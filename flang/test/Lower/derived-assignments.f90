@@ -13,12 +13,14 @@ subroutine test1
   ! CHECK-DAG:  %[[VAL_1:.*]] = fir.alloca !fir.type<_QFtest1Tt{a:i32,b:i32}> {{{.*}}uniq_name = "_QFtest1Et2"}
   ! CHECK:  %[[VAL_2:.*]] = fir.field_index a, !fir.type<_QFtest1Tt{a:i32,b:i32}>
   ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest1Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
-  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest1Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK:  %[[VAL_2b:.*]] = fir.field_index a, !fir.type<_QFtest1Tt{a:i32,b:i32}>
+  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2b]] : (!fir.ref<!fir.type<_QFtest1Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
   ! CHECK:  fir.store %[[VAL_5]] to %[[VAL_4]] : !fir.ref<i32>
   ! CHECK:  %[[VAL_6:.*]] = fir.field_index b, !fir.type<_QFtest1Tt{a:i32,b:i32}>
   ! CHECK:  %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_6]] : (!fir.ref<!fir.type<_QFtest1Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
-  ! CHECK:  %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_6]] : (!fir.ref<!fir.type<_QFtest1Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK:  %[[VAL_6b:.*]] = fir.field_index b, !fir.type<_QFtest1Tt{a:i32,b:i32}>
+  ! CHECK:  %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_6b]] : (!fir.ref<!fir.type<_QFtest1Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK:  %[[VAL_9:.*]] = fir.load %[[VAL_7]] : !fir.ref<i32>
   ! CHECK:  fir.store %[[VAL_9]] to %[[VAL_8]] : !fir.ref<i32>
   t1 = t2
@@ -77,7 +79,8 @@ subroutine test3
   ! CHECK-DAG:  %[[VAL_1:.*]] = fir.alloca !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}> {{{.*}}uniq_name = "_QFtest3Et2"}
   ! CHECK:  %[[VAL_2:.*]] = fir.field_index m_c, !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>
   ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.char<1,20>>
-  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.char<1,20>>
+  ! CHECK:  %[[VAL_2b:.*]] = fir.field_index m_c, !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>
+  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2b]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.char<1,20>>
   ! CHECK:  %[[VAL_5:.*]] = arith.constant 20 : index
   ! CHECK:  %[[VAL_6:.*]] = arith.constant 1 : i64
   ! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_5]] : (index) -> i64
@@ -88,7 +91,8 @@ subroutine test3
   ! CHECK:  fir.call @llvm.memmove.p0.p0.i64(%[[VAL_10]], %[[VAL_11]], %[[VAL_8]], %[[VAL_9]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK:  %[[VAL_12:.*]] = fir.field_index m_i, !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>
   ! CHECK:  %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_12]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
-  ! CHECK:  %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_12]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK:  %[[VAL_12b:.*]] = fir.field_index m_i, !fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>
+  ! CHECK:  %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_12b]] : (!fir.ref<!fir.type<_QFtest3Tt{m_c:!fir.char<1,20>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK:  %[[VAL_15:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
   ! CHECK:  fir.store %[[VAL_15]] to %[[VAL_14]] : !fir.ref<i32>
   t1 = t2
@@ -106,7 +110,8 @@ subroutine test_array_comp(t1, t2)
 
   ! CHECK:  %[[VAL_2:.*]] = fir.field_index m_x, !fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>
   ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.array<10xf32>>
-  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.array<10xf32>>
+  ! CHECK:  %[[VAL_2b:.*]] = fir.field_index m_x, !fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>
+  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2b]] : (!fir.ref<!fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.array<10xf32>>
   ! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : index
   ! CHECK:  %[[VAL_6:.*]] = arith.constant 1 : index
   ! CHECK:  %[[VAL_7:.*]] = arith.constant 9 : index
@@ -118,7 +123,8 @@ subroutine test_array_comp(t1, t2)
   ! CHECK:  }
   ! CHECK:  %[[VAL_12:.*]] = fir.field_index m_i, !fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>
   ! CHECK:  %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_12]] : (!fir.ref<!fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
-  ! CHECK:  %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_12]] : (!fir.ref<!fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK:  %[[VAL_12b:.*]] = fir.field_index m_i, !fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>
+  ! CHECK:  %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_12b]] : (!fir.ref<!fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK:  %[[VAL_15:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
   ! CHECK:  fir.store %[[VAL_15]] to %[[VAL_14]] : !fir.ref<i32>
   t1 = t2
@@ -135,12 +141,14 @@ subroutine test_ptr_comp(t1, t2)
 
   ! CHECK:  %[[VAL_2:.*]] = fir.field_index ptr, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
   ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
-  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
+  ! CHECK:  %[[VAL_2b:.*]] = fir.field_index ptr, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
+  ! CHECK:  %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_2b]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
   ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
   ! CHECK:  fir.store %[[VAL_5]] to %[[VAL_4]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>>
   ! CHECK:  %[[VAL_6:.*]] = fir.field_index m_i, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
   ! CHECK:  %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_6]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
-  ! CHECK:  %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_6]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
+  ! CHECK:  %[[VAL_6b:.*]] = fir.field_index m_i, !fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>
+  ! CHECK:  %[[VAL_8:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_6b]] : (!fir.ref<!fir.type<_QFtest_ptr_compTt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.complex<4>>>>,m_i:i32}>>, !fir.field) -> !fir.ref<i32>
   ! CHECK:  %[[VAL_9:.*]] = fir.load %[[VAL_7]] : !fir.ref<i32>
   ! CHECK:  fir.store %[[VAL_9]] to %[[VAL_8]] : !fir.ref<i32>
   t1 = t2

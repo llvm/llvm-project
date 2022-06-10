@@ -1005,21 +1005,30 @@ static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
                                               mlir::Location loc,
                                               const fir::ExtendedValue &lhs,
                                               const fir::ExtendedValue &rhs) {
-  auto baseType = fir::unwrapPassByRefType(fir::getBase(lhs).getType());
-  auto lhsType = baseType.dyn_cast<fir::RecordType>();
+  auto lbaseType = fir::unwrapPassByRefType(fir::getBase(lhs).getType());
+  auto lhsType = lbaseType.dyn_cast<fir::RecordType>();
   assert(lhsType && "lhs must be a scalar record type");
+  auto rbaseType = fir::unwrapPassByRefType(fir::getBase(rhs).getType());
+  auto rhsType = rbaseType.dyn_cast<fir::RecordType>();
+  assert(rhsType && "rhs must be a scalar record type");
   auto fieldIndexType = fir::FieldType::get(lhsType.getContext());
-  for (auto [fieldName, fieldType] : lhsType.getTypeList()) {
-    assert(!fir::hasDynamicSize(fieldType));
-    mlir::Value field = builder.create<fir::FieldIndexOp>(
-        loc, fieldIndexType, fieldName, lhsType, fir::getTypeParams(lhs));
-    auto fieldRefType = builder.getRefType(fieldType);
+  for (auto [lhsPair, rhsPair] :
+       llvm::zip(lhsType.getTypeList(), rhsType.getTypeList())) {
+    auto &[lFieldName, lFieldTy] = lhsPair;
+    auto &[rFieldName, rFieldTy] = rhsPair;
+    assert(!fir::hasDynamicSize(lFieldTy) && !fir::hasDynamicSize(rFieldTy));
+    mlir::Value rField = builder.create<fir::FieldIndexOp>(
+        loc, fieldIndexType, rFieldName, rhsType, fir::getTypeParams(rhs));
+    auto rFieldRefType = builder.getRefType(rFieldTy);
     mlir::Value fromCoor = builder.create<fir::CoordinateOp>(
-        loc, fieldRefType, fir::getBase(rhs), field);
+        loc, rFieldRefType, fir::getBase(rhs), rField);
+    mlir::Value field = builder.create<fir::FieldIndexOp>(
+        loc, fieldIndexType, lFieldName, lhsType, fir::getTypeParams(lhs));
+    auto fieldRefType = builder.getRefType(lFieldTy);
     mlir::Value toCoor = builder.create<fir::CoordinateOp>(
         loc, fieldRefType, fir::getBase(lhs), field);
     llvm::Optional<fir::DoLoopOp> outerLoop;
-    if (auto sequenceType = fieldType.dyn_cast<fir::SequenceType>()) {
+    if (auto sequenceType = lFieldTy.dyn_cast<fir::SequenceType>()) {
       // Create loops to assign array components elements by elements.
       // Note that, since these are components, they either do not overlap,
       // or are the same and exactly overlap. They also have compile time
@@ -1045,14 +1054,14 @@ static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
       fromCoor = builder.create<fir::CoordinateOp>(loc, elementRefType,
                                                    fromCoor, indices);
     }
-    auto fieldElementType = fir::unwrapSequenceType(fieldType);
-    if (fieldElementType.isa<fir::BoxType>()) {
-      assert(fieldElementType.cast<fir::BoxType>()
-                 .getEleTy()
-                 .isa<fir::PointerType>() &&
-             "allocatable require deep copy");
+    if (auto fieldEleTy = fir::unwrapSequenceType(lFieldTy);
+        fieldEleTy.isa<fir::BoxType>()) {
+      assert(
+          fieldEleTy.cast<fir::BoxType>().getEleTy().isa<fir::PointerType>() &&
+          "allocatable members require deep copy");
       auto fromPointerValue = builder.create<fir::LoadOp>(loc, fromCoor);
-      builder.create<fir::StoreOp>(loc, fromPointerValue, toCoor);
+      auto castTo = builder.createConvert(loc, fieldEleTy, fromPointerValue);
+      builder.create<fir::StoreOp>(loc, castTo, toCoor);
     } else {
       auto from =
           fir::factory::componentToExtendedValue(builder, loc, fromCoor);
