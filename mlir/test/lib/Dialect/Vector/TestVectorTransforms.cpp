@@ -18,10 +18,12 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -312,15 +314,35 @@ struct TestVectorUnrollingPatterns
       UnrollVectorOptions::NativeShapeFnType nativeShapeFn =
           [](Operation *op) -> Optional<SmallVector<int64_t, 4>> {
         vector::ContractionOp contractOp = cast<vector::ContractionOp>(op);
-        SmallVector<int64_t, 4> nativeShape = {4, 4, 2};
-        if (auto floatType = contractOp.getLhsType()
-                                 .getElementType()
-                                 .dyn_cast<FloatType>()) {
-          if (floatType.getWidth() == 16) {
-            nativeShape[2] = 4;
-          }
-        }
+        SmallVector<int64_t, 4> nativeShape(
+            contractOp.getIteratorTypes().size(), 4);
+        Type lhsType = contractOp.getLhsType().getElementType();
+        nativeShape[nativeShape.size() - 1] = lhsType.isF16() ? 4 : 2;
         return nativeShape;
+      };
+
+      UnrollVectorOptions opts;
+      opts.setNativeShapeFn(nativeShapeFn)
+          .setFilterConstraint(
+              [](Operation *op) { return success(isa<ContractionOp>(op)); });
+
+      if (!unrollOrder.empty()) {
+        opts.setUnrollTraversalOrderFn([this](Operation *op)
+                                           -> Optional<SmallVector<int64_t>> {
+          vector::ContractionOp contractOp = cast<vector::ContractionOp>(op);
+          if (contractOp.getIteratorTypes().size() == unrollOrder.size())
+            return SmallVector<int64_t>(unrollOrder.begin(), unrollOrder.end());
+          return None;
+        });
+      }
+      populateVectorUnrollPatterns(patterns, opts);
+    } else {
+      auto nativeShapeFn =
+          [](Operation *op) -> Optional<SmallVector<int64_t, 4>> {
+        auto contractOp = dyn_cast<ContractionOp>(op);
+        if (!contractOp)
+          return None;
+        return SmallVector<int64_t, 4>(contractOp.getIteratorTypes().size(), 2);
       };
       populateVectorUnrollPatterns(patterns,
                                    UnrollVectorOptions()
@@ -328,17 +350,14 @@ struct TestVectorUnrollingPatterns
                                        .setFilterConstraint([](Operation *op) {
                                          return success(isa<ContractionOp>(op));
                                        }));
-    } else {
-      populateVectorUnrollPatterns(
-          patterns, UnrollVectorOptions()
-                        .setNativeShape(ArrayRef<int64_t>{2, 2, 2})
-                        .setFilterConstraint([](Operation *op) {
-                          return success(isa<ContractionOp>(op));
-                        }));
     }
     populateVectorToVectorCanonicalizationPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
+
+  ListOption<int64_t> unrollOrder{*this, "unroll-order",
+                                  llvm::cl::desc("set the unroll order"),
+                                  llvm::cl::ZeroOrMore};
 
   Option<bool> unrollBasedOnType{
       *this, "unroll-based-on-type",
@@ -472,6 +491,11 @@ struct TestVectorTransferUnrollingPatterns
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestVectorTransferUnrollingPatterns)
 
+  TestVectorTransferUnrollingPatterns() = default;
+  TestVectorTransferUnrollingPatterns(
+      const TestVectorTransferUnrollingPatterns &pass)
+      : PassWrapper(pass) {}
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect>();
   }
@@ -485,17 +509,36 @@ struct TestVectorTransferUnrollingPatterns
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateVectorUnrollPatterns(
-        patterns,
-        UnrollVectorOptions()
-            .setNativeShape(ArrayRef<int64_t>{2, 2})
-            .setFilterConstraint([](Operation *op) {
-              return success(
-                  isa<vector::TransferReadOp, vector::TransferWriteOp>(op));
-            }));
+    UnrollVectorOptions opts;
+    opts.setNativeShape(ArrayRef<int64_t>{2, 2})
+        .setFilterConstraint([](Operation *op) {
+          return success(
+              isa<vector::TransferReadOp, vector::TransferWriteOp>(op));
+        });
+    if (reverseUnrollOrder.getValue()) {
+      opts.setUnrollTraversalOrderFn(
+          [](Operation *op) -> Optional<SmallVector<int64_t>> {
+            int64_t numLoops = 0;
+            if (auto readOp = dyn_cast<vector::TransferReadOp>(op))
+              numLoops = readOp.getVectorType().getRank();
+            else if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op))
+              numLoops = writeOp.getVectorType().getRank();
+            else
+              return None;
+            auto order = llvm::reverse(llvm::seq<int64_t>(0, numLoops));
+            return llvm::to_vector(order);
+          });
+    }
+    populateVectorUnrollPatterns(patterns, opts);
     populateVectorToVectorCanonicalizationPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
+
+  Option<bool> reverseUnrollOrder{
+      *this, "reverse-unroll-order",
+      llvm::cl::desc(
+          "reverse the order of unrolling of vector transfer operations"),
+      llvm::cl::init(false)};
 };
 
 struct TestVectorTransferFullPartialSplitPatterns

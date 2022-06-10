@@ -140,10 +140,16 @@ define <4 x double> @demandedelts_vpermil2pd256_as_shufpd(<4 x double> %a0, <4 x
 ; X86-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,2,3]
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: demandedelts_vpermil2pd256_as_shufpd:
-; X64:       # %bb.0:
-; X64-NEXT:    vpermil2pd {{.*#+}} ymm0 = ymm1[0,0],ymm0[3],ymm1[3]
-; X64-NEXT:    retq
+; X64-AVX-LABEL: demandedelts_vpermil2pd256_as_shufpd:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpermil2pd {{.*#+}} ymm0 = ymm1[0,0],ymm0[3],ymm1[3]
+; X64-AVX-NEXT:    retq
+;
+; X64-AVX2-LABEL: demandedelts_vpermil2pd256_as_shufpd:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[3],ymm1[3]
+; X64-AVX2-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,1,2,3]
+; X64-AVX2-NEXT:    retq
   %res0 = insertelement <4 x i64> <i64 0, i64 4, i64 2, i64 7>, i64 %a2, i32 0
   %res1 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a1, <4 x i64> %res0, i8 0)
   %res2 = shufflevector <4 x double> %res1, <4 x double> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
