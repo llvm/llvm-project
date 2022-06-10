@@ -892,9 +892,14 @@ macro(add_llvm_executable name)
 
   if (ARG_GENERATE_DRIVER)
     string(REPLACE "-" "_" TOOL_NAME ${name})
-    configure_file(
-      ${LLVM_MAIN_SRC_DIR}/cmake/driver-template.cpp.in
-      ${CMAKE_CURRENT_BINARY_DIR}/${name}-driver.cpp)
+    foreach(path ${CMAKE_MODULE_PATH})
+      if(EXISTS ${path}/llvm-driver-template.cpp.in)
+        configure_file(
+          ${path}/llvm-driver-template.cpp.in
+          ${CMAKE_CURRENT_BINARY_DIR}/${name}-driver.cpp)
+        break()
+      endif()
+    endforeach()
 
     list(APPEND ALL_FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}-driver.cpp)
 
