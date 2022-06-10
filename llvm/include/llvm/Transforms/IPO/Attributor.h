@@ -2602,16 +2602,6 @@ struct IntegerRangeState : public AbstractState {
     unionAssumed(R.getAssumed());
   }
 
-  /// Unite known range with the passed state.
-  void unionKnown(const ConstantRange &R) {
-    // Don't loose a known range.
-    Known = Known.unionWith(R);
-    Assumed = Assumed.unionWith(Known);
-  }
-
-  /// See IntegerRangeState::unionKnown(..).
-  void unionKnown(const IntegerRangeState &R) { unionKnown(R.getKnown()); }
-
   /// Intersect known range with the passed state.
   void intersectKnown(const ConstantRange &R) {
     Assumed = Assumed.intersectWith(R);
@@ -2641,8 +2631,8 @@ struct IntegerRangeState : public AbstractState {
   IntegerRangeState operator&=(const IntegerRangeState &R) {
     // NOTE: `&=` operator seems like `intersect` but in this case, we need to
     // take `union`.
-    unionKnown(R);
-    unionAssumed(R);
+    Known = Known.unionWith(R.getKnown());
+    Assumed = Assumed.unionWith(R.getAssumed());
     return *this;
   }
 };
