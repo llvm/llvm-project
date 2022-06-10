@@ -54,6 +54,20 @@ if (current_toolchain == default_toolchain) {
     }
   }
 
+  write_cmake_config("write_modulemap") {
+    input = "module.modulemap.in"
+    output = "$libcxx_generated_include_dir/module.modulemap"
+    #no = "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER"
+    values = [
+      # An empty value here means the feature is supported.
+      # Unsupported values should be set to `$no`.
+      "requires_LIBCXX_ENABLE_FILESYSTEM=",
+      "requires_LIBCXX_ENABLE_LOCALIZATION=",
+      "requires_LIBCXX_ENABLE_THREADS=",
+      "requires_LIBCXX_ENABLE_WIDE_CHARACTERS=",
+    ]
+  }
+
   copy("copy_headers") {
     sources = [
       "__algorithm/adjacent_find.h",
@@ -674,7 +688,6 @@ if (current_toolchain == default_toolchain) {
       "map",
       "math.h",
       "memory",
-      "module.modulemap",
       "mutex",
       "new",
       "numbers",
@@ -724,7 +737,10 @@ if (current_toolchain == default_toolchain) {
       "wchar.h",
       "wctype.h",
     ]
-    deps = [ ":write_config_site" ]
+    deps = [
+      ":write_config_site",
+      ":write_modulemap",
+    ]
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets
       # LIBCXX_CXX_ABI_HEADER_TARGET if the libcxx abi library either of
