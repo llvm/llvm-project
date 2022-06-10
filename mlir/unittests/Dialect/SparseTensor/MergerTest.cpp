@@ -136,43 +136,78 @@ protected:
   }
 
   /// Compares expressions for equality. Equality is defined recursively as:
-  /// - Two expressions can only be equal if they have the same Kind.
-  /// - Two binary expressions are equal if they have the same Kind and their
-  ///     children are equal.
-  /// - Expressions with Kind invariant or tensor are equal if they have the
-  ///     same expression id.
+  /// - Operations are equal if they have the same kind and children.
+  /// - Leaf tensors are equal if they refer to the same tensor.
   bool compareExpression(unsigned e, const std::shared_ptr<Pattern> &pattern) {
     auto tensorExp = merger.exp(e);
     if (tensorExp.kind != pattern->kind)
       return false;
-    assert(tensorExp.kind != Kind::kInvariant &&
-           "Invariant comparison not yet supported");
     switch (tensorExp.kind) {
-    case Kind::kTensor:
+    // Leaf.
+    case kTensor:
       return tensorExp.tensor == pattern->tensorNum;
-    case Kind::kAbsF:
-    case Kind::kCeilF:
-    case Kind::kFloorF:
-    case Kind::kNegF:
-    case Kind::kNegI:
+    case kInvariant:
+    case kIndex:
+      llvm_unreachable("invariant not handled yet");
+    // Unary operations.
+    case kAbsF:
+    case kAbsC:
+    case kCeilF:
+    case kFloorF:
+    case kSqrtF:
+    case kSqrtC:
+    case kExpm1F:
+    case kExpm1C:
+    case kLog1pF:
+    case kLog1pC:
+    case kSinF:
+    case kSinC:
+    case kTanhF:
+    case kTanhC:
+    case kNegF:
+    case kNegC:
+    case kNegI:
+    case kTruncF:
+    case kExtF:
+    case kCastFS:
+    case kCastFU:
+    case kCastSF:
+    case kCastUF:
+    case kCastS:
+    case kCastU:
+    case kCastIdx:
+    case kTruncI:
+    case kCIm:
+    case kCRe:
+    case kBitCast:
+    case kBinaryBranch:
+    case kUnary:
+    case kShlI:
+    case kBinary:
       return compareExpression(tensorExp.children.e0, pattern->e0);
-    case Kind::kMulF:
-    case Kind::kMulI:
-    case Kind::kDivF:
-    case Kind::kDivS:
-    case Kind::kDivU:
-    case Kind::kAddF:
-    case Kind::kAddI:
-    case Kind::kSubF:
-    case Kind::kSubI:
-    case Kind::kAndI:
-    case Kind::kOrI:
-    case Kind::kXorI:
+    // Binary operations.
+    case kMulF:
+    case kMulC:
+    case kMulI:
+    case kDivF:
+    case kDivC:
+    case kDivS:
+    case kDivU:
+    case kAddF:
+    case kAddC:
+    case kAddI:
+    case kSubF:
+    case kSubC:
+    case kSubI:
+    case kAndI:
+    case kOrI:
+    case kXorI:
+    case kShrS:
+    case kShrU:
       return compareExpression(tensorExp.children.e0, pattern->e0) &&
              compareExpression(tensorExp.children.e1, pattern->e1);
-    default:
-      llvm_unreachable("Unhandled Kind");
     }
+    llvm_unreachable("unexpected kind");
   }
 
   unsigned numTensors;
