@@ -450,7 +450,8 @@ void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
 
   auto *OptionalLoc =
       State.Env.getStorageLocation(*E->getArg(0), SkipPast::Reference);
-  assert(OptionalLoc != nullptr);
+  if (OptionalLoc == nullptr)
+    return;
 
   State.Env.setValue(*OptionalLoc, createOptionalValue(State.Env, HasValueVal));
 
