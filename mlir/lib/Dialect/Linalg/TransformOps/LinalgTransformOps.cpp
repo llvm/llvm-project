@@ -93,6 +93,130 @@ FailureOr<LinalgOp> transform::DecomposeOp::applyToOne(LinalgOp target) {
 }
 
 //===----------------------------------------------------------------------===//
+// FuseOp
+//===----------------------------------------------------------------------===//
+
+/// Apply a tiling transformation to all payload ops and store both the
+/// tiled operation as well as the created tile loops.
+static LogicalResult
+applyTilingToAll(Operation *transformOp, Value target,
+                 ArrayRef<int64_t> tileSizes,
+                 transform::TransformResults &transformResults,
+                 transform::TransformState &state,
+                 function_ref<FailureOr<TiledLinalgOp>(LinalgOp)> applyFn) {
+  // Number of loops: Number of tiles sizes that are not zero.
+  size_t numLoops = tileSizes.size() - llvm::count(tileSizes, 0);
+  // All payload ops. These should all be LinalgOps for now.
+  ArrayRef<Operation *> payloadOps = state.getPayloadOps(target);
+
+  SmallVector<Operation *> tiledLinalgOps;
+  SmallVector<SmallVector<Operation *>> loopOps(numLoops);
+  for (unsigned int i = 0; i < numLoops; ++i)
+    loopOps[i].reserve(payloadOps.size());
+
+  for (Operation *target : payloadOps) {
+    auto linalgOp = dyn_cast<linalg::LinalgOp>(target);
+    if (!linalgOp)
+      return transformOp->emitError("only LinalgOps are supported");
+
+    FailureOr<TiledLinalgOp> tiled = applyFn(linalgOp);
+    if (failed(tiled))
+      return failure();
+
+    tiledLinalgOps.push_back(tiled->op);
+    if (tiled->loops.size() != numLoops)
+      // Not enough loops were generated. This usually means that the input size
+      // was smaller than the tiling size.
+      // TODO: LinalgTilingPattern should return failure().
+      return failure();
+    for (unsigned int i = 0; i < numLoops; ++i)
+      loopOps[i].push_back(tiled->loops[i]);
+  }
+
+  transformResults.set(transformOp->getOpResult(0), tiledLinalgOps);
+  for (unsigned int i = 0; i < numLoops; ++i)
+    transformResults.set(transformOp->getOpResult(i + 1), loopOps[i]);
+  return success();
+}
+
+/// Parse a tiling-like operation that returns the tiled op as well as the
+/// created tile loops. The function counts the non-zero tile sizes to compute
+/// the number of results.
+static ParseResult parseTileLikeOp(OpAsmParser &parser, OperationState &result,
+                                   StringRef sizesAttrName) {
+  OpAsmParser::UnresolvedOperand targetOperand;
+  SMLoc opLoc = parser.getCurrentLocation();
+  if (parser.parseOperand(targetOperand) ||
+      parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+  Attribute sizesAttr = result.attributes.get(sizesAttrName);
+  if (!sizesAttr)
+    return parser.emitError(opLoc)
+           << "expected '" << sizesAttrName << "' attribute";
+  auto sizesArrayAttr = sizesAttr.dyn_cast<ArrayAttr>();
+  if (!sizesArrayAttr)
+    return parser.emitError(opLoc)
+           << "'" << sizesAttrName << "' attribute must be an array";
+  Type pdlOpType = parser.getBuilder().getType<pdl::OperationType>();
+  size_t numExpectedLoops =
+      sizesArrayAttr.size() - llvm::count(extractI64Array(sizesArrayAttr), 0);
+  result.addTypes(SmallVector<Type>(numExpectedLoops + 1, pdlOpType));
+  if (parser.resolveOperand(targetOperand, pdlOpType, result.operands))
+    return failure();
+  return success();
+}
+
+LogicalResult
+transform::FuseOp::apply(mlir::transform::TransformResults &transformResults,
+                         mlir::transform::TransformState &state) {
+  LinalgTilingAndFusionOptions fusionOptions;
+  fusionOptions.tileSizes = extractI64Array(getTileSizes());
+  fusionOptions.tileInterchange = extractI64Array(getTileInterchange());
+
+  return applyTilingToAll(
+      getOperation(), getTarget(), fusionOptions.tileSizes, transformResults,
+      state, [&](LinalgOp linalgOp) -> FailureOr<TiledLinalgOp> {
+        LinalgTileAndFuseTensorOpsPattern pattern(getContext(), fusionOptions);
+        SimpleRewriter rewriter(getContext());
+        rewriter.setInsertionPoint(linalgOp);
+        FailureOr<TileLoopNest> tileLoopNest =
+            pattern.returningMatchAndRewrite(linalgOp, rewriter);
+        if (failed(tileLoopNest))
+          return failure();
+
+        TiledLinalgOp tiledLinalgOp;
+        tiledLinalgOp.op = tileLoopNest->getRootOp();
+        tiledLinalgOp.loops = {tileLoopNest->getLoopOps().begin(),
+                               tileLoopNest->getLoopOps().end()};
+        return tiledLinalgOp;
+      });
+}
+
+ParseResult transform::FuseOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
+  return parseTileLikeOp(
+      parser, result,
+      transform::FuseOp::getTileSizesAttrName(result.name).getValue());
+}
+
+void transform::FuseOp::print(OpAsmPrinter &p) {
+  p << ' ';
+  p << getTarget();
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+LogicalResult transform::FuseOp::verify() {
+  SmallVector<int64_t> permutation = extractI64Array(getTileInterchange());
+  auto sequence = llvm::to_vector(llvm::seq<int64_t>(0, permutation.size()));
+  if (!std::is_permutation(sequence.begin(), sequence.end(),
+                           permutation.begin(), permutation.end())) {
+    return emitOpError() << "expects interchange to be a permutation, found "
+                         << getTileInterchange();
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GeneralizeOp
 //===----------------------------------------------------------------------===//
 
@@ -274,49 +398,6 @@ FailureOr<LinalgOp> transform::ScalarizeOp::applyToOne(LinalgOp target) {
 // TileOp
 //===----------------------------------------------------------------------===//
 
-/// Apply a tiling transformation to all payload ops and store both the
-/// tiled operation as well as the created tile loops.
-static LogicalResult
-applyTilingToAll(Operation *transformOp, Value target,
-                 ArrayRef<int64_t> tileSizes,
-                 transform::TransformResults &transformResults,
-                 transform::TransformState &state,
-                 function_ref<FailureOr<TiledLinalgOp>(LinalgOp)> applyFn) {
-  // Number of loops: Number of tiles sizes that are not zero.
-  size_t numLoops = tileSizes.size() - llvm::count(tileSizes, 0);
-  // All payload ops. These should all be LinalgOps for now.
-  ArrayRef<Operation *> payloadOps = state.getPayloadOps(target);
-
-  SmallVector<Operation *> tiledLinalgOps;
-  SmallVector<SmallVector<Operation *>> loopOps(numLoops);
-  for (unsigned int i = 0; i < numLoops; ++i)
-    loopOps[i].reserve(payloadOps.size());
-
-  for (Operation *target : payloadOps) {
-    auto linalgOp = dyn_cast<linalg::LinalgOp>(target);
-    if (!linalgOp)
-      return transformOp->emitError("only LinalgOps are supported");
-
-    FailureOr<TiledLinalgOp> tiled = applyFn(linalgOp);
-    if (failed(tiled))
-      return failure();
-
-    tiledLinalgOps.push_back(tiled->op);
-    if (tiled->loops.size() != numLoops)
-      // Not enough loops were generated. This usually means that the input size
-      // was smaller than the tiling size.
-      // TODO: LinalgTilingPattern should return failure().
-      return failure();
-    for (unsigned int i = 0; i < numLoops; ++i)
-      loopOps[i].push_back(tiled->loops[i]);
-  }
-
-  transformResults.set(transformOp->getOpResult(0), tiledLinalgOps);
-  for (unsigned int i = 0; i < numLoops; ++i)
-    transformResults.set(transformOp->getOpResult(i + 1), loopOps[i]);
-  return success();
-}
-
 LogicalResult transform::TileOp::apply(TransformResults &transformResults,
                                        TransformState &state) {
   LinalgTilingOptions tilingOptions;
@@ -337,53 +418,14 @@ LogicalResult transform::TileOp::apply(TransformResults &transformResults,
 
 ParseResult transform::TileOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
-  StringRef sizesAttrName = TileOp::getSizesAttrName(result.name).getValue();
-  OpAsmParser::UnresolvedOperand targetOperand;
-  SMLoc opLoc = parser.getCurrentLocation();
-  if (parser.parseOperand(targetOperand) ||
-      parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-  Attribute sizesAttr = result.attributes.get(sizesAttrName);
-  if (!sizesAttr)
-    return parser.emitError(opLoc)
-           << "expected '" << sizesAttrName << "' attribute";
-  auto sizesArrayAttr = sizesAttr.dyn_cast<ArrayAttr>();
-  if (!sizesArrayAttr)
-    return parser.emitError(opLoc)
-           << "'" << sizesAttrName << "' attribute must be an array";
-  Type pdlOpType = parser.getBuilder().getType<pdl::OperationType>();
-  size_t numExpectedLoops =
-      sizesArrayAttr.size() - llvm::count(extractI64Array(sizesArrayAttr), 0);
-  result.addTypes(SmallVector<Type>(numExpectedLoops + 1, pdlOpType));
-  if (parser.resolveOperand(targetOperand, pdlOpType, result.operands))
-    return failure();
-  return success();
+  return parseTileLikeOp(parser, result,
+                         TileOp::getSizesAttrName(result.name).getValue());
 }
 
 void TileOp::print(OpAsmPrinter &p) {
   p << ' ';
   p << getTarget();
   p.printOptionalAttrDict((*this)->getAttrs());
-}
-
-void TileOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  // `target` arg is consumed and can no longer be used.
-  effects.emplace_back(MemoryEffects::Read::get(), getTarget(),
-                       TransformMappingResource::get());
-  effects.emplace_back(MemoryEffects::Free::get(), getTarget(),
-                       TransformMappingResource::get());
-
-  for (Value r : getResults()) {
-    effects.emplace_back(MemoryEffects::Write::get(), r,
-                         TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Allocate::get(), r,
-                         TransformMappingResource::get());
-  }
-
-  effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(), PayloadIRResource::get());
 }
 
 //===----------------------------------------------------------------------===//
