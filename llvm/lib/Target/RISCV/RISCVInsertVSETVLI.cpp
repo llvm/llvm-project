@@ -1414,7 +1414,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
 void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
   for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr &MI = *I++;
-    if (isFaultFirstLoad(MI)) {
+    if (RISCVVInstInfo::isFaultFirstLoad(MI)) {
       Register VLOutput = MI.getOperand(1).getReg();
       if (!MRI->use_nodbg_empty(VLOutput))
         BuildMI(MBB, I, MI.getDebugLoc(), TII->get(RISCV::PseudoReadVL),
