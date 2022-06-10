@@ -422,7 +422,8 @@ set(files
   __ranges/zip_view.h
   __split_buffer
   __std_stream
-  __string
+  __string/char_traits.h
+  __string/extern_template_lists.h
   __support/android/locale_bionic.h
   __support/fuchsia/xlocale.h
   __support/ibm/gettod_zos.h

@@ -453,7 +453,8 @@ END-SCRIPT
 #include <__ranges/zip_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/zip_view.h'}}
 #include <__split_buffer> // expected-error@*:* {{use of private header from outside its module: '__split_buffer'}}
 #include <__std_stream> // expected-error@*:* {{use of private header from outside its module: '__std_stream'}}
-#include <__string> // expected-error@*:* {{use of private header from outside its module: '__string'}}
+#include <__string/char_traits.h> // expected-error@*:* {{use of private header from outside its module: '__string/char_traits.h'}}
+#include <__string/extern_template_lists.h> // expected-error@*:* {{use of private header from outside its module: '__string/extern_template_lists.h'}}
 #include <__thread/poll_with_backoff.h> // expected-error@*:* {{use of private header from outside its module: '__thread/poll_with_backoff.h'}}
 #include <__thread/timed_backoff_policy.h> // expected-error@*:* {{use of private header from outside its module: '__thread/timed_backoff_policy.h'}}
 #include <__tuple> // expected-error@*:* {{use of private header from outside its module: '__tuple'}}

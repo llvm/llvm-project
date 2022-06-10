@@ -987,13 +987,15 @@ module std [system] {
     header "string"
     export initializer_list
     export string_view
-    export __string
+    module __string {
+      module char_traits           { private header "__string/char_traits.h" }
+      module extern_template_lists { private header "__string/extern_template_lists.h" }
+    }
     export *
   }
   module string_view {
     header "string_view"
     export initializer_list
-    export __string
     export *
     module string_view_fwd { private header "__fwd/string_view.h" }
   }
@@ -1169,7 +1171,6 @@ module std [system] {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
     private header "__std_stream" export *
   }
-  module __string            { private header "__string"            export * }
   module __threading_support {         header "__threading_support" export * }
   module __tree              {         header "__tree"              export * }
   module __tuple             { private header "__tuple"             export * }

@@ -199,6 +199,7 @@ namespace std {
 #include <__algorithm/min.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__fwd/string_view.h>
 #include <__ranges/concepts.h>
@@ -206,7 +207,7 @@ namespace std {
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/size.h>
-#include <__string>
+#include <__string/char_traits.h>
 #include <compare>
 #include <iosfwd>
 #include <iterator>

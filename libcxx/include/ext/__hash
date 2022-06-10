@@ -13,7 +13,6 @@
 #  pragma GCC system_header
 
 #include <__config>
-#include <__string>
 #include <cstring>
 #include <string>
 
