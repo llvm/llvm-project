@@ -11,6 +11,7 @@ set(LIBCXX_SOURCES
   chrono.cpp
   condition_variable.cpp
   condition_variable_destructor.cpp
+  error_category.cpp
   exception.cpp
   filesystem/filesystem_clock.cpp
   filesystem/filesystem_error.cpp
