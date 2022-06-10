@@ -51,120 +51,13 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     type& get() const _NOEXCEPT {return *__f_;}
 
-#ifndef _LIBCPP_CXX03_LANG
     // invoke
     template <class... _ArgTypes>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     typename __invoke_of<type&, _ArgTypes...>::type
     operator() (_ArgTypes&&... __args) const {
-        return _VSTD::__invoke(get(), _VSTD::forward<_ArgTypes>(__args)...);
+        return std::__invoke(get(), std::forward<_ArgTypes>(__args)...);
     }
-#else
-
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return<type>::type
-    operator() () const {
-        return _VSTD::__invoke(get());
-    }
-
-    template <class _A0>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return0<type, _A0>::type
-    operator() (_A0& __a0) const {
-        return _VSTD::__invoke(get(), __a0);
-    }
-
-    template <class _A0>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return0<type, _A0 const>::type
-    operator() (_A0 const& __a0) const {
-        return _VSTD::__invoke(get(), __a0);
-    }
-
-    template <class _A0, class _A1>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return1<type, _A0, _A1>::type
-    operator() (_A0& __a0, _A1& __a1) const {
-        return _VSTD::__invoke(get(), __a0, __a1);
-    }
-
-    template <class _A0, class _A1>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return1<type, _A0 const, _A1>::type
-    operator() (_A0 const& __a0, _A1& __a1) const {
-        return _VSTD::__invoke(get(), __a0, __a1);
-    }
-
-    template <class _A0, class _A1>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return1<type, _A0, _A1 const>::type
-    operator() (_A0& __a0, _A1 const& __a1) const {
-        return _VSTD::__invoke(get(), __a0, __a1);
-    }
-
-    template <class _A0, class _A1>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return1<type, _A0 const, _A1 const>::type
-    operator() (_A0 const& __a0, _A1 const& __a1) const {
-        return _VSTD::__invoke(get(), __a0, __a1);
-    }
-
-    template <class _A0, class _A1, class _A2>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return2<type, _A0, _A1, _A2>::type
-    operator() (_A0& __a0, _A1& __a1, _A2& __a2) const {
-        return _VSTD::__invoke(get(), __a0, __a1, __a2);
-    }
-
-    template <class _A0, class _A1, class _A2>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return2<type, _A0 const, _A1, _A2>::type
-    operator() (_A0 const& __a0, _A1& __a1, _A2& __a2) const {
-        return _VSTD::__invoke(get(), __a0, __a1, __a2);
-    }
-
-    template <class _A0, class _A1, class _A2>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return2<type, _A0, _A1 const, _A2>::type
-    operator() (_A0& __a0, _A1 const& __a1, _A2& __a2) const {
-        return _VSTD::__invoke(get(), __a0, __a1, __a2);
-    }
-
-    template <class _A0, class _A1, class _A2>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return2<type, _A0, _A1, _A2 const>::type
-    operator() (_A0& __a0, _A1& __a1, _A2 const& __a2) const {
-        return _VSTD::__invoke(get(), __a0, __a1, __a2);
-    }
-
-    template <class _A0, class _A1, class _A2>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return2<type, _A0 const, _A1 const, _A2>::type
-    operator() (_A0 const& __a0, _A1 const& __a1, _A2& __a2) const {
-        return _VSTD::__invoke(get(), __a0, __a1, __a2);
-    }
-
-    template <class _A0, class _A1, class _A2>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return2<type, _A0 const, _A1, _A2 const>::type
-    operator() (_A0 const& __a0, _A1& __a1, _A2 const& __a2) const {
-        return _VSTD::__invoke(get(), __a0, __a1, __a2);
-    }
-
-    template <class _A0, class _A1, class _A2>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return2<type, _A0, _A1 const, _A2 const>::type
-    operator() (_A0& __a0, _A1 const& __a1, _A2 const& __a2) const {
-        return _VSTD::__invoke(get(), __a0, __a1, __a2);
-    }
-
-    template <class _A0, class _A1, class _A2>
-    _LIBCPP_INLINE_VISIBILITY
-    typename __invoke_return2<type, _A0 const, _A1 const, _A2 const>::type
-    operator() (_A0 const& __a0, _A1 const& __a1, _A2 const& __a2) const {
-        return _VSTD::__invoke(get(), __a0, __a1, __a2);
-    }
-#endif // _LIBCPP_CXX03_LANG
 };
 
 #if _LIBCPP_STD_VER > 14

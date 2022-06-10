@@ -212,8 +212,6 @@ struct __weak_result_type<_Rp (_Cp::*)(_A1) const volatile>
 {
 };
 
-
-#ifndef _LIBCPP_CXX03_LANG
 // 3 or more arguments
 
 template <class _Rp, class _A1, class _A2, class _A3, class ..._A4>
@@ -263,59 +261,6 @@ struct __invoke_return
 {
     typedef decltype(_VSTD::__invoke(declval<_Tp>(), declval<_Args>()...)) type;
 };
-
-#else
-
-template <class _Fp, bool = __has_result_type<__weak_result_type<_Fp> >::value>
-struct __invoke_return
-{
-    typedef typename __weak_result_type<_Fp>::result_type type;
-};
-
-template <class _Fp>
-struct __invoke_return<_Fp, false>
-{
-    typedef decltype(_VSTD::__invoke(declval<_Fp&>())) type;
-};
-
-template <class _Tp, class _A0>
-struct __invoke_return0
-{
-    typedef decltype(_VSTD::__invoke(declval<_Tp&>(), declval<_A0&>())) type;
-};
-
-template <class _Rp, class _Tp, class _A0>
-struct __invoke_return0<_Rp _Tp::*, _A0>
-{
-    typedef typename __enable_invoke<_Rp _Tp::*, _A0>::type type;
-};
-
-template <class _Tp, class _A0, class _A1>
-struct __invoke_return1
-{
-    typedef decltype(_VSTD::__invoke(declval<_Tp&>(), declval<_A0&>(),
-                                                      declval<_A1&>())) type;
-};
-
-template <class _Rp, class _Class, class _A0, class _A1>
-struct __invoke_return1<_Rp _Class::*, _A0, _A1> {
-    typedef typename __enable_invoke<_Rp _Class::*, _A0>::type type;
-};
-
-template <class _Tp, class _A0, class _A1, class _A2>
-struct __invoke_return2
-{
-    typedef decltype(_VSTD::__invoke(declval<_Tp&>(), declval<_A0&>(),
-                                                      declval<_A1&>(),
-                                                      declval<_A2&>())) type;
-};
-
-template <class _Ret, class _Class, class _A0, class _A1, class _A2>
-struct __invoke_return2<_Ret _Class::*, _A0, _A1, _A2> {
-    typedef typename __enable_invoke<_Ret _Class::*, _A0>::type type;
-};
-
-#endif // !defined(_LIBCPP_CXX03_LANG)
 
 _LIBCPP_END_NAMESPACE_STD
 
