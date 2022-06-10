@@ -7,9 +7,6 @@ that are developed as part of the LLVM compiler infrastructure project and the
 Clang frontend.  These tools are kept in a separate "extra" repository to
 allow lighter weight checkouts of the core Clang codebase.
 
-This repository is only intended to be checked out inside of a full LLVM+Clang
-tree, and in the 'tools/extra' subdirectory of the Clang checkout.
-
 All discussion regarding Clang, Clang-based tools, and code in this repository
 should be held using the standard Clang forum:
   https://discourse.llvm.org/c/clang
@@ -19,4 +16,4 @@ commit lists:
   http://lists.llvm.org/mailman/listinfo/cfe-commits
 
 If you find a bug in these tools, please file it in the LLVM bug tracker:
-  http://llvm.org/bugs/
+  https://github.com/llvm/llvm-project/issues/
