@@ -62,7 +62,7 @@ FlattenedDependencyGraph DependencyGraphFlattenerAnalysis::run(Function &F,
 
 PreservedAnalyses
 DependencyGraphFlattenerPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
-  OS << "Printing analysis results of FDG for function "
+  OS << "Printing analysis results for function "
      << "'" << F.getName() << "':"
      << "\n";
   AM.getResult<DependencyGraphFlattenerAnalysis>(F).print(OS);
