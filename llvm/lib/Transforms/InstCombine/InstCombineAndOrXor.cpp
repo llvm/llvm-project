@@ -1869,6 +1869,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     };
     BinaryOperator *BO;
     if (match(Op0, m_OneUse(m_BinOp(BO))) && isSuitableBinOpcode(BO)) {
+      Instruction::BinaryOps BOpcode = BO->getOpcode();
       Value *X;
       const APInt *C1;
       // TODO: The one-use restrictions could be relaxed a little if the AND
@@ -1878,12 +1879,54 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         unsigned XWidth = X->getType()->getScalarSizeInBits();
         Constant *TruncC1 = ConstantInt::get(X->getType(), C1->trunc(XWidth));
         Value *BinOp = isa<ZExtInst>(BO->getOperand(0))
-                           ? Builder.CreateBinOp(BO->getOpcode(), X, TruncC1)
-                           : Builder.CreateBinOp(BO->getOpcode(), TruncC1, X);
+                           ? Builder.CreateBinOp(BOpcode, X, TruncC1)
+                           : Builder.CreateBinOp(BOpcode, TruncC1, X);
         Constant *TruncC = ConstantInt::get(X->getType(), C->trunc(XWidth));
         Value *And = Builder.CreateAnd(BinOp, TruncC);
         return new ZExtInst(And, Ty);
       }
+
+      if (match(BO->getOperand(0), m_OneUse(m_ZExt(m_Value(X)))) &&
+          C->isMask(X->getType()->getScalarSizeInBits())) {
+        Y = BO->getOperand(1);
+        Value *TrY = Builder.CreateTrunc(Y, X->getType(), Y->getName() + ".tr");
+        Value *NewBO =
+            Builder.CreateBinOp(BOpcode, X, TrY, BO->getName() + ".narrow");
+        return new ZExtInst(NewBO, Ty);
+      }
+
+      if (match(BO->getOperand(1), m_OneUse(m_ZExt(m_Value(X)))) &&
+          C->isMask(X->getType()->getScalarSizeInBits())) {
+        Y = BO->getOperand(0);
+        Value *TrY = Builder.CreateTrunc(Y, X->getType(), Y->getName() + ".tr");
+        Value *NewBO =
+            Builder.CreateBinOp(BOpcode, TrY, X, BO->getName() + ".narrow");
+        return new ZExtInst(NewBO, Ty);
+      }
+    }
+
+    Constant *C1, *C2;
+    const APInt *C3 = C;
+    Value *X;
+    if (C3->isPowerOf2() &&
+        match(Op0, m_OneUse(m_LShr(m_Shl(m_ImmConstant(C1), m_Value(X)),
+                                   m_ImmConstant(C2)))) &&
+        match(C1, m_Power2())) {
+      Constant *Log2C1 = ConstantExpr::getExactLogBase2(C1);
+      Constant *Log2C3 = ConstantInt::get(Ty, C3->countTrailingZeros());
+      Constant *LshrC = ConstantExpr::getAdd(C2, Log2C3);
+      KnownBits KnownLShrc = computeKnownBits(LshrC, 0, nullptr);
+      if (KnownLShrc.getMaxValue().ult(Width)) {
+        // iff C1,C3 is pow2 and C2 + cttz(C3) < BitWidth:
+        // ((C1 << X) >> C2) & C3 -> X == (cttz(C3)+C2-cttz(C1)) ? C3 : 0
+        Constant *CmpC = ConstantExpr::getSub(LshrC, Log2C1);
+        Value *Cmp = Builder.CreateICmpEQ(X, CmpC);
+        return SelectInst::Create(Cmp, ConstantInt::get(Ty, *C3),
+                                  ConstantInt::getNullValue(Ty));
+      }
+      // TODO: Symmetrical case
+      // iff C1,C3 is pow2 and Log2(C3) >= C2:
+      // ((C1 >> X) << C2) & C3 -> X == (cttz(C1)+C2-cttz(C3)) ? C3 : 0
     }
   }
 

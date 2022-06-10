@@ -28,7 +28,7 @@ class HandleSegvTestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         signo = process.GetUnixSignals().GetSignalNumberFromName("SIGSEGV")
 
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)

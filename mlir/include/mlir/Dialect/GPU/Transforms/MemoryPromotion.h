@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_GPU_MEMORYPROMOTION_H
-#define MLIR_DIALECT_GPU_MEMORYPROMOTION_H
+#ifndef MLIR_DIALECT_GPU_TRANSFORMS_MEMORYPROMOTION_H
+#define MLIR_DIALECT_GPU_TRANSFORMS_MEMORYPROMOTION_H
 
 namespace mlir {
 
@@ -26,4 +26,4 @@ void promoteToWorkgroupMemory(gpu::GPUFuncOp op, unsigned arg);
 
 } // namespace mlir
 
-#endif // MLIR_DIALECT_GPU_MEMORYPROMOTION_H
+#endif // MLIR_DIALECT_GPU_TRANSFORMS_MEMORYPROMOTION_H

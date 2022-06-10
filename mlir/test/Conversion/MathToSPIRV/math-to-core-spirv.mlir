@@ -19,7 +19,7 @@ func.func @copy_sign_scalar(%value: f32, %sign: f32) -> f32 {
 
 // -----
 
-module attributes { spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float16, Int16], []>, {}> } {
+module attributes { spv.target_env = #spv.target_env<#spv.vce<v1.0, [Float16, Int16], []>, #spv.resource_limits<>> } {
 
 func.func @copy_sign_vector(%value: vector<3xf16>, %sign: vector<3xf16>) -> vector<3xf16> {
   %0 = math.copysign %value, %sign : vector<3xf16>

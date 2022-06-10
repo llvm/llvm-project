@@ -78,9 +78,12 @@ private:
   }
 
   static bool hasELFInitSection(LinkGraph &G) {
-    for (auto &Sec : G.sections())
-      if (Sec.getName() == ".init_array")
+    for (auto &Sec : G.sections()) {
+      auto SecName = Sec.getName();
+      if (SecName.consume_front(".init_array") &&
+          (SecName.empty() || SecName[0] == '.'))
         return true;
+    }
     return false;
   }
 

@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_GPU_PASSES_H_
-#define MLIR_DIALECT_GPU_PASSES_H_
+#ifndef MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
+#define MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Pass/Pass.h"
 
 namespace llvm {
@@ -126,8 +126,8 @@ std::unique_ptr<Pass> createGpuSerializeToHsacoPass(StringRef triple,
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
-#include "mlir/Dialect/GPU/Passes.h.inc"
+#include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
 
 } // namespace mlir
 
-#endif // MLIR_DIALECT_GPU_PASSES_H_
+#endif // MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
