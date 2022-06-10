@@ -4996,8 +4996,9 @@ def analysis_UnoptimizedCFG : Flag<["-"], "unoptimized-cfg">,
 def analysis_CFGAddImplicitDtors : Flag<["-"], "cfg-add-implicit-dtors">,
   HelpText<"Add C++ implicit destructors to CFGs for all analyses">;
 
+// We should remove this option in clang-16 release.
 def analyzer_store : Separate<["-"], "analyzer-store">,
-  HelpText<"Source Code Analysis - Abstract Memory Store Models">;
+  HelpText<"Source Code Analysis - Abstract Memory Store Models [DEPRECATED, removing in clang-16]">;
 def analyzer_store_EQ : Joined<["-"], "analyzer-store=">, Alias<analyzer_store>;
 
 def analyzer_constraints : Separate<["-"], "analyzer-constraints">,
