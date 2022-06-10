@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/Grammar.h"
-#include "clang-pseudo/LRGraph.h"
-#include "clang-pseudo/LRTable.h"
+#include "clang-pseudo/grammar/Grammar.h"
+#include "clang-pseudo/grammar/LRGraph.h"
+#include "clang-pseudo/grammar/LRTable.h"
 #include "clang/Basic/TokenKinds.h"
 #include <cstdint>
 

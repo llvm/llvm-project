@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-pseudo/GLR.h"
-#include "clang-pseudo/Grammar.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "clang-pseudo/Token.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TokenKinds.h"

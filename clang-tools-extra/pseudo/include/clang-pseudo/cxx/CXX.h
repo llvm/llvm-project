@@ -23,7 +23,7 @@
 #ifndef CLANG_PSEUDO_CXX_CXX_H
 #define CLANG_PSEUDO_CXX_CXX_H
 
-#include "clang-pseudo/Grammar.h"
+#include "clang-pseudo/grammar/Grammar.h"
 
 namespace clang {
 namespace pseudo {

@@ -28,10 +28,10 @@
 //  in making decisions.
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_PSEUDO_LRGRAPH_H
-#define CLANG_PSEUDO_LRGRAPH_H
+#ifndef CLANG_PSEUDO_GRAMMAR_LRGRAPH_H
+#define CLANG_PSEUDO_GRAMMAR_LRGRAPH_H
 
-#include "clang-pseudo/Grammar.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "llvm/ADT/Hashing.h"
 #include <vector>
 
@@ -178,4 +178,4 @@ template <> struct DenseMapInfo<clang::pseudo::Item> {
 };
 } // namespace llvm
 
-#endif // CLANG_PSEUDO_LRGRAPH_H
+#endif // CLANG_PSEUDO_GRAMMAR_LRGRAPH_H

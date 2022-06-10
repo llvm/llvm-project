@@ -20,8 +20,8 @@
 #ifndef CLANG_PSEUDO_FOREST_H
 #define CLANG_PSEUDO_FOREST_H
 
-#include "clang-pseudo/Grammar.h"
 #include "clang-pseudo/Token.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Allocator.h"

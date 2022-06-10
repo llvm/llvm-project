@@ -33,10 +33,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_PSEUDO_LRTABLE_H
-#define CLANG_PSEUDO_LRTABLE_H
+#ifndef CLANG_PSEUDO_GRAMMAR_LRTABLE_H
+#define CLANG_PSEUDO_GRAMMAR_LRTABLE_H
 
-#include "clang-pseudo/Grammar.h"
+#include "clang-pseudo/grammar/Grammar.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cstdint>
 #include <vector>
@@ -189,4 +189,4 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LRTable::Action &);
 } // namespace pseudo
 } // namespace clang
 
-#endif // CLANG_PSEUDO_LRTABLE_H
+#endif // CLANG_PSEUDO_GRAMMAR_LRTABLE_H
