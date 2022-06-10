@@ -118,7 +118,7 @@ def Transform_Dialect : Dialect {
         mapping between transform IR values and payload IR operations.
         
         - An `Allocate` effect from this resource means creating a new mapping
-          entry, it is always accompanied by a `Write` effet.
+          entry, it is always accompanied by a `Write` effect.
           
         - A `Read` effect from this resource means accessing the mapping.
         
@@ -150,6 +150,37 @@ def Transform_Dialect : Dialect {
     meaningless to refer to them. When further transformations are desired, the
     transform operations can return _new_ handles that can be read or consumed
     by subsequent operations.
+
+    ## Handle Invalidation
+
+    The execution model of the transform dialect expects that a payload IR
+    operation is associated with _at most one_ transform IR handle. This avoids
+    the situation when a handle to an operation outlives the operation itself
+    that can be erased during a transformation triggered through another handle.
+
+    Handles pointing to operations nested in each other are allowed to co-exist
+    in the transform IR. However, a transform IR operation that consumes such a
+    handle automatically _invalidates_ all the other handles that are associated
+    with operations nested in the operations associated with the consumed
+    handle. Any use of the invalidated handle results in undefined behavior
+    since the payload IR operations associated with it are likely to have been
+    mutated or erased. The mere fact of the handle being invalidated does _not_
+    trigger undefined behavior, only its appearance as an operand does.
+    Invalidation applies to the entire handle, even if some of the payload IR
+    operations associated with it are not nested in payload IR operations
+    associated with another, consumed handle.
+
+    Note: the restriction on two handles not pointing to the same operation may
+    be relaxed in the future to follow the invalidation model for nested
+    operation.
+
+    The Transform dialect infrastructure has the capability of checking whether
+    the transform IR op operand is invalidated before applying the
+    transformation. However, such a check is computationally expensive and
+    must be enabled explicitly through `TransformOptions`. Additionally, the
+    `transform-dialect-check-uses` pass emits warnings when a handle may be used
+    after it has been consumed, but does so abstractly, without processing the
+    payload IR.
 
     ## Intended Use and Integrations
 
@@ -184,7 +215,7 @@ def Transform_Dialect : Dialect {
     differentiate between the parts of the loop produced by the previous pass
     (both are the same operation, and it is likely undesirable to pollute the
     operation with pass-specific information). Implementing passes that run the
-    combined transfomration would have run into the combinatorial explosion
+    combined transformation would have run into the combinatorial explosion
     issue due to multiple possible transform compositions or into the need for
     deep pass parameterization, the ultimate form of which is an ad-hoc dialect
     to specify which transformations the pass should run. The transform dialect
@@ -200,7 +231,7 @@ def Transform_Dialect : Dialect {
     takes care of bookkeeping. As such, the transform dialect does not provide
     the interpreter pass. Instead, it provides a set of utilities that can be
     used by clients to define their own interpreter passes or as part of a more
-    complex pass. For example, the mapping between values in the tranfsorm IR
+    complex pass. For example, the mapping between values in the transform IR
     and operations in the payload IR, or the function that applies the
     transformations specified by ops in the given block sequentially. Note that
     a transform op may have regions with further transform ops in them, with

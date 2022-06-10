@@ -27,6 +27,10 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
       TestTransformDialectInterpreterPass)
 
+  TestTransformDialectInterpreterPass() = default;
+  TestTransformDialectInterpreterPass(
+      const TestTransformDialectInterpreterPass &) {}
+
   StringRef getArgument() const override {
     return "test-transform-dialect-interpreter";
   }
@@ -37,13 +41,21 @@ public:
 
   void runOnOperation() override {
     ModuleOp module = getOperation();
-    transform::TransformState state(module.getBodyRegion(), module);
+    transform::TransformState state(
+        module.getBodyRegion(), module,
+        transform::TransformOptions().enableExpensiveChecks(
+            enableExpensiveChecks));
     for (auto op :
          module.getBody()->getOps<transform::TransformOpInterface>()) {
       if (failed(state.applyTransform(op)))
         return signalPassFailure();
     }
   }
+
+  Option<bool> enableExpensiveChecks{
+      *this, "enable-expensive-checks", llvm::cl::init(false),
+      llvm::cl::desc("perform expensive checks to better report errors in the "
+                     "transform IR")};
 };
 } // namespace
 

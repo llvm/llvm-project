@@ -34,6 +34,15 @@ def TestProduceParamOrForwardOperandOp
   let hasVerifier = 1;
 }
 
+def TestConsumeOperand : Op<Transform_Dialect, "test_consume_operand",
+     [DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins
+    Arg<PDL_Operation, "",
+        [TransformMappingRead, TransformMappingFree]>:$operand);
+  let assemblyFormat = "$operand attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
 def TestConsumeOperandIfMatchesParamOrFail
   : Op<Transform_Dialect, "test_consume_operand_if_matches_param_or_fail",
        [DeclareOpInterfaceMethods<TransformOpInterface>]> {
