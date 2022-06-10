@@ -621,9 +621,10 @@ struct ObjectFileInstance : public PluginInstance<ObjectFileCreateInstance> {
       CallbackType create_callback,
       ObjectFileCreateMemoryInstance create_memory_callback,
       ObjectFileGetModuleSpecifications get_module_specifications,
-      ObjectFileSaveCore save_core)
-      : PluginInstance<ObjectFileCreateInstance>(name, description,
-                                                 create_callback),
+      ObjectFileSaveCore save_core,
+      DebuggerInitializeCallback debugger_init_callback)
+      : PluginInstance<ObjectFileCreateInstance>(
+            name, description, create_callback, debugger_init_callback),
         create_memory_callback(create_memory_callback),
         get_module_specifications(get_module_specifications),
         save_core(save_core) {}
@@ -644,10 +645,11 @@ bool PluginManager::RegisterPlugin(
     ObjectFileCreateInstance create_callback,
     ObjectFileCreateMemoryInstance create_memory_callback,
     ObjectFileGetModuleSpecifications get_module_specifications,
-    ObjectFileSaveCore save_core) {
+    ObjectFileSaveCore save_core,
+    DebuggerInitializeCallback debugger_init_callback) {
   return GetObjectFileInstances().RegisterPlugin(
       name, description, create_callback, create_memory_callback,
-      get_module_specifications, save_core);
+      get_module_specifications, save_core, debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(ObjectFileCreateInstance create_callback) {
@@ -1364,6 +1366,7 @@ LanguageSet PluginManager::GetREPLAllTypeSystemSupportedLanguages() {
 void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetDynamicLoaderInstances().PerformDebuggerCallback(debugger);
   GetJITLoaderInstances().PerformDebuggerCallback(debugger);
+  GetObjectFileInstances().PerformDebuggerCallback(debugger);
   GetPlatformInstances().PerformDebuggerCallback(debugger);
   GetProcessInstances().PerformDebuggerCallback(debugger);
   GetSymbolFileInstances().PerformDebuggerCallback(debugger);
@@ -1490,6 +1493,7 @@ CreateSettingForPlugin(Debugger &debugger, ConstString plugin_type_name,
 static const char *kDynamicLoaderPluginName("dynamic-loader");
 static const char *kPlatformPluginName("platform");
 static const char *kProcessPluginName("process");
+static const char *kObjectFilePluginName("object-file");
 static const char *kSymbolFilePluginName("symbol-file");
 static const char *kJITLoaderPluginName("jit-loader");
 static const char *kStructuredDataPluginName("structured-data");
@@ -1540,6 +1544,22 @@ bool PluginManager::CreateSettingForProcessPlugin(
   return CreateSettingForPlugin(debugger, ConstString(kProcessPluginName),
                                 ConstString("Settings for process plug-ins"),
                                 properties_sp, description, is_global_property);
+}
+
+lldb::OptionValuePropertiesSP
+PluginManager::GetSettingForObjectFilePlugin(Debugger &debugger,
+                                             ConstString setting_name) {
+  return GetSettingForPlugin(debugger, setting_name,
+                             ConstString(kObjectFilePluginName));
+}
+
+bool PluginManager::CreateSettingForObjectFilePlugin(
+    Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+    ConstString description, bool is_global_property) {
+  return CreateSettingForPlugin(
+      debugger, ConstString(kObjectFilePluginName),
+      ConstString("Settings for object file plug-ins"), properties_sp,
+      description, is_global_property);
 }
 
 lldb::OptionValuePropertiesSP

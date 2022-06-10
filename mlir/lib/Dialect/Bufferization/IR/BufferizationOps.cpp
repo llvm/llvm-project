@@ -139,19 +139,81 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   if (getOperation()->getUses().empty())
     return success();
 
-  FailureOr<Value> alloc = state.createAlloc(rewriter, getLoc(), getResult());
+  Optional<bool> dealloc = llvm::None;
+  if (escape().hasValue())
+    dealloc = !*escape();
+  FailureOr<Value> alloc =
+      state.createAlloc(rewriter, getLoc(), getResult(), dealloc);
   if (failed(alloc))
     return failure();
+  if (copy()) {
+    FailureOr<Value> copyValueBuffer = state.getBuffer(
+        rewriter, getOperation()->getOpOperand(getNumOperands() - 1));
+    if (failed(copyValueBuffer))
+      return failure();
+    if (failed(state.getOptions().createMemCpy(rewriter, getLoc(),
+                                               *copyValueBuffer, *alloc)))
+      return failure();
+  }
   replaceOpWithBufferizedValues(rewriter, getOperation(), *alloc);
   return success();
 }
 
+bool AllocTensorOp::isMemoryWrite(OpResult opResult,
+                                  const AnalysisState &state) {
+  // AllocTensorOps do not write unless they have a `copy` value.
+  return static_cast<bool>(copy());
+}
+
+bool AllocTensorOp::bufferizesToMemoryRead(OpOperand &opOperand,
+                                           const AnalysisState &state) {
+  assert(opOperand.getOperandNumber() == getNumOperands() - 1 &&
+         "expected copy operand");
+  return true;
+}
+
+bool AllocTensorOp::bufferizesToMemoryWrite(OpOperand &opOperand,
+                                            const AnalysisState &state) {
+  assert(opOperand.getOperandNumber() == getNumOperands() - 1 &&
+         "expected copy operand");
+  return false;
+}
+
+SmallVector<OpResult>
+AllocTensorOp::getAliasingOpResult(OpOperand &opOperand,
+                                   const AnalysisState &state) {
+  // This is a new allocation. It does not alias with any other buffer.
+  return {};
+}
+
 LogicalResult AllocTensorOp::verify() {
-  if (getType().getNumDynamicDims() !=
-      static_cast<int64_t>(dynamicSizes().size()))
+  if (copy() && !dynamicSizes().empty())
+    return emitError("dynamic sizes not needed when copying a tensor");
+  if (!copy() && getType().getNumDynamicDims() !=
+                     static_cast<int64_t>(dynamicSizes().size()))
     return emitError("expected ")
            << getType().getNumDynamicDims() << " dynamic sizes";
+  if (copy() && copy().getType() != getType())
+    return emitError("expected that `copy` and return type match");
   return success();
+}
+
+void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
+                          RankedTensorType type, ValueRange dynamicSizes) {
+  build(builder, result, type, dynamicSizes, /*copy=*/Value(),
+        /*escape=*/BoolAttr());
+}
+
+void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
+                          RankedTensorType type, ValueRange dynamicSizes,
+                          Value copy) {
+  build(builder, result, type, dynamicSizes, copy, /*escape=*/BoolAttr());
+}
+
+void AllocTensorOp::build(OpBuilder &builder, OperationState &result,
+                          RankedTensorType type, ValueRange dynamicSizes,
+                          Value copy, bool escape) {
+  build(builder, result, type, dynamicSizes, copy, builder.getBoolAttr(escape));
 }
 
 namespace {
@@ -171,6 +233,8 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
 
   LogicalResult matchAndRewrite(AllocTensorOp op,
                                 PatternRewriter &rewriter) const override {
+    if (op.copy())
+      return failure();
     SmallVector<int64_t> newShape = llvm::to_vector(op.getType().getShape());
     SmallVector<Value> newDynamicSizes;
     unsigned int dynValCounter = 0;
@@ -189,8 +253,9 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
         newShape, op.getType().getElementType(), op.getType().getEncoding());
     if (newType == op.getType())
       return failure();
-    auto newOp =
-        rewriter.create<AllocTensorOp>(op.getLoc(), newType, newDynamicSizes);
+    auto newOp = rewriter.create<AllocTensorOp>(
+        op.getLoc(), newType, newDynamicSizes, /*copy=*/Value(),
+        /*escape=*/op.escapeAttr());
     rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
     return success();
   }
@@ -207,8 +272,8 @@ struct FoldDimOfAllocTensorOp : public OpRewritePattern<tensor::DimOp> {
       return failure();
     if (!allocTensorOp.getType().isDynamicDim(*maybeConstantIndex))
       return failure();
-    rewriter.replaceOp(dimOp,
-                       allocTensorOp.getDynamicSize(*maybeConstantIndex));
+    rewriter.replaceOp(
+        dimOp, allocTensorOp.getDynamicSize(rewriter, *maybeConstantIndex));
     return success();
   }
 };
@@ -224,12 +289,65 @@ LogicalResult AllocTensorOp::reifyResultShapes(
   auto shapes = llvm::to_vector<4>(llvm::map_range(
       llvm::seq<int64_t>(0, getType().getRank()), [&](int64_t dim) -> Value {
         if (isDynamicDim(dim))
-          return getDynamicSize(dim);
+          return getDynamicSize(builder, dim);
         return builder.create<arith::ConstantIndexOp>(getLoc(),
                                                       getStaticSize(dim));
       }));
   reifiedReturnShapes.emplace_back(std::move(shapes));
   return success();
+}
+
+ParseResult AllocTensorOp::parse(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand> dynamicSizesOperands;
+  if (parser.parseLParen() || parser.parseOperandList(dynamicSizesOperands) ||
+      parser.parseRParen())
+    return failure();
+  ParseResult copyKeyword = parser.parseOptionalKeyword("copy");
+  OpAsmParser::UnresolvedOperand copyOperand;
+  if (copyKeyword.succeeded())
+    if (parser.parseLParen() || parser.parseOperand(copyOperand) ||
+        parser.parseRParen())
+      return failure();
+  if (parser.parseOptionalAttrDict(result.attributes) || parser.parseColon())
+    return failure();
+
+  TensorType type;
+  if (parser.parseCustomTypeWithFallback(type))
+    return failure();
+  result.addTypes(type);
+
+  Type indexType = parser.getBuilder().getIndexType();
+  if (parser.resolveOperands(dynamicSizesOperands, indexType, result.operands))
+    return failure();
+  if (copyKeyword.succeeded())
+    if (parser.resolveOperand(copyOperand, type, result.operands))
+      return failure();
+  result.addAttribute(AllocTensorOp::getOperandSegmentSizeAttr(),
+                      parser.getBuilder().getI32VectorAttr(
+                          {static_cast<int32_t>(dynamicSizesOperands.size()),
+                           static_cast<int32_t>(copyKeyword.succeeded())}));
+  return success();
+}
+
+void AllocTensorOp::print(OpAsmPrinter &p) {
+  p << "(" << dynamicSizes() << ")";
+  if (copy())
+    p << " copy(" << copy() << ")";
+  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
+                              AllocTensorOp::getOperandSegmentSizeAttr()});
+  p << " : ";
+  auto type = result().getType();
+  if (auto validType = type.dyn_cast<::mlir::TensorType>())
+    p.printStrippedAttrOrType(validType);
+  else
+    p << type;
+}
+
+Value AllocTensorOp::getDynamicSize(OpBuilder &b, unsigned idx) {
+  assert(isDynamicDim(idx) && "expected dynamic dim");
+  if (copy())
+    return b.create<tensor::DimOp>(getLoc(), copy(), idx);
+  return getOperand(getIndexOfDynamicSize(idx));
 }
 
 //===----------------------------------------------------------------------===//
