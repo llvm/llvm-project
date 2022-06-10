@@ -3441,6 +3441,19 @@ static void inferDSOLocal(GlobalValue *GV) {
     GV->setDSOLocal(true);
 }
 
+GlobalValue::SanitizerMetadata deserializeSanitizerMetadata(unsigned V) {
+  GlobalValue::SanitizerMetadata Meta;
+  if (V & (1 << 0))
+    Meta.NoAddress = true;
+  if (V & (1 << 1))
+    Meta.NoHWAddress = true;
+  if (V & (1 << 2))
+    Meta.NoMemtag = true;
+  if (V & (1 << 3))
+    Meta.IsDynInit = true;
+  return Meta;
+}
+
 Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   // v1: [pointer type, isconst, initid, linkage, alignment, section,
   // visibility, threadlocal, unnamed_addr, externally_initialized,
@@ -3543,6 +3556,12 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   // Check whether we have enough values to read a partition name.
   if (Record.size() > 15)
     NewGV->setPartition(StringRef(Strtab.data() + Record[14], Record[15]));
+
+  if (Record.size() > 16 && Record[16] != UINT_MAX) {
+    llvm::GlobalValue::SanitizerMetadata Meta =
+        deserializeSanitizerMetadata(Record[16]);
+    NewGV->setSanitizerMetadata(Meta);
+  }
 
   return Error::success();
 }
