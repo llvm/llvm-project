@@ -543,4 +543,71 @@ lpad:
   EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, LINew));
 }
 
+TEST_F(FunctionPropertiesAnalysisTest, InlineSameLoopBB) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = makeLLVMModule(C,
+                                             R"IR(
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+declare i32 @a()
+declare i32 @b()
+
+define i32 @f1(i32 %a) {
+entry:
+  br label %loop
+loop:
+  %i = call i32 @f2(i32 %a)
+  %c = icmp slt i32 %i, %a
+  br i1 %c, label %loop, label %end
+end:
+  %r = phi i32 [%i, %loop], [%a, %entry]
+  ret i32 %r
+}
+
+define i32 @f2(i32 %a) {
+  %cnd = icmp slt i32 %a, 0
+  br i1 %cnd, label %then, label %else
+then:
+  %r1 = call i32 @a()
+  br label %end
+else:
+  %r2 = call i32 @b()
+  br label %end
+end:
+  %r = phi i32 [%r1, %then], [%r2, %else]
+  ret i32 %r
+}
+)IR");
+
+  Function *F1 = M->getFunction("f1");
+  CallBase *CB = findCall(*F1);
+  EXPECT_NE(CB, nullptr);
+
+  FunctionPropertiesInfo ExpectedInitial;
+  ExpectedInitial.BasicBlockCount = 3;
+  ExpectedInitial.TotalInstructionCount = 6;
+  ExpectedInitial.BlocksReachedFromConditionalInstruction = 2;
+  ExpectedInitial.Uses = 1;
+  ExpectedInitial.DirectCallsToDefinedFunctions = 1;
+  ExpectedInitial.MaxLoopDepth = 1;
+  ExpectedInitial.TopLevelLoopCount = 1;
+
+  FunctionPropertiesInfo ExpectedFinal = ExpectedInitial;
+  ExpectedFinal.BasicBlockCount = 6;
+  ExpectedFinal.DirectCallsToDefinedFunctions = 0;
+  ExpectedFinal.BlocksReachedFromConditionalInstruction = 4;
+  ExpectedFinal.TotalInstructionCount = 12;
+
+  auto FPI = buildFPI(*F1);
+  EXPECT_EQ(FPI, ExpectedInitial);
+
+  FunctionPropertiesUpdater FPU(FPI, *CB);
+  InlineFunctionInfo IFI;
+  auto IR = llvm::InlineFunction(*CB, IFI);
+  EXPECT_TRUE(IR.isSuccess());
+  FPU.finish(*LI);
+  EXPECT_EQ(FPI, ExpectedFinal);
+}
+
 } // end anonymous namespace
