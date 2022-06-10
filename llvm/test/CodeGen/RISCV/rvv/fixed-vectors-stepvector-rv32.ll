@@ -14,6 +14,18 @@ define <2 x i8> @stepvector_v2i8() {
   ret <2 x i8> %v
 }
 
+declare <3 x i8> @llvm.experimental.stepvector.v3i8()
+
+define <3 x i8> @stepvector_v3i8() {
+; CHECK-LABEL: stepvector_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    ret
+  %v = call <3 x i8> @llvm.experimental.stepvector.v3i8()
+  ret <3 x i8> %v
+}
+
 declare <4 x i8> @llvm.experimental.stepvector.v4i8()
 
 define <4 x i8> @stepvector_v4i8() {
