@@ -2473,7 +2473,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
 
     if (ICVTrackingAA.isAssumedTracked()) {
       Optional<Value *> URV = ICVTrackingAA.getUniqueReplacementValue(ICV);
-      if (!URV || (*URV && AA::isValidAtPosition(**URV, I, OMPInfoCache)))
+      if (!URV || (*URV && AA::isValidAtPosition(AA::ValueAndContext(**URV, I),
+                                                 OMPInfoCache)))
         return URV;
     }
 

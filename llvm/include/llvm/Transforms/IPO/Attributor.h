@@ -155,6 +155,16 @@ enum ValueScope : uint8_t {
   Interprocedural = 2,
 };
 
+struct ValueAndContext : public std::pair<Value *, const Instruction *> {
+  using Base = std::pair<Value *, const Instruction *>;
+  ValueAndContext(const Base &B) : Base(B) {}
+  ValueAndContext(Value &V, const Instruction *CtxI) : Base(&V, CtxI) {}
+  ValueAndContext(Value &V, const Instruction &CtxI) : Base(&V, &CtxI) {}
+
+  Value *getValue() const { return this->first; }
+  const Instruction *getCtxI() const { return this->second; }
+};
+
 /// Return true if \p I is a `nosync` instruction. Use generic reasoning and
 /// potentially the corresponding AANoSync.
 bool isNoSyncInst(Attributor &A, const Instruction &I,
@@ -172,11 +182,10 @@ bool isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
 /// instruction/argument of \p Scope.
 bool isValidInScope(const Value &V, const Function *Scope);
 
-/// Return true if \p V is a valid value at position \p CtxI, that is a
-/// constant, an argument of the same function as \p CtxI, or an instruction in
-/// that function that dominates \p CtxI.
-bool isValidAtPosition(const Value &V, const Instruction &CtxI,
-                       InformationCache &InfoCache);
+/// Return true if the value of \p VAC is a valid at the position of \p VAC,
+/// that is a constant, an argument of the same function, or an instruction in
+/// that function that dominates the position.
+bool isValidAtPosition(const ValueAndContext &VAC, InformationCache &InfoCache);
 
 /// Try to convert \p V to type \p Ty without introducing new instructions. If
 /// this is not possible return `nullptr`. Note: this function basically knows
@@ -273,6 +282,26 @@ bool isPotentiallyReachable(
     std::function<bool(const Function &F)> GoBackwardsCB);
 
 } // namespace AA
+
+template <>
+struct DenseMapInfo<AA::ValueAndContext>
+    : public DenseMapInfo<AA::ValueAndContext::Base> {
+  using Base = DenseMapInfo<AA::ValueAndContext::Base>;
+  static inline AA::ValueAndContext getEmptyKey() {
+    return Base::getEmptyKey();
+  }
+  static inline AA::ValueAndContext getTombstoneKey() {
+    return Base::getTombstoneKey();
+  }
+  static unsigned getHashValue(const AA::ValueAndContext &VAC) {
+    return Base::getHashValue(VAC);
+  }
+
+  static bool isEqual(const AA::ValueAndContext &LHS,
+                      const AA::ValueAndContext &RHS) {
+    return Base::isEqual(LHS, RHS);
+  }
+};
 
 /// The value passed to the line option that defines the maximal initialization
 /// chain length.

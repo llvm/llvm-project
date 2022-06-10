@@ -242,24 +242,27 @@ bool AA::isValidInScope(const Value &V, const Function *Scope) {
   return false;
 }
 
-bool AA::isValidAtPosition(const Value &V, const Instruction &CtxI,
+bool AA::isValidAtPosition(const AA::ValueAndContext &VAC,
                            InformationCache &InfoCache) {
-  if (isa<Constant>(V) || &V == &CtxI)
+  if (isa<Constant>(VAC.getValue()) || VAC.getValue() == VAC.getCtxI())
     return true;
-  const Function *Scope = CtxI.getFunction();
-  if (auto *A = dyn_cast<Argument>(&V))
+  const Function *Scope = nullptr;
+  const Instruction *CtxI = VAC.getCtxI();
+  if (CtxI)
+    Scope = CtxI->getFunction();
+  if (auto *A = dyn_cast<Argument>(VAC.getValue()))
     return A->getParent() == Scope;
-  if (auto *I = dyn_cast<Instruction>(&V)) {
+  if (auto *I = dyn_cast<Instruction>(VAC.getValue())) {
     if (I->getFunction() == Scope) {
       if (const DominatorTree *DT =
               InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(
                   *Scope))
-        return DT->dominates(I, &CtxI);
+        return DT->dominates(I, CtxI);
       // Local dominance check mostly for the old PM passes.
-      if (I->getParent() == CtxI.getParent())
+      if (CtxI && I->getParent() == CtxI->getParent())
         return llvm::any_of(
             make_range(I->getIterator(), I->getParent()->end()),
-            [&](const Instruction &AfterI) { return &AfterI == &CtxI; });
+            [&](const Instruction &AfterI) { return &AfterI == CtxI; });
     }
   }
   return false;
