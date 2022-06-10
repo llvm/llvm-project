@@ -24,7 +24,7 @@ names to attribute values.
 Every SSA value, such as operation results or block arguments, in MLIR has a type
 defined by the type system. MLIR has an open type system with no fixed list of types,
 and there are no restrictions on the abstractions they represent. For example, take
-the following [Arithemetic AddI operation](Dialects/ArithmeticOps.md#arithaddi-mlirarithaddiop):
+the following [Arithmetic AddI operation](Dialects/ArithmeticOps.md#arithaddi-mlirarithaddiop):
 
 ```mlir
   %result = arith.addi %lhs, %rhs : i64
@@ -295,7 +295,7 @@ documentation for more information on defining and using interfaces.
 
 For each attribute or type, there are a few builders(`get`/`getChecked`)
 automatically generated based on the parameters of the type. These are used to
-construct instances of the correpsonding attribute or type. For example, given
+construct instances of the corresponding attribute or type. For example, given
 the following definition:
 
 ```tablegen
@@ -519,7 +519,7 @@ assembly format consists of literals, variables, and directives.
 
 - A literal is a keyword or valid punctuation enclosed in backticks, e.g.
   `` `keyword` `` or `` `<` ``.
-- A variable is a parameter name preceeded by a dollar sign, e.g. `$param0`,
+- A variable is a parameter name preceded by a dollar sign, e.g. `$param0`,
   which captures one attribute or type parameter.
 - A directive is a keyword followed by an optional argument list that defines
   special parser and printer behaviour.
