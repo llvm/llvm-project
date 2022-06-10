@@ -15,6 +15,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PlatformDefs.h"
+#include "src/__support/FPUtil/builtin_wrappers.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -31,20 +32,7 @@ template <> struct SpecialLongDouble<long double> {
 };
 #endif // SPECIAL_X86_LONG_DOUBLE
 
-// The following overloads are matched based on what is accepted by
-// __builtin_clz* rather than using the exactly-sized aliases from stdint.h.
-// This way, we can avoid making any assumptions about integer sizes and let the
-// compiler match for us.
-template <typename T> static inline int clz(T val);
-template <> inline int clz<unsigned int>(unsigned int val) {
-  return __builtin_clz(val);
-}
-template <> inline int clz<unsigned long int>(unsigned long int val) {
-  return __builtin_clzl(val);
-}
-template <> inline int clz<unsigned long long int>(unsigned long long int val) {
-  return __builtin_clzll(val);
-}
+using fputil::ctz;
 
 template <typename T>
 static inline void normalize(int &exponent,
