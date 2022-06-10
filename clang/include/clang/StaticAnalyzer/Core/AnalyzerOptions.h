@@ -40,6 +40,13 @@ enum Analyses {
 NumAnalyses
 };
 
+/// AnalysisStores - Set of available analysis store models.
+enum AnalysisStores {
+#define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATFN) NAME##Model,
+#include "clang/StaticAnalyzer/Core/Analyses.def"
+NumStores
+};
+
 /// AnalysisConstraints - Set of available constraint models.
 enum AnalysisConstraints {
 #define ANALYSIS_CONSTRAINTS(NAME, CMDFLAG, DESC, CREATFN) NAME##Model,
@@ -200,6 +207,7 @@ public:
   /// A key-value table of use-specified configuration values.
   // TODO: This shouldn't be public.
   ConfigTable Config;
+  AnalysisStores AnalysisStoreOpt = RegionStoreModel;
   AnalysisConstraints AnalysisConstraintsOpt = RangeConstraintsModel;
   AnalysisDiagClients AnalysisDiagOpt = PD_HTML;
   AnalysisPurgeMode AnalysisPurgeOpt = PurgeStmt;
@@ -236,6 +244,7 @@ public:
   unsigned ShouldEmitErrorsOnInvalidConfigValue : 1;
   unsigned AnalyzeAll : 1;
   unsigned AnalyzerDisplayProgress : 1;
+  unsigned AnalyzeNestedBlocks : 1;
 
   unsigned eagerlyAssumeBinOpBifurcation : 1;
 
@@ -297,10 +306,10 @@ public:
         ShowCheckerOptionList(false), ShowCheckerOptionAlphaList(false),
         ShowCheckerOptionDeveloperList(false), ShowEnabledCheckerList(false),
         ShowConfigOptionsList(false), AnalyzeAll(false),
-        AnalyzerDisplayProgress(false), eagerlyAssumeBinOpBifurcation(false),
-        TrimGraph(false), visualizeExplodedGraphWithGraphViz(false),
-        UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false),
-        AnalyzerWerror(false) {
+        AnalyzerDisplayProgress(false), AnalyzeNestedBlocks(false),
+        eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
+        visualizeExplodedGraphWithGraphViz(false), UnoptimizedCFG(false),
+        PrintStats(false), NoRetryExhausted(false), AnalyzerWerror(false) {
     llvm::sort(AnalyzerConfigCmdFlags);
   }
 

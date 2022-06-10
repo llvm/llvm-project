@@ -1,8 +1,8 @@
-// RUN: %clang_analyze_cc1 -fblocks -verify %s \
+// RUN: %clang_analyze_cc1 -fblocks -verify %s -analyzer-store=region \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.Malloc
 //
-// RUN: %clang_analyze_cc1 -fblocks -verify %s \
+// RUN: %clang_analyze_cc1 -fblocks -verify %s -analyzer-store=region \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.Malloc \
 // RUN:   -analyzer-config unix.DynamicMemoryModeling:Optimistic=true
