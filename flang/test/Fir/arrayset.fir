@@ -1,4 +1,5 @@
 // RUN: tco %s | FileCheck %s
+// RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: define void @x(ptr %0)
 func.func @x(%arr : !fir.ref<!fir.array<10xf32>>) {

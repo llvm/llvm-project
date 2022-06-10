@@ -1,4 +1,5 @@
 // RUN: tco %s | FileCheck %s
+// RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s
 
 // Test fir.is_present and fir.absent codegen
 

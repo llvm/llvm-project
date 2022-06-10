@@ -1,4 +1,5 @@
 // RUN: tco %s | FileCheck %s
+// RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: @character_literal1
 func.func @character_literal1() -> !fir.char<1,13> {

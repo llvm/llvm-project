@@ -32,6 +32,7 @@
 #include "flang/Semantics/unparse-with-symbols.h"
 
 #include "mlir/IR/Dialect.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "clang/Basic/Diagnostic.h"
@@ -96,6 +97,34 @@ bool CodeGenAction::beginSourceFileAction() {
     return true;
   }
 
+  // Load the MLIR dialects required by Flang
+  mlir::DialectRegistry registry;
+  mlirCtx = std::make_unique<mlir::MLIRContext>(registry);
+  fir::support::registerNonCodegenDialects(registry);
+  fir::support::loadNonCodegenDialects(*mlirCtx);
+  fir::support::loadDialects(*mlirCtx);
+  fir::support::registerLLVMTranslation(*mlirCtx);
+
+  // If the input is an MLIR file, just parse it and return.
+  if (this->getCurrentInput().getKind().getLanguage() == Language::MLIR) {
+    llvm::SourceMgr sourceMgr;
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileOrErr =
+        llvm::MemoryBuffer::getFileOrSTDIN(getCurrentInput().getFile());
+    sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
+    mlir::OwningOpRef<mlir::ModuleOp> module =
+        mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, mlirCtx.get());
+
+    if (!module || mlir::failed(module->verifyInvariants())) {
+      unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "Could not parse FIR");
+      ci.getDiagnostics().Report(diagID);
+      return false;
+    }
+
+    mlirModule = std::make_unique<mlir::ModuleOp>(module.release());
+    return true;
+  }
+
   // Otherwise, generate an MLIR module from the input Fortran source
   if (getCurrentInput().getKind().getLanguage() != Language::Fortran) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
@@ -108,12 +137,6 @@ bool CodeGenAction::beginSourceFileAction() {
              generateRtTypeTables();
   if (!res)
     return res;
-
-  // Load the MLIR dialects required by Flang
-  mlir::DialectRegistry registry;
-  mlirCtx = std::make_unique<mlir::MLIRContext>(registry);
-  fir::support::registerNonCodegenDialects(registry);
-  fir::support::loadNonCodegenDialects(*mlirCtx);
 
   // Create a LoweringBridge
   const common::IntrinsicTypeDefaultKinds &defKinds =

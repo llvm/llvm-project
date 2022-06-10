@@ -42,6 +42,8 @@ InputKind FrontendOptions::getInputKindForExtension(llvm::StringRef extension) {
 
   if (extension == "bc" || extension == "ll")
     return Language::LLVM_IR;
+  if (extension == "fir" || extension == "mlir")
+    return Language::MLIR;
 
   return Language::Unknown;
 }
