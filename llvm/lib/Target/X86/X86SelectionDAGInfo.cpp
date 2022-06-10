@@ -67,40 +67,8 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
   // The libc version is likely to be faster for these cases. It can use the
   // address value and run time information about the CPU.
   if (Alignment < Align(4) || !ConstantSize ||
-      ConstantSize->getZExtValue() > Subtarget.getMaxInlineSizeThreshold()) {
-    // Check to see if there is a specialized entry-point for memory zeroing.
-    ConstantSDNode *ValC = dyn_cast<ConstantSDNode>(Val);
-
-    if (const char *bzeroName =
-            (ValC && ValC->isZero())
-                ? DAG.getTargetLoweringInfo().getLibcallName(RTLIB::BZERO)
-                : nullptr) {
-      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      EVT IntPtr = TLI.getPointerTy(DAG.getDataLayout());
-      Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
-      TargetLowering::ArgListTy Args;
-      TargetLowering::ArgListEntry Entry;
-      Entry.Node = Dst;
-      Entry.Ty = IntPtrTy;
-      Args.push_back(Entry);
-      Entry.Node = Size;
-      Args.push_back(Entry);
-
-      TargetLowering::CallLoweringInfo CLI(DAG);
-      CLI.setDebugLoc(dl)
-          .setChain(Chain)
-          .setLibCallee(CallingConv::C, Type::getVoidTy(*DAG.getContext()),
-                        DAG.getExternalSymbol(bzeroName, IntPtr),
-                        std::move(Args))
-          .setDiscardResult();
-
-      std::pair<SDValue,SDValue> CallResult = TLI.LowerCallTo(CLI);
-      return CallResult.second;
-    }
-
-    // Otherwise have the target-independent code call memset.
+      ConstantSize->getZExtValue() > Subtarget.getMaxInlineSizeThreshold()) 
     return SDValue();
-  }
 
   uint64_t SizeVal = ConstantSize->getZExtValue();
   SDValue InFlag;
