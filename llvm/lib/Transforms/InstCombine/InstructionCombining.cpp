@@ -1177,10 +1177,11 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
       if (cast<Instruction>(InVal)->getParent() == NonConstBB)
         return nullptr;
 
-    // If the incoming non-constant value is in I's block, we will remove one
-    // instruction, but insert another equivalent one, leading to infinite
-    // instcombine.
-    if (isPotentiallyReachable(I.getParent(), NonConstBB, nullptr, &DT, LI))
+    // If the incoming non-constant value is reachable from the phis block,
+    // we'll push the operation across a loop backedge. This could result in
+    // an infinite combine loop, and is generally non-profitable (especially
+    // if the operation was originally outside the loop).
+    if (isPotentiallyReachable(PN->getParent(), NonConstBB, nullptr, &DT, LI))
       return nullptr;
   }
 
