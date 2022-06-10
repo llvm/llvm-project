@@ -3535,6 +3535,19 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
     Out << '"';
   }
 
+  using SanitizerMetadata = llvm::GlobalValue::SanitizerMetadata;
+  if (GV->hasSanitizerMetadata()) {
+    SanitizerMetadata MD = GV->getSanitizerMetadata();
+    if (MD.NoAddress)
+      Out << ", no_sanitize_address";
+    if (MD.NoHWAddress)
+      Out << ", no_sanitize_hwaddress";
+    if (MD.NoMemtag)
+      Out << ", no_sanitize_memtag";
+    if (MD.IsDynInit)
+      Out << ", sanitize_address_dyninit";
+  }
+
   maybePrintComdat(Out, *GV);
   if (MaybeAlign A = GV->getAlign())
     Out << ", align " << A->value();

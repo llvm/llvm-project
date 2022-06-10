@@ -580,6 +580,11 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(prefix);
   KEYWORD(prologue);
 
+  KEYWORD(no_sanitize_address);
+  KEYWORD(no_sanitize_hwaddress);
+  KEYWORD(no_sanitize_memtag);
+  KEYWORD(sanitize_address_dyninit);
+
   KEYWORD(ccc);
   KEYWORD(fastcc);
   KEYWORD(coldcc);
