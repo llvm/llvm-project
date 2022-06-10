@@ -8,6 +8,8 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-freebsd -passes=instrprof -S | FileCheck %s -check-prefixes=FREEBSD,ELF
 ; RUN: opt < %s -mtriple=x86_64-scei-ps4 -instrprof -S | FileCheck %s -check-prefixes=PS4,ELF
 ; RUN: opt < %s -mtriple=x86_64-scei-ps4 -passes=instrprof -S | FileCheck %s -check-prefixes=PS4,ELF
+; RUN: opt < %s -mtriple=x86_64-sie-ps5 -instrprof -S | FileCheck %s -check-prefixes=PS4,ELF
+; RUN: opt < %s -mtriple=x86_64-sie-ps5 -passes=instrprof -S | FileCheck %s -check-prefixes=PS4,ELF
 ; RUN: opt < %s -mtriple=x86_64-pc-solaris -instrprof -S | FileCheck %s -check-prefixes=SOLARIS,ELF
 ; RUN: opt < %s -mtriple=x86_64-pc-solaris -passes=instrprof -S | FileCheck %s -check-prefixes=SOLARIS,ELF
 ; RUN: opt < %s -mtriple=x86_64-pc-windows -instrprof -S | FileCheck %s -check-prefix=WINDOWS
