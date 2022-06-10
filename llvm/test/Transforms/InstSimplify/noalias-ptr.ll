@@ -22,329 +22,329 @@ target triple = "x86_64-unknown-linux-gnu"
 ;     }
 ;   }
 
-define void @_Z2p1v() #0 {
+define void @_Z2p1v() {
 ; CHECK-LABEL: @_Z2p1v(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    br i1 false, label [[TMP3:%.*]], label [[TMP2:%.*]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP1]]) #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    br label [[TMP3]]
-; CHECK:       3:
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I1:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    br i1 false, label [[BB6:%.*]], label [[BB5:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I1]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    br label [[BB6]]
+; CHECK:       bb6:
 ; CHECK-NEXT:    ret void
 ;
+bb:
   %mStackData = alloca [10 x i32], align 16
-  %1 = bitcast [10 x i32]* %mStackData to i8*
-  %2 = tail call noalias i8* @_Znam(i64 48) #4
-  %3 = bitcast i8* %2 to i32*
-  %4 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
-  %5 = icmp eq i32* %3, %4
-  br i1 %5, label %7, label %6
+  %i = bitcast [10 x i32]* %mStackData to i8*
+  %i1 = tail call noalias i8* @_Znam(i64 48) #3
+  %i2 = bitcast i8* %i1 to i32*
+  %i3 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
+  %i4 = icmp eq i32* %i2, %i3
+  br i1 %i4, label %bb6, label %bb5
 
+bb5:                                              ; preds = %bb
+  call void @_ZdaPv(i8* %i1) #4
+  br label %bb6
 
-; <label>:6                                       ; preds = %0
-  call void @_ZdaPv(i8* %2) #5
-  br label %7
-
-; <label>:7                                       ; preds = %0, %6
+bb6:                                              ; preds = %bb5, %bb
   ret void
 }
 
-; Also check a more-complicated case with multiple underlying objects.
-
-define void @_Z2p2bb(i1 zeroext %b1, i1 zeroext %b2) #0 {
+define void @_Z2p2bb(i1 zeroext %b1, i1 zeroext %b2) {
 ; CHECK-LABEL: @_Z2p2bb(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    br i1 false, label [[TMP4:%.*]], label [[TMP3:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP1]]) #[[ATTR4]]
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP2]]) #[[ATTR4]]
-; CHECK-NEXT:    br label [[TMP4]]
-; CHECK:       4:
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I3:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    [[I4:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    br i1 false, label [[BB8:%.*]], label [[BB7:%.*]]
+; CHECK:       bb7:
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I3]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I4]]) #[[ATTR3]]
+; CHECK-NEXT:    br label [[BB8]]
+; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;
+bb:
   %mStackData = alloca [10 x i32], align 16
-  %1 = bitcast [10 x i32]* %mStackData to i8*
-  %2 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
-  %3 = select i1 %b1, i32* %2, i32* @g2
-  %4 = tail call noalias i8* @_Znam(i64 48) #4
-  %5 = tail call noalias i8* @_Znam(i64 48) #4
-  %.v = select i1 %b2, i8* %4, i8* %5
-  %6 = bitcast i8* %.v to i32*
-  %7 = icmp eq i32* %6, %3
-  br i1 %7, label %9, label %8
+  %i = bitcast [10 x i32]* %mStackData to i8*
+  %i1 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
+  %i2 = select i1 %b1, i32* %i1, i32* @g2
+  %i3 = tail call noalias i8* @_Znam(i64 48) #3
+  %i4 = tail call noalias i8* @_Znam(i64 48) #3
+  %.v = select i1 %b2, i8* %i3, i8* %i4
+  %i5 = bitcast i8* %.v to i32*
+  %i6 = icmp eq i32* %i5, %i2
+  br i1 %i6, label %bb8, label %bb7
 
+bb7:                                              ; preds = %bb
+  call void @_ZdaPv(i8* %i3) #4
+  call void @_ZdaPv(i8* %i4) #4
+  br label %bb8
 
-; <label>:8                                       ; preds = %0
-  call void @_ZdaPv(i8* %4) #5
-  call void @_ZdaPv(i8* %5) #5
-  br label %9
-
-; <label>:9                                       ; preds = %0, %8
+bb8:                                              ; preds = %bb7, %bb
   ret void
 }
 
-define void @_Z2p4bb(i1 zeroext %b1, i1 zeroext %b2) #0 {
+define void @_Z2p4bb(i1 zeroext %b1, i1 zeroext %b2) {
 ; CHECK-LABEL: @_Z2p4bb(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    br i1 false, label [[TMP4:%.*]], label [[TMP3:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP1]]) #[[ATTR4]]
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP2]]) #[[ATTR4]]
-; CHECK-NEXT:    br label [[TMP4]]
-; CHECK:       4:
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I3:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    [[I4:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    br i1 false, label [[BB8:%.*]], label [[BB7:%.*]]
+; CHECK:       bb7:
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I3]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I4]]) #[[ATTR3]]
+; CHECK-NEXT:    br label [[BB8]]
+; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;
+bb:
   %mStackData = alloca [10 x i32], align 16
-  %1 = bitcast [10 x i32]* %mStackData to i8*
-  %2 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
-  %3 = select i1 %b1, i32* %2, i32* @g3
-  %4 = tail call noalias i8* @_Znam(i64 48) #4
-  %5 = tail call noalias i8* @_Znam(i64 48) #4
-  %.v = select i1 %b2, i8* %4, i8* %5
-  %6 = bitcast i8* %.v to i32*
-  %7 = icmp eq i32* %6, %3
-  br i1 %7, label %9, label %8
+  %i = bitcast [10 x i32]* %mStackData to i8*
+  %i1 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
+  %i2 = select i1 %b1, i32* %i1, i32* @g3
+  %i3 = tail call noalias i8* @_Znam(i64 48) #3
+  %i4 = tail call noalias i8* @_Znam(i64 48) #3
+  %.v = select i1 %b2, i8* %i3, i8* %i4
+  %i5 = bitcast i8* %.v to i32*
+  %i6 = icmp eq i32* %i5, %i2
+  br i1 %i6, label %bb8, label %bb7
 
+bb7:                                              ; preds = %bb
+  call void @_ZdaPv(i8* %i3) #4
+  call void @_ZdaPv(i8* %i4) #4
+  br label %bb8
 
-; <label>:8                                       ; preds = %0
-  call void @_ZdaPv(i8* %4) #5
-  call void @_ZdaPv(i8* %5) #5
-  br label %9
-
-; <label>:9                                       ; preds = %0, %8
+bb8:                                              ; preds = %bb7, %bb
   ret void
 }
 
-define void @_Z2p5bb(i1 zeroext %b1, i1 zeroext %b2) #0 {
+define void @_Z2p5bb(i1 zeroext %b1, i1 zeroext %b2) {
 ; CHECK-LABEL: @_Z2p5bb(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    br i1 false, label [[TMP4:%.*]], label [[TMP3:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP1]]) #[[ATTR4]]
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP2]]) #[[ATTR4]]
-; CHECK-NEXT:    br label [[TMP4]]
-; CHECK:       4:
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I3:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    [[I4:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    br i1 false, label [[BB8:%.*]], label [[BB7:%.*]]
+; CHECK:       bb7:
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I3]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I4]]) #[[ATTR3]]
+; CHECK-NEXT:    br label [[BB8]]
+; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;
+bb:
   %mStackData = alloca [10 x i32], align 16
-  %1 = bitcast [10 x i32]* %mStackData to i8*
-  %2 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
-  %3 = select i1 %b1, i32* %2, i32* @g4
-  %4 = tail call noalias i8* @_Znam(i64 48) #4
-  %5 = tail call noalias i8* @_Znam(i64 48) #4
-  %.v = select i1 %b2, i8* %4, i8* %5
-  %6 = bitcast i8* %.v to i32*
-  %7 = icmp eq i32* %6, %3
-  br i1 %7, label %9, label %8
+  %i = bitcast [10 x i32]* %mStackData to i8*
+  %i1 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
+  %i2 = select i1 %b1, i32* %i1, i32* @g4
+  %i3 = tail call noalias i8* @_Znam(i64 48) #3
+  %i4 = tail call noalias i8* @_Znam(i64 48) #3
+  %.v = select i1 %b2, i8* %i3, i8* %i4
+  %i5 = bitcast i8* %.v to i32*
+  %i6 = icmp eq i32* %i5, %i2
+  br i1 %i6, label %bb8, label %bb7
 
+bb7:                                              ; preds = %bb
+  call void @_ZdaPv(i8* %i3) #4
+  call void @_ZdaPv(i8* %i4) #4
+  br label %bb8
 
-; <label>:8                                       ; preds = %0
-  call void @_ZdaPv(i8* %4) #5
-  call void @_ZdaPv(i8* %5) #5
-  br label %9
-
-; <label>:9                                       ; preds = %0, %8
+bb8:                                              ; preds = %bb7, %bb
   ret void
 }
 
-define void @_Z2p6bb(i1 zeroext %b1, i1 zeroext %b2) #0 {
+define void @_Z2p6bb(i1 zeroext %b1, i1 zeroext %b2) {
 ; CHECK-LABEL: @_Z2p6bb(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    br i1 false, label [[TMP4:%.*]], label [[TMP3:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP1]]) #[[ATTR4]]
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP2]]) #[[ATTR4]]
-; CHECK-NEXT:    br label [[TMP4]]
-; CHECK:       4:
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I3:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    [[I4:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    br i1 false, label [[BB8:%.*]], label [[BB7:%.*]]
+; CHECK:       bb7:
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I3]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I4]]) #[[ATTR3]]
+; CHECK-NEXT:    br label [[BB8]]
+; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;
+bb:
   %mStackData = alloca [10 x i32], align 16
-  %1 = bitcast [10 x i32]* %mStackData to i8*
-  %2 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
-  %3 = select i1 %b1, i32* %2, i32* @g5
-  %4 = tail call noalias i8* @_Znam(i64 48) #4
-  %5 = tail call noalias i8* @_Znam(i64 48) #4
-  %.v = select i1 %b2, i8* %4, i8* %5
-  %6 = bitcast i8* %.v to i32*
-  %7 = icmp eq i32* %6, %3
-  br i1 %7, label %9, label %8
+  %i = bitcast [10 x i32]* %mStackData to i8*
+  %i1 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
+  %i2 = select i1 %b1, i32* %i1, i32* @g5
+  %i3 = tail call noalias i8* @_Znam(i64 48) #3
+  %i4 = tail call noalias i8* @_Znam(i64 48) #3
+  %.v = select i1 %b2, i8* %i3, i8* %i4
+  %i5 = bitcast i8* %.v to i32*
+  %i6 = icmp eq i32* %i5, %i2
+  br i1 %i6, label %bb8, label %bb7
 
+bb7:                                              ; preds = %bb
+  call void @_ZdaPv(i8* %i3) #4
+  call void @_ZdaPv(i8* %i4) #4
+  br label %bb8
 
-; <label>:8                                       ; preds = %0
-  call void @_ZdaPv(i8* %4) #5
-  call void @_ZdaPv(i8* %5) #5
-  br label %9
-
-; <label>:9                                       ; preds = %0, %8
+bb8:                                              ; preds = %bb7, %bb
   ret void
 }
 
-; Here's another case involving multiple underlying objects, but this time we
-; must keep the comparison (it might involve a regular pointer-typed function
-; argument).
-
-define void @_Z4nopebbPi(i1 zeroext %b1, i1 zeroext %b2, i32* readnone %q) #0 {
+define void @_Z4nopebbPi(i1 zeroext %b1, i1 zeroext %b2, i32* readnone %q) {
 ; CHECK-LABEL: @_Z4nopebbPi(
+; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[MSTACKDATA:%.*]] = alloca [10 x i32], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[MSTACKDATA]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[B1:%.*]], i32* [[TMP1]], i32* [[Q:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[B2:%.*]], i8* [[TMP3]], i8* [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[DOTV]] to i32*
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32* [[TMP5]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP8:%.*]], label [[TMP7:%.*]]
-; CHECK:       7:
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP3]]) #[[ATTR4]]
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP4]]) #[[ATTR4]]
-; CHECK-NEXT:    br label [[TMP8]]
-; CHECK:       8:
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[MSTACKDATA]], i64 0, i64 0
+; CHECK-NEXT:    [[I2:%.*]] = select i1 [[B1:%.*]], i32* [[I1]], i32* [[Q:%.*]]
+; CHECK-NEXT:    [[I3:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    [[I4:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[B2:%.*]], i8* [[I3]], i8* [[I4]]
+; CHECK-NEXT:    [[I5:%.*]] = bitcast i8* [[DOTV]] to i32*
+; CHECK-NEXT:    [[I6:%.*]] = icmp eq i32* [[I5]], [[I2]]
+; CHECK-NEXT:    br i1 [[I6]], label [[BB8:%.*]], label [[BB7:%.*]]
+; CHECK:       bb7:
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I3]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I4]]) #[[ATTR3]]
+; CHECK-NEXT:    br label [[BB8]]
+; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;
+bb:
   %mStackData = alloca [10 x i32], align 16
-  %1 = bitcast [10 x i32]* %mStackData to i8*
-  %2 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
-  %3 = select i1 %b1, i32* %2, i32* %q
-  %4 = tail call noalias i8* @_Znam(i64 48) #4
-  %5 = tail call noalias i8* @_Znam(i64 48) #4
-  %.v = select i1 %b2, i8* %4, i8* %5
-  %6 = bitcast i8* %.v to i32*
-  %7 = icmp eq i32* %6, %3
-  br i1 %7, label %9, label %8
+  %i = bitcast [10 x i32]* %mStackData to i8*
+  %i1 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
+  %i2 = select i1 %b1, i32* %i1, i32* %q
+  %i3 = tail call noalias i8* @_Znam(i64 48) #3
+  %i4 = tail call noalias i8* @_Znam(i64 48) #3
+  %.v = select i1 %b2, i8* %i3, i8* %i4
+  %i5 = bitcast i8* %.v to i32*
+  %i6 = icmp eq i32* %i5, %i2
+  br i1 %i6, label %bb8, label %bb7
 
+bb7:                                              ; preds = %bb
+  call void @_ZdaPv(i8* %i3) #4
+  call void @_ZdaPv(i8* %i4) #4
+  br label %bb8
 
-; <label>:8                                       ; preds = %0
-  call void @_ZdaPv(i8* %4) #5
-  call void @_ZdaPv(i8* %5) #5
-  br label %9
-
-; <label>:9                                       ; preds = %0, %8
+bb8:                                              ; preds = %bb7, %bb
   ret void
 }
 
-define void @_Z2p3bb(i1 zeroext %b1, i1 zeroext %b2) #0 {
+define void @_Z2p3bb(i1 zeroext %b1, i1 zeroext %b2) {
 ; CHECK-LABEL: @_Z2p3bb(
+; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[MSTACKDATA:%.*]] = alloca [10 x i32], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[MSTACKDATA]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[B1:%.*]], i32* [[TMP1]], i32* @g1
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[B2:%.*]], i8* [[TMP3]], i8* [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[DOTV]] to i32*
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32* [[TMP5]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP8:%.*]], label [[TMP7:%.*]]
-; CHECK:       7:
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP3]]) #[[ATTR4]]
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP4]]) #[[ATTR4]]
-; CHECK-NEXT:    br label [[TMP8]]
-; CHECK:       8:
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[MSTACKDATA]], i64 0, i64 0
+; CHECK-NEXT:    [[I2:%.*]] = select i1 [[B1:%.*]], i32* [[I1]], i32* @g1
+; CHECK-NEXT:    [[I3:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    [[I4:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[B2:%.*]], i8* [[I3]], i8* [[I4]]
+; CHECK-NEXT:    [[I5:%.*]] = bitcast i8* [[DOTV]] to i32*
+; CHECK-NEXT:    [[I6:%.*]] = icmp eq i32* [[I5]], [[I2]]
+; CHECK-NEXT:    br i1 [[I6]], label [[BB8:%.*]], label [[BB7:%.*]]
+; CHECK:       bb7:
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I3]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I4]]) #[[ATTR3]]
+; CHECK-NEXT:    br label [[BB8]]
+; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;
+bb:
   %mStackData = alloca [10 x i32], align 16
-  %1 = bitcast [10 x i32]* %mStackData to i8*
-  %2 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
-  %3 = select i1 %b1, i32* %2, i32* @g1
-  %4 = tail call noalias i8* @_Znam(i64 48) #4
-  %5 = tail call noalias i8* @_Znam(i64 48) #4
-  %.v = select i1 %b2, i8* %4, i8* %5
-  %6 = bitcast i8* %.v to i32*
-  %7 = icmp eq i32* %6, %3
-  br i1 %7, label %9, label %8
+  %i = bitcast [10 x i32]* %mStackData to i8*
+  %i1 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
+  %i2 = select i1 %b1, i32* %i1, i32* @g1
+  %i3 = tail call noalias i8* @_Znam(i64 48) #3
+  %i4 = tail call noalias i8* @_Znam(i64 48) #3
+  %.v = select i1 %b2, i8* %i3, i8* %i4
+  %i5 = bitcast i8* %.v to i32*
+  %i6 = icmp eq i32* %i5, %i2
+  br i1 %i6, label %bb8, label %bb7
 
+bb7:                                              ; preds = %bb
+  call void @_ZdaPv(i8* %i3) #4
+  call void @_ZdaPv(i8* %i4) #4
+  br label %bb8
 
-; <label>:8                                       ; preds = %0
-  call void @_ZdaPv(i8* %4) #5
-  call void @_ZdaPv(i8* %5) #5
-  br label %9
-
-; <label>:9                                       ; preds = %0, %8
+bb8:                                              ; preds = %bb7, %bb
   ret void
 }
 
-define void @_Z2p7bb(i1 zeroext %b1, i1 zeroext %b2) #0 {
+define void @_Z2p7bb(i1 zeroext %b1, i1 zeroext %b2) {
 ; CHECK-LABEL: @_Z2p7bb(
+; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[MSTACKDATA:%.*]] = alloca [10 x i32], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[MSTACKDATA]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[B1:%.*]], i32* [[TMP1]], i32* @g6
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[B2:%.*]], i8* [[TMP3]], i8* [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[DOTV]] to i32*
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32* [[TMP5]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP8:%.*]], label [[TMP7:%.*]]
-; CHECK:       7:
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP3]]) #[[ATTR4]]
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP4]]) #[[ATTR4]]
-; CHECK-NEXT:    br label [[TMP8]]
-; CHECK:       8:
+; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[MSTACKDATA]], i64 0, i64 0
+; CHECK-NEXT:    [[I2:%.*]] = select i1 [[B1:%.*]], i32* [[I1]], i32* @g6
+; CHECK-NEXT:    [[I3:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    [[I4:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select i1 [[B2:%.*]], i8* [[I3]], i8* [[I4]]
+; CHECK-NEXT:    [[I5:%.*]] = bitcast i8* [[DOTV]] to i32*
+; CHECK-NEXT:    [[I6:%.*]] = icmp eq i32* [[I5]], [[I2]]
+; CHECK-NEXT:    br i1 [[I6]], label [[BB8:%.*]], label [[BB7:%.*]]
+; CHECK:       bb7:
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I3]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I4]]) #[[ATTR3]]
+; CHECK-NEXT:    br label [[BB8]]
+; CHECK:       bb8:
 ; CHECK-NEXT:    ret void
 ;
+bb:
   %mStackData = alloca [10 x i32], align 16
-  %1 = bitcast [10 x i32]* %mStackData to i8*
-  %2 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
-  %3 = select i1 %b1, i32* %2, i32* @g6
-  %4 = tail call noalias i8* @_Znam(i64 48) #4
-  %5 = tail call noalias i8* @_Znam(i64 48) #4
-  %.v = select i1 %b2, i8* %4, i8* %5
-  %6 = bitcast i8* %.v to i32*
-  %7 = icmp eq i32* %6, %3
-  br i1 %7, label %9, label %8
+  %i = bitcast [10 x i32]* %mStackData to i8*
+  %i1 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
+  %i2 = select i1 %b1, i32* %i1, i32* @g6
+  %i3 = tail call noalias i8* @_Znam(i64 48) #3
+  %i4 = tail call noalias i8* @_Znam(i64 48) #3
+  %.v = select i1 %b2, i8* %i3, i8* %i4
+  %i5 = bitcast i8* %.v to i32*
+  %i6 = icmp eq i32* %i5, %i2
+  br i1 %i6, label %bb8, label %bb7
 
+bb7:                                              ; preds = %bb
+  call void @_ZdaPv(i8* %i3) #4
+  call void @_ZdaPv(i8* %i4) #4
+  br label %bb8
 
-; <label>:8                                       ; preds = %0
-  call void @_ZdaPv(i8* %4) #5
-  call void @_ZdaPv(i8* %5) #5
-  br label %9
-
-; <label>:9                                       ; preds = %0, %8
+bb8:                                              ; preds = %bb7, %bb
   ret void
 }
 
-define void @_Z2p2v(i32 %c) #0 {
+define void @_Z2p2v(i32 %c) {
 ; CHECK-LABEL: @_Z2p2v(
+; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[MSTACKDATA:%.*]] = alloca [10 x i32], i32 [[C:%.*]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to i32*
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[MSTACKDATA]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32* [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[TMP6:%.*]], label [[TMP5:%.*]]
-; CHECK:       5:
-; CHECK-NEXT:    call void @_ZdaPv(i8* [[TMP1]]) #[[ATTR4]]
-; CHECK-NEXT:    br label [[TMP6]]
-; CHECK:       6:
+; CHECK-NEXT:    [[I1:%.*]] = tail call noalias i8* @_Znam(i64 48) #[[ATTR2]]
+; CHECK-NEXT:    [[I2:%.*]] = bitcast i8* [[I1]] to i32*
+; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* [[MSTACKDATA]], i64 0, i64 0
+; CHECK-NEXT:    [[I4:%.*]] = icmp eq i32* [[I2]], [[I3]]
+; CHECK-NEXT:    br i1 [[I4]], label [[BB6:%.*]], label [[BB5:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    call void @_ZdaPv(i8* [[I1]]) #[[ATTR3]]
+; CHECK-NEXT:    br label [[BB6]]
+; CHECK:       bb6:
 ; CHECK-NEXT:    ret void
 ;
+bb:
   %mStackData = alloca [10 x i32], i32 %c, align 16
-  %1 = bitcast [10 x i32]* %mStackData to i8*
-  %2 = tail call noalias i8* @_Znam(i64 48) #4
-  %3 = bitcast i8* %2 to i32*
-  %4 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
-  %5 = icmp eq i32* %3, %4
-  br i1 %5, label %7, label %6
+  %i = bitcast [10 x i32]* %mStackData to i8*
+  %i1 = tail call noalias i8* @_Znam(i64 48) #3
+  %i2 = bitcast i8* %i1 to i32*
+  %i3 = getelementptr inbounds [10 x i32], [10 x i32]* %mStackData, i64 0, i64 0
+  %i4 = icmp eq i32* %i2, %i3
+  br i1 %i4, label %bb6, label %bb5
 
+bb5:                                              ; preds = %bb
+  call void @_ZdaPv(i8* %i1) #4
+  br label %bb6
 
-; <label>:6                                       ; preds = %0
-  call void @_ZdaPv(i8* %2) #5
-  br label %7
-
-; <label>:7                                       ; preds = %0, %6
+bb6:                                              ; preds = %bb5, %bb
   ret void
 }
 
 ; Function Attrs: nobuiltin
-declare noalias i8* @_Znam(i64) #2
+declare noalias i8* @_Znam(i64) #1
 
 ; Function Attrs: nobuiltin nounwind
-declare void @_ZdaPv(i8*) #3
+declare void @_ZdaPv(i8*) #2
 
-attributes #0 = { uwtable }
-attributes #1 = { nounwind }
-attributes #2 = { nobuiltin }
-attributes #3 = { nobuiltin nounwind }
-attributes #4 = { builtin }
-attributes #5 = { builtin nounwind }
-
+attributes #1 = { nobuiltin }
+attributes #2 = { nobuiltin nounwind }
+attributes #3 = { builtin }
+attributes #4 = { builtin nounwind }
