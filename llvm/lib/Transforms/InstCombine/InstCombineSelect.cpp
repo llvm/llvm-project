@@ -450,8 +450,11 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
         }
 
         if (OpToFold) {
-          Constant *C = ConstantExpr::getBinOpIdentity(TVI->getOpcode(),
-                                                       TVI->getType(), true);
+          FastMathFlags FMF;
+          if (isa<FPMathOperator>(&SI))
+            FMF = SI.getFastMathFlags();
+          Constant *C = ConstantExpr::getBinOpIdentity(
+              TVI->getOpcode(), TVI->getType(), true, FMF.noSignedZeros());
           Value *OOp = TVI->getOperand(2-OpToFold);
           // Avoid creating select between 2 constants unless it's selecting
           // between 0, 1 and -1.
@@ -460,6 +463,8 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
           if (!isa<Constant>(OOp) ||
               (OOpIsAPInt && isSelect01(C->getUniqueInteger(), *OOpC))) {
             Value *NewSel = Builder.CreateSelect(SI.getCondition(), OOp, C);
+            if (isa<FPMathOperator>(&SI))
+              cast<Instruction>(NewSel)->setFastMathFlags(FMF);
             NewSel->takeName(TVI);
             BinaryOperator *BO = BinaryOperator::Create(TVI->getOpcode(),
                                                         FalseVal, NewSel);
@@ -482,8 +487,11 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
         }
 
         if (OpToFold) {
-          Constant *C = ConstantExpr::getBinOpIdentity(FVI->getOpcode(),
-                                                       FVI->getType(), true);
+          FastMathFlags FMF;
+          if (isa<FPMathOperator>(&SI))
+            FMF = SI.getFastMathFlags();
+          Constant *C = ConstantExpr::getBinOpIdentity(
+              FVI->getOpcode(), FVI->getType(), true, FMF.noSignedZeros());
           Value *OOp = FVI->getOperand(2-OpToFold);
           // Avoid creating select between 2 constants unless it's selecting
           // between 0, 1 and -1.
@@ -492,6 +500,8 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
           if (!isa<Constant>(OOp) ||
               (OOpIsAPInt && isSelect01(C->getUniqueInteger(), *OOpC))) {
             Value *NewSel = Builder.CreateSelect(SI.getCondition(), C, OOp);
+            if (isa<FPMathOperator>(&SI))
+              cast<Instruction>(NewSel)->setFastMathFlags(FMF);
             NewSel->takeName(FVI);
             BinaryOperator *BO = BinaryOperator::Create(FVI->getOpcode(),
                                                         TrueVal, NewSel);
