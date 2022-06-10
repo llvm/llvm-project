@@ -185,13 +185,21 @@ Language Selection and Mode Options
 
    ISO C++ 2017 with amendments and GNU extensions
 
-  | ``c++2a``
+  | ``c++20``
 
-   Working draft for ISO C++ 2020
+   ISO C++ 2020 with amendments
 
-  | ``gnu++2a``
+  | ``gnu++20``
 
-   Working draft for ISO C++ 2020 with GNU extensions
+   ISO C++ 2020 with amendments and GNU extensions
+
+  | ``c++2b``
+
+   Working draft for ISO C++ 2023
+
+  | ``gnu++2b``
+
+   Working draft for ISO C++ 2023 with GNU extensions
 
  The default C++ language standard is ``gnu++14``.
 
