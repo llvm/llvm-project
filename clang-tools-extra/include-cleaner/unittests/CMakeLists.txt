@@ -23,5 +23,6 @@ target_link_libraries(ClangIncludeCleanerTests
   PRIVATE
   clangIncludeCleaner
   clangTesting
+  LLVMTestingSupport
   )
 
