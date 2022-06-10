@@ -229,7 +229,6 @@ TEST(ArrayRefTest, EmptyInitializerList) {
   EXPECT_TRUE(A.empty());
 }
 
-// Test that makeArrayRef works on ArrayRef (no-op)
 TEST(ArrayRefTest, makeArrayRef) {
   static const int A1[] = {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -264,5 +263,44 @@ TEST(ArrayRefTest, makeArrayRefFromStdArray) {
 
 static_assert(std::is_trivially_copyable<ArrayRef<int>>::value,
               "trivially copyable");
+
+TEST(ArrayRefTest, makeMutableArrayRef) {
+  int A = 0;
+  auto AR = makeMutableArrayRef(A);
+  EXPECT_EQ(AR.data(), &A);
+  EXPECT_EQ(AR.size(), (size_t)1);
+
+  AR[0] = 1;
+  EXPECT_EQ(A, 1);
+
+  int B[] = {0, 1, 2, 3};
+  auto BR1 = makeMutableArrayRef(&B[0], 4);
+  auto BR2 = makeMutableArrayRef(B);
+  EXPECT_EQ(BR1.data(), &B[0]);
+  EXPECT_EQ(BR1.size(), (size_t)4);
+  EXPECT_EQ(BR2.data(), &B[0]);
+  EXPECT_EQ(BR2.size(), (size_t)4);
+
+  SmallVector<int> C1;
+  SmallVectorImpl<int> &C2 = C1;
+  C1.resize(5);
+  auto CR1 = makeMutableArrayRef(C1);
+  auto CR2 = makeMutableArrayRef(C2);
+  EXPECT_EQ(CR1.data(), C1.data());
+  EXPECT_EQ(CR1.size(), C1.size());
+  EXPECT_EQ(CR2.data(), C2.data());
+  EXPECT_EQ(CR2.size(), C2.size());
+
+  std::vector<int> D;
+  D.resize(5);
+  auto DR = makeMutableArrayRef(D);
+  EXPECT_EQ(DR.data(), D.data());
+  EXPECT_EQ(DR.size(), D.size());
+
+  std::array<int, 5> E;
+  auto ER = makeMutableArrayRef(E);
+  EXPECT_EQ(ER.data(), E.data());
+  EXPECT_EQ(ER.size(), E.size());
+}
 
 } // end anonymous namespace
