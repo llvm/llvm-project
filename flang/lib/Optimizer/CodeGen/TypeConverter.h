@@ -15,7 +15,7 @@
 
 #include "DescriptorModel.h"
 #include "Target.h"
-#include "flang/Lower/Todo.h" // remove when TODO's are done
+#include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/KindMapping.h"

@@ -9,7 +9,7 @@
 #include "flang/Lower/Mangler.h"
 #include "flang/Common/reference.h"
 #include "flang/Lower/Support/Utils.h"
-#include "flang/Lower/Todo.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/tools.h"
