@@ -356,6 +356,10 @@ public:
   /// an alias. Return false if the op is not bufferizable.
   bool bufferizesToAliasOnly(OpOperand &opOperand) const;
 
+  /// Return true if a copy can always be avoided when allocating a new tensor
+  /// for the given OpOperand.
+  bool canOmitTensorCopy(OpOperand &opOperand) const;
+
   /// Return true if the given value is read by an op that bufferizes to a
   /// memory read. Also takes into account ops that create an alias but do not
   /// read by themselves (e.g., ExtractSliceOp).
