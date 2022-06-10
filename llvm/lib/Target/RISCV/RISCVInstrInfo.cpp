@@ -1930,3 +1930,8 @@ RISCVInstrInfo::isRVVSpillForZvlsseg(unsigned Opcode) const {
     return std::make_pair(8u, 1u);
   }
 }
+
+bool RISCVInstrInfo::isFaultFirstLoad(const MachineInstr &MI) const {
+  return MI.getNumExplicitDefs() == 2 && MI.modifiesRegister(RISCV::VL) &&
+         !MI.isInlineAsm();
+}
