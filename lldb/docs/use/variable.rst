@@ -808,6 +808,7 @@ of type names. This would let you rephrase the above example for arrays of type
 Simple [3] as:
 
 ::
+
    (lldb) type summary add --summary-string "${var[].x}" -x "Simple \[[0-9]+\]"
    (lldb) frame variable
    (Simple [3]) sarray = [1,4,7]
