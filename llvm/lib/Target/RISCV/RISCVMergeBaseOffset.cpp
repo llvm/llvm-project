@@ -50,6 +50,9 @@ public:
   void foldOffset(MachineInstr &HiLUI, MachineInstr &LoADDI, MachineInstr &Tail,
                   int64_t Offset);
   bool matchLargeOffset(MachineInstr &TailAdd, Register GSReg, int64_t &Offset);
+  bool matchShiftedOffset(MachineInstr &TailShXAdd, Register GSReg,
+                          int64_t &Offset);
+
   RISCVMergeBaseOffsetOpt() : MachineFunctionPass(ID) {}
 
   MachineFunctionProperties getRequiredProperties() const override {
@@ -193,6 +196,55 @@ bool RISCVMergeBaseOffsetOpt::matchLargeOffset(MachineInstr &TailAdd,
   return false;
 }
 
+// Detect patterns for offsets that are passed into a SHXADD instruction.
+// The offset has 1,2, or 3 trailing zeros and fits in simm13, simm14, simm15.
+// The constant is created with addi    voff, x0, C, and shXadd is used to
+// fill insert the trailing zeros and do the addition.
+//
+// HiLUI:      lui     vreg1, %hi(s)
+// LoADDI:     addi    vreg2, vreg1, %lo(s)
+// OffsetTail: addi    voff, x0, C
+// TailAdd:    shXadd  vreg4, voff, vreg2
+bool RISCVMergeBaseOffsetOpt::matchShiftedOffset(MachineInstr &TailShXAdd,
+                                                 Register GAReg,
+                                                 int64_t &Offset) {
+  assert((TailShXAdd.getOpcode() == RISCV::SH1ADD ||
+          TailShXAdd.getOpcode() == RISCV::SH2ADD ||
+          TailShXAdd.getOpcode() == RISCV::SH3ADD) &&
+         "Expected SHXADD instruction!");
+  // The first source is the shifted operand.
+  Register Rs1 = TailShXAdd.getOperand(1).getReg();
+
+  if (GAReg != TailShXAdd.getOperand(2).getReg())
+    return false;
+
+  // Can't fold if the register has more than one use.
+  if (!MRI->hasOneUse(Rs1))
+    return false;
+  // This can point to an ADDI X0, C.
+  MachineInstr &OffsetTail = *MRI->getVRegDef(Rs1);
+  if (OffsetTail.getOpcode() != RISCV::ADDI)
+    return false;
+  if (!OffsetTail.getOperand(1).isReg() ||
+      OffsetTail.getOperand(1).getReg() != RISCV::X0 ||
+      !OffsetTail.getOperand(2).isImm())
+    return false;
+
+  Offset = OffsetTail.getOperand(2).getImm();
+  assert(isInt<12>(Offset) && "Unexpected offset");
+
+  switch (TailShXAdd.getOpcode()) {
+  default: llvm_unreachable("Unexpected opcode");
+  case RISCV::SH1ADD: Offset <<= 1; break;
+  case RISCV::SH2ADD: Offset <<= 2; break;
+  case RISCV::SH3ADD: Offset <<= 3; break;
+  }
+
+  LLVM_DEBUG(dbgs() << "  Offset Instr: " << OffsetTail);
+  DeadInstrs.insert(&OffsetTail);
+  return true;
+}
+
 bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
                                                   MachineInstr &LoADDI) {
   Register DestReg = LoADDI.getOperand(0).getReg();
@@ -236,6 +288,18 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
     //    This happens in case the lower 12 bits of the offset are zeros.
     int64_t Offset;
     if (!matchLargeOffset(Tail, DestReg, Offset))
+      return false;
+    foldOffset(HiLUI, LoADDI, Tail, Offset);
+    return true;
+  }
+  case RISCV::SH1ADD:
+  case RISCV::SH2ADD:
+  case RISCV::SH3ADD: {
+    // The offset is too large to fit in the immediate field of ADDI.
+    // It may be encoded as (SH2ADD (ADDI X0, C), DestReg) or
+    // (SH3ADD (ADDI X0, C), DestReg).
+    int64_t Offset;
+    if (!matchShiftedOffset(Tail, DestReg, Offset))
       return false;
     foldOffset(HiLUI, LoADDI, Tail, Offset);
     return true;
