@@ -444,8 +444,7 @@ SourceLocation Preprocessor::CheckEndOfDirective(const char *DirType,
 }
 
 void Preprocessor::SuggestTypoedDirective(const Token &Tok,
-                                          StringRef Directive,
-                                          const SourceLocation &EndLoc) const {
+                                          StringRef Directive) const {
   // If this is a `.S` file, treat unknown # directives as non-preprocessor
   // directives.
   if (getLangOpts().AsmPreprocessor) return;
@@ -457,11 +456,14 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
     Candidates.insert(Candidates.end(), {"elifdef", "elifndef"});
 
   if (Optional<StringRef> Sugg = findSimilarStr(Directive, Candidates)) {
-    CharSourceRange DirectiveRange =
-        CharSourceRange::getCharRange(Tok.getLocation(), EndLoc);
-    std::string SuggValue = Sugg.getValue().str();
+    // Directive cannot be coming from macro.
+    assert(Tok.getLocation().isFileID());
+    CharSourceRange DirectiveRange = CharSourceRange::getCharRange(
+        Tok.getLocation(),
+        Tok.getLocation().getLocWithOffset(Directive.size()));
+    StringRef SuggValue = Sugg.getValue();
 
-    auto Hint = FixItHint::CreateReplacement(DirectiveRange, "#" + SuggValue);
+    auto Hint = FixItHint::CreateReplacement(DirectiveRange, SuggValue);
     Diag(Tok, diag::warn_pp_invalid_directive) << 1 << SuggValue << Hint;
   }
 }
@@ -596,7 +598,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
                                        /*foundnonskip*/false,
                                        /*foundelse*/false);
       } else {
-        SuggestTypoedDirective(Tok, Directive, endLoc);
+        SuggestTypoedDirective(Tok, Directive);
       }
     } else if (Directive[0] == 'e') {
       StringRef Sub = Directive.substr(1);
@@ -758,10 +760,10 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           }
         }
       } else {
-        SuggestTypoedDirective(Tok, Directive, endLoc);
+        SuggestTypoedDirective(Tok, Directive);
       }
     } else {
-      SuggestTypoedDirective(Tok, Directive, endLoc);
+      SuggestTypoedDirective(Tok, Directive);
     }
 
     CurPPLexer->ParsingPreprocessorDirective = false;
