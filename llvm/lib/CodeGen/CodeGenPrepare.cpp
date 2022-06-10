@@ -2056,7 +2056,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
     return false;
 
   // Bail if the value is never zero.
-  Value *Op = CountZeros->getOperand(0);
+  Use &Op = CountZeros->getOperandUse(0);
   if (isKnownNonZero(Op, *DL))
     return false;
 
@@ -2078,7 +2078,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
   // Replace the unconditional branch that was created by the first split with
   // a compare against zero and a conditional branch.
   Value *Zero = Constant::getNullValue(Ty);
-  // Avoid introducing branch on poison.
+  // Avoid introducing branch on poison. This also replaces the ctz operand.
   if (!isGuaranteedNotToBeUndefOrPoison(Op))
     Op = Builder.CreateFreeze(Op, Op->getName() + ".fr");
   Value *Cmp = Builder.CreateICmpEQ(Op, Zero, "cmpz");

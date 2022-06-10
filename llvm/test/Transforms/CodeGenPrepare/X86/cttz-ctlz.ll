@@ -17,7 +17,7 @@ define i64 @cttz(i64 %A) {
 ; SLOW-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A_FR]], 0
 ; SLOW-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; SLOW:       cond.false:
-; SLOW-NEXT:    [[Z:%.*]] = call i64 @llvm.cttz.i64(i64 [[A]], i1 true)
+; SLOW-NEXT:    [[Z:%.*]] = call i64 @llvm.cttz.i64(i64 [[A_FR]], i1 true)
 ; SLOW-NEXT:    br label [[COND_END]]
 ; SLOW:       cond.end:
 ; SLOW-NEXT:    [[CTZ:%.*]] = phi i64 [ 64, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ]
@@ -34,7 +34,7 @@ define i64 @cttz(i64 %A) {
 ; FAST_LZ-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A_FR]], 0
 ; FAST_LZ-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; FAST_LZ:       cond.false:
-; FAST_LZ-NEXT:    [[Z:%.*]] = call i64 @llvm.cttz.i64(i64 [[A]], i1 true)
+; FAST_LZ-NEXT:    [[Z:%.*]] = call i64 @llvm.cttz.i64(i64 [[A_FR]], i1 true)
 ; FAST_LZ-NEXT:    br label [[COND_END]]
 ; FAST_LZ:       cond.end:
 ; FAST_LZ-NEXT:    [[CTZ:%.*]] = phi i64 [ 64, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ]
@@ -52,7 +52,7 @@ define i64 @ctlz(i64 %A) {
 ; SLOW-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A_FR]], 0
 ; SLOW-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; SLOW:       cond.false:
-; SLOW-NEXT:    [[Z:%.*]] = call i64 @llvm.ctlz.i64(i64 [[A]], i1 true)
+; SLOW-NEXT:    [[Z:%.*]] = call i64 @llvm.ctlz.i64(i64 [[A_FR]], i1 true)
 ; SLOW-NEXT:    br label [[COND_END]]
 ; SLOW:       cond.end:
 ; SLOW-NEXT:    [[CTZ:%.*]] = phi i64 [ 64, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ]
@@ -64,7 +64,7 @@ define i64 @ctlz(i64 %A) {
 ; FAST_TZ-NEXT:    [[CMPZ:%.*]] = icmp eq i64 [[A_FR]], 0
 ; FAST_TZ-NEXT:    br i1 [[CMPZ]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]]
 ; FAST_TZ:       cond.false:
-; FAST_TZ-NEXT:    [[Z:%.*]] = call i64 @llvm.ctlz.i64(i64 [[A]], i1 true)
+; FAST_TZ-NEXT:    [[Z:%.*]] = call i64 @llvm.ctlz.i64(i64 [[A_FR]], i1 true)
 ; FAST_TZ-NEXT:    br label [[COND_END]]
 ; FAST_TZ:       cond.end:
 ; FAST_TZ-NEXT:    [[CTZ:%.*]] = phi i64 [ 64, [[ENTRY:%.*]] ], [ [[Z]], [[COND_FALSE]] ]
