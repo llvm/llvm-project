@@ -11,6 +11,8 @@
 
 #include <__algorithm/rotate.h>
 #include <__config>
+#include <__iterator/advance.h>
+#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__utility/swap.h>
 #include <memory>

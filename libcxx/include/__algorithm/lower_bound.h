@@ -13,8 +13,12 @@
 #include <__algorithm/half_positive.h>
 #include <__config>
 #include <__functional/identity.h>
+#include <__functional/invoke.h>
+#include <__iterator/advance.h>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
 #include <__type_traits/is_callable.h>
-#include <iterator>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

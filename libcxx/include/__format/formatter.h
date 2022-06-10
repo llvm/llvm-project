@@ -15,6 +15,7 @@
 #include <__algorithm/transform.h>
 #include <__assert>
 #include <__availability>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__format/format_error.h>
 #include <__format/format_fwd.h>

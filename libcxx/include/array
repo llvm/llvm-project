@@ -114,11 +114,13 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__algorithm/swap_ranges.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__iterator/reverse_iterator.h>
 #include <__tuple>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-#include <iterator>
+#include <compare>
+#include <iterator> // TODO: Remove this include
 #include <stdexcept>
 #include <type_traits>
 #include <version>

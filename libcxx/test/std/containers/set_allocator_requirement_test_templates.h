@@ -20,6 +20,7 @@
 
 
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 #include "count_new.h"

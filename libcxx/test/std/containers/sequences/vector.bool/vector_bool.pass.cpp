@@ -19,6 +19,7 @@
 
 #include <vector>
 #include <cassert>
+#include <iterator>
 #include <type_traits>
 
 #include "test_macros.h"

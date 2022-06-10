@@ -17,7 +17,10 @@
 #include <__algorithm/rotate.h>
 #include <__algorithm/upper_bound.h>
 #include <__config>
+#include <__iterator/advance.h>
+#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/reverse_iterator.h>
 #include <__utility/swap.h>
 #include <memory>
 

@@ -196,6 +196,10 @@ template <class charT> class messages_byname;
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__debug>
+#include <__iterator/access.h>
+#include <__iterator/back_insert_iterator.h>
+#include <__iterator/istreambuf_iterator.h>
+#include <__iterator/ostreambuf_iterator.h>
 #include <__locale>
 #ifndef __APPLE__
 # include <cstdarg>
@@ -204,7 +208,7 @@ template <class charT> class messages_byname;
 #include <cstdlib>
 #include <ctime>
 #include <ios>
-#include <iterator>
+#include <iterator> // TODO: Remove this include
 #include <limits>
 #include <memory>
 #include <streambuf>

@@ -13,6 +13,7 @@
 // allocation_result<T*> allocate_at_least(size_t n)
 
 #include <cassert>
+#include <concepts>
 #include <memory>
 
 #include "count_new.h"

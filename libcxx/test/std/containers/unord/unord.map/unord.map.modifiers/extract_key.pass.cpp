@@ -14,7 +14,9 @@
 
 // node_type extract(key_type const&);
 
+#include <iterator>
 #include <unordered_map>
+
 #include "test_macros.h"
 #include "min_allocator.h"
 #include "Counter.h"

@@ -13,6 +13,7 @@
 
 #include <span>
 #include <cassert>
+#include <iterator>
 #include <string>
 #include <utility>
 

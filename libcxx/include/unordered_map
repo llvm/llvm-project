@@ -521,12 +521,14 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
 #include <__hash_table>
+#include <__iterator/distance.h>
+#include <__iterator/erase_if_container.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
 #include <__node_handle>
 #include <__utility/forward.h>
 #include <compare>
-#include <iterator> // __libcpp_erase_if_container
+#include <iterator> // TODO: Remove this include
 #include <stdexcept>
 #include <tuple>
 #include <version>

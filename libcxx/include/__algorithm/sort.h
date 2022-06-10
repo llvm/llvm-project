@@ -18,6 +18,7 @@
 #include <__config>
 #include <__debug>
 #include <__functional/operations.h>
+#include <__iterator/iterator_traits.h>
 #include <__utility/swap.h>
 #include <climits>
 #include <memory>

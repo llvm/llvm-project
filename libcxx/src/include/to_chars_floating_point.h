@@ -23,6 +23,7 @@
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__config>
+#include <__functional/operations.h>
 #include <__iterator/access.h>
 #include <__iterator/size.h>
 #include <bit>

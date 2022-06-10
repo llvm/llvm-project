@@ -18,6 +18,7 @@
 #include <string>
 #include <cassert>
 #include <cstddef>
+#include <iterator>
 
 #include "../../test_compare.h"
 #include "../../test_hash.h"

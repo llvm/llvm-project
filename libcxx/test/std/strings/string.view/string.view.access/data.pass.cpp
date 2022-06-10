@@ -14,6 +14,7 @@
 
 #include <string_view>
 #include <cassert>
+#include <iterator>
 
 #include "test_macros.h"
 
