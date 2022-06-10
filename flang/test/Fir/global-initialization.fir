@@ -1,3 +1,4 @@
+// RUN: fir-opt --fir-to-llvm-ir %s | FileCheck %s
 // RUN: tco --fir-to-llvm-ir %s | FileCheck %s
 
 fir.global internal @_QEmask : !fir.array<32xi32> {
