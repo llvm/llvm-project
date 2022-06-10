@@ -39,7 +39,7 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; MUBUF-NEXT:    buffer_load_dword v2, v0, s[36:39], 0 offen offset:4
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    v_add_nc_u32_e32 v0, v2, v1
-; MUBUF-NEXT:    v_mad_u64_u32 v[0:1], s0, v0, s0, 0x3039
+; MUBUF-NEXT:    v_mad_u64_u32 v[0:1], null, v0, s0, 0x3039
 ; MUBUF-NEXT:    buffer_store_dword v0, v0, s[36:39], 0 offen
 ; MUBUF-NEXT:  .LBB0_2: ; %shader_eval_surface.exit
 ; MUBUF-NEXT:    s_endpgm
@@ -71,7 +71,7 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, vcc_lo offset:4
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_add_nc_u32_e32 v0, v1, v0
-; FLATSCR-NEXT:    v_mad_u64_u32 v[0:1], s0, v0, s0, 0x3039
+; FLATSCR-NEXT:    v_mad_u64_u32 v[0:1], null, v0, s0, 0x3039
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s0
 ; FLATSCR-NEXT:  .LBB0_2: ; %shader_eval_surface.exit
 ; FLATSCR-NEXT:    s_endpgm
