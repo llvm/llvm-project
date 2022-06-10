@@ -8,15 +8,17 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.out -lite=0 -v=1 2>&1 | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.out -v=1 --print-only=main2.cold.1 --print-disasm 2>&1 | FileCheck %s
 
 # CHECK-NOT: unclaimed PC-relative relocations left in data
 # CHECK-DAG: BOLT-INFO: marking main2.cold.1(*2) as a fragment of main
 # CHECK-DAG: BOLT-INFO: marking main2.cold.1(*2) as a fragment of main2
+# CHECK: Binary Function "main2.cold.1(*2)" after disassembly
+# CHECK: End of Function "main2.cold.1(*2)"
 # CHECK-DAG: BOLT-WARNING: Ignoring main2
 # CHECK-DAG: BOLT-WARNING: Ignoring main
 # CHECK-DAG: BOLT-WARNING: Ignoring main2.cold.1(*2)
-# CHECK: BOLT-WARNING: ignored 3 functions due to cold fragments
+# CHECK: BOLT-WARNING: skipped 3 functions due to cold fragments
   .text
   .globl main
   .type main, %function
