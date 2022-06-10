@@ -253,6 +253,9 @@ add_entrypoint_object(
     libc.include.errno
     libc.include.pthread
     libc.src.__support.threads.thread
+  COMPILE_OPTIONS
+    -O3
+    -fno-omit-frame-pointer
 )
 
 add_entrypoint_object(
