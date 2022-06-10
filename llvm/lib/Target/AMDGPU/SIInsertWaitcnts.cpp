@@ -1361,6 +1361,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   } else {
     switch (Inst.getOpcode()) {
     case AMDGPU::S_SENDMSG:
+    case AMDGPU::S_SENDMSG_RTN_B32:
+    case AMDGPU::S_SENDMSG_RTN_B64:
     case AMDGPU::S_SENDMSGHALT:
       ScoreBrackets->updateByEvent(TII, TRI, MRI, SQ_MESSAGE, Inst);
       break;
