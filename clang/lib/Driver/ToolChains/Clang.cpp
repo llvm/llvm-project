@@ -3158,9 +3158,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 static void RenderAnalyzerOptions(const ArgList &Args, ArgStringList &CmdArgs,
                                   const llvm::Triple &Triple,
                                   const InputInfo &Input) {
-  // Treat blocks as analysis entry points.
-  CmdArgs.push_back("-analyzer-opt-analyze-nested-blocks");
-
   // Add default argument set.
   if (!Args.hasArg(options::OPT__analyzer_no_default_checks)) {
     CmdArgs.push_back("-analyzer-checker=core");
