@@ -119,3 +119,22 @@ func.func @select_different_tensors(%t: tensor<?xf32>, %sz: index, %c: i1) -> te
   %1 = arith.select %c, %0, %t : tensor<?xf32>
   return %1 : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @alloc_tensor_with_copy(
+//  CHECK-SAME:     %[[t:.*]]: tensor<5xf32>)
+// TODO: Add a test case with dynamic dim size. This is not possible at the
+// moment because this would create a tensor op during bufferization. That is
+// currently forbidden.
+func.func @alloc_tensor_with_copy(%t: tensor<5xf32>) -> tensor<5xf32> {
+  // CHECK: %[[m:.*]] = bufferization.to_memref %[[t]]
+  // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
+  // CHECK: memref.copy %[[m]], %[[alloc]]
+  %0 = bufferization.alloc_tensor() copy(%t) : tensor<5xf32>
+  // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
+  // CHECK: memref.dealloc %[[alloc]]
+  // CHECK: return %[[r]]
+  return %0 : tensor<5xf32>
+}
+

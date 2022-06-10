@@ -224,7 +224,7 @@ func.func @tensor_cast_to_memref(%arg0 : tensor<4x6x16x32xi8>) ->
   return %1 : memref<?x?x16x32xi8>
 }
 // CHECK:   %[[M:.+]] = bufferization.to_memref %[[ARG0]] : memref<4x6x16x32xi8>
-// CHECK:   %[[M1:.+]] = memref.cast %[[M]] 
+// CHECK:   %[[M1:.+]] = memref.cast %[[M]]
 // CHECK-SAME: memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
 // CHECK:   return %[[M1]] : memref<?x?x16x32xi8>
 
