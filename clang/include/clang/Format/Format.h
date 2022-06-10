@@ -395,11 +395,6 @@ struct FormatStyle {
   /// \version 9
   bool AllowAllArgumentsOnNextLine;
 
-  /// This option is **deprecated**. See ``NextLine`` of
-  /// ``PackConstructorInitializers``.
-  /// \version 9
-  bool AllowAllConstructorInitializersOnNextLine;
-
   /// If the function declaration doesn't fit on a line,
   /// allow putting all parameters of a function declaration onto
   /// the next line even if ``BinPackParameters`` is ``false``.
@@ -1882,11 +1877,6 @@ struct FormatStyle {
   /// \endcode
   /// \version 5
   bool CompactNamespaces;
-
-  /// This option is **deprecated**. See ``CurrentLine`` of
-  /// ``PackConstructorInitializers``.
-  /// \version 3.7
-  bool ConstructorInitializerAllOnOneLineOrOnePerLine;
 
   /// The number of characters to use for indentation of constructor
   /// initializer lists as well as inheritance lists.
