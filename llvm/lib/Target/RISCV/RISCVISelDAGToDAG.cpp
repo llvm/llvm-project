@@ -2416,10 +2416,8 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 
   // Retrieve the tail policy operand index, if any.
   Optional<unsigned> TailPolicyOpIdx;
-  const RISCVInstrInfo *TII = static_cast<const RISCVInstrInfo *>(
-      CurDAG->getSubtarget().getInstrInfo());
-
-  const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
+  const RISCVInstrInfo &TII = *Subtarget->getInstrInfo();
+  const MCInstrDesc &MaskedMCID = TII.get(N->getMachineOpcode());
 
   bool IsTA = true;
   if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags)) {
@@ -2444,7 +2442,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   }
 
   if (IsTA) {
-    uint64_t TSFlags = TII->get(I->UnmaskedPseudo).TSFlags;
+    uint64_t TSFlags = TII.get(I->UnmaskedPseudo).TSFlags;
 
     // Check that we're dropping the merge operand, the mask operand, and any
     // policy operand when we transform to this unmasked pseudo.
@@ -2453,7 +2451,7 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
            "Unexpected pseudo to transform to");
     (void)TSFlags;
   } else {
-    uint64_t TSFlags = TII->get(I->UnmaskedTUPseudo).TSFlags;
+    uint64_t TSFlags = TII.get(I->UnmaskedTUPseudo).TSFlags;
 
     // Check that we're dropping the mask operand, and any policy operand
     // when we transform to this unmasked tu pseudo.
