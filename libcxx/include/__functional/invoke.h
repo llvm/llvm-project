@@ -11,15 +11,648 @@
 #define _LIBCPP___FUNCTIONAL_INVOKE_H
 
 #include <__config>
-#include <__functional/weak_result_type.h>
+#include <__type_traits/add_lvalue_reference.h>
+#include <__type_traits/apply_cv.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
+#include <__type_traits/is_base_of.h>
+#include <__type_traits/is_core_convertible.h>
+#include <__type_traits/is_member_function_pointer.h>
+#include <__type_traits/is_member_object_pointer.h>
+#include <__type_traits/is_reference_wrapper.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_void.h>
+#include <__type_traits/remove_cv.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+// TODO: Disentangle the type traits and std::invoke properly
+
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+struct __any
+{
+    __any(...);
+};
+
+struct __nat
+{
+#ifndef _LIBCPP_CXX03_LANG
+    __nat() = delete;
+    __nat(const __nat&) = delete;
+    __nat& operator=(const __nat&) = delete;
+    ~__nat() = delete;
+#endif
+};
+
+template <class _MP, bool _IsMemberFunctionPtr, bool _IsMemberObjectPtr>
+struct __member_pointer_traits_imp
+{
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...), true, false>
+{
+    typedef _Class _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...), true, false>
+{
+    typedef _Class _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) const, true, false>
+{
+    typedef _Class const _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) const, true, false>
+{
+    typedef _Class const _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) volatile, true, false>
+{
+    typedef _Class volatile _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) volatile, true, false>
+{
+    typedef _Class volatile _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) const volatile, true, false>
+{
+    typedef _Class const volatile _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) const volatile, true, false>
+{
+    typedef _Class const volatile _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+#if __has_feature(cxx_reference_qualified_functions) || defined(_LIBCPP_COMPILER_GCC)
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) &, true, false>
+{
+    typedef _Class& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) &, true, false>
+{
+    typedef _Class& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) const&, true, false>
+{
+    typedef _Class const& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) const&, true, false>
+{
+    typedef _Class const& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) volatile&, true, false>
+{
+    typedef _Class volatile& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) volatile&, true, false>
+{
+    typedef _Class volatile& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) const volatile&, true, false>
+{
+    typedef _Class const volatile& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) const volatile&, true, false>
+{
+    typedef _Class const volatile& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) &&, true, false>
+{
+    typedef _Class&& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) &&, true, false>
+{
+    typedef _Class&& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) const&&, true, false>
+{
+    typedef _Class const&& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) const&&, true, false>
+{
+    typedef _Class const&& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) volatile&&, true, false>
+{
+    typedef _Class volatile&& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) volatile&&, true, false>
+{
+    typedef _Class volatile&& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...) const volatile&&, true, false>
+{
+    typedef _Class const volatile&& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param...);
+};
+
+template <class _Rp, class _Class, class ..._Param>
+struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param..., ...) const volatile&&, true, false>
+{
+    typedef _Class const volatile&& _ClassType;
+    typedef _Rp _ReturnType;
+    typedef _Rp (_FnType) (_Param..., ...);
+};
+
+#endif // __has_feature(cxx_reference_qualified_functions) || defined(_LIBCPP_COMPILER_GCC)
+
+template <class _Rp, class _Class>
+struct __member_pointer_traits_imp<_Rp _Class::*, false, true>
+{
+    typedef _Class _ClassType;
+    typedef _Rp _ReturnType;
+};
+
+template <class _MP>
+struct __member_pointer_traits
+    : public __member_pointer_traits_imp<typename remove_cv<_MP>::type,
+                    is_member_function_pointer<_MP>::value,
+                    is_member_object_pointer<_MP>::value>
+{
+//     typedef ... _ClassType;
+//     typedef ... _ReturnType;
+//     typedef ... _FnType;
+};
+
+template <class _DecayedFp>
+struct __member_pointer_class_type {};
+
+template <class _Ret, class _ClassType>
+struct __member_pointer_class_type<_Ret _ClassType::*> {
+  typedef _ClassType type;
+};
+
+#ifndef _LIBCPP_CXX03_LANG
+
+template <class _Fp, class _A0,
+         class _DecayFp = typename decay<_Fp>::type,
+         class _DecayA0 = typename decay<_A0>::type,
+         class _ClassT = typename __member_pointer_class_type<_DecayFp>::type>
+using __enable_if_bullet1 = typename enable_if
+    <
+        is_member_function_pointer<_DecayFp>::value
+        && is_base_of<_ClassT, _DecayA0>::value
+    >::type;
+
+template <class _Fp, class _A0,
+         class _DecayFp = typename decay<_Fp>::type,
+         class _DecayA0 = typename decay<_A0>::type>
+using __enable_if_bullet2 = typename enable_if
+    <
+        is_member_function_pointer<_DecayFp>::value
+        && __is_reference_wrapper<_DecayA0>::value
+    >::type;
+
+template <class _Fp, class _A0,
+         class _DecayFp = typename decay<_Fp>::type,
+         class _DecayA0 = typename decay<_A0>::type,
+         class _ClassT = typename __member_pointer_class_type<_DecayFp>::type>
+using __enable_if_bullet3 = typename enable_if
+    <
+        is_member_function_pointer<_DecayFp>::value
+        && !is_base_of<_ClassT, _DecayA0>::value
+        && !__is_reference_wrapper<_DecayA0>::value
+    >::type;
+
+template <class _Fp, class _A0,
+         class _DecayFp = typename decay<_Fp>::type,
+         class _DecayA0 = typename decay<_A0>::type,
+         class _ClassT = typename __member_pointer_class_type<_DecayFp>::type>
+using __enable_if_bullet4 = typename enable_if
+    <
+        is_member_object_pointer<_DecayFp>::value
+        && is_base_of<_ClassT, _DecayA0>::value
+    >::type;
+
+template <class _Fp, class _A0,
+         class _DecayFp = typename decay<_Fp>::type,
+         class _DecayA0 = typename decay<_A0>::type>
+using __enable_if_bullet5 = typename enable_if
+    <
+        is_member_object_pointer<_DecayFp>::value
+        && __is_reference_wrapper<_DecayA0>::value
+    >::type;
+
+template <class _Fp, class _A0,
+         class _DecayFp = typename decay<_Fp>::type,
+         class _DecayA0 = typename decay<_A0>::type,
+         class _ClassT = typename __member_pointer_class_type<_DecayFp>::type>
+using __enable_if_bullet6 = typename enable_if
+    <
+        is_member_object_pointer<_DecayFp>::value
+        && !is_base_of<_ClassT, _DecayA0>::value
+        && !__is_reference_wrapper<_DecayA0>::value
+    >::type;
+
+// __invoke forward declarations
+
+// fall back - none of the bullets
+
+template <class ..._Args>
+auto __invoke(__any, _Args&& ...__args) -> __nat;
+
+// bullets 1, 2 and 3
+
+template <class _Fp, class _A0, class ..._Args,
+          class = __enable_if_bullet1<_Fp, _A0>>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr auto
+__invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
+    noexcept(noexcept((static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...))
+    { return          (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...); }
+
+template <class _Fp, class _A0, class ..._Args,
+          class = __enable_if_bullet2<_Fp, _A0>>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr auto
+__invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
+    noexcept(noexcept((__a0.get().*__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      (__a0.get().*__f)(static_cast<_Args&&>(__args)...))
+    { return          (__a0.get().*__f)(static_cast<_Args&&>(__args)...); }
+
+template <class _Fp, class _A0, class ..._Args,
+          class = __enable_if_bullet3<_Fp, _A0>>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr auto
+__invoke(_Fp&& __f, _A0&& __a0, _Args&& ...__args)
+    noexcept(noexcept(((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...))
+    { return          ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...); }
+
+// bullets 4, 5 and 6
+
+template <class _Fp, class _A0,
+          class = __enable_if_bullet4<_Fp, _A0>>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr auto
+__invoke(_Fp&& __f, _A0&& __a0)
+    noexcept(noexcept(static_cast<_A0&&>(__a0).*__f))
+    -> decltype(      static_cast<_A0&&>(__a0).*__f)
+    { return          static_cast<_A0&&>(__a0).*__f; }
+
+template <class _Fp, class _A0,
+          class = __enable_if_bullet5<_Fp, _A0>>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr auto
+__invoke(_Fp&& __f, _A0&& __a0)
+    noexcept(noexcept(__a0.get().*__f))
+    -> decltype(      __a0.get().*__f)
+    { return          __a0.get().*__f; }
+
+template <class _Fp, class _A0,
+          class = __enable_if_bullet6<_Fp, _A0>>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr auto
+__invoke(_Fp&& __f, _A0&& __a0)
+    noexcept(noexcept((*static_cast<_A0&&>(__a0)).*__f))
+    -> decltype(      (*static_cast<_A0&&>(__a0)).*__f)
+    { return          (*static_cast<_A0&&>(__a0)).*__f; }
+
+// bullet 7
+
+template <class _Fp, class ..._Args>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr auto
+__invoke(_Fp&& __f, _Args&& ...__args)
+    noexcept(noexcept(static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...)))
+    -> decltype(      static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...))
+    { return          static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...); }
+
+// __invokable
+template <class _Ret, class _Fp, class ..._Args>
+struct __invokable_r
+{
+  template <class _XFp, class ..._XArgs>
+  static auto __try_call(int) -> decltype(
+    _VSTD::__invoke(declval<_XFp>(), declval<_XArgs>()...));
+  template <class _XFp, class ..._XArgs>
+  static __nat __try_call(...);
+
+  // FIXME: Check that _Ret, _Fp, and _Args... are all complete types, cv void,
+  // or incomplete array types as required by the standard.
+  using _Result = decltype(__try_call<_Fp, _Args...>(0));
+
+  using type = typename conditional<
+      _IsNotSame<_Result, __nat>::value,
+      typename conditional< is_void<_Ret>::value, true_type, __is_core_convertible<_Result, _Ret> >::type,
+      false_type >::type;
+  static const bool value = type::value;
+};
+template <class _Fp, class ..._Args>
+using __invokable = __invokable_r<void, _Fp, _Args...>;
+
+template <bool _IsInvokable, bool _IsCVVoid, class _Ret, class _Fp, class ..._Args>
+struct __nothrow_invokable_r_imp {
+  static const bool value = false;
+};
+
+template <class _Ret, class _Fp, class ..._Args>
+struct __nothrow_invokable_r_imp<true, false, _Ret, _Fp, _Args...>
+{
+    typedef __nothrow_invokable_r_imp _ThisT;
+
+    template <class _Tp>
+    static void __test_noexcept(_Tp) noexcept;
+
+    static const bool value = noexcept(_ThisT::__test_noexcept<_Ret>(
+        _VSTD::__invoke(declval<_Fp>(), declval<_Args>()...)));
+};
+
+template <class _Ret, class _Fp, class ..._Args>
+struct __nothrow_invokable_r_imp<true, true, _Ret, _Fp, _Args...>
+{
+    static const bool value = noexcept(
+        _VSTD::__invoke(declval<_Fp>(), declval<_Args>()...));
+};
+
+template <class _Ret, class _Fp, class ..._Args>
+using __nothrow_invokable_r =
+    __nothrow_invokable_r_imp<
+            __invokable_r<_Ret, _Fp, _Args...>::value,
+            is_void<_Ret>::value,
+            _Ret, _Fp, _Args...
+    >;
+
+template <class _Fp, class ..._Args>
+using __nothrow_invokable =
+    __nothrow_invokable_r_imp<
+            __invokable<_Fp, _Args...>::value,
+            true, void, _Fp, _Args...
+    >;
+
+template <class _Fp, class ..._Args>
+struct __invoke_of
+    : public enable_if<
+        __invokable<_Fp, _Args...>::value,
+        typename __invokable_r<void, _Fp, _Args...>::_Result>
+{
+};
+
+#else
+
+// Assume that it's a functor in C++03
+template <class _Func, class... _Args>
+_LIBCPP_HIDE_FROM_ABI
+decltype(std::declval<_Func>()(std::declval<_Args>()...)) __invoke(_Func&& __func, _Args&&... __args) {
+    return static_cast<_Func&&>(__func)(static_cast<_Args&&>(__args)...);
+}
+
+template <class _Ret, class _T1, bool _IsFunc, bool _IsBase>
+struct __enable_invoke_imp;
+
+template <class _Ret, class _T1>
+struct __enable_invoke_imp<_Ret, _T1, true, true> {
+    typedef _Ret _Bullet1;
+    typedef _Bullet1 type;
+};
+
+template <class _Ret, class _T1>
+struct __enable_invoke_imp<_Ret, _T1, true, false>  {
+    typedef _Ret _Bullet2;
+    typedef _Bullet2 type;
+};
+
+template <class _Ret, class _T1>
+struct __enable_invoke_imp<_Ret, _T1, false, true>  {
+    typedef typename add_lvalue_reference<
+                typename __apply_cv<_T1, _Ret>::type
+            >::type _Bullet3;
+    typedef _Bullet3 type;
+};
+
+template <class _Ret, class _T1>
+struct __enable_invoke_imp<_Ret, _T1, false, false>  {
+    typedef typename add_lvalue_reference<
+                typename __apply_cv<decltype(*declval<_T1>()), _Ret>::type
+            >::type _Bullet4;
+    typedef _Bullet4 type;
+};
+
+template <class _Ret, class _T1>
+struct __enable_invoke_imp<_Ret, _T1*, false, false>  {
+    typedef typename add_lvalue_reference<
+                typename __apply_cv<_T1, _Ret>::type
+            >::type _Bullet4;
+    typedef _Bullet4  type;
+};
+
+template <class _Fn, class _T1,
+          class _Traits = __member_pointer_traits<_Fn>,
+          class _Ret = typename _Traits::_ReturnType,
+          class _Class = typename _Traits::_ClassType>
+struct __enable_invoke : __enable_invoke_imp<
+    _Ret, _T1,
+    is_member_function_pointer<_Fn>::value,
+    is_base_of<_Class, typename remove_reference<_T1>::type>::value>
+{
+};
+
+__nat __invoke(__any, ...);
+
+// first bullet
+
+template <class _Fn, class _T1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename __enable_invoke<_Fn, _T1>::_Bullet1
+__invoke(_Fn __f, _T1& __t1) {
+    return (__t1.*__f)();
+}
+
+template <class _Fn, class _T1, class _A0>
+inline _LIBCPP_INLINE_VISIBILITY
+typename __enable_invoke<_Fn, _T1>::_Bullet1
+__invoke(_Fn __f, _T1& __t1, _A0& __a0) {
+    return (__t1.*__f)(__a0);
+}
+
+template <class _Fn, class _T1, class _A0, class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename __enable_invoke<_Fn, _T1>::_Bullet1
+__invoke(_Fn __f, _T1& __t1, _A0& __a0, _A1& __a1) {
+    return (__t1.*__f)(__a0, __a1);
+}
+
+template <class _Fn, class _T1, class _A0, class _A1, class _A2>
+inline _LIBCPP_INLINE_VISIBILITY
+typename __enable_invoke<_Fn, _T1>::_Bullet1
+__invoke(_Fn __f, _T1& __t1, _A0& __a0, _A1& __a1, _A2& __a2) {
+    return (__t1.*__f)(__a0, __a1, __a2);
+}
+
+template <class _Fn, class _T1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename __enable_invoke<_Fn, _T1>::_Bullet2
+__invoke(_Fn __f, _T1& __t1) {
+    return ((*__t1).*__f)();
+}
+
+template <class _Fn, class _T1, class _A0>
+inline _LIBCPP_INLINE_VISIBILITY
+typename __enable_invoke<_Fn, _T1>::_Bullet2
+__invoke(_Fn __f, _T1& __t1, _A0& __a0) {
+    return ((*__t1).*__f)(__a0);
+}
+
+template <class _Fn, class _T1, class _A0, class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename __enable_invoke<_Fn, _T1>::_Bullet2
+__invoke(_Fn __f, _T1& __t1, _A0& __a0, _A1& __a1) {
+    return ((*__t1).*__f)(__a0, __a1);
+}
+
+template <class _Fn, class _T1, class _A0, class _A1, class _A2>
+inline _LIBCPP_INLINE_VISIBILITY
+typename __enable_invoke<_Fn, _T1>::_Bullet2
+__invoke(_Fn __f, _T1& __t1, _A0& __a0, _A1& __a1, _A2& __a2) {
+    return ((*__t1).*__f)(__a0, __a1, __a2);
+}
+
+template <class _Fn, class _T1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename __enable_invoke<_Fn, _T1>::_Bullet3
+__invoke(_Fn __f, _T1& __t1) {
+    return __t1.*__f;
+}
+
+template <class _Fn, class _T1>
+inline _LIBCPP_INLINE_VISIBILITY
+typename __enable_invoke<_Fn, _T1>::_Bullet4
+__invoke(_Fn __f, _T1& __t1) {
+    return (*__t1).*__f;
+}
+
+// fifth bullet
+
+template <class _Fp>
+inline _LIBCPP_INLINE_VISIBILITY
+decltype(declval<_Fp&>()())
+__invoke(_Fp& __f)
+{
+    return __f();
+}
+
+template <class _Fp, class _A0>
+inline _LIBCPP_INLINE_VISIBILITY
+decltype(declval<_Fp&>()(declval<_A0&>()))
+__invoke(_Fp& __f, _A0& __a0)
+{
+    return __f(__a0);
+}
+
+template <class _Fp, class _A0, class _A1>
+inline _LIBCPP_INLINE_VISIBILITY
+decltype(declval<_Fp&>()(declval<_A0&>(), declval<_A1&>()))
+__invoke(_Fp& __f, _A0& __a0, _A1& __a1)
+{
+    return __f(__a0, __a1);
+}
+
+template <class _Fp, class _A0, class _A1, class _A2>
+inline _LIBCPP_INLINE_VISIBILITY
+decltype(declval<_Fp&>()(declval<_A0&>(), declval<_A1&>(), declval<_A2&>()))
+__invoke(_Fp& __f, _A0& __a0, _A1& __a1, _A2& __a2)
+{
+    return __f(__a0, __a1, __a2);
+}
+
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _Ret, bool = is_void<_Ret>::value>
 struct __invoke_void_return_wrapper
@@ -84,6 +717,47 @@ struct __invoke_void_return_wrapper<_Ret, true>
 };
 
 #if _LIBCPP_STD_VER > 14
+
+// is_invocable
+
+template <class _Fn, class ..._Args>
+struct _LIBCPP_TEMPLATE_VIS is_invocable
+    : integral_constant<bool, __invokable<_Fn, _Args...>::value> {};
+
+template <class _Ret, class _Fn, class ..._Args>
+struct _LIBCPP_TEMPLATE_VIS is_invocable_r
+    : integral_constant<bool, __invokable_r<_Ret, _Fn, _Args...>::value> {};
+
+template <class _Fn, class ..._Args>
+inline constexpr bool is_invocable_v = is_invocable<_Fn, _Args...>::value;
+
+template <class _Ret, class _Fn, class ..._Args>
+inline constexpr bool is_invocable_r_v = is_invocable_r<_Ret, _Fn, _Args...>::value;
+
+// is_nothrow_invocable
+
+template <class _Fn, class ..._Args>
+struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable
+    : integral_constant<bool, __nothrow_invokable<_Fn, _Args...>::value> {};
+
+template <class _Ret, class _Fn, class ..._Args>
+struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable_r
+    : integral_constant<bool, __nothrow_invokable_r<_Ret, _Fn, _Args...>::value> {};
+
+template <class _Fn, class ..._Args>
+inline constexpr bool is_nothrow_invocable_v = is_nothrow_invocable<_Fn, _Args...>::value;
+
+template <class _Ret, class _Fn, class ..._Args>
+inline constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<_Ret, _Fn, _Args...>::value;
+
+template <class _Fn, class... _Args>
+struct _LIBCPP_TEMPLATE_VIS invoke_result
+    : __invoke_of<_Fn, _Args...>
+{
+};
+
+template <class _Fn, class... _Args>
+using invoke_result_t = typename invoke_result<_Fn, _Args...>::type;
 
 template <class _Fn, class ..._Args>
 _LIBCPP_CONSTEXPR_AFTER_CXX17 invoke_result_t<_Fn, _Args...>
