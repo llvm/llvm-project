@@ -881,16 +881,16 @@ static DIType *solveDIType(DIBuilder &Builder, Type *Ty,
                                       dwarf::DW_ATE_float,
                                       llvm::DINode::FlagArtificial);
   } else if (Ty->isPointerTy()) {
-    // Construct BasicType instead of PointerType to avoid infinite
-    // search problem.
-    // For example, we would be in trouble if we traverse recursively:
+    // Construct PointerType points to null (aka void *) instead of exploring
+    // pointee type to avoid infinite search problem. For example, we would be
+    // in trouble if we traverse recursively:
     //
     //  struct Node {
     //      Node* ptr;
     //  };
-    RetType = Builder.createBasicType(Name, Layout.getTypeSizeInBits(Ty),
-                                      dwarf::DW_ATE_address,
-                                      llvm::DINode::FlagArtificial);
+    RetType = Builder.createPointerType(nullptr, Layout.getTypeSizeInBits(Ty),
+                                        Layout.getABITypeAlignment(Ty),
+                                        /*DWARFAddressSpace=*/None, Name);
   } else if (Ty->isStructTy()) {
     auto *DIStruct = Builder.createStructType(
         Scope, Name, Scope->getFile(), LineNum, Layout.getTypeSizeInBits(Ty),
@@ -914,13 +914,21 @@ static DIType *solveDIType(DIBuilder &Builder, Type *Ty,
 
     RetType = DIStruct;
   } else {
-    LLVM_DEBUG(dbgs() << "Unresolved Type: " << *Ty << "\n";);
-    SmallString<32> Buffer;
-    raw_svector_ostream OS(Buffer);
-    OS << Name.str() << "_" << Layout.getTypeSizeInBits(Ty);
-    RetType = Builder.createBasicType(OS.str(), Layout.getTypeSizeInBits(Ty),
-                                      dwarf::DW_ATE_address,
-                                      llvm::DINode::FlagArtificial);
+    LLVM_DEBUG(dbgs() << "Unresolved Type: " << *Ty << "\n");
+    TypeSize Size = Layout.getTypeSizeInBits(Ty);
+    auto *CharSizeType = Builder.createBasicType(
+        Name, 8, dwarf::DW_ATE_unsigned_char, llvm::DINode::FlagArtificial);
+
+    if (Size <= 8)
+      RetType = CharSizeType;
+    else {
+      if (Size % 8 != 0)
+        Size = TypeSize::Fixed(Size + 8 - (Size % 8));
+
+      RetType = Builder.createArrayType(
+          Size, Layout.getPrefTypeAlign(Ty).value(), CharSizeType,
+          Builder.getOrCreateArray(Builder.getOrCreateSubrange(0, Size / 8)));
+    }
   }
 
   DITypeCache.insert({Ty, RetType});
@@ -996,14 +1004,12 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
        *IndexTy = FrameTy->getElementType(IndexIndex);
 
   DenseMap<unsigned, DIType *> TyCache;
-  TyCache.insert({ResumeIndex,
-                  DBuilder.createBasicType("__resume_fn",
-                                           Layout.getTypeSizeInBits(ResumeFnTy),
-                                           dwarf::DW_ATE_address)});
   TyCache.insert(
-      {DestroyIndex, DBuilder.createBasicType(
-                         "__destroy_fn", Layout.getTypeSizeInBits(DestroyFnTy),
-                         dwarf::DW_ATE_address)});
+      {ResumeIndex, DBuilder.createPointerType(
+                        nullptr, Layout.getTypeSizeInBits(ResumeFnTy))});
+  TyCache.insert(
+      {DestroyIndex, DBuilder.createPointerType(
+                         nullptr, Layout.getTypeSizeInBits(DestroyFnTy))});
 
   /// FIXME: If we fill the field `SizeInBits` with the actual size of
   /// __coro_index in bits, then __coro_index wouldn't show in the debugger.
