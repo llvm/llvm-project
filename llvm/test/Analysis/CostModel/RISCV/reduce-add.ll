@@ -2,6 +2,40 @@
 ; RUN: opt < %s -mtriple=riscv32 -mattr=+v -riscv-v-vector-bits-min=256 -passes='print<cost-model>' -cost-kind=throughput 2>&1 -disable-output | FileCheck %s --check-prefix=RISCV32
 ; RUN: opt < %s -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=256 -passes='print<cost-model>' -cost-kind=throughput 2>&1 -disable-output | FileCheck %s --check-prefix=RISCV64
 
+define i32 @reduce_i1(i32 %arg) {
+; RISCV32-LABEL: 'reduce_i1'
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1 = call i1 @llvm.vector.reduce.add.v1i1(<1 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2 = call i1 @llvm.vector.reduce.add.v2i1(<2 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: %V4 = call i1 @llvm.vector.reduce.add.v4i1(<4 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 121 for instruction: %V8 = call i1 @llvm.vector.reduce.add.v8i1(<8 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 321 for instruction: %V16 = call i1 @llvm.vector.reduce.add.v16i1(<16 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 801 for instruction: %V32 = call i1 @llvm.vector.reduce.add.v32i1(<32 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1921 for instruction: %V64 = call i1 @llvm.vector.reduce.add.v64i1(<64 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 4481 for instruction: %V128 = call i1 @llvm.vector.reduce.add.v128i1(<128 x i1> undef)
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+; RISCV64-LABEL: 'reduce_i1'
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1 = call i1 @llvm.vector.reduce.add.v1i1(<1 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2 = call i1 @llvm.vector.reduce.add.v2i1(<2 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: %V4 = call i1 @llvm.vector.reduce.add.v4i1(<4 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 121 for instruction: %V8 = call i1 @llvm.vector.reduce.add.v8i1(<8 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 321 for instruction: %V16 = call i1 @llvm.vector.reduce.add.v16i1(<16 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 801 for instruction: %V32 = call i1 @llvm.vector.reduce.add.v32i1(<32 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1921 for instruction: %V64 = call i1 @llvm.vector.reduce.add.v64i1(<64 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 4481 for instruction: %V128 = call i1 @llvm.vector.reduce.add.v128i1(<128 x i1> undef)
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+  %V1   = call i1 @llvm.vector.reduce.add.v1i1(<1 x i1> undef)
+  %V2   = call i1 @llvm.vector.reduce.add.v2i1(<2 x i1> undef)
+  %V4   = call i1 @llvm.vector.reduce.add.v4i1(<4 x i1> undef)
+  %V8   = call i1 @llvm.vector.reduce.add.v8i1(<8 x i1> undef)
+  %V16  = call i1 @llvm.vector.reduce.add.v16i1(<16 x i1> undef)
+  %V32  = call i1 @llvm.vector.reduce.add.v32i1(<32 x i1> undef)
+  %V64  = call i1 @llvm.vector.reduce.add.v64i1(<64 x i1> undef)
+  %V128 = call i1 @llvm.vector.reduce.add.v128i1(<128 x i1> undef)
+  ret i32 undef
+}
+
 define i32 @reduce_i8(i32 %arg) {
 ; RISCV32-LABEL: 'reduce_i8'
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V1 = call i8 @llvm.vector.reduce.add.v1i8(<1 x i8> undef)
@@ -138,6 +172,14 @@ define i32 @reduce_i64(i32 %arg) {
   ret i32 undef
 }
 
+declare i1 @llvm.vector.reduce.add.v1i1(<1 x i1>)
+declare i1 @llvm.vector.reduce.add.v2i1(<2 x i1>)
+declare i1 @llvm.vector.reduce.add.v4i1(<4 x i1>)
+declare i1 @llvm.vector.reduce.add.v8i1(<8 x i1>)
+declare i1 @llvm.vector.reduce.add.v16i1(<16 x i1>)
+declare i1 @llvm.vector.reduce.add.v32i1(<32 x i1>)
+declare i1 @llvm.vector.reduce.add.v64i1(<64 x i1>)
+declare i1 @llvm.vector.reduce.add.v128i1(<128 x i1>)
 declare i8 @llvm.vector.reduce.add.v1i8(<1 x i8>)
 declare i8 @llvm.vector.reduce.add.v2i8(<2 x i8>)
 declare i8 @llvm.vector.reduce.add.v4i8(<4 x i8>)
