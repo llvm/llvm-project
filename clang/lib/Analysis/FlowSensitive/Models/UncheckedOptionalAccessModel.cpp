@@ -165,8 +165,8 @@ auto isValueOrNotEqX() {
 }
 
 auto isCallReturningOptional() {
-  return callExpr(callee(functionDecl(returns(anyOf(
-      optionalOrAliasType(), referenceType(pointee(optionalOrAliasType())))))));
+  return callExpr(hasType(qualType(anyOf(
+      optionalOrAliasType(), referenceType(pointee(optionalOrAliasType()))))));
 }
 
 /// Creates a symbolic value for an `optional` value using `HasValueVal` as the

@@ -180,11 +180,20 @@ struct is_void : is_same<void, typename remove_cv<T>::type> {};
 namespace detail {
 
 template <class T>
+auto try_add_lvalue_reference(int) -> type_identity<T&>;
+template <class T>
+auto try_add_lvalue_reference(...) -> type_identity<T>;
+
+template <class T>
 auto try_add_rvalue_reference(int) -> type_identity<T&&>;
 template <class T>
 auto try_add_rvalue_reference(...) -> type_identity<T>;
 
 }  // namespace detail
+
+template <class T>
+struct add_lvalue_reference : decltype(detail::try_add_lvalue_reference<T>(0)) {
+};
 
 template <class T>
 struct add_rvalue_reference : decltype(detail::try_add_rvalue_reference<T>(0)) {
@@ -2316,6 +2325,26 @@ TEST_P(UncheckedOptionalAccessTest, OptionalValueInitialization) {
     }
   )",
       UnorderedElementsAre(Pair("merge", "unsafe: input.cc:19:7")));
+}
+
+TEST_P(UncheckedOptionalAccessTest, AssignThroughLvalueReferencePtr) {
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    template <typename T>
+    struct smart_ptr {
+      typename std::add_lvalue_reference<T>::type operator*() &;
+    };
+
+    void target() {
+      smart_ptr<$ns::$optional<float>> x;
+      *x = $ns::nullopt;
+      (*x).value();
+      /*[[check]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check", "unsafe: input.cc:12:7")));
 }
 
 // FIXME: Add support for:
