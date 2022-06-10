@@ -278,10 +278,10 @@ public:
   }
 
   // Return the i-th 64-bit word of the number.
-  const uint64_t &operator[](size_t i) const { return val[i]; }
+  constexpr const uint64_t &operator[](size_t i) const { return val[i]; }
 
   // Return the i-th 64-bit word of the number.
-  uint64_t &operator[](size_t i) { return val[i]; }
+  constexpr uint64_t &operator[](size_t i) { return val[i]; }
 
   uint64_t *data() { return val; }
 
