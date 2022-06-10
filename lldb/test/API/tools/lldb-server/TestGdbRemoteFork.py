@@ -262,3 +262,37 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
             "send packet: $Eff#00",
         ], True)
         self.expect_gdbremote_sequence()
+
+    @add_test_categories(["fork"])
+    def test_kill_all(self):
+        self.build()
+        self.prep_debug_monitor_and_inferior(inferior_args=["fork"])
+        self.add_qSupported_packets(["multiprocess+",
+                                     "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
+        ], True)
+        ret = self.expect_gdbremote_sequence()
+        parent_pid = ret["parent_pid"]
+        child_pid = ret["child_pid"]
+        self.reset_test_sequence()
+
+        exit_regex = "[$]X09;process:([0-9a-f]+)#.*"
+        self.test_sequence.add_log_lines([
+            # kill all processes
+            "read packet: $k#00",
+            {"direction": "send", "regex": exit_regex,
+             "capture": {1: "pid1"}},
+            {"direction": "send", "regex": exit_regex,
+             "capture": {1: "pid2"}},
+        ], True)
+        ret = self.expect_gdbremote_sequence()
+        self.assertEqual(set([ret["pid1"], ret["pid2"]]),
+                         set([parent_pid, child_pid]))
