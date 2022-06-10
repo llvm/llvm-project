@@ -57,6 +57,7 @@ if (current_toolchain == default_toolchain) {
   write_cmake_config("write_modulemap") {
     input = "module.modulemap.in"
     output = "$libcxx_generated_include_dir/module.modulemap"
+
     #no = "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER"
     values = [
       # An empty value here means the feature is supported.
@@ -494,6 +495,8 @@ if (current_toolchain == default_toolchain) {
       "__split_buffer",
       "__std_stream",
       "__string",
+      "__string/char_traits.h",
+      "__string/extern_template_lists.h",
       "__support/android/locale_bionic.h",
       "__support/fuchsia/xlocale.h",
       "__support/ibm/gettod_zos.h",
