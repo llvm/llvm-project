@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #include <cstddef>
@@ -37,6 +38,7 @@ public:
     pageZeroSize = LP::pageZeroSize;
     headerSize = sizeof(typename LP::mach_header);
     wordSize = LP::wordSize;
+    p2WordSize = llvm::CTLog2<LP::wordSize>();
   }
 
   virtual ~TargetInfo() = default;
@@ -85,11 +87,16 @@ public:
   size_t stubSize;
   size_t stubHelperHeaderSize;
   size_t stubHelperEntrySize;
+  uint8_t p2WordSize;
   size_t wordSize;
 
   size_t thunkSize = 0;
   uint64_t forwardBranchRange = 0;
   uint64_t backwardBranchRange = 0;
+
+  uint32_t modeDwarfEncoding;
+  uint8_t subtractorRelocType;
+  uint8_t unsignedRelocType;
 
   // We contrive this value as sufficiently far from any valid address that it
   // will always be out-of-range for any architecture. UINT64_MAX is not a
