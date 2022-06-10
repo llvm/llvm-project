@@ -41,7 +41,10 @@ int raise(int sig);
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <signal.h>
+
+#if __has_include(<signal.h>)
+# include <signal.h>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

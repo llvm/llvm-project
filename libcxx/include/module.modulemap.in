@@ -38,6 +38,7 @@ module std [system] {
     // <iso646.h> provided by compiler.
     // <limits.h> provided by compiler or C library.
     module locale_h {
+      @requires_LIBCXX_ENABLE_LOCALIZATION@
       header "locale.h"
       export *
     }
@@ -50,6 +51,7 @@ module std [system] {
       export *
     }
     module stdatomic_h {
+      @requires_LIBCXX_ENABLE_THREADS@
       requires cplusplus23
       header "stdatomic.h"
       export *
@@ -90,11 +92,13 @@ module std [system] {
     }
     // <time.h> provided by C library.
     module wchar_h {
+      @requires_LIBCXX_ENABLE_WIDE_CHARACTERS@
       // <wchar.h>'s __need_* macros require textual inclusion.
       textual header "wchar.h"
       export *
     }
     module wctype_h {
+      @requires_LIBCXX_ENABLE_WIDE_CHARACTERS@
       header "wctype.h"
       export *
     }
@@ -155,6 +159,7 @@ module std [system] {
       export *
     }
     module clocale {
+      @requires_LIBCXX_ENABLE_LOCALIZATION@
       header "clocale"
       export *
     }
@@ -215,11 +220,13 @@ module std [system] {
       export *
     }
     module cwchar {
+      @requires_LIBCXX_ENABLE_WIDE_CHARACTERS@
       header "cwchar"
       export depr.stdio_h
       export *
     }
     module cwctype {
+      @requires_LIBCXX_ENABLE_WIDE_CHARACTERS@
       header "cwctype"
       export *
     }
@@ -382,6 +389,7 @@ module std [system] {
     export *
   }
   module barrier {
+    @requires_LIBCXX_ENABLE_THREADS@
     header "barrier"
     export *
   }
@@ -425,7 +433,11 @@ module std [system] {
       module duration              { private header "__chrono/duration.h" }
       module file_clock            { private header "__chrono/file_clock.h" }
       module hh_mm_ss              { private header "__chrono/hh_mm_ss.h" }
-      module high_resolution_clock { private header "__chrono/high_resolution_clock.h" }
+      module high_resolution_clock {
+        private header "__chrono/high_resolution_clock.h"
+        export steady_clock
+        export system_clock
+      }
       module literals              { private header "__chrono/literals.h" }
       module month                 { private header "__chrono/month.h" }
       module month_weekday         { private header "__chrono/month_weekday.h" }
@@ -441,6 +453,7 @@ module std [system] {
     }
   }
   module codecvt {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "codecvt"
     export *
   }
@@ -528,6 +541,7 @@ module std [system] {
     export *
   }
   module filesystem {
+    @requires_LIBCXX_ENABLE_FILESYSTEM@
     header "filesystem"
     export *
 
@@ -588,6 +602,7 @@ module std [system] {
     export *
   }
   module fstream {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "fstream"
     export *
   }
@@ -626,6 +641,7 @@ module std [system] {
     }
   }
   module future {
+    @requires_LIBCXX_ENABLE_THREADS@
     header "future"
     export *
   }
@@ -634,10 +650,12 @@ module std [system] {
     export *
   }
   module iomanip {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "iomanip"
     export *
   }
   module ios {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "ios"
     export iosfwd
     export *
@@ -651,6 +669,7 @@ module std [system] {
     export *
   }
   module iostream {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "iostream"
     export ios
     export streambuf
@@ -659,6 +678,7 @@ module std [system] {
     export *
   }
   module istream {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "istream"
     // FIXME: should re-export ios, streambuf?
     export *
@@ -711,6 +731,7 @@ module std [system] {
     }
   }
   module latch {
+    @requires_LIBCXX_ENABLE_THREADS@
     header "latch"
     export *
   }
@@ -724,6 +745,7 @@ module std [system] {
     export *
   }
   module locale {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "locale"
     export *
   }
@@ -761,6 +783,7 @@ module std [system] {
     }
   }
   module mutex {
+    @requires_LIBCXX_ENABLE_THREADS@
     header "mutex"
     export *
   }
@@ -797,6 +820,7 @@ module std [system] {
     export *
   }
   module ostream {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "ostream"
     // FIXME: should re-export ios, streambuf?
     export *
@@ -909,6 +933,7 @@ module std [system] {
     export *
   }
   module regex {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "regex"
     export initializer_list
     export *
@@ -918,6 +943,7 @@ module std [system] {
     export *
   }
   module semaphore {
+    @requires_LIBCXX_ENABLE_THREADS@
     header "semaphore"
     export *
   }
@@ -927,6 +953,7 @@ module std [system] {
     export *
   }
   module shared_mutex {
+    @requires_LIBCXX_ENABLE_THREADS@
     header "shared_mutex"
     export version
   }
@@ -937,6 +964,7 @@ module std [system] {
     module span_fwd { private header "__fwd/span.h" }
   }
   module sstream {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "sstream"
     // FIXME: should re-export istream, ostream, ios, streambuf, string?
     export *
@@ -951,6 +979,7 @@ module std [system] {
     export *
   }
   module streambuf {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "streambuf"
     export *
   }
@@ -969,6 +998,7 @@ module std [system] {
     module string_view_fwd { private header "__fwd/string_view.h" }
   }
   module strstream {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "strstream"
     export *
   }
@@ -977,6 +1007,7 @@ module std [system] {
     export *
   }
   module thread {
+    @requires_LIBCXX_ENABLE_THREADS@
     header "thread"
     export *
 
@@ -1118,7 +1149,6 @@ module std [system] {
     export *
   }
 
-  // __config not modularised due to a bug in Clang
   // FIXME: These should be private.
   module __assert            {         header "__assert"            export * }
   module __availability      { private header "__availability"      export * }
@@ -1127,12 +1157,18 @@ module std [system] {
   module __debug             {         header "__debug"             export * }
   module __errc              { private header "__errc"              export * }
   module __hash_table        {         header "__hash_table"        export * }
-  module __locale            { private header "__locale"            export * }
+  module __locale            {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
+    private header "__locale" export *
+  }
   module __mbstate_t         { private header "__mbstate_t.h"       export * }
   module __mutex_base        { private header "__mutex_base"        export * }
   module __node_handle       { private header "__node_handle"       export * }
   module __split_buffer      { private header "__split_buffer"      export * }
-  module __std_stream        { private header "__std_stream"        export * }
+  module __std_stream        {
+    @requires_LIBCXX_ENABLE_LOCALIZATION@
+    private header "__std_stream" export *
+  }
   module __string            { private header "__string"            export * }
   module __threading_support {         header "__threading_support" export * }
   module __tree              {         header "__tree"              export * }
@@ -1184,6 +1220,7 @@ module std [system] {
       export *
     }
     module regex {
+      @requires_LIBCXX_ENABLE_LOCALIZATION@
       header "experimental/regex"
       export *
     }
