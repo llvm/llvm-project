@@ -1361,7 +1361,7 @@ defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, 0xef>, AMDGPUS
 //def IMAGE_RSRC256 : MIMG_NoPattern_RSRC256 <"image_rsrc256", mimgopc<0x7e>>;
 //def IMAGE_SAMPLER : MIMG_NoPattern_ <"image_sampler", mimgopc<0x7f>>;
 
-let SubtargetPredicate = isGFX10Only, OtherPredicates = [HasGFX10_BEncoding] in
+let SubtargetPredicate = isGFX10Only, OtherPredicates = [HasGFX10_AEncoding] in
 defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, 0x80>, "image_msaa_load", 1, 0, 0, 1>;
 
 let OtherPredicates = [HasGFX10_AEncoding] in
