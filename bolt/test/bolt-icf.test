@@ -3,7 +3,7 @@
 REQUIRES: system-linux
 
 RUN: %clangxx %p/Inputs/bolt_icf.cpp -g -Wl,-q -o %t.exe
-RUN: llvm-bolt %t.exe -relocs -o %t -icf 2>&1 | FileCheck %s
+RUN: llvm-bolt %t.exe --relocs -o %t --icf 2>&1 | FileCheck %s
 RUN: llvm-nm -n %t | FileCheck %s -check-prefix=CHECK-SYM
 
 CHECK: BOLT-INFO: ICF folded [[#]] out of [[#]] functions in [[#]] passes.

@@ -715,13 +715,15 @@ void BinaryContext::skipMarkedFragments() {
            "internal error in traversing function fragments");
     if (opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: Ignoring " << BF->getPrintName() << '\n';
-    BF->setIgnored();
+    BF->setSimple(false);
+    BF->setHasSplitJumpTable(true);
+
     std::for_each(BF->Fragments.begin(), BF->Fragments.end(), addToWorklist);
     std::for_each(BF->ParentFragments.begin(), BF->ParentFragments.end(),
                   addToWorklist);
   }
   if (!FragmentsToSkip.empty())
-    errs() << "BOLT-WARNING: ignored " << FragmentsToSkip.size() << " function"
+    errs() << "BOLT-WARNING: skipped " << FragmentsToSkip.size() << " function"
            << (FragmentsToSkip.size() == 1 ? "" : "s")
            << " due to cold fragments\n";
   FragmentsToSkip.clear();
