@@ -22,7 +22,6 @@ id := IDENTIFIER
 # TABLE-NEXT:     'expr': go to state 1
 # TABLE-NEXT:     'id': go to state 2
 # TABLE-NEXT: State 1
-# TABLE-NEXT:     'EOF': accept
 # TABLE-NEXT: State 2
 # TABLE-NEXT:     'EOF': reduce by rule 1 'expr := id'
 # TABLE-NEXT: State 3

@@ -393,6 +393,29 @@ TEST_F(GLRTest, GLRReduceOrder) {
             "[  0, end)     └─IDENTIFIER := tok[0]\n");
 }
 
+TEST_F(GLRTest, NoExplicitAccept) {
+  build(R"bnf(
+    _ := test
+
+    test := IDENTIFIER test
+    test := IDENTIFIER
+  )bnf");
+  clang::LangOptions LOptions;
+  // Given the following input, and the grammar above, we perform two reductions
+  // of the nonterminal `test` when the next token is `eof`, verify that the
+  // parser stops at the right state.
+  const TokenStream &Tokens = cook(lex("id id", LOptions), LOptions);
+  auto LRTable = LRTable::buildSLR(*G);
+
+  const ForestNode &Parsed =
+      glrParse(Tokens, {*G, LRTable, Arena, GSStack}, id("test"));
+  EXPECT_EQ(Parsed.dumpRecursive(*G),
+            "[  0, end) test := IDENTIFIER test\n"
+            "[  0,   1) ├─IDENTIFIER := tok[0]\n"
+            "[  1, end) └─test := IDENTIFIER\n"
+            "[  1, end)   └─IDENTIFIER := tok[1]\n");
+}
+
 TEST(GSSTest, GC) {
   //      ┌-A-┬-AB
   //      ├-B-┘

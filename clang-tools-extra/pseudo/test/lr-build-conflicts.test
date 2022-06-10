@@ -33,7 +33,6 @@ expr := IDENTIFIER
 # TABLE-NEXT:     'IDENTIFIER': shift state 2
 # TABLE-NEXT:     'expr': go to state 1
 # TABLE-NEXT: State 1
-# TABLE-NEXT:     'EOF': accept
 # TABLE-NEXT:     '-': shift state 3
 # TABLE-NEXT: State 2
 # TABLE-NEXT:     'EOF': reduce by rule 1 'expr := IDENTIFIER'

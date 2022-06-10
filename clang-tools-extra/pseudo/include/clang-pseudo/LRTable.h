@@ -19,8 +19,7 @@
 //  Typically, based on the category of the grammar symbol, the LRTable is
 //  broken into two logically separate tables:
 //    - ACTION table with terminals as columns -- e.g. ACTION[S, a] specifies
-//      next action (shift/reduce/accept/error) on state S under a lookahead
-//      terminal a
+//      next action (shift/reduce) on state S under a lookahead terminal a
 //    - GOTO table with nonterminals as columns -- e.g. GOTO[S, X] specifies
 //      the state which we transist to from the state S with the nonterminal X
 //
@@ -76,8 +75,12 @@ public:
       Shift,
       // Reduce by a rule: pop the state stack.
       Reduce,
-      // Signals that we have parsed the input successfully.
-      Accept,
+
+      // NOTE: there are no typical accept actions in the LRtable, accept
+      // actions are handled specifically in the parser -- if the parser
+      // reaches to a target state (which is goto(StartState, StartSymbol)) at
+      // the EOF token after a reduce, this indicates the input has been parsed
+      // as the StartSymbol successfully.
 
       // Nonterminal actions, corresponding to entry of GOTO table.
 
@@ -86,7 +89,6 @@ public:
       GoTo,
     };
 
-    static Action accept(RuleID RID) { return Action(Accept, RID); }
     static Action goTo(StateID S) { return Action(GoTo, S); }
     static Action shift(StateID S) { return Action(Shift, S); }
     static Action reduce(RuleID RID) { return Action(Reduce, RID); }

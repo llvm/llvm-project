@@ -33,7 +33,7 @@ TEST(LRTable, Builder) {
   std::vector<LRTable::Entry> Entries = {
       {/* State */ 0, tokenSymbol(tok::semi), Action::shift(0)},
       {/* State */ 0, tokenSymbol(tok::semi), Action::reduce(0)},
-      {/* State */ 1, tokenSymbol(tok::eof), Action::accept(2)},
+      {/* State */ 1, tokenSymbol(tok::eof), Action::reduce(2)},
       {/* State */ 2, tokenSymbol(tok::semi), Action::reduce(1)}};
   GrammarTable GT;
   LRTable T = LRTable::buildForTests(GT, Entries);
@@ -41,7 +41,7 @@ TEST(LRTable, Builder) {
   EXPECT_THAT(T.find(0, tokenSymbol(tok::semi)),
               UnorderedElementsAre(Action::shift(0), Action::reduce(0)));
   EXPECT_THAT(T.find(1, tokenSymbol(tok::eof)),
-              UnorderedElementsAre(Action::accept(2)));
+              UnorderedElementsAre(Action::reduce(2)));
   EXPECT_THAT(T.find(1, tokenSymbol(tok::semi)), IsEmpty());
   EXPECT_THAT(T.find(2, tokenSymbol(tok::semi)),
               UnorderedElementsAre(Action::reduce(1)));
