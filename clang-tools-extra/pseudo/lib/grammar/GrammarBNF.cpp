@@ -232,7 +232,7 @@ private:
         continue;
       }
 
-      Out.Sequence.push_back({Chunk});
+      Out.Sequence.push_back({Chunk, /*Attributes=*/{}});
     }
     return true;
   }
