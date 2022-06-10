@@ -20,16 +20,20 @@ add_object_library(
     libc.src.string.memory_utils.memset_implementation
 )
 
-add_header_library(
+add_object_library(
   string_writer
+  SRCS
+    string_writer.cpp
   HDRS
     string_writer.h
   DEPENDS
     libc.src.string.memory_utils.memcpy_implementation
 )
 
-add_header_library(
+add_object_library(
   file_writer
+  SRCS
+    file_writer.cpp
   HDRS
     file_writer.h
   DEPENDS
@@ -62,8 +66,10 @@ add_object_library(
 )
 
 
-add_header_library(
+add_object_library(
   printf_main
+  SRCS
+    printf_main.cpp
   HDRS
     printf_main.h
   DEPENDS
