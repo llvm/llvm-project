@@ -1261,7 +1261,9 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
       (!HasExternalLayout || Offset == CharUnits::Zero()) &&
       EmptySubobjects->CanPlaceBaseAtOffset(Base, CharUnits::Zero())) {
     setSize(std::max(getSize(), Layout.getSize()));
-    UpdateAlignment(BaseAlign, UnpackedAlignTo, PreferredBaseAlign);
+    // On PS4/PS5, don't update the alignment, to preserve compatibility.
+    if (!Context.getTargetInfo().getTriple().isPS())
+      UpdateAlignment(BaseAlign, UnpackedAlignTo, PreferredBaseAlign);
 
     return CharUnits::Zero();
   }
