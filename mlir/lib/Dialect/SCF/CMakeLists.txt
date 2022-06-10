@@ -16,5 +16,6 @@ add_mlir_dialect_library(MLIRSCF
   MLIRSideEffectInterfaces
   )
 
+add_subdirectory(TransformOps)
 add_subdirectory(Transforms)
 add_subdirectory(Utils)

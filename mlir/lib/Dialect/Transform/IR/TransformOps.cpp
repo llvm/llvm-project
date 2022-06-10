@@ -137,17 +137,6 @@ LogicalResult transform::GetClosestIsolatedParentOp::apply(
   return success();
 }
 
-void transform::GetClosestIsolatedParentOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), getTarget(),
-                       TransformMappingResource::get());
-  effects.emplace_back(MemoryEffects::Allocate::get(), getParent(),
-                       TransformMappingResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(), getParent(),
-                       TransformMappingResource::get());
-  effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
-}
-
 //===----------------------------------------------------------------------===//
 // PDLMatchOp
 //===----------------------------------------------------------------------===//

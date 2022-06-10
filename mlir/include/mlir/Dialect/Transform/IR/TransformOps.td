@@ -19,7 +19,7 @@ include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 
 def GetClosestIsolatedParentOp : TransformDialectOp<"get_closest_isolated_parent",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
-     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
   let summary = "Gets handles to the closest isolated-from-above parents";
   let description = [{
     The handles defined by this Transform op correspond to the closest isolated

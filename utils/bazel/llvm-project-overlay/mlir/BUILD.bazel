@@ -1868,6 +1868,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/SCF/Passes.h",
+        "include/mlir/Dialect/SCF/Patterns.h",
         "include/mlir/Dialect/SCF/Transforms.h",
     ],
     includes = ["include"],
@@ -1888,6 +1889,59 @@ cc_library(
         ":Support",
         ":TensorDialect",
         ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "SCFTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/SCF/TransformOps/SCFTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":PDLDialect",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "SCFTransformOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/SCF/TransformOps/SCFTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/SCF/TransformOps/SCFTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/SCF/TransformOps/SCFTransformOps.td",
+    deps = [
+        ":SCFTransformOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "SCFTransformOps",
+    srcs = glob(["lib/Dialect/SCF/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/SCF/TransformOps/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":Affine",
+        ":FuncDialect",
+        ":IR",
+        ":PDLDialect",
+        ":SCFDialect",
+        ":SCFTransformOpsIncGen",
+        ":SCFTransforms",
+        ":SCFUtils",
+        ":SideEffectInterfaces",
+        ":TransformDialect",
+        ":VectorOps",
         "//llvm:Support",
     ],
 )
@@ -2601,6 +2655,7 @@ cc_library(
         ],
         exclude = [
             "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
+            "include/mlir/Dialect/SCF/Patterns.h",
             "include/mlir/Dialect/SCF/Transforms.h",
         ],
     ),
@@ -6299,6 +6354,7 @@ cc_library(
         ":SCFPassIncGen",
         ":SCFToGPUPass",
         ":SCFToStandard",
+        ":SCFTransformOps",
         ":SCFTransforms",
         ":SDBM",
         ":SPIRVDialect",

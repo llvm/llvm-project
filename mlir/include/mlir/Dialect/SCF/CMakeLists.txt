@@ -7,3 +7,5 @@ add_public_tablegen_target(MLIRSCFPassIncGen)
 add_dependencies(mlir-headers MLIRSCFPassIncGen)
 
 add_mlir_doc(Passes SCFPasses ./ -gen-pass-doc)
+
+add_subdirectory(TransformOps)
