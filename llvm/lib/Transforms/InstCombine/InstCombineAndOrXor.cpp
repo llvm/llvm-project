@@ -1904,6 +1904,30 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         return new ZExtInst(NewBO, Ty);
       }
     }
+
+    Constant *C1, *C2;
+    const APInt *C3 = C;
+    Value *X;
+    if (C3->isPowerOf2() &&
+        match(Op0, m_OneUse(m_LShr(m_Shl(m_ImmConstant(C1), m_Value(X)),
+                                   m_ImmConstant(C2)))) &&
+        match(C1, m_Power2())) {
+      Constant *Log2C1 = ConstantExpr::getExactLogBase2(C1);
+      Constant *Log2C3 = ConstantInt::get(Ty, C3->countTrailingZeros());
+      Constant *LshrC = ConstantExpr::getAdd(C2, Log2C3);
+      KnownBits KnownLShrc = computeKnownBits(LshrC, 0, nullptr);
+      if (KnownLShrc.getMaxValue().ult(Width)) {
+        // iff C1,C3 is pow2 and C2 + cttz(C3) < BitWidth:
+        // ((C1 << X) >> C2) & C3 -> X == (cttz(C3)+C2-cttz(C1)) ? C3 : 0
+        Constant *CmpC = ConstantExpr::getSub(LshrC, Log2C1);
+        Value *Cmp = Builder.CreateICmpEQ(X, CmpC);
+        return SelectInst::Create(Cmp, ConstantInt::get(Ty, *C3),
+                                  ConstantInt::getNullValue(Ty));
+      }
+      // TODO: Symmetrical case
+      // iff C1,C3 is pow2 and Log2(C3) >= C2:
+      // ((C1 >> X) << C2) & C3 -> X == (cttz(C1)+C2-cttz(C3)) ? C3 : 0
+    }
   }
 
   if (match(&I, m_And(m_OneUse(m_Shl(m_ZExt(m_Value(X)), m_Value(Y))),

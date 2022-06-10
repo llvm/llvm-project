@@ -1778,9 +1778,8 @@ define i8 @not_lshr_bitwidth_mask(i8 %x, i8 %y) {
 
 define i16 @shl_lshr_pow2_const_case1(i16 %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case1(
-; CHECK-NEXT:    [[SHL:%.*]] = shl i16 4, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i16 [[SHL]], 6
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[LSHR]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i16 8, i16 0
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %shl = shl i16 4, %x
@@ -1791,9 +1790,8 @@ define i16 @shl_lshr_pow2_const_case1(i16 %x) {
 
 define <3 x i16> @shl_lshr_pow2_const_case1_uniform_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case1_uniform_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> <i16 4, i16 4, i16 4>, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> [[SHL]], <i16 6, i16 6, i16 6>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[LSHR]], <i16 8, i16 8, i16 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 7, i16 7, i16 7>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 8, i16 8, i16 8>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %shl = shl <3 x i16> <i16 4, i16 4, i16 4>, %x
@@ -1804,22 +1802,20 @@ define <3 x i16> @shl_lshr_pow2_const_case1_uniform_vec(<3 x i16> %x) {
 
 define <3 x i16> @shl_lshr_pow2_const_case1_non_uniform_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case1_non_uniform_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> <i16 16, i16 8, i16 4>, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> [[SHL]], <i16 5, i16 4, i16 3>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[LSHR]], <i16 8, i16 16, i16 4>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 7, i16 6, i16 1>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 8, i16 8, i16 8>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
-  %shl = shl <3 x i16> <i16 16, i16 8, i16 4>, %x
-  %lshr = lshr <3 x i16> %shl, <i16 5, i16 4, i16 3>
-  %r = and <3 x i16> %lshr, <i16 8, i16 16, i16 4>
+  %shl = shl <3 x i16> <i16 2, i16 8, i16 32>, %x
+  %lshr = lshr <3 x i16> %shl, <i16 5, i16 6, i16 3>
+  %r = and <3 x i16> %lshr, <i16 8, i16 8, i16 8>
   ret <3 x i16> %r
 }
 
 define <3 x i16> @shl_lshr_pow2_const_case1_undef1_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case1_undef1_vec(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> <i16 undef, i16 16, i16 16>, [[X:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> [[SHL]], <i16 5, i16 5, i16 5>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[LSHR]], <i16 8, i16 8, i16 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 8, i16 4, i16 4>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 8, i16 8, i16 8>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %shl = shl <3 x i16> <i16 undef, i16 16, i16 16>, %x
@@ -1867,6 +1863,8 @@ define i16 @shl_lshr_pow2_const_case2(i16 %x) {
   %r = and i16 %lshr, 8
   ret i16 %r
 }
+
+; TODO: this pattern can be transform to icmp+select
 
 define i16 @shl_lshr_pow2_not_const_case2(i16 %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_not_const_case2(
