@@ -25439,8 +25439,7 @@ TEST_F(FormatTest, RemoveBraces) {
   verifyFormat("do {\n"
                "  ++I;\n"
                "} while (hasMore() && Filter(*I));",
-               "do { ++I; } while (hasMore() && Filter(*I));",
-               Style);
+               "do { ++I; } while (hasMore() && Filter(*I));", Style);
 
   verifyFormat("if (a)\n"
                "  if (b)\n"

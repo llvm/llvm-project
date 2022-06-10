@@ -230,12 +230,10 @@ void WhitespaceManager::calculateLineBreakInformation() {
     if (Change.Tok->is(tok::comment)) {
       if (Change.Tok->is(TT_LineComment) || !Change.IsInsideToken) {
         LastBlockComment = &Change;
-      } else {
-        if ((Change.StartOfBlockComment = LastBlockComment)) {
-          Change.IndentationOffset =
-              Change.StartOfTokenColumn -
-              Change.StartOfBlockComment->StartOfTokenColumn;
-        }
+      } else if ((Change.StartOfBlockComment = LastBlockComment)) {
+        Change.IndentationOffset =
+            Change.StartOfTokenColumn -
+            Change.StartOfBlockComment->StartOfTokenColumn;
       }
     } else {
       LastBlockComment = nullptr;
