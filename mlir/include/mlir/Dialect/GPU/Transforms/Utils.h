@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_GPU_UTILS_H_
-#define MLIR_DIALECT_GPU_UTILS_H_
+#ifndef MLIR_DIALECT_GPU_TRANSFORMS_UTILS_H_
+#define MLIR_DIALECT_GPU_TRANSFORMS_UTILS_H_
 
 #include "mlir/Support/LLVM.h"
 
@@ -44,4 +44,4 @@ LogicalResult sinkOperationsIntoLaunchOp(
     llvm::function_ref<bool(Operation *)> isSinkingBeneficiary);
 
 } // namespace mlir
-#endif // MLIR_DIALECT_GPU_UTILS_H_
+#endif // MLIR_DIALECT_GPU_TRANSFORMS_UTILS_H_

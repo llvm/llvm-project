@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_GPU_PARALLELLOOPMAPPER_H
-#define MLIR_DIALECT_GPU_PARALLELLOOPMAPPER_H
+#ifndef MLIR_DIALECT_GPU_TRANSFORMS_PARALLELLOOPMAPPER_H
+#define MLIR_DIALECT_GPU_TRANSFORMS_PARALLELLOOPMAPPER_H
 
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -46,4 +46,4 @@ LogicalResult setMappingAttr(scf::ParallelOp ploopOp,
                              ArrayRef<ParallelLoopDimMappingAttr> mapping);
 } // namespace gpu
 } // namespace mlir
-#endif // MLIR_DIALECT_GPU_PARALLELLOOPMAPPER_H
+#endif // MLIR_DIALECT_GPU_TRANSFORMS_PARALLELLOOPMAPPER_H

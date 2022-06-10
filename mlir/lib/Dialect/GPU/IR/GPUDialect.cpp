@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -31,7 +31,7 @@
 using namespace mlir;
 using namespace mlir::gpu;
 
-#include "mlir/Dialect/GPU/GPUOpsDialect.cpp.inc"
+#include "mlir/Dialect/GPU/IR/GPUOpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // MMAMatrixType
@@ -121,11 +121,11 @@ void GPUDialect::initialize() {
   addTypes<MMAMatrixType>();
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/GPU/GPUOps.cpp.inc"
+#include "mlir/Dialect/GPU/IR/GPUOps.cpp.inc"
       >();
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include "mlir/Dialect/GPU/GPUOpsAttributes.cpp.inc"
+#include "mlir/Dialect/GPU/IR/GPUOpsAttributes.cpp.inc"
       >();
   addInterfaces<GPUInlinerInterface>();
 }
@@ -1398,11 +1398,11 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyDimOfAllocOp>(context);
 }
 
-#include "mlir/Dialect/GPU/GPUOpInterfaces.cpp.inc"
-#include "mlir/Dialect/GPU/GPUOpsEnums.cpp.inc"
+#include "mlir/Dialect/GPU/IR/GPUOpInterfaces.cpp.inc"
+#include "mlir/Dialect/GPU/IR/GPUOpsEnums.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/GPU/GPUOpsAttributes.cpp.inc"
+#include "mlir/Dialect/GPU/IR/GPUOpsAttributes.cpp.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/GPU/GPUOps.cpp.inc"
+#include "mlir/Dialect/GPU/IR/GPUOps.cpp.inc"
