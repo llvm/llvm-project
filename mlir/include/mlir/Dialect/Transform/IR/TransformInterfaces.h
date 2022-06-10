@@ -18,6 +18,27 @@ namespace transform {
 
 class TransformOpInterface;
 
+/// Options controlling the application of transform operations by the
+/// TransformState.
+class TransformOptions {
+public:
+  TransformOptions() {}
+
+  /// Requests computationally expensive checks of the transform and payload IR
+  /// well-formedness to be performed before each transformation. In particular,
+  /// these ensure that the handles still point to valid operations when used.
+  TransformOptions &enableExpensiveChecks(bool enable = true) {
+    expensiveChecksEnabled = enable;
+    return *this;
+  }
+
+  /// Returns true if the expensive checks are requested.
+  bool getExpensiveChecksEnabled() const { return expensiveChecksEnabled; }
+
+private:
+  bool expensiveChecksEnabled = true;
+};
+
 /// The state maintained across applications of various ops implementing the
 /// TransformOpInterface. The operations implementing this interface and the
 /// surrounding structure are referred to as transform IR. The operations to
@@ -63,8 +84,10 @@ public:
   /// Creates a state for transform ops living in the given region. The parent
   /// operation of the region. The second argument points to the root operation
   /// in the payload IR beind transformed, which may or may not contain the
-  /// region with transform ops.
-  TransformState(Region &region, Operation *root);
+  /// region with transform ops. Additional options can be provided through the
+  /// trailing configuration object.
+  TransformState(Region &region, Operation *root,
+                 const TransformOptions &options = TransformOptions());
 
   /// Returns the op at which the transformation state is rooted. This is
   /// typically helpful for transformations that apply globally.
@@ -296,6 +319,21 @@ private:
   static LogicalResult tryEmplaceReverseMapping(Mappings &map, Operation *op,
                                                 Value handle);
 
+  /// If the operand is a handle consumed by the operation, i.e. has the "free"
+  /// memory effect associated with it, identifies other handles that are
+  /// pointing to payload IR operations nested in the operations pointed to by
+  /// the consumed handle. Marks all such handles as invalidated so trigger
+  /// errors if they are used.
+  void recordHandleInvalidation(OpOperand &handle);
+
+  /// Checks that the operation does not use invalidated handles as operands.
+  /// Reports errors and returns failure if it does. Otherwise, invalidates the
+  /// handles consumed by the operation as well as any handles pointing to
+  /// payload IR operations nested in the operations associated with the
+  /// consumed handles.
+  LogicalResult
+  checkAndRecordHandleInvalidation(TransformOpInterface transform);
+
   /// The mappings between transform IR values and payload IR ops, aggregated by
   /// the region in which the transform IR values are defined.
   llvm::SmallDenseMap<Region *, Mappings> mappings;
@@ -306,6 +344,14 @@ private:
 
   /// The top-level operation that contains all payload IR, typically a module.
   Operation *topLevel;
+
+  /// Additional options controlling the transformation state behavior.
+  TransformOptions options;
+
+  /// The mapping from invalidated handles to the error-reporting functions that
+  /// describe when the handles were invalidated. Calling such a function emits
+  /// a user-visible diagnostic.
+  DenseMap<Value, std::function<void()>> invalidatedHandles;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// A stack of nested regions that are being processed in the transform IR.
