@@ -711,6 +711,10 @@ bool PdbAstBuilder::CompleteType(clang::QualType qt) {
   if (qt.isNull())
     return false;
   clang::TagDecl *tag = qt->getAsTagDecl();
+  if (qt->isArrayType()) {
+    const clang::Type *element_type = qt->getArrayElementTypeNoTypeQual();
+    tag = element_type->getAsTagDecl();
+  }
   if (!tag)
     return false;
 
@@ -1089,6 +1093,7 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
                                     ->getCanonicalTypeInternal();
     lldb::opaque_compiler_type_t parent_opaque_ty =
         ToCompilerType(parent_qt).GetOpaqueQualType();
+    // FIXME: Remove this workaround.
     auto iter = m_cxx_record_map.find(parent_opaque_ty);
     if (iter != m_cxx_record_map.end()) {
       if (iter->getSecond().contains({func_name, func_ct})) {
@@ -1103,18 +1108,17 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
     TypeIndex class_index = func_record.getClassType();
 
     CVType parent_cvt = m_index.tpi().getType(class_index);
-    ClassRecord class_record = CVTagRecord::create(parent_cvt).asClass();
+    TagRecord tag_record = CVTagRecord::create(parent_cvt).asTag();
     // If it's a forward reference, try to get the real TypeIndex.
-    if (class_record.isForwardRef()) {
+    if (tag_record.isForwardRef()) {
       llvm::Expected<TypeIndex> eti =
           m_index.tpi().findFullDeclForForwardRef(class_index);
       if (eti) {
-        class_record =
-            CVTagRecord::create(m_index.tpi().getType(*eti)).asClass();
+        tag_record = CVTagRecord::create(m_index.tpi().getType(*eti)).asTag();
       }
     }
-    if (!class_record.FieldList.isSimple()) {
-      CVType field_list = m_index.tpi().getType(class_record.FieldList);
+    if (!tag_record.FieldList.isSimple()) {
+      CVType field_list = m_index.tpi().getType(tag_record.FieldList);
       CreateMethodDecl process(m_index, m_clang, func_ti, function_decl,
                                parent_opaque_ty, func_name, func_ct);
       if (llvm::Error err = visitMemberRecordStream(field_list.data(), process))
@@ -1156,6 +1160,8 @@ PdbAstBuilder::GetOrCreateInlinedFunctionDecl(PdbCompilandSymId inlinesite_id) {
     return llvm::dyn_cast<clang::FunctionDecl>(decl);
   clang::FunctionDecl *function_decl =
       CreateFunctionDeclFromId(func_id, inlinesite_id);
+  if (function_decl == nullptr)
+    return nullptr;
 
   // Use inline site id in m_decl_to_status because it's expected to be a
   // PdbCompilandSymId so that we can parse local variables info after it.
@@ -1261,6 +1267,8 @@ PdbAstBuilder::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
   clang::FunctionDecl *function_decl =
       CreateFunctionDecl(func_id, proc_name, proc.FunctionType, func_ct,
                          func_type->getNumParams(), storage, false, parent);
+  if (function_decl == nullptr)
+    return nullptr;
 
   lldbassert(m_uid_to_decl.count(toOpaqueUid(func_id)) == 0);
   m_uid_to_decl[toOpaqueUid(func_id)] = function_decl;
