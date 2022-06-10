@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
         llvm::outs() << "Forest bytes: " << Arena.bytes()
                      << " nodes: " << Arena.nodeCount() << "\n";
         llvm::outs() << "GSS bytes: " << GSS.bytes()
-                     << " nodes: " << GSS.nodeCount() << "\n";
+                     << " nodes: " << GSS.nodesCreated() << "\n";
       }
     }
   }
