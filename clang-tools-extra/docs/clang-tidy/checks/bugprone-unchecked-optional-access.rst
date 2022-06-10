@@ -42,7 +42,7 @@ existence check:
 
 .. code-block:: c++
 
-   void f(absl::optional<int> opt) {
+   void f(std::optional<int> opt) {
      use(*opt); // unsafe: it is unclear whether `opt` has a value.
    }
 
@@ -54,7 +54,7 @@ branches of the code. For example:
 
 .. code-block:: c++
 
-   void f(absl::optional<int> opt) {
+   void f(std::optional<int> opt) {
      if (opt.has_value()) {
      } else {
        use(opt.value()); // unsafe: it is clear that `opt` does *not* have a value.
@@ -99,11 +99,11 @@ optional has a value. For example:
 
 .. code-block:: c++
 
-   void g(absl::optional<int> opt) {
+   void g(std::optional<int> opt) {
      use(*opt); // unsafe: it is unclear whether `opt` has a value.
    }
 
-   void f(absl::optional<int> opt) {
+   void f(std::optional<int> opt) {
      if (opt.has_value()) {
        g(opt);
      }
@@ -121,7 +121,7 @@ example:
 
 .. code-block:: c++
 
-   void f(absl::optional<int> opt) {
+   void f(std::optional<int> opt) {
      if (opt.has_value()) {
        use(*opt);
      }
@@ -137,9 +137,9 @@ have a value. For example:
 
 .. code-block:: c++
 
-   void f(absl::optional<int> opt1) {
+   void f(std::optional<int> opt1) {
      if (opt1.has_value()) {
-       absl::optional<int> opt2 = opt1;
+       std::optional<int> opt2 = opt1;
        use(*opt2);
      }
    }
@@ -154,7 +154,7 @@ a value. For example:
 
 .. code-block:: c++
 
-   void f(absl::optional<int> opt) {
+   void f(std::optional<int> opt) {
      DCHECK(opt.has_value());
      use(*opt);
    }
@@ -168,7 +168,7 @@ paths that lead to an access. For example:
 
 .. code-block:: c++
 
-   void f(absl::optional<int> opt) {
+   void f(std::optional<int> opt) {
      bool safe = false;
      if (opt.has_value() && SomeOtherCondition()) {
        safe = true;
@@ -223,7 +223,7 @@ check the optional again in the local scope of the callee. For example:
      use(val);
    }
 
-   void f(absl::optional<int> opt) {
+   void f(std::optional<int> opt) {
      if (opt.has_value()) {
        g(*opt);
      }
@@ -234,7 +234,7 @@ and
 .. code-block:: c++
 
    struct S {
-     absl::optional<int> opt;
+     std::optional<int> opt;
      int x;
    };
 
@@ -260,7 +260,7 @@ The check is aware of aliases of optional types that are created via
 
 .. code-block:: c++
 
-   using OptionalInt = absl::optional<int>;
+   using OptionalInt = std::optional<int>;
 
    void f(OptionalInt opt) {
      use(opt.value()); // unsafe: it is unclear whether `opt` has a value.
