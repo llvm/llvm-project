@@ -746,6 +746,8 @@ Syntax::
                          <global | constant> <Type> [<InitializerConstant>]
                          [, section "name"] [, partition "name"]
                          [, comdat [($name)]] [, align <Alignment>]
+                         [, no_sanitize] [, no_sanitize_address]
+                         [, no_sanitize_hwaddress] [, sanitize_address_dyninit]
                          (, !name !N)*
 
 For example, the following defines a global in a numbered address space
@@ -2320,6 +2322,25 @@ Global Attributes
 Attributes may be set to communicate additional information about a global variable.
 Unlike :ref:`function attributes <fnattrs>`, attributes on a global variable
 are grouped into a single :ref:`attribute group <attrgrp>`.
+
+``no_sanitize``
+    This attribute indicates that the global variable should not have any
+    sanitizers applied to it, either because it was in the sanitizer ignore
+    list, or it was annotated with
+    `__attribute__((disable_sanitizer_instrumentation))`.
+``no_sanitize_address``
+    This attribute indicates that the global variable should not have
+    AddressSanitizer instrumentation applied to it, because it was annotated
+    with `__attribute__((no_sanitize("address")))`.
+``no_sanitize_hwaddress``
+    This attribute indicates that the global variable should not have
+    HWAddressSanitizer instrumentation applied to it, because it was annotated
+    with `__attribute__((no_sanitize("hwaddress")))`.
+``sanitize_address_dyninit``
+    This attribute indicates that the global variable, when instrumented with
+    AddressSanitizer, should be checked for ODR violations. This attribute is
+    applied to global variables that are dynamically initialized according to
+    C++ rules.
 
 .. _opbundles:
 
