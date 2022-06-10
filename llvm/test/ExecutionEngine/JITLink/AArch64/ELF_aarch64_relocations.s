@@ -15,9 +15,10 @@ main:
 
         .size   main, .-main
 
-# Check R_AARCH64_CALL26 relocation of a local function call
+# Check R_AARCH64_CALL26 / R_AARCH64_JUMP26 relocation of a local function call
 #
 # jitlink-check: decode_operand(local_func_call26, 0)[25:0] = (local_func - local_func_call26)[27:2]
+# jitlink-check: decode_operand(local_func_jump26, 0)[25:0] = (local_func - local_func_jump26)[27:2]
         .globl  local_func
         .p2align  2
         .type	local_func,@function
@@ -31,6 +32,11 @@ local_func_call26:
         bl	local_func
         .size   local_func_call26, .-local_func_call26
 
+        .globl  local_func_jump26
+        .p2align  2
+local_func_jump26:
+        b	local_func
+        .size   local_func_jump26, .-local_func_jump26
 
 # Check R_AARCH64_ADR_PREL_PG_HI21 / R_AARCH64_ADD_ABS_LO12_NC relocation of a local symbol
 #

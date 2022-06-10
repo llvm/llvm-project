@@ -68,6 +68,7 @@ private:
     using namespace aarch64;
     switch (Type) {
     case ELF::R_AARCH64_CALL26:
+    case ELF::R_AARCH64_JUMP26:
       return ELFCall26;
     case ELF::R_AARCH64_ADR_PREL_PG_HI21:
       return ELFAdrPage21;
