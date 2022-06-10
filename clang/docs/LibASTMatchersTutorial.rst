@@ -399,7 +399,7 @@ in the callback. So we start with:
 
 .. code-block:: c++
 
-      hasCondition(binaryOperator(hasOperatorName("<"))
+      hasCondition(binaryOperator(hasOperatorName("<")))
 
 It makes sense to ensure that the left-hand side is a reference to a
 variable, and that the right-hand side has integer type.
@@ -529,7 +529,7 @@ address, all we need to do is make sure neither ``ValueDecl`` (base class of
       }
 
 If execution reaches the end of ``LoopPrinter::run()``, we know that the
-loop shell that looks like
+loop shell looks like
 
 .. code-block:: c++
 
