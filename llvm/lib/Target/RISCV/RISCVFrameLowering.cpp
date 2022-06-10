@@ -637,7 +637,15 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // Restore the stack pointer using the value of the frame pointer. Only
   // necessary if the stack pointer was modified, meaning the stack size is
   // unknown.
-  if (RI->hasStackRealignment(MF) || MFI.hasVarSizedObjects()) {
+  //
+  // In order to make sure the stack point is right through the EH region,
+  // we also need to restore stack pointer from the frame pointer if we
+  // don't preserve stack space within prologue/epilogue for outgoing variables,
+  // normally it's just checking the variable sized object is present or not
+  // is enough, but we also don't preserve that at prologue/epilogue when
+  // have vector objects in stack.
+  if (RI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
+      !hasReservedCallFrame(MF)) {
     assert(hasFP(MF) && "frame pointer should not have been eliminated");
     adjustReg(MBB, LastFrameDestroy, DL, SPReg, FPReg, -FPOffset,
               MachineInstr::FrameDestroy);
