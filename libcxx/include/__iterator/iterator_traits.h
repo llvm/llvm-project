@@ -105,15 +105,14 @@ template <class _Tp>
 struct __has_iterator_typedefs
 {
 private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename __void_t<typename _Up::iterator_category>::type* = 0,
-                                            typename __void_t<typename _Up::difference_type>::type* = 0,
-                                            typename __void_t<typename _Up::value_type>::type* = 0,
-                                            typename __void_t<typename _Up::reference>::type* = 0,
-                                            typename __void_t<typename _Up::pointer>::type* = 0);
+    template <class _Up> static false_type __test(...);
+    template <class _Up> static true_type __test(typename __void_t<typename _Up::iterator_category>::type* = 0,
+                                                 typename __void_t<typename _Up::difference_type>::type* = 0,
+                                                 typename __void_t<typename _Up::value_type>::type* = 0,
+                                                 typename __void_t<typename _Up::reference>::type* = 0,
+                                                 typename __void_t<typename _Up::pointer>::type* = 0);
 public:
-    static const bool value = sizeof(__test<_Tp>(0,0,0,0,0)) == 1;
+    static const bool value = decltype(__test<_Tp>(0,0,0,0,0))::value;
 };
 
 
@@ -121,22 +120,20 @@ template <class _Tp>
 struct __has_iterator_category
 {
 private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::iterator_category* = nullptr);
+    template <class _Up> static false_type __test(...);
+    template <class _Up> static true_type __test(typename _Up::iterator_category* = nullptr);
 public:
-    static const bool value = sizeof(__test<_Tp>(nullptr)) == 1;
+    static const bool value = decltype(__test<_Tp>(nullptr))::value;
 };
 
 template <class _Tp>
 struct __has_iterator_concept
 {
 private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::iterator_concept* = nullptr);
+    template <class _Up> static false_type __test(...);
+    template <class _Up> static true_type __test(typename _Up::iterator_concept* = nullptr);
 public:
-    static const bool value = sizeof(__test<_Tp>(nullptr)) == 1;
+    static const bool value = decltype(__test<_Tp>(nullptr))::value;
 };
 
 #if _LIBCPP_STD_VER > 17

@@ -25,11 +25,10 @@ template <class _Tp>
 struct __has_result_type
 {
 private:
-    struct __two {char __lx; char __lxx;};
-    template <class _Up> static __two __test(...);
-    template <class _Up> static char __test(typename _Up::result_type* = 0);
+    template <class _Up> static false_type __test(...);
+    template <class _Up> static true_type __test(typename _Up::result_type* = 0);
 public:
-    static const bool value = sizeof(__test<_Tp>(0)) == 1;
+    static const bool value = decltype(__test<_Tp>(0))::value;
 };
 
 // __weak_result_type

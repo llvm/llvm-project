@@ -29,12 +29,12 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_class
 
 namespace __is_class_imp
 {
-template <class _Tp> char  __test(int _Tp::*);
-template <class _Tp> __two __test(...);
+template <class _Tp> true_type  __test(int _Tp::*);
+template <class _Tp> false_type __test(...);
 }
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_class
-    : public integral_constant<bool, sizeof(__is_class_imp::__test<_Tp>(0)) == 1 && !is_union<_Tp>::value> {};
+    : public integral_constant<bool, decltype(__is_class_imp::__test<_Tp>(0))::value && !is_union<_Tp>::value> {};
 
 #endif
 
