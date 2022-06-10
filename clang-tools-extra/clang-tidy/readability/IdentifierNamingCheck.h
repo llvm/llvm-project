@@ -89,7 +89,7 @@ public:
 
   struct HungarianNotation {
   public:
-    bool checkOptionValid(int StyleKindIndex, StringRef StyleString) const;
+    bool checkOptionValid(int StyleKindIndex) const;
     bool isOptionEnabled(StringRef OptionKey,
                          const llvm::StringMap<std::string> &StrMap) const;
     void loadDefaultConfig(
