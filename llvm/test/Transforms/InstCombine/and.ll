@@ -1788,6 +1788,18 @@ define i16 @shl_lshr_pow2_const_case1(i16 %x) {
   ret i16 %r
 }
 
+define i16 @shl_ashr_pow2_const_case1(i16 %x) {
+; CHECK-LABEL: @shl_ashr_pow2_const_case1(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i16 8, i16 0
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %shl = shl i16 4, %x
+  %lshr = ashr i16 %shl, 6
+  %r = and i16 %lshr, 8
+  ret i16 %r
+}
+
 define <3 x i16> @shl_lshr_pow2_const_case1_uniform_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @shl_lshr_pow2_const_case1_uniform_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 7, i16 7, i16 7>
@@ -2003,4 +2015,142 @@ define i16 @lshr_lshr_pow2_const_negative_overflow(i16 %x) {
   %lshr2 = lshr i16 %lshr1, 15
   %r = and i16 %lshr2, 4
   ret i16 %r
+}
+
+; demanded bits path for lshr+shl+and
+; Log2(LshrC) + ShlC < BitWidth
+
+define i16 @lshr_shl_pow2_const_case1(i16 %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_case1(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i16 1024, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[TMP1]], 8
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %lshr1 = lshr i16 256, %x
+  %shl = shl i16 %lshr1, 2
+  %r = and i16 %shl, 8
+  ret i16 %r
+}
+
+; TODO: this pattern can be transform to icmp+select
+
+define i16 @lshr_shl_pow2_const_xor(i16 %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i16 1024, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[TMP1]], 8
+; CHECK-NEXT:    [[R:%.*]] = xor i16 [[AND]], 8
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %lshr1 = lshr i16 256, %x
+  %shl = shl i16 %lshr1, 2
+  %and = and i16 %shl, 8
+  %r = xor i16 %and, 8
+  ret i16 %r
+}
+
+; Log2(LshrC) + ShlC >= BitWidth
+
+define i16 @lshr_shl_pow2_const_case2(i16 %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_case2(
+; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i16 8192, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[LSHR1]], 4
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[SHL]], 32
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %lshr1 = lshr i16 8192, %x
+  %shl = shl i16 %lshr1, 4
+  %r = and i16 %shl, 32
+  ret i16 %r
+}
+
+; ShlC > Log2(AndC)
+
+define i16 @lshr_shl_pow2_const_overflow(i16 %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_overflow(
+; CHECK-NEXT:    ret i16 0
+;
+  %lshr1 = lshr i16 8192, %x
+  %shl = shl i16 %lshr1, 6
+  %r = and i16 %shl, 32
+  ret i16 %r
+}
+
+define i16 @lshr_shl_pow2_const_negative_oneuse(i16 %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_negative_oneuse(
+; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i16 8192, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[LSHR1]], 4
+; CHECK-NEXT:    call void @use16(i16 [[SHL]])
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[SHL]], 32
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %lshr1 = lshr i16 8192, %x
+  %shl = shl i16 %lshr1, 4
+  call void @use16(i16 %shl)
+  %r = and i16 %shl, 32
+  ret i16 %r
+}
+
+define <3 x i16> @lshr_shl_pow2_const_case1_uniform_vec(<3 x i16> %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_case1_uniform_vec(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 6, i16 6, i16 6>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 128, i16 128, i16 128>
+; CHECK-NEXT:    ret <3 x i16> [[R]]
+;
+  %lshr = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, %x
+  %shl = shl <3 x i16> %lshr, <i16 6, i16 6, i16 6>
+  %r = and <3 x i16> %shl, <i16 128, i16 128, i16 128>
+  ret <3 x i16> %r
+}
+
+define <3 x i16> @lshr_shl_pow2_const_case1_non_uniform_vec(<3 x i16> %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_case1_non_uniform_vec(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 8192, i16 16384, i16 -32768>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 7, i16 5, i16 3>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 128, i16 128, i16 128>
+; CHECK-NEXT:    ret <3 x i16> [[R]]
+;
+  %lshr = lshr <3 x i16> <i16 8192, i16 16384, i16 32768>, %x
+  %shl = shl <3 x i16> %lshr, <i16 7, i16 5, i16 3>
+  %r = and <3 x i16> %shl, <i16 128, i16 128, i16 128>
+  ret <3 x i16> %r
+}
+
+define <3 x i16> @lshr_shl_pow2_const_case1_undef1_vec(<3 x i16> %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_case1_undef1_vec(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 undef, i16 8192, i16 8192>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 6, i16 6, i16 6>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 128, i16 128, i16 128>
+; CHECK-NEXT:    ret <3 x i16> [[R]]
+;
+  %lshr = lshr <3 x i16> <i16 undef, i16 8192, i16 8192>, %x
+  %shl = shl <3 x i16> %lshr, <i16 6, i16 6, i16 6>
+  %r = and <3 x i16> %shl, <i16 128, i16 128, i16 128>
+  ret <3 x i16> %r
+}
+
+define <3 x i16> @lshr_shl_pow2_const_case1_undef2_vec(<3 x i16> %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_case1_undef2_vec(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 undef, i16 6, i16 6>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 128, i16 128, i16 128>
+; CHECK-NEXT:    ret <3 x i16> [[R]]
+;
+  %lshr = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, %x
+  %shl = shl <3 x i16> %lshr, <i16 undef, i16 6, i16 6>
+  %r = and <3 x i16> %shl, <i16 128, i16 128, i16 128>
+  ret <3 x i16> %r
+}
+
+define <3 x i16> @lshr_shl_pow2_const_case1_undef3_vec(<3 x i16> %x) {
+; CHECK-LABEL: @lshr_shl_pow2_const_case1_undef3_vec(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, [[X:%.*]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 6, i16 6, i16 6>
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 undef, i16 128, i16 128>
+; CHECK-NEXT:    ret <3 x i16> [[R]]
+;
+  %lshr = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, %x
+  %shl = shl <3 x i16> %lshr, <i16 6, i16 6, i16 6>
+  %r = and <3 x i16> %shl, <i16 undef, i16 128, i16 128>
+  ret <3 x i16> %r
 }
