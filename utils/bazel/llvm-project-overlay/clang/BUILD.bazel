@@ -1928,7 +1928,7 @@ cc_binary(
 
 template_rule(
     name = "clang_main",
-    src = "//llvm:cmake/driver-template.cpp.in",
+    src = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
     out = "clang_main.cpp",
     substitutions = {
         "@TOOL_NAME@": "clang"
