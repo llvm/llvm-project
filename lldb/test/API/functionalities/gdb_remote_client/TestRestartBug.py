@@ -62,4 +62,4 @@ class TestRestartBug(GDBRemoteTestBase):
         # auto-continue after setting the breakpoint.
         self.assertEqual(self.server.responder.continueCount, 1)
         # And the process should end up in the stopped state.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)

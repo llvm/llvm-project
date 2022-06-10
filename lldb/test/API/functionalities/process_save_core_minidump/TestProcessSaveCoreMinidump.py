@@ -26,7 +26,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             target = self.dbg.CreateTarget(exe)
             process = target.LaunchSimple(
                 None, None, self.get_process_working_directory())
-            self.assertEqual(process.GetState(), lldb.eStateStopped)
+            self.assertState(process.GetState(), lldb.eStateStopped)
 
             # get neccessary data for the verification phase
             process_info = process.GetProcessInfo()

@@ -56,6 +56,6 @@ class TestLinux64ExecViaDynamicLoader(TestBase):
         process.Continue();
 
         # Stopped on main here.
-        self.assertEqual(process.GetState(), lldb.eStateStopped)
+        self.assertState(process.GetState(), lldb.eStateStopped)
         thread = process.GetSelectedThread()
         self.assertIn("main", thread.GetFrameAtIndex(0).GetDisplayFunctionName())

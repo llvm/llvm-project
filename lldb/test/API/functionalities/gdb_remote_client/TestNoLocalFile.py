@@ -101,6 +101,6 @@ class TestNoLocalFile(GDBRemoteTestBase):
         process = target.Launch(launch_info, error)
 
         self.assertSuccess(error, "Successfully launched.")
-        self.assertEqual(process.GetState(), lldb.eStateStopped, "Should be stopped at entry")
+        self.assertState(process.GetState(), lldb.eStateStopped, "Should be stopped at entry")
         self.assertIsNotNone(self.a_packet_file, "A packet was sent")
         self.assertEqual(self.absent_file, self.a_packet_file, "The A packet file was correct")
