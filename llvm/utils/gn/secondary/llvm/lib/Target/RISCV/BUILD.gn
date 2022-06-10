@@ -58,6 +58,7 @@ static_library("LLVMRISCVCodeGen") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/Transforms/IPO",
   ]
   include_dirs = [ "." ]
   sources = [
