@@ -415,14 +415,19 @@ define void @test_memcpy_loadstore_16(i8* %dest, i8* %src) {
   ret void
 }
 
-define void @test_undefined(i8* %dest, i8* %src) {
+define void @test_undefined(i8* %dest, i8* %src, i1 %c1) {
 ; CHECK-LABEL: @test_undefined(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[OK:%.*]], label [[UNDEFINED:%.*]]
+; CHECK:       undefined:
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    br label [[OK]]
+; CHECK:       ok:
+; CHECK-NEXT:    ret void
+;
 entry:
-  br i1 undef, label %ok, label %undefined
+  br i1 %c1, label %ok, label %undefined
 undefined:
-; CHECK: undefined:
-; CHECK-NEXT:    store i1 true, i1* undef
-; CHECK-NEXT:    br label %ok
   call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 16 %dest, i8* align 16 %src, i32 7, i32 4)
   call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 16 %dest, i8* align 16 %src, i32 -8, i32 4)
   call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i32(i8* align 16 %dest, i8* align 16 %src, i32 7, i32 4)

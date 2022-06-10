@@ -10,10 +10,10 @@ declare void @foo()
 declare void @bar(%struct.quux*)
 declare i32 @__gxx_wasm_personality_v0(...)
 
-define void @test() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test(i1 %c1) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 bb:
   %tmp0 = alloca %struct.blam, align 4
-  br i1 undef, label %bb1, label %bb2
+  br i1 %c1, label %bb1, label %bb2
 
 bb1:                                              ; preds = %bb
   %tmp1 = getelementptr inbounds %struct.blam, %struct.blam* %tmp0, i32 0, i32 0

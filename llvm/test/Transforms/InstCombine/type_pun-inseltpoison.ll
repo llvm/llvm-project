@@ -98,25 +98,25 @@ define { float, i32 } @type_pun_float_i32(<16 x i8> %in) {
 ; CHECK-NEXT:    [[SROA_EXTRACT:%.*]] = extractelement <4 x i32> [[SROA_BC]], i64 0
 ; CHECK-NEXT:    [[SROA_BC1:%.*]] = bitcast <16 x i8> [[IN]] to <4 x float>
 ; CHECK-NEXT:    [[SROA_EXTRACT2:%.*]] = extractelement <4 x float> [[SROA_BC1]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { float, i32 } undef, float [[SROA_EXTRACT2]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { float, i32 } poison, float [[SROA_EXTRACT2]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { float, i32 } [[TMP1]], i32 [[SROA_EXTRACT]], 1
 ; CHECK-NEXT:    ret { float, i32 } [[TMP2]]
 ;
   %sroa = shufflevector <16 x i8> %in, <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %f = bitcast <4 x i8> %sroa to float
   %i = bitcast <4 x i8> %sroa to i32
-  %1 = insertvalue { float, i32 } undef, float %f, 0
+  %1 = insertvalue { float, i32 } poison, float %f, 0
   %2 = insertvalue { float, i32 } %1, i32 %i, 1
   ret { float, i32 } %2
 }
 
 ; Type punning two i32 values, with control flow.
 ; Verify that the bitcast is shared and dominates usage.
-define i32 @type_pun_i32_ctrl(<16 x i8> %in) {
+define i32 @type_pun_i32_ctrl(<16 x i8> %in, i1 %c1) {
 ; CHECK-LABEL: @type_pun_i32_ctrl(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SROA_BC:%.*]] = bitcast <16 x i8> [[IN:%.*]] to <4 x i32>
-; CHECK-NEXT:    br i1 undef, label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[SROA_EXTRACT1:%.*]] = extractelement <4 x i32> [[SROA_BC]], i64 0
 ; CHECK-NEXT:    br label [[TAIL:%.*]]
@@ -129,7 +129,7 @@ define i32 @type_pun_i32_ctrl(<16 x i8> %in) {
 ;
 entry:
   %sroa = shufflevector <16 x i8> %in, <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  br i1 undef, label %left, label %right
+  br i1 %c1, label %left, label %right
 left:
   %lhs = bitcast <4 x i8> %sroa to i32
   br label %tail
