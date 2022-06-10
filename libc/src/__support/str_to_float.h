@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/Limits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/builtin_wrappers.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/detailed_powers_of_ten.h"
 #include "src/__support/high_precision_decimal.h"
@@ -50,11 +51,11 @@ template <class T> uint32_t inline leading_zeroes(T inputNumber) {
 }
 
 template <> uint32_t inline leading_zeroes<uint32_t>(uint32_t inputNumber) {
-  return inputNumber == 0 ? 32 : __builtin_clz(inputNumber);
+  return inputNumber == 0 ? 32 : fputil::clz(inputNumber);
 }
 
 template <> uint32_t inline leading_zeroes<uint64_t>(uint64_t inputNumber) {
-  return inputNumber == 0 ? 64 : __builtin_clzll(inputNumber);
+  return inputNumber == 0 ? 64 : fputil::clz(inputNumber);
 }
 
 static inline uint64_t low64(__uint128_t num) {

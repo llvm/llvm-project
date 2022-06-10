@@ -12,6 +12,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PlatformDefs.h"
+#include "src/__support/FPUtil/builtin_wrappers.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -19,7 +20,7 @@ namespace x86 {
 
 inline void normalize(int &exponent, __uint128_t &mantissa) {
   const int shift =
-      __builtin_clzll(static_cast<uint64_t>(mantissa)) -
+      clz(static_cast<uint64_t>(mantissa)) -
       (8 * sizeof(uint64_t) - 1 - MantissaWidth<long double>::VALUE);
   exponent -= shift;
   mantissa <<= shift;
