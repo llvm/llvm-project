@@ -5,7 +5,7 @@ set(LLVM_LINK_COMPONENTS
 if (MLIR_ENABLE_SPIRV_CPU_RUNNER)
   message(STATUS "Building SPIR-V CPU runner")
 
-  add_mlir_tool(mlir-spirv-cpu-runner
+  add_llvm_tool(mlir-spirv-cpu-runner
     mlir-spirv-cpu-runner.cpp
   )
 

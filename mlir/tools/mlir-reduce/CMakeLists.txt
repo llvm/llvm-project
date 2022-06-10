@@ -17,7 +17,7 @@ set(LIBS
   MLIRReduceLib
   )
 
-add_mlir_tool(mlir-reduce
+add_llvm_tool(mlir-reduce
   mlir-reduce.cpp
 
   DEPENDS

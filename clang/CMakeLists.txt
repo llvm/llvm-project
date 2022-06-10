@@ -366,10 +366,6 @@ endif()
 # The libdir suffix must exactly match whatever LLVM's configuration used.
 set(CLANG_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}")
 
-set(CLANG_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
-    "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
-mark_as_advanced(CLANG_TOOLS_INSTALL_DIR)
-
 set(CLANG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(CLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 

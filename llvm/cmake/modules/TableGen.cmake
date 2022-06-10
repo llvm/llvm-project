@@ -196,7 +196,7 @@ macro(add_tablegen target project)
     install(TARGETS ${target}
             ${export_to_llvmexports}
             COMPONENT ${target}
-            RUNTIME DESTINATION "${${project}_TOOLS_INSTALL_DIR}")
+            RUNTIME DESTINATION ${LLVM_TOOLS_INSTALL_DIR})
     if(NOT LLVM_ENABLE_IDE)
       add_llvm_install_targets("install-${target}"
                                DEPENDS ${target}
