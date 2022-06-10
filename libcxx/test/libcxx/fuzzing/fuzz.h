@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring> // std::strlen
+#include <iterator>
 #include <type_traits>
 #include <utility> // std::swap
 

@@ -18,6 +18,7 @@
 
 #include <string_view>
 #include <cassert>
+#include <iterator>
 #include <limits>
 
 #include "test_macros.h"

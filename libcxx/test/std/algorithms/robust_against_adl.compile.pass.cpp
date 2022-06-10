@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <iterator>
 
 #include "test_macros.h"
 

@@ -88,6 +88,7 @@ namespace std {
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <cstdlib>
+#include <initializer_list>
 #include <memory>
 #include <type_traits>
 #include <typeinfo>

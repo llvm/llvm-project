@@ -188,11 +188,17 @@ template <class T, class Allocator, class Predicate>
 #include <__config>
 #include <__debug>
 #include <__format/enable_insertable.h>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/move_iterator.h>
+#include <__iterator/next.h>
+#include <__iterator/prev.h>
+#include <__iterator/reverse_iterator.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <initializer_list>
-#include <iterator>
+#include <iterator> // TODO: Remove this include
 #include <limits>
 #include <memory>
 #include <type_traits>

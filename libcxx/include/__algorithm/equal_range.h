@@ -16,7 +16,10 @@
 #include <__algorithm/upper_bound.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <iterator>
+#include <__iterator/advance.h>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

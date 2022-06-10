@@ -286,7 +286,9 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <__format/enable_insertable.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__iterator/advance.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/reverse_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/allocate_at_least.h>
 #include <__split_buffer>

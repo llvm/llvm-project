@@ -11,9 +11,11 @@
 #include <format>
 
 #include <algorithm>
+#include <cassert>
 #include <charconv>
 #include <cmath>
 #include <cstdint>
+#include <iterator>
 
 #include "make_string.h"
 #include "string_literal.h"
