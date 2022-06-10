@@ -39,6 +39,32 @@ void populateWarpExecuteOnLane0OpToScfForPattern(
     RewritePatternSet &patterns,
     const WarpExecuteOnLane0LoweringOptions &options);
 
+using DistributionMapFn = std::function<AffineMap(vector::TransferWriteOp)>;
+
+/// Distribute transfer_write ops based on the affine map returned by
+/// `distributionMapFn`.
+/// Example:
+/// ```
+/// %0 = vector.warp_execute_on_lane_0(%id){
+///   ...
+///   vector.transfer_write %v, %A[%c0] : vector<32xf32>, memref<128xf32>
+///   vector.yield
+/// }
+/// ```
+/// To
+/// ```
+/// %r:3 = vector.warp_execute_on_lane_0(%id) -> (vector<1xf32>) {
+///   ...
+///   vector.yield %v : vector<32xf32>
+/// }
+/// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
+void populateDistributeTransferWriteOpPatterns(
+    RewritePatternSet &patterns, DistributionMapFn distributionMapFn);
+
+/// Move scalar operations with no dependency on the warp op outside of the
+/// region.
+void moveScalarUniformCode(WarpExecuteOnLane0Op op);
+
 } // namespace vector
 } // namespace mlir
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_VECTORDISTRIBUTION_H_
