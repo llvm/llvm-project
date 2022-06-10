@@ -30,6 +30,15 @@ define <4 x i32> @load_zext_v4i16i32(<4 x i16>* %ap) #0 {
   ret <4 x i32> %val
 }
 
+; Don't try to use SVE for irregular types.
+define <2 x i256> @load_zext_v2i64i256(<2 x i64>* %ap) #0 {
+  ; CHECK-LABEL: load_zext_v2i64i256
+  ; CHECK-NOT: ptrue
+  %a = load <2 x i64>, <2 x i64>* %ap
+  %val = zext <2 x i64> %a to <2 x i256>
+  ret <2 x i256> %val
+}
+
 define <8 x i32> @load_zext_v8i16i32(<8 x i16>* %ap) #0 {
   ; CHECK-LABEL: load_zext_v8i16i32
   ; CHECK: ptrue [[P0:p[0-9]+]].s, vl8
