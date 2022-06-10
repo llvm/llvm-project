@@ -980,24 +980,21 @@ define void @interleaved_store_vf16_i8_stride3(<16 x i8> %a, <16 x i8> %b, <16 x
 ;
 ; AVX512-LABEL: interleaved_store_vf16_i8_stride3:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX512-NEXT:    vpalignr {{.*#+}} xmm3 = xmm0[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5]
-; AVX512-NEXT:    vpalignr {{.*#+}} xmm4 = xmm1[11,12,13,14,15,0,1,2,3,4,5,6,7,8,9,10]
-; AVX512-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX512-NEXT:    vpalignr {{.*#+}} xmm5 = xmm2[5,6,7,8,9,10,11,12,13,14,15],xmm4[0,1,2,3,4]
-; AVX512-NEXT:    vpalignr {{.*#+}} xmm0 = xmm5[5,6,7,8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4]
-; AVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm6 = [0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5,0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5]
-; AVX512-NEXT:    # ymm6 = mem[0,1,0,1]
-; AVX512-NEXT:    vpshufb %xmm6, %xmm0, %xmm0
-; AVX512-NEXT:    vinserti128 $1, %xmm5, %ymm1, %ymm1
-; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
-; AVX512-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm3
-; AVX512-NEXT:    vpalignr {{.*#+}} ymm2 = ymm3[5,6,7,8,9,10,11,12,13,14,15],ymm2[0,1,2,3,4],ymm3[21,22,23,24,25,26,27,28,29,30,31],ymm2[16,17,18,19,20]
-; AVX512-NEXT:    vpalignr {{.*#+}} ymm1 = ymm2[5,6,7,8,9,10,11,12,13,14,15],ymm1[0,1,2,3,4],ymm2[21,22,23,24,25,26,27,28,29,30,31],ymm1[16,17,18,19,20]
-; AVX512-NEXT:    vpshufb %ymm6, %ymm1, %ymm1
-; AVX512-NEXT:    vmovdqu %xmm0, 32(%rdi)
-; AVX512-NEXT:    vmovdqu %ymm1, (%rdi)
+; AVX512-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15,0,1,2,3,4,5]
+; AVX512-NEXT:    vpalignr {{.*#+}} xmm3 = xmm1[11,12,13,14,15,0,1,2,3,4,5,6,7,8,9,10]
+; AVX512-NEXT:    vpalignr {{.*#+}} xmm4 = xmm0[5,6,7,8,9,10,11,12,13,14,15],xmm2[0,1,2,3,4]
+; AVX512-NEXT:    vpalignr {{.*#+}} xmm0 = xmm3[5,6,7,8,9,10,11,12,13,14,15],xmm0[0,1,2,3,4]
+; AVX512-NEXT:    vpalignr {{.*#+}} xmm2 = xmm2[5,6,7,8,9,10,11,12,13,14,15],xmm3[0,1,2,3,4]
+; AVX512-NEXT:    vpalignr {{.*#+}} xmm1 = xmm4[5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3,4]
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5]
+; AVX512-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
+; AVX512-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[5,6,7,8,9,10,11,12,13,14,15],xmm2[0,1,2,3,4]
+; AVX512-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
+; AVX512-NEXT:    vpalignr {{.*#+}} xmm2 = xmm2[5,6,7,8,9,10,11,12,13,14,15],xmm4[0,1,2,3,4]
+; AVX512-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vinserti32x4 $1, %xmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vmovdqu %xmm2, 32(%rdi)
+; AVX512-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 %1 = shufflevector <16 x i8> %a, <16 x i8> %b, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
