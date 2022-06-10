@@ -13,7 +13,6 @@
 #include "Target.h"
 
 #include "lld/Common/ErrorHandler.h"
-#include "mach-o/compact_unwind_encoding.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -141,10 +140,6 @@ ARM64::ARM64() : ARM64Common(LP64()) {
   // is -4*(2**(26-1))..4*(2**(26-1) - 1).
   backwardBranchRange = 128 * 1024 * 1024;
   forwardBranchRange = backwardBranchRange - 4;
-
-  modeDwarfEncoding = UNWIND_ARM64_MODE_DWARF;
-  subtractorRelocType = ARM64_RELOC_SUBTRACTOR;
-  unsignedRelocType = ARM64_RELOC_UNSIGNED;
 
   stubHelperHeaderSize = sizeof(stubHelperHeaderCode);
   stubHelperEntrySize = sizeof(stubHelperEntryCode);

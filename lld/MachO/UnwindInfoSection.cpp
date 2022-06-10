@@ -28,7 +28,6 @@
 
 using namespace llvm;
 using namespace llvm::MachO;
-using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::macho;
 
@@ -223,8 +222,7 @@ void UnwindInfoSectionImpl::prepareRelocations() {
   // entries to the GOT. Hence the use of a MapVector for
   // UnwindInfoSection::symbols.
   for (const Defined *d : make_second_range(symbols))
-    if (d->unwindEntry &&
-        d->unwindEntry->getName() == section_names::compactUnwind)
+    if (d->unwindEntry)
       prepareRelocations(d->unwindEntry);
 }
 
@@ -332,18 +330,6 @@ void UnwindInfoSectionImpl::relocateCompactUnwind(
     cu.functionAddress = d->getVA();
     if (!d->unwindEntry)
       return;
-
-    // If we have DWARF unwind info, create a CU entry that points to it.
-    if (d->unwindEntry->getName() == section_names::ehFrame) {
-      cu.encoding = target->modeDwarfEncoding | d->unwindEntry->outSecOff;
-      const FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry];
-      cu.functionLength = fde.funcLength;
-      cu.personality = fde.personality;
-      cu.lsda = fde.lsda;
-      return;
-    }
-
-    assert(d->unwindEntry->getName() == section_names::compactUnwind);
 
     auto buf = reinterpret_cast<const uint8_t *>(d->unwindEntry->data.data()) -
                target->wordSize;
