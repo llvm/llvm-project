@@ -77,6 +77,9 @@ struct Relocation {
   /// Return true if relocation type implies the creation of a GOT entry
   static bool isGOT(uint64_t Type);
 
+  /// Special relocation type that allows the linker to modify the instruction.
+  static bool isX86GOTPCRELX(uint64_t Type);
+
   /// Return true if relocation type is NONE
   static bool isNone(uint64_t Type);
 

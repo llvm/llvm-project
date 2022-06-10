@@ -842,6 +842,20 @@ public:
     return (RI == Relocations.end()) ? nullptr : &RI->second;
   }
 
+  /// Return the first relocation in the function that starts at an address in
+  /// the [StartOffset, EndOffset) range. Return nullptr if no such relocation
+  /// exists.
+  const Relocation *getRelocationInRange(uint64_t StartOffset,
+                                         uint64_t EndOffset) const {
+    assert(CurrentState == State::Empty &&
+           "Relocations unavailable in the current function state.");
+    auto RI = Relocations.lower_bound(StartOffset);
+    if (RI != Relocations.end() && RI->first < EndOffset)
+      return &RI->second;
+
+    return nullptr;
+  }
+
   /// Returns the raw binary encoding of this function.
   ErrorOr<ArrayRef<uint8_t>> getData() const;
 
@@ -1314,11 +1328,11 @@ public:
     case ELF::R_X86_64_PC8:
     case ELF::R_X86_64_PC32:
     case ELF::R_X86_64_PC64:
+    case ELF::R_X86_64_GOTPCRELX:
+    case ELF::R_X86_64_REX_GOTPCRELX:
       Relocations[Offset] = Relocation{Offset, Symbol, RelType, Addend, Value};
       return;
     case ELF::R_X86_64_PLT32:
-    case ELF::R_X86_64_GOTPCRELX:
-    case ELF::R_X86_64_REX_GOTPCRELX:
     case ELF::R_X86_64_GOTPCREL:
     case ELF::R_X86_64_TPOFF32:
     case ELF::R_X86_64_GOTTPOFF:
