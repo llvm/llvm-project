@@ -125,7 +125,7 @@ public:
   /// Set TargetOptions.
   ///
   /// Note: This operation will overwrite any previously configured options,
-  /// including EmulatedTLS and ExplicitEmulatedTLS which
+  /// including EmulatedTLS, ExplicitEmulatedTLS, and UseInitArray which
   /// the JITTargetMachineBuilder sets by default. Clients are responsible
   /// for re-enabling these overwritten options.
   JITTargetMachineBuilder &setOptions(TargetOptions Options) {

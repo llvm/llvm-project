@@ -28,12 +28,15 @@
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
+#include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
+#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericRTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
@@ -120,6 +123,9 @@ namespace {
                                       "RuntimeDyld"),
                            clEnumValN(JITLinkerKind::JITLink, "jitlink",
                                       "Orc-specific linker")));
+  cl::opt<std::string> OrcRuntime("orc-runtime",
+                                  cl::desc("Use ORC runtime from given path"),
+                                  cl::init(""));
 
   cl::opt<unsigned>
   LazyJITCompileThreads("compile-threads",
@@ -230,13 +236,15 @@ namespace {
       cl::desc("Do not resolve lli process symbols in JIT'd code"),
       cl::init(false));
 
-  enum class LLJITPlatform { Inactive, DetectHost, GenericIR };
+  enum class LLJITPlatform { Inactive, DetectHost, ORC, GenericIR };
 
   cl::opt<LLJITPlatform>
       Platform("lljit-platform", cl::desc("Platform to use with LLJIT"),
                cl::init(LLJITPlatform::DetectHost),
                cl::values(clEnumValN(LLJITPlatform::DetectHost, "DetectHost",
                                      "Select based on JIT target triple"),
+                          clEnumValN(LLJITPlatform::ORC, "ORC",
+                                     "Use ORCPlatform with the ORC runtime"),
                           clEnumValN(LLJITPlatform::GenericIR, "GenericIR",
                                      "Use LLJITGenericIRPlatform"),
                           clEnumValN(LLJITPlatform::Inactive, "Inactive",
@@ -363,6 +371,53 @@ private:
     CacheName.replace(pos, CacheName.length() - pos, ".o");
     return true;
   }
+};
+
+class ORCPlatformSupport : public orc::LLJIT::PlatformSupport {
+public:
+  ORCPlatformSupport(orc::LLJIT &J) : J(J) {}
+
+  Error initialize(orc::JITDylib &JD) override {
+    using llvm::orc::shared::SPSExecutorAddr;
+    using llvm::orc::shared::SPSString;
+    using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
+    enum dlopen_mode : int32_t {
+      ORC_RT_RTLD_LAZY = 0x1,
+      ORC_RT_RTLD_NOW = 0x2,
+      ORC_RT_RTLD_LOCAL = 0x4,
+      ORC_RT_RTLD_GLOBAL = 0x8
+    };
+
+    if (auto WrapperAddr = J.lookup("__orc_rt_jit_dlopen_wrapper")) {
+      return J.getExecutionSession().callSPSWrapper<SPSDLOpenSig>(
+          *WrapperAddr, DSOHandles[&JD], JD.getName(),
+          int32_t(ORC_RT_RTLD_LAZY));
+    } else
+      return WrapperAddr.takeError();
+  }
+
+  Error deinitialize(orc::JITDylib &JD) override {
+    using llvm::orc::shared::SPSExecutorAddr;
+    using SPSDLCloseSig = int32_t(SPSExecutorAddr);
+
+    if (auto WrapperAddr = J.lookup("__orc_rt_jit_dlclose_wrapper")) {
+      int32_t result;
+      auto E = J.getExecutionSession().callSPSWrapper<SPSDLCloseSig>(
+          *WrapperAddr, result, DSOHandles[&JD]);
+      if (E)
+        return E;
+      else if (result)
+        return make_error<StringError>("dlclose failed",
+                                       inconvertibleErrorCode());
+      DSOHandles.erase(&JD);
+    } else
+      return WrapperAddr.takeError();
+    return Error::success();
+  }
+
+private:
+  orc::LLJIT &J;
+  DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
 };
 
 // On Mingw and Cygwin, an external symbol named '__main' is called from the
@@ -904,21 +959,29 @@ int runOrcJIT(const char *ProgName) {
   }
 
   // Set up LLJIT platform.
-  {
-    LLJITPlatform P = Platform;
-    if (P == LLJITPlatform::DetectHost)
+  LLJITPlatform P = Platform;
+  if (P == LLJITPlatform::DetectHost) {
+    if (JITLinker == JITLinkerKind::JITLink && !OrcRuntime.empty() &&
+        (TT->isOSBinFormatMachO() || TT->isOSBinFormatELF()))
+      P = LLJITPlatform::ORC;
+    else
       P = LLJITPlatform::GenericIR;
-
-    switch (P) {
-    case LLJITPlatform::GenericIR:
-      // Nothing to do: LLJITBuilder will use this by default.
-      break;
-    case LLJITPlatform::Inactive:
-      Builder.setPlatformSetUp(orc::setUpInactivePlatform);
-      break;
-    default:
-      llvm_unreachable("Unrecognized platform value");
-    }
+  }
+  switch (P) {
+  case LLJITPlatform::ORC:
+    Builder.setPlatformSetUp([](llvm::orc::LLJIT &J) -> llvm::Error {
+      J.setPlatformSupport(std::make_unique<ORCPlatformSupport>(J));
+      return Error::success();
+    });
+    break;
+  case LLJITPlatform::GenericIR:
+    // Nothing to do: LLJITBuilder will use this by default.
+    break;
+  case LLJITPlatform::Inactive:
+    Builder.setPlatformSetUp(orc::setUpInactivePlatform);
+    break;
+  default:
+    llvm_unreachable("Unrecognized platform value");
   }
 
   std::unique_ptr<orc::ExecutorProcessControl> EPC = nullptr;
@@ -926,13 +989,15 @@ int runOrcJIT(const char *ProgName) {
     EPC = ExitOnErr(orc::SelfExecutorProcessControl::Create(
         std::make_shared<orc::SymbolStringPool>()));
 
-    Builder.setObjectLinkingLayerCreator([&EPC](orc::ExecutionSession &ES,
-                                                const Triple &) {
+    Builder.setObjectLinkingLayerCreator([&EPC, &P](orc::ExecutionSession &ES,
+                                                    const Triple &TT) {
       auto L = std::make_unique<orc::ObjectLinkingLayer>(ES, EPC->getMemMgr());
-      L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
-          ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(ES))));
-      L->addPlugin(std::make_unique<orc::DebugObjectManagerPlugin>(
-          ES, ExitOnErr(orc::createJITLoaderGDBRegistrar(ES))));
+      if (P != LLJITPlatform::ORC) {
+        L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
+            ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(ES))));
+        L->addPlugin(std::make_unique<orc::DebugObjectManagerPlugin>(
+            ES, ExitOnErr(orc::createJITLoaderGDBRegistrar(ES))));
+      }
       return L;
     });
   }
@@ -978,6 +1043,31 @@ int runOrcJIT(const char *ProgName) {
     J->getMainJITDylib().addGenerator(
         std::make_unique<LLIBuiltinFunctionGenerator>(GenerateBuiltinFunctions,
                                                       Mangle));
+
+  if (P == LLJITPlatform::ORC) {
+    if (auto *OLL = llvm::dyn_cast<llvm::orc::ObjectLinkingLayer>(ObjLayer)) {
+      auto &ES = J->getExecutionSession();
+      if (TT->isOSBinFormatMachO()) {
+        if (auto P = llvm::orc::MachOPlatform::Create(
+                ES, *OLL, J->getMainJITDylib(), OrcRuntime.c_str()))
+          ES.setPlatform(std::move(*P));
+        else
+          ExitOnErr(P.takeError());
+      } else if (TT->isOSBinFormatELF()) {
+        if (auto P = llvm::orc::ELFNixPlatform::Create(
+                ES, *OLL, J->getMainJITDylib(), OrcRuntime.c_str()))
+          ES.setPlatform(std::move(*P));
+        else
+          ExitOnErr(P.takeError());
+      } else {
+        errs() << "No ORC platform support\n";
+        exit(1);
+      }
+    } else {
+      errs() << "ORC platform requires JITLink\n";
+      exit(1);
+    }
+  }
 
   // Regular modules are greedy: They materialize as a whole and trigger
   // materialization for all required symbols recursively. Lazy modules go
