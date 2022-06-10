@@ -16,7 +16,6 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/RISCVISAInfo.h"
@@ -432,13 +431,6 @@ inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
 void printVType(unsigned VType, raw_ostream &OS);
 
 } // namespace RISCVVType
-
-namespace RISCVVInstInfo {
-inline static bool isFaultFirstLoad(const MachineInstr &MI) {
-  return MI.getNumExplicitDefs() == 2 && MI.modifiesRegister(RISCV::VL) &&
-         !MI.isInlineAsm();
-}
-} // namespace RISCVVInstInfo
 
 } // namespace llvm
 

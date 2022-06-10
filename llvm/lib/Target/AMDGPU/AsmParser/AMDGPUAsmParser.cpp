@@ -5119,7 +5119,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
       SharedVGPRCount = Val;
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3,
-                       COMPUTE_PGM_RSRC3_GFX10_SHARED_VGPR_COUNT, Val,
+                       COMPUTE_PGM_RSRC3_GFX10_PLUS_SHARED_VGPR_COUNT, Val,
                        ValRange);
     } else if (ID == ".amdhsa_exception_fp_ieee_invalid_op") {
       PARSE_BITS_ENTRY(
@@ -5616,7 +5616,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   if (MRI.regsOverlap(AMDGPU::TTMP12_TTMP13_TTMP14_TTMP15, RegNo))
     return isGFX9Plus();
 
-  // GFX10 has 2 more SGPRs 104 and 105.
+  // GFX10+ has 2 more SGPRs 104 and 105.
   if (MRI.regsOverlap(AMDGPU::SGPR104_SGPR105, RegNo))
     return hasSGPR104_SGPR105();
 
@@ -5625,8 +5625,9 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
   case AMDGPU::SRC_SHARED_LIMIT:
   case AMDGPU::SRC_PRIVATE_BASE:
   case AMDGPU::SRC_PRIVATE_LIMIT:
-  case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
     return isGFX9Plus();
+  case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
+    return isGFX9Plus() && !isGFX11Plus();
   case AMDGPU::TBA:
   case AMDGPU::TBA_LO:
   case AMDGPU::TBA_HI:
@@ -5649,7 +5650,7 @@ bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
 
   if (isSI() || isGFX10Plus()) {
     // No flat_scr on SI.
-    // On GFX10 flat scratch is not a valid register operand and can only be
+    // On GFX10Plus flat scratch is not a valid register operand and can only be
     // accessed with s_setreg/s_getreg.
     switch (RegNo) {
     case AMDGPU::FLAT_SCR:
