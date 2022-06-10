@@ -1536,6 +1536,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         .addReg(AArch64::X17)
         .addImm(0));
     return;
+  }
   case AArch64::EMITMTETAGGED: {
     ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
