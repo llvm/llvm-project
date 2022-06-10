@@ -38,12 +38,6 @@ using namespace bufferization;
 constexpr const ::llvm::StringLiteral
     bufferization::BufferizableOpInterface::kInplaceableAttrName;
 
-/// Attribute name used to mark allocs that are created by the bufferization.
-static const char *kBufferAllocationAttr = "bufferization.allocation";
-
-/// Attribute name used to mark allocs that should not be deallocated.
-static const char *kSkipDeallocAttr = "bufferization.skip_dealloc";
-
 //===----------------------------------------------------------------------===//
 // OpFilter
 //===----------------------------------------------------------------------===//
@@ -456,15 +450,6 @@ static MemRefType getAllocationTypeAndShape(OpBuilder &b, Location loc,
   return allocMemRefType;
 }
 
-static Value createBufferAllocation(OpBuilder &b, Location loc, MemRefType type,
-                                    ValueRange dynShape, bool skipDealloc) {
-  auto allocaOp = b.create<memref::AllocaOp>(loc, type, dynShape);
-  allocaOp->setAttr(kBufferAllocationAttr, b.getUnitAttr());
-  if (skipDealloc)
-    allocaOp->setAttr(kSkipDeallocAttr, b.getUnitAttr());
-  return allocaOp.getResult();
-}
-
 /// Create an allocation after `shapedValue.getDefiningOp` (or at the top of the
 /// block in case of a bbArg).
 FailureOr<Value> BufferizationState::createAlloc(OpBuilder &b, Location loc,
@@ -479,21 +464,32 @@ FailureOr<Value> BufferizationState::createAlloc(OpBuilder &b, Location loc,
   MemRefType allocMemRefType =
       getAllocationTypeAndShape(b, loc, shapedValue, dynShape);
 
+  // Create the buffer allocation.
+  FailureOr<Value> buffer =
+      getOptions().createAlloc(b, loc, allocMemRefType, dynShape);
+  if (failed(buffer))
+    return failure();
+
   // Should be the buffer be deallocated again or should we let it leak?
-  bool skipDealloc;
   if (dealloc) {
-    skipDealloc = !dealloc.getValue();
+    if (!dealloc.getValue())
+      return *buffer;
   } else {
     assert(shapedValue.getType().isa<TensorType>() &&
            "must specify `dealloc` if non-tensor value is passed");
     // Buffer should be not be deallocated if deallocs are generally deactivated
     // or if the tensor is yielded from a block.
-    skipDealloc = !getOptions().createDeallocs ||
-                  getAnalysisState().isTensorYielded(shapedValue);
+    if (!getOptions().createDeallocs ||
+        getAnalysisState().isTensorYielded(shapedValue))
+      return *buffer;
   }
 
-  // Create the buffer allocation.
-  return createBufferAllocation(b, loc, allocMemRefType, dynShape, skipDealloc);
+  // Create buffer deallocation.
+  b.setInsertionPoint(b.getInsertionBlock()->getTerminator());
+  if (failed(getOptions().createDealloc(b, loc, *buffer)))
+    return failure();
+
+  return *buffer;
 }
 
 /// Create a memory copy between two memref buffers.
@@ -504,53 +500,6 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
 
   b.create<memref::CopyOp>(loc, from, to);
   return success();
-}
-
-LogicalResult
-bufferization::createAllocDeallocOps(Operation *op,
-                                     const BufferizationOptions &options,
-                                     bool onlyLeakingAllocs, bool *changed) {
-  IRRewriter rewriter(op->getContext());
-  if (changed)
-    *changed = false;
-
-  // Bufferization creates memref.alloca ops. After bufferization, these must be
-  // rewritten to alloc/dealloc ops as specified in the bufferization options.
-  WalkResult status = op->walk([&](memref::AllocaOp allocaOp) {
-    // Ignore memref.alloca ops that were not created by the bufferization.
-    if (!allocaOp->hasAttr(kBufferAllocationAttr))
-      return WalkResult::skip();
-    // If `onlyLeakingAllocs`, process only ops that are marked as
-    // "skip dealloc".
-    bool skipDealloc = allocaOp->hasAttr(kSkipDeallocAttr);
-    if (onlyLeakingAllocs && !skipDealloc)
-      return WalkResult::skip();
-
-    // Create alloc.
-    Block *block = allocaOp->getBlock();
-    rewriter.setInsertionPoint(allocaOp);
-    FailureOr<Value> alloc =
-        options.createAlloc(rewriter, allocaOp->getLoc(), allocaOp.getType(),
-                            allocaOp.dynamicSizes());
-    if (failed(alloc))
-      return WalkResult::interrupt();
-    rewriter.replaceOp(allocaOp, *alloc);
-    if (changed)
-      *changed = true;
-
-    // Stop here if the buffer should not be deallocated.
-    if (skipDealloc)
-      return WalkResult::advance();
-
-    // Create dealloc.
-    rewriter.setInsertionPoint(block->getTerminator());
-    if (failed(options.createDealloc(rewriter, alloc->getLoc(), *alloc)))
-      return WalkResult::interrupt();
-
-    return WalkResult::advance();
-  });
-
-  return success(!status.wasInterrupted());
 }
 
 //===----------------------------------------------------------------------===//

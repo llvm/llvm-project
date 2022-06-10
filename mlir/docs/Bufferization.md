@@ -270,9 +270,11 @@ the block. Deallocation of such buffers is tricky and not currently implemented
 in an efficient way. For this reason, One-Shot Bufferize must be explicitly
 configured with `allow-return-allocs` to support such IR.
 
-When running with `allow-return-allocs`, One-Shot Bufferize resolves yields of
-newly allocated buffers with copies. E.g., the `scf.if` example above would
-bufferize to IR similar to the following:
+When running with `allow-return-allocs`, One-Shot Bufferize may introduce
+allocations that cannot be deallocated by One-Shot Bufferize yet. For that
+reason, `-buffer-deallocation` must be run after One-Shot Bufferize. This buffer
+deallocation pass resolves yields of newly allocated buffers with copies. E.g.,
+the `scf.if` example above would bufferize to IR similar to the following:
 
 ```mlir
 %0 = scf.if %c -> (memref<?xf32>) {
@@ -291,15 +293,10 @@ not matter which if-branch was taken. In both cases, the resulting buffer `%0`
 must be deallocated at some point after the `scf.if` (unless the `%0` is
 returned/yielded from its block).
 
-One-Shot Bufferize internally utilizes functionality from the
-[Buffer Deallocation](https://mlir.llvm.org/docs/BufferDeallocationInternals/)
-pass to deallocate yielded buffers. Therefore, ops with regions must implement
-the `RegionBranchOpInterface` when `allow-return-allocs`.
-
-Note: Buffer allocations that are returned from a function are not deallocated.
-It is the caller's responsibility to deallocate the buffer. In the future, this
-could be automated with allocation hoisting (across function boundaries) or
-reference counting.
+Note: Buffer allocations that are returned from a function are not deallocated,
+not even with `-buffer-deallocation`. It is the caller's responsibility to
+deallocate the buffer. In the future, this could be automated with allocation
+hoisting (across function boundaries) or reference counting.
 
 One-Shot Bufferize can be configured to leak all memory and not generate any
 buffer deallocations with `create-deallocs=0`. This can be useful for
