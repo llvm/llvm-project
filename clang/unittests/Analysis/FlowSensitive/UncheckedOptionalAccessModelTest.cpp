@@ -2165,7 +2165,6 @@ TEST_P(UncheckedOptionalAccessTest, CallReturningOptional) {
     }
   )",
       UnorderedElementsAre(Pair("check-1", "unsafe: input.cc:9:7")));
-
   ExpectLatticeChecksFor(
       R"(
     #include "unchecked_optional_access_test.h"
@@ -2231,8 +2230,95 @@ TEST_P(UncheckedOptionalAccessTest, WithAlias) {
       UnorderedElementsAre(Pair("check", "unsafe: input.cc:8:7")));
 }
 
+TEST_P(UncheckedOptionalAccessTest, OptionalValueOptional) {
+  // Basic test that nested values are populated.  We nest an optional because
+  // its easy to use in a test, but the type of the nested value shouldn't
+  // matter.
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    using Foo = $ns::$optional<std::string>;
+
+    void target($ns::$optional<Foo> foo) {
+      if (foo && *foo) {
+        foo->value();
+        /*[[access]]*/
+      }
+    }
+  )",
+      UnorderedElementsAre(Pair("access", "safe")));
+
+  // Mutation is supported for nested values.
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    using Foo = $ns::$optional<std::string>;
+
+    void target($ns::$optional<Foo> foo) {
+      if (foo && *foo) {
+        foo->reset();
+        foo->value();
+        /*[[reset]]*/
+      }
+    }
+  )",
+      UnorderedElementsAre(Pair("reset", "unsafe: input.cc:9:9")));
+}
+
+// Tests that structs can be nested. We use an optional field because its easy
+// to use in a test, but the type of the field shouldn't matter.
+TEST_P(UncheckedOptionalAccessTest, OptionalValueStruct) {
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {
+      $ns::$optional<std::string> opt;
+    };
+
+    void target($ns::$optional<Foo> foo) {
+      if (foo && foo->opt) {
+        foo->opt.value();
+        /*[[access]]*/
+      }
+    }
+  )",
+      UnorderedElementsAre(Pair("access", "safe")));
+}
+
+TEST_P(UncheckedOptionalAccessTest, OptionalValueInitialization) {
+  // FIXME: Fix when to initialize `value`. All unwrapping should be safe in
+  // this example, but `value` initialization is done multiple times during the
+  // fixpoint iterations and joining the environment won't correctly merge them.
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    using Foo = $ns::$optional<std::string>;
+
+    void target($ns::$optional<Foo> foo, bool b) {
+      if (!foo.has_value()) return;
+      if (b) {
+        if (!foo->has_value()) return;
+        // We have created `foo.value()`.
+        foo->value();
+      } else {
+        if (!foo->has_value()) return;
+        // We have created `foo.value()` again, in a different environment.
+        foo->value();
+      }
+      // Now we merge the two values. UncheckedOptionalAccessModel::merge() will
+      // throw away the "value" property.
+      foo->value();
+      /*[[merge]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("merge", "unsafe: input.cc:19:7")));
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)
 // - invalidation (passing optional by non-const reference/pointer)
-// - nested `optional` values
