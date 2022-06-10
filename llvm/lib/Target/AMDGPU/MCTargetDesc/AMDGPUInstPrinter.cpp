@@ -626,8 +626,8 @@ void AMDGPUInstPrinter::printWaitEXP(const MCInst *MI, unsigned OpNo,
   }
 }
 
-bool AMDGPUInstPrinter::needsVccMods(const MCInstrDesc &Desc,
-                                     unsigned OpNo) const {
+bool AMDGPUInstPrinter::needsImpliedVcc(const MCInstrDesc &Desc,
+                                        unsigned OpNo) const {
   return OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP) &&
          (Desc.TSFlags & SIInstrFlags::VOPC) &&
          (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
@@ -814,7 +814,7 @@ void AMDGPUInstPrinter::printOperandAndFPInputMods(const MCInst *MI,
                                                    const MCSubtargetInfo &STI,
                                                    raw_ostream &O) {
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-  if (needsVccMods(Desc, OpNo))
+  if (needsImpliedVcc(Desc, OpNo))
     printDefaultVccOperand(true, STI, O);
 
   unsigned InputModifiers = MI->getOperand(OpNo).getImm();
@@ -853,7 +853,7 @@ void AMDGPUInstPrinter::printOperandAndIntInputMods(const MCInst *MI,
                                                     const MCSubtargetInfo &STI,
                                                     raw_ostream &O) {
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-  if (needsVccMods(Desc, OpNo))
+  if (needsImpliedVcc(Desc, OpNo))
     printDefaultVccOperand(true, STI, O);
 
   unsigned InputModifiers = MI->getOperand(OpNo).getImm();

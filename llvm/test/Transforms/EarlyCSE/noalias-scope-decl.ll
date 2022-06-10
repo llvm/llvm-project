@@ -3,30 +3,30 @@
 
 ; Store-to-load forwarding across a @llvm.experimental.noalias.scope.decl.
 
-define float @s2l(float* %p) {
+define float @s2l(ptr %p) {
 ; CHECK-LABEL: @s2l(
-; CHECK-NEXT:    store float 0.000000e+00, float* [[P:%.*]], align 4
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !0)
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  store float 0.0, float* %p
+  store float 0.0, ptr %p
   call void @llvm.experimental.noalias.scope.decl(metadata !0)
-  %t = load float, float* %p
+  %t = load float, ptr %p
   ret float %t
 }
 
 ; Redundant load elimination across a @llvm.experimental.noalias.scope.decl.
 
-define float @rle(float* %p) {
+define float @rle(ptr %p) {
 ; CHECK-LABEL: @rle(
-; CHECK-NEXT:    [[R:%.*]] = load float, float* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata !0)
 ; CHECK-NEXT:    [[T:%.*]] = fadd float [[R]], [[R]]
 ; CHECK-NEXT:    ret float [[T]]
 ;
-  %r = load float, float* %p
+  %r = load float, ptr %p
   call void @llvm.experimental.noalias.scope.decl(metadata !0)
-  %s = load float, float* %p
+  %s = load float, ptr %p
   %t = fadd float %r, %s
   ret float %t
 }

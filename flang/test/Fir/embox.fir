@@ -1,4 +1,5 @@
 // RUN: tco %s | FileCheck %s
+// RUN: %flang_fc1 -mmlir -disable-external-name-interop  -emit-llvm %s -o -| FileCheck %s
 
 
 // CHECK-LABEL: define void @_QPtest_callee(ptr %0)
