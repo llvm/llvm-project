@@ -532,43 +532,43 @@ inline _LIBCPP_INLINE_VISIBILITY void __sort(_Tp** __first, _Tp** __last, __less
   _VSTD::__sort<__less<uintptr_t>&, uintptr_t*>((uintptr_t*)__first, (uintptr_t*)__last, __comp);
 }
 
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<char>&, char*>(char*, char*, __less<char>&))
+extern template _LIBCPP_FUNC_VIS void __sort<__less<char>&, char*>(char*, char*, __less<char>&);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<wchar_t>&, wchar_t*>(wchar_t*, wchar_t*, __less<wchar_t>&))
+extern template _LIBCPP_FUNC_VIS void __sort<__less<wchar_t>&, wchar_t*>(wchar_t*, wchar_t*, __less<wchar_t>&);
 #endif
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<signed char>&, signed char*>(signed char*, signed char*, __less<signed char>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<unsigned char>&, unsigned char*>(unsigned char*, unsigned char*, __less<unsigned char>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<short>&, short*>(short*, short*, __less<short>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<unsigned short>&, unsigned short*>(unsigned short*, unsigned short*, __less<unsigned short>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<int>&, int*>(int*, int*, __less<int>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<unsigned>&, unsigned*>(unsigned*, unsigned*, __less<unsigned>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<long>&, long*>(long*, long*, __less<long>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<unsigned long>&, unsigned long*>(unsigned long*, unsigned long*, __less<unsigned long>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<long long>&, long long*>(long long*, long long*, __less<long long>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<unsigned long long>&, unsigned long long*>(unsigned long long*, unsigned long long*, __less<unsigned long long>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<float>&, float*>(float*, float*, __less<float>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<double>&, double*>(double*, double*, __less<double>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS void __sort<__less<long double>&, long double*>(long double*, long double*, __less<long double>&))
+extern template _LIBCPP_FUNC_VIS void __sort<__less<signed char>&, signed char*>(signed char*, signed char*, __less<signed char>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<unsigned char>&, unsigned char*>(unsigned char*, unsigned char*, __less<unsigned char>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<short>&, short*>(short*, short*, __less<short>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<unsigned short>&, unsigned short*>(unsigned short*, unsigned short*, __less<unsigned short>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<int>&, int*>(int*, int*, __less<int>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<unsigned>&, unsigned*>(unsigned*, unsigned*, __less<unsigned>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<long>&, long*>(long*, long*, __less<long>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<unsigned long>&, unsigned long*>(unsigned long*, unsigned long*, __less<unsigned long>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<long long>&, long long*>(long long*, long long*, __less<long long>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<unsigned long long>&, unsigned long long*>(unsigned long long*, unsigned long long*, __less<unsigned long long>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<float>&, float*>(float*, float*, __less<float>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<double>&, double*>(double*, double*, __less<double>&);
+extern template _LIBCPP_FUNC_VIS void __sort<__less<long double>&, long double*>(long double*, long double*, __less<long double>&);
 
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<char>&, char*>(char*, char*, __less<char>&))
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<char>&, char*>(char*, char*, __less<char>&);
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<wchar_t>&, wchar_t*>(wchar_t*, wchar_t*, __less<wchar_t>&))
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<wchar_t>&, wchar_t*>(wchar_t*, wchar_t*, __less<wchar_t>&);
 #endif
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<signed char>&, signed char*>(signed char*, signed char*, __less<signed char>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<unsigned char>&, unsigned char*>(unsigned char*, unsigned char*, __less<unsigned char>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<short>&, short*>(short*, short*, __less<short>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<unsigned short>&, unsigned short*>(unsigned short*, unsigned short*, __less<unsigned short>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<int>&, int*>(int*, int*, __less<int>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<unsigned>&, unsigned*>(unsigned*, unsigned*, __less<unsigned>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<long>&, long*>(long*, long*, __less<long>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<unsigned long>&, unsigned long*>(unsigned long*, unsigned long*, __less<unsigned long>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<long long>&, long long*>(long long*, long long*, __less<long long>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<unsigned long long>&, unsigned long long*>(unsigned long long*, unsigned long long*, __less<unsigned long long>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<float>&, float*>(float*, float*, __less<float>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<double>&, double*>(double*, double*, __less<double>&))
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<long double>&, long double*>(long double*, long double*, __less<long double>&))
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<signed char>&, signed char*>(signed char*, signed char*, __less<signed char>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<unsigned char>&, unsigned char*>(unsigned char*, unsigned char*, __less<unsigned char>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<short>&, short*>(short*, short*, __less<short>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<unsigned short>&, unsigned short*>(unsigned short*, unsigned short*, __less<unsigned short>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<int>&, int*>(int*, int*, __less<int>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<unsigned>&, unsigned*>(unsigned*, unsigned*, __less<unsigned>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<long>&, long*>(long*, long*, __less<long>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<unsigned long>&, unsigned long*>(unsigned long*, unsigned long*, __less<unsigned long>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<long long>&, long long*>(long long*, long long*, __less<long long>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<unsigned long long>&, unsigned long long*>(unsigned long long*, unsigned long long*, __less<unsigned long long>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<float>&, float*>(float*, float*, __less<float>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<double>&, double*>(double*, double*, __less<double>&);
+extern template _LIBCPP_FUNC_VIS bool __insertion_sort_incomplete<__less<long double>&, long double*>(long double*, long double*, __less<long double>&);
 
-_LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS unsigned __sort5<__less<long double>&, long double*>(long double*, long double*, long double*, long double*, long double*, __less<long double>&))
+extern template _LIBCPP_FUNC_VIS unsigned __sort5<__less<long double>&, long double*>(long double*, long double*, long double*, long double*, long double*, __less<long double>&);
 
 template <class _RandomAccessIterator, class _Compare>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 void
