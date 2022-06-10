@@ -88,10 +88,6 @@ BufferizationOptions getPartialBufferizationOptions();
 LogicalResult bufferizeOp(Operation *op, BufferizationState &bufferizationState,
                           const OpFilter *opFilter = nullptr);
 
-/// Finalize all buffer allocations: Create alloc/dealloc ops as specified by
-/// the bufferization options.
-LogicalResult finalizeBuffers(Operation *op,
-                              const BufferizationOptions &options);
 } // namespace bufferization
 } // namespace mlir
 

@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs promote-buffer-results-to-out-params function-boundary-type-conversion=fully-dynamic-layout-map" -buffer-deallocation -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs promote-buffer-results-to-out-params function-boundary-type-conversion=identity-layout-map" -buffer-deallocation -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs function-boundary-type-conversion=fully-dynamic-layout-map" -buffer-results-to-out-params -buffer-deallocation -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs function-boundary-type-conversion=identity-layout-map" -buffer-results-to-out-params -buffer-deallocation -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs function-boundary-type-conversion=infer-layout-map" -buffer-deallocation -split-input-file | FileCheck %s --check-prefix=CHECK-BASELINE
 
 // Note: function-boundary-type-conversion=infer-layout-map with
@@ -17,7 +17,8 @@
 //       CHECK:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
 //       CHECK:   memref.copy %[[arg0]], %[[alloc]]
 //       CHECK:   memref.store %{{.*}}, %[[alloc]]
-//       CHECK:   memref.copy %[[alloc]], %[[arg1]]
+//       CHECK:   %[[casted:.*]] = memref.cast %[[alloc]]
+//       CHECK:   memref.copy %[[casted]], %[[arg1]]
 //       CHECK:   memref.dealloc %[[alloc]]
 //       CHECK:   return
 //       CHECK: }
@@ -53,7 +54,7 @@ func.func @callee(%t: tensor<5xf32>) -> (tensor<5xf32>, tensor<5xf32>) {
 // CHECK:   %[[casted:.*]] = memref.cast %[[alloc]] : memref<5xf32> to memref<5xf32, #[[$map1]]>
 // CHECK:   call @callee(%[[arg0]], %[[casted]])
 // CHECK:   %[[l1:.*]] = memref.load %[[arg0]]
-// CHECK:   %[[l2:.*]] = memref.load %[[alloc]]
+// CHECK:   %[[l2:.*]] = memref.load %[[casted]]
 // CHECK:   memref.dealloc %[[alloc]]
 // CHECK:   return %[[l1]], %[[l2]]
 // CHECK: }
@@ -79,7 +80,8 @@ func.func @main(%t: tensor<5xf32>) -> (f32, f32) {
 //  CHECK-SAME:     %[[r:.*]]: memref<2x5xf32, #[[$map2a]]>) {
 //       CHECK:   %[[alloc:.*]] = memref.alloc() {{.*}} : memref<10x20xf32>
 //       CHECK:   %[[subview:.*]] = memref.subview %[[alloc]]{{.*}} : memref<10x20xf32> to memref<2x5xf32, #[[$map2b]]>
-//       CHECK:   memref.copy %[[subview]], %[[r]]
+//       CHECK:   %[[casted:.*]] = memref.cast %[[subview]]
+//       CHECK:   memref.copy %[[casted]], %[[r]]
 //       CHECK:   memref.dealloc %[[alloc]]
 
 // CHECK-NO-LAYOUT-LABEL: func @callee(
@@ -112,7 +114,7 @@ func.func @callee(%idx: index) -> tensor<2x5xf32> {
 // CHECK:   %[[alloc:.*]] = memref.alloc() : memref<2x5xf32>
 // CHECK:   %[[casted:.*]] = memref.cast %[[alloc]] : memref<2x5xf32> to memref<2x5xf32, #[[$map2a]]>
 // CHECK:   call @callee(%{{.*}}, %[[casted]])
-// CHECK:   memref.load %[[alloc]]
+// CHECK:   memref.load %[[casted]]
 // CHECK:   memref.dealloc %[[alloc]]
 
 // CHECK-NO-LAYOUT: func @main(

@@ -472,10 +472,6 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
     }
   }
 
-  // Finalize all buffers.
-  if (failed(finalizeBuffers(moduleOp, options)))
-    return failure();
-
   // Post-pass cleanup of function argument attributes.
   moduleOp.walk([&](func::FuncOp op) {
     for (BlockArgument bbArg : op.getArguments())
