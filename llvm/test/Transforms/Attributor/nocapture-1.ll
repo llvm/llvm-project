@@ -214,10 +214,10 @@ define i32 @nc1(i32* %q, i32* %p, i1 %b) {
 ; IS__TUNIT____-NEXT:    br label [[L:%.*]]
 ; IS__TUNIT____:       l:
 ; IS__TUNIT____-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E:%.*]] ]
-; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[P]], i32* [[Y]]
+; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[P]], i32* [[Q]]
 ; IS__TUNIT____-NEXT:    [[VAL:%.*]] = load i32, i32* [[TMP2]], align 4
 ; IS__TUNIT____-NEXT:    store i32 0, i32* [[P]], align 4
-; IS__TUNIT____-NEXT:    store i32* [[Y]], i32** @g, align 8
+; IS__TUNIT____-NEXT:    store i32* [[Q]], i32** @g, align 8
 ; IS__TUNIT____-NEXT:    ret i32 [[VAL]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn
@@ -227,10 +227,10 @@ define i32 @nc1(i32* %q, i32* %p, i1 %b) {
 ; IS__CGSCC____-NEXT:    br label [[L:%.*]]
 ; IS__CGSCC____:       l:
 ; IS__CGSCC____-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E:%.*]] ]
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[P]], i32* [[Y]]
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[P]], i32* [[Q]]
 ; IS__CGSCC____-NEXT:    [[VAL:%.*]] = load i32, i32* [[TMP2]], align 4
 ; IS__CGSCC____-NEXT:    store i32 0, i32* [[P]], align 4
-; IS__CGSCC____-NEXT:    store i32* [[Y]], i32** @g, align 8
+; IS__CGSCC____-NEXT:    store i32* [[Q]], i32** @g, align 8
 ; IS__CGSCC____-NEXT:    ret i32 [[VAL]]
 ;
 e:
@@ -256,10 +256,10 @@ define i32 @nc1_addrspace(i32* %q, i32 addrspace(1)* %p, i1 %b) {
 ; IS__TUNIT____-NEXT:    [[X:%.*]] = phi i32 addrspace(1)* [ [[P]], [[E:%.*]] ]
 ; IS__TUNIT____-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E]] ]
 ; IS__TUNIT____-NEXT:    [[TMP:%.*]] = addrspacecast i32 addrspace(1)* [[X]] to i32*
-; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[TMP]], i32* [[Y]]
+; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[TMP]], i32* [[Q]]
 ; IS__TUNIT____-NEXT:    [[VAL:%.*]] = load i32, i32* [[TMP2]], align 4
 ; IS__TUNIT____-NEXT:    store i32 0, i32* [[TMP]], align 4
-; IS__TUNIT____-NEXT:    store i32* [[Y]], i32** @g, align 8
+; IS__TUNIT____-NEXT:    store i32* [[Q]], i32** @g, align 8
 ; IS__TUNIT____-NEXT:    ret i32 [[VAL]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn
@@ -271,10 +271,10 @@ define i32 @nc1_addrspace(i32* %q, i32 addrspace(1)* %p, i1 %b) {
 ; IS__CGSCC____-NEXT:    [[X:%.*]] = phi i32 addrspace(1)* [ [[P]], [[E:%.*]] ]
 ; IS__CGSCC____-NEXT:    [[Y:%.*]] = phi i32* [ [[Q]], [[E]] ]
 ; IS__CGSCC____-NEXT:    [[TMP:%.*]] = addrspacecast i32 addrspace(1)* [[X]] to i32*
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[TMP]], i32* [[Y]]
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = select i1 [[B]], i32* [[TMP]], i32* [[Q]]
 ; IS__CGSCC____-NEXT:    [[VAL:%.*]] = load i32, i32* [[TMP2]], align 4
 ; IS__CGSCC____-NEXT:    store i32 0, i32* [[TMP]], align 4
-; IS__CGSCC____-NEXT:    store i32* [[Y]], i32** @g, align 8
+; IS__CGSCC____-NEXT:    store i32* [[Q]], i32** @g, align 8
 ; IS__CGSCC____-NEXT:    ret i32 [[VAL]]
 ;
 e:

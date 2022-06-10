@@ -1229,16 +1229,14 @@ define internal void @f1(i8*** %a) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@f1
 ; IS__TUNIT____-SAME: (i8*** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR3]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[X:%.*]] = getelementptr { [2 x i8*] }, { [2 x i8*] }* @g, i32 0, i32 0, i32 0
-; IS__TUNIT____-NEXT:    store i8** [[X]], i8*** [[A]], align 8
+; IS__TUNIT____-NEXT:    store i8** getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @g, i32 0, i32 0, i32 0), i8*** [[A]], align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@f1
 ; IS__CGSCC____-SAME: (i8*** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[X:%.*]] = getelementptr { [2 x i8*] }, { [2 x i8*] }* @g, i32 0, i32 0, i32 0
-; IS__CGSCC____-NEXT:    store i8** [[X]], i8*** [[A]], align 8
+; IS__CGSCC____-NEXT:    store i8** getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @g, i32 0, i32 0, i32 0), i8*** [[A]], align 8
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
