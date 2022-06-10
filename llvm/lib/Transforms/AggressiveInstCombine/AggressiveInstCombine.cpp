@@ -22,6 +22,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -365,10 +366,72 @@ static bool tryToRecognizePopCount(Instruction &I) {
   return false;
 }
 
+/// Fold smin(smax(fptosi(x), C1), C2) to llvm.fptosi.sat(x), providing C1 and
+/// C2 saturate the value of the fp conversion. The transform is not reversable
+/// as the fptosi.sat is more defined than the input - all values produce a
+/// valid value for the fptosi.sat, where as some produce poison for original
+/// that were out of range of the integer conversion. The reversed pattern may
+/// use fmax and fmin instead. As we cannot directly reverse the transform, and
+/// it is not always profitable, we make it conditional on the cost being
+/// reported as lower by TTI.
+static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
+  // Look for min(max(fptosi, converting to fptosi_sat.
+  Value *In;
+  const APInt *MinC, *MaxC;
+  if (!match(&I, m_SMax(m_OneUse(m_SMin(m_OneUse(m_FPToSI(m_Value(In))),
+                                        m_APInt(MinC))),
+                        m_APInt(MaxC))) &&
+      !match(&I, m_SMin(m_OneUse(m_SMax(m_OneUse(m_FPToSI(m_Value(In))),
+                                        m_APInt(MaxC))),
+                        m_APInt(MinC))))
+    return false;
+
+  // Check that the constants clamp a saturate.
+  if (!(*MinC + 1).isPowerOf2() || -*MaxC != *MinC + 1)
+    return false;
+
+  Type *IntTy = I.getType();
+  Type *FpTy = In->getType();
+  Type *SatTy =
+      IntegerType::get(IntTy->getContext(), (*MinC + 1).exactLogBase2() + 1);
+  if (auto *VecTy = dyn_cast<VectorType>(IntTy))
+    SatTy = VectorType::get(SatTy, VecTy->getElementCount());
+
+  // Get the cost of the intrinsic, and check that against the cost of
+  // fptosi+smin+smax
+  InstructionCost SatCost = TTI.getIntrinsicInstrCost(
+      IntrinsicCostAttributes(Intrinsic::fptosi_sat, SatTy, {In}, {FpTy}),
+      TTI::TCK_RecipThroughput);
+  SatCost += TTI.getCastInstrCost(Instruction::SExt, SatTy, IntTy,
+                                  TTI::CastContextHint::None,
+                                  TTI::TCK_RecipThroughput);
+
+  InstructionCost MinMaxCost = TTI.getCastInstrCost(
+      Instruction::FPToSI, IntTy, FpTy, TTI::CastContextHint::None,
+      TTI::TCK_RecipThroughput);
+  MinMaxCost += TTI.getIntrinsicInstrCost(
+      IntrinsicCostAttributes(Intrinsic::smin, IntTy, {IntTy}),
+      TTI::TCK_RecipThroughput);
+  MinMaxCost += TTI.getIntrinsicInstrCost(
+      IntrinsicCostAttributes(Intrinsic::smax, IntTy, {IntTy}),
+      TTI::TCK_RecipThroughput);
+
+  if (SatCost >= MinMaxCost)
+    return false;
+
+  IRBuilder<> Builder(&I);
+  Function *Fn = Intrinsic::getDeclaration(I.getModule(), Intrinsic::fptosi_sat,
+                                           {SatTy, FpTy});
+  Value *Sat = Builder.CreateCall(Fn, In);
+  I.replaceAllUsesWith(Builder.CreateSExt(Sat, IntTy));
+  return true;
+}
+
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
-static bool foldUnusualPatterns(Function &F, DominatorTree &DT) {
+static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
+                                TargetTransformInfo &TTI) {
   bool MadeChange = false;
   for (BasicBlock &BB : F) {
     // Ignore unreachable basic blocks.
@@ -384,6 +447,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT) {
       MadeChange |= foldAnyOrAllBitsSet(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I);
+      MadeChange |= tryToFPToSat(I, TTI);
     }
   }
 
@@ -397,13 +461,13 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT) {
 
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
-static bool runImpl(Function &F, AssumptionCache &AC, TargetLibraryInfo &TLI,
-                    DominatorTree &DT) {
+static bool runImpl(Function &F, AssumptionCache &AC, TargetTransformInfo &TTI,
+                    TargetLibraryInfo &TLI, DominatorTree &DT) {
   bool MadeChange = false;
   const DataLayout &DL = F.getParent()->getDataLayout();
   TruncInstCombine TIC(AC, TLI, DL, DT);
   MadeChange |= TIC.run(F);
-  MadeChange |= foldUnusualPatterns(F, DT);
+  MadeChange |= foldUnusualPatterns(F, DT, TTI);
   return MadeChange;
 }
 
@@ -413,6 +477,7 @@ void AggressiveInstCombinerLegacyPass::getAnalysisUsage(
   AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<DominatorTreeWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
+  AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addPreserved<BasicAAWrapperPass>();
   AU.addPreserved<DominatorTreeWrapperPass>();
@@ -423,7 +488,8 @@ bool AggressiveInstCombinerLegacyPass::runOnFunction(Function &F) {
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  return runImpl(F, AC, TLI, DT);
+  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  return runImpl(F, AC, TTI, TLI, DT);
 }
 
 PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
@@ -431,7 +497,8 @@ PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  if (!runImpl(F, AC, TLI, DT)) {
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  if (!runImpl(F, AC, TTI, TLI, DT)) {
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
   }
@@ -448,6 +515,7 @@ INITIALIZE_PASS_BEGIN(AggressiveInstCombinerLegacyPass,
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(AggressiveInstCombinerLegacyPass, "aggressive-instcombine",
                     "Combine pattern based expressions", false, false)
 
