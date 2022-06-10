@@ -1437,7 +1437,8 @@ def IndexListArrayAttr :
   TypedArrayAttrBase<I64ArrayAttr, "Array of 64-bit integer array attributes">;
 
 // Attribute information for an Attribute field within a StructAttr.
-class StructFieldAttr<string thisName, Attr thisType> {
+class StructFieldAttr<string thisName, Attr thisType>
+    : Deprecated<"StructAttr is being removed on June 20"> {
   // Name of this field in the StructAttr.
   string name = thisName;
 
@@ -1450,6 +1451,7 @@ class StructFieldAttr<string thisName, Attr thisType> {
 // useful when representing data that would normally be in a structure.
 class StructAttr<string name, Dialect d,
                  list<StructFieldAttr> attributes> :
+    Deprecated<"StructAttr is being removed on June 20">,
     DictionaryAttrBase<CPred<"$_self.isa<" # d.cppNamespace
                                            # "::" # name # ">()">,
         "DictionaryAttr with field(s): " #
