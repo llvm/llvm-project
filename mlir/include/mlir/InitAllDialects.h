@@ -23,6 +23,7 @@
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/TransformOps/BufferizationTransformOps.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
@@ -107,6 +108,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
   // clang-format on
 
   // Register all dialect extensions.
+  bufferization::registerTransformDialectExtension(registry);
   linalg::registerTransformDialectExtension(registry);
   scf::registerTransformDialectExtension(registry);
 
