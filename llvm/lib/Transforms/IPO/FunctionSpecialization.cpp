@@ -710,6 +710,11 @@ private:
                             SmallVectorImpl<CallArgBinding> &Constants) {
     Function *F = A->getParent();
 
+    // SCCP solver does not record an argument that will be constructed on
+    // stack.
+    if (A->hasByValAttr() && !F->onlyReadsMemory())
+      return;
+
     // Iterate over all the call sites of the argument's parent function.
     for (User *U : F->users()) {
       if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
@@ -728,12 +733,6 @@ private:
       auto *V = CS.getArgOperand(A->getArgNo());
       if (isa<PoisonValue>(V))
         return;
-
-      // For now, constant expressions are fine but only if they are function
-      // calls.
-      if (auto *CE = dyn_cast<ConstantExpr>(V))
-        if (!isa<Function>(CE->getOperand(0)))
-          return;
 
       // TrackValueOfGlobalVariable only tracks scalar global variables.
       if (auto *GV = dyn_cast<GlobalVariable>(V)) {
