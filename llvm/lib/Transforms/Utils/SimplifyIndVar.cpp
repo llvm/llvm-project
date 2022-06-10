@@ -1757,10 +1757,6 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
     truncateIVUse(DU, DT, LI);
     return nullptr;
   }
-  // Assume block terminators cannot evaluate to a recurrence. We can't to
-  // insert a Trunc after a terminator if there happens to be a critical edge.
-  assert(DU.NarrowUse != DU.NarrowUse->getParent()->getTerminator() &&
-         "SCEV is not expected to evaluate a block terminator");
 
   // Reuse the IV increment that SCEVExpander created as long as it dominates
   // NarrowUse.
