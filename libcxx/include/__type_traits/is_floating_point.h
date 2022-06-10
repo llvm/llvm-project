@@ -19,6 +19,13 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if __has_keyword(__is_floating_point)
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_floating_point : integral_constant<bool, __is_floating_point(_Tp)> {};
+
+#else
+
 template <class _Tp> struct __libcpp_is_floating_point              : public false_type {};
 template <>          struct __libcpp_is_floating_point<float>       : public true_type {};
 template <>          struct __libcpp_is_floating_point<double>      : public true_type {};
@@ -26,6 +33,8 @@ template <>          struct __libcpp_is_floating_point<long double> : public tru
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_floating_point
     : public __libcpp_is_floating_point<typename remove_cv<_Tp>::type> {};
+
+#endif // __has_keyword(__is_floating_point)
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
