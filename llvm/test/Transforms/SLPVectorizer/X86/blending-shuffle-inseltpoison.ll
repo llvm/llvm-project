@@ -43,7 +43,7 @@ define <4 x i8> @h_undef(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i8> [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    ret <4 x i8> [[TMP2]]
 ;
-  %x0 = extractelement <4 x i8> undef, i32 0
+  %x0 = extractelement <4 x i8> poison, i32 0
   %x3 = extractelement <4 x i8> %x, i32 3
   %y1 = extractelement <4 x i8> %y, i32 1
   %y2 = extractelement <4 x i8> %y, i32 2

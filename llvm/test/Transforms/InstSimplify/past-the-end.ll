@@ -13,7 +13,7 @@ define zeroext i1 @no_offsets() {
 ; CHECK-LABEL: @no_offsets(
 ; CHECK:         ret i1 false
 ;
-  %t = icmp eq i32* @opte_a, @opte_b
+  %t = icmp eq ptr @opte_a, @opte_b
   ret i1 %t
 }
 
@@ -21,11 +21,11 @@ define zeroext i1 @no_offsets() {
 
 define zeroext i1 @both_past_the_end() {
 ; CHECK-LABEL: @both_past_the_end(
-; CHECK:         ret i1 icmp eq (i32* getelementptr inbounds (i32, i32* @opte_a, i32 1), i32* getelementptr inbounds (i32, i32* @opte_b, i32 1))
+; CHECK:         ret i1 icmp eq (ptr getelementptr inbounds (i32, ptr @opte_a, i32 1), ptr getelementptr inbounds (i32, ptr @opte_b, i32 1))
 ;
-  %x = getelementptr i32, i32* @opte_a, i32 1
-  %y = getelementptr i32, i32* @opte_b, i32 1
-  %t = icmp eq i32* %x, %y
+  %x = getelementptr i32, ptr @opte_a, i32 1
+  %y = getelementptr i32, ptr @opte_b, i32 1
+  %t = icmp eq ptr %x, %y
   ret i1 %t
   ; TODO: refine this
 }
@@ -35,10 +35,10 @@ define zeroext i1 @both_past_the_end() {
 
 define zeroext i1 @just_one_past_the_end() {
 ; CHECK-LABEL: @just_one_past_the_end(
-; CHECK:         ret i1 icmp eq (i32* getelementptr inbounds (i32, i32* @opte_a, i32 1), i32* @opte_b)
+; CHECK:         ret i1 icmp eq (ptr getelementptr inbounds (i32, ptr @opte_a, i32 1), ptr @opte_b)
 ;
-  %x = getelementptr i32, i32* @opte_a, i32 1
-  %t = icmp eq i32* %x, @opte_b
+  %x = getelementptr i32, ptr @opte_a, i32 1
+  %t = icmp eq ptr %x, @opte_b
   ret i1 %t
 }
 
@@ -50,7 +50,7 @@ define zeroext i1 @no_alloca_offsets() {
 ;
   %m = alloca i32
   %n = alloca i32
-  %t = icmp eq i32* %m, %n
+  %t = icmp eq ptr %m, %n
   ret i1 %t
 }
 
@@ -60,16 +60,16 @@ define zeroext i1 @both_past_the_end_alloca() {
 ; CHECK-LABEL: @both_past_the_end_alloca(
 ; CHECK:         [[M:%.*]] = alloca i32
 ; CHECK-NEXT:    [[N:%.*]] = alloca i32
-; CHECK-NEXT:    [[X:%.*]] = getelementptr i32, i32* [[M]], i32 1
-; CHECK-NEXT:    [[Y:%.*]] = getelementptr i32, i32* [[N]], i32 1
-; CHECK-NEXT:    [[T:%.*]] = icmp eq i32* [[X]], [[Y]]
+; CHECK-NEXT:    [[X:%.*]] = getelementptr i32, ptr [[M]], i32 1
+; CHECK-NEXT:    [[Y:%.*]] = getelementptr i32, ptr [[N]], i32 1
+; CHECK-NEXT:    [[T:%.*]] = icmp eq ptr [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[T]]
 ;
   %m = alloca i32
   %n = alloca i32
-  %x = getelementptr i32, i32* %m, i32 1
-  %y = getelementptr i32, i32* %n, i32 1
-  %t = icmp eq i32* %x, %y
+  %x = getelementptr i32, ptr %m, i32 1
+  %y = getelementptr i32, ptr %n, i32 1
+  %t = icmp eq ptr %x, %y
   ret i1 %t
   ; TODO: refine this
 }
@@ -81,13 +81,13 @@ define zeroext i1 @just_one_past_the_end_alloca() {
 ; CHECK-LABEL: @just_one_past_the_end_alloca(
 ; CHECK:         [[M:%.*]] = alloca i32
 ; CHECK-NEXT:    [[N:%.*]] = alloca i32
-; CHECK-NEXT:    [[X:%.*]] = getelementptr i32, i32* [[M]], i32 1
-; CHECK-NEXT:    [[T:%.*]] = icmp eq i32* [[X]], [[N]]
+; CHECK-NEXT:    [[X:%.*]] = getelementptr i32, ptr [[M]], i32 1
+; CHECK-NEXT:    [[T:%.*]] = icmp eq ptr [[X]], [[N]]
 ; CHECK-NEXT:    ret i1 [[T]]
 ;
   %m = alloca i32
   %n = alloca i32
-  %x = getelementptr i32, i32* %m, i32 1
-  %t = icmp eq i32* %x, %n
+  %x = getelementptr i32, ptr %m, i32 1
+  %t = icmp eq ptr %x, %n
   ret i1 %t
 }

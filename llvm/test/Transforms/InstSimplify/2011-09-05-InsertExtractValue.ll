@@ -3,7 +3,7 @@
 
 declare void @bar()
 
-define void @test1() personality i32 (i32, i64, i8*, i8*)* @__gxx_personality_v0 {
+define void @test1() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @bar()
@@ -11,32 +11,32 @@ define void @test1() personality i32 (i32, i64, i8*, i8*)* @__gxx_personality_v0
 ; CHECK:       cont:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[EX:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[EX:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    resume { i8*, i32 } [[EX]]
+; CHECK-NEXT:    resume { ptr, i32 } [[EX]]
 ;
 entry:
   invoke void @bar() to label %cont unwind label %lpad
 cont:
   ret void
 lpad:
-  %ex = landingpad { i8*, i32 } cleanup
-  %exc_ptr = extractvalue { i8*, i32 } %ex, 0
-  %filter = extractvalue { i8*, i32 } %ex, 1
-  %exc_ptr2 = insertvalue { i8*, i32 } undef, i8* %exc_ptr, 0
-  %filter2 = insertvalue { i8*, i32 } %exc_ptr2, i32 %filter, 1
-  resume { i8*, i32 } %filter2
+  %ex = landingpad { ptr, i32 } cleanup
+  %exc_ptr = extractvalue { ptr, i32 } %ex, 0
+  %filter = extractvalue { ptr, i32 } %ex, 1
+  %exc_ptr2 = insertvalue { ptr, i32 } undef, ptr %exc_ptr, 0
+  %filter2 = insertvalue { ptr, i32 } %exc_ptr2, i32 %filter, 1
+  resume { ptr, i32 } %filter2
 }
 
-declare i32 @__gxx_personality_v0(i32, i64, i8*, i8*)
+declare i32 @__gxx_personality_v0(i32, i64, ptr, ptr)
 
-define { i8, i32 } @test2({ i8*, i32 } %x) {
+define { i8, i32 } @test2({ ptr, i32 } %x) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[EX:%.*]] = extractvalue { i8*, i32 } [[X:%.*]], 1
+; CHECK-NEXT:    [[EX:%.*]] = extractvalue { ptr, i32 } [[X:%.*]], 1
 ; CHECK-NEXT:    [[INS:%.*]] = insertvalue { i8, i32 } undef, i32 [[EX]], 1
 ; CHECK-NEXT:    ret { i8, i32 } [[INS]]
 ;
-  %ex = extractvalue { i8*, i32 } %x, 1
+  %ex = extractvalue { ptr, i32 } %x, 1
   %ins = insertvalue { i8, i32 } undef, i32 %ex, 1
   ret { i8, i32 } %ins
 }
