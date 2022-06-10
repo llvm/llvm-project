@@ -1000,13 +1000,15 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
     unsigned SrcAS, const AttributeList &FuncAttributes) const {
   const int MVCFastLen = 16;
 
-  // Don't expand Op into scalar loads/stores in these cases:
-  if (Op.isMemcpy() && Op.allowOverlap() && Op.size() <= MVCFastLen)
-    return false;  // Small memcpy: Use MVC
-  if (Op.isMemset() && Op.size() - 1 <= MVCFastLen)
-    return false;  // Small memset (first byte with STC/MVI): Use MVC
-  if (Op.isZeroMemset())
-    return false;  // Memset zero: Use XC
+  if (Limit != ~unsigned(0)) {
+    // Don't expand Op into scalar loads/stores in these cases:
+    if (Op.isMemcpy() && Op.allowOverlap() && Op.size() <= MVCFastLen)
+      return false; // Small memcpy: Use MVC
+    if (Op.isMemset() && Op.size() - 1 <= MVCFastLen)
+      return false; // Small memset (first byte with STC/MVI): Use MVC
+    if (Op.isZeroMemset())
+      return false; // Memset zero: Use XC
+  }
 
   return TargetLowering::findOptimalMemOpLowering(MemOps, Limit, Op, DstAS,
                                                   SrcAS, FuncAttributes);

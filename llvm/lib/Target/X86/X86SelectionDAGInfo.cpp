@@ -46,7 +46,7 @@ bool X86SelectionDAGInfo::isBaseRegConflictPossible(
 
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Val,
-    SDValue Size, Align Alignment, bool isVolatile,
+    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo) const {
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   const X86Subtarget &Subtarget =
@@ -143,7 +143,8 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
                       DAG.getNode(ISD::ADD, dl, AddrVT, Dst,
                                   DAG.getConstant(Offset, dl, AddrVT)),
                       Val, DAG.getConstant(BytesLeft, dl, SizeVT), Alignment,
-                      isVolatile, false, DstPtrInfo.getWithOffset(Offset));
+                      isVolatile, AlwaysInline,
+                      /* isTailCall */ false, DstPtrInfo.getWithOffset(Offset));
   }
 
   // TODO: Use a Tokenfactor, as in memcpy, instead of a single chain.

@@ -344,6 +344,14 @@ public:
                         Dest.getAlignment().getAsAlign(), IsVolatile);
   }
 
+  using CGBuilderBaseTy::CreateMemSetInline;
+  llvm::CallInst *CreateMemSetInline(Address Dest, llvm::Value *Value,
+                                     uint64_t Size) {
+    return CreateMemSetInline(Dest.getPointer(),
+                              Dest.getAlignment().getAsAlign(), Value,
+                              getInt64(Size));
+  }
+
   using CGBuilderBaseTy::CreatePreserveStructAccessIndex;
   Address CreatePreserveStructAccessIndex(Address Addr, unsigned Index,
                                           unsigned FieldIndex,

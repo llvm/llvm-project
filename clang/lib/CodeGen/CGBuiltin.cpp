@@ -3508,6 +3508,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Builder.CreateMemSet(Dest, ByteVal, SizeVal, false);
     return RValue::get(Dest.getPointer());
   }
+  case Builtin::BI__builtin_memset_inline: {
+    Address Dest = EmitPointerWithAlignment(E->getArg(0));
+    Value *ByteVal =
+        Builder.CreateTrunc(EmitScalarExpr(E->getArg(1)), Builder.getInt8Ty());
+    uint64_t Size =
+        E->getArg(2)->EvaluateKnownConstInt(getContext()).getZExtValue();
+    EmitNonNullArgCheck(RValue::get(Dest.getPointer()), E->getArg(0)->getType(),
+                        E->getArg(0)->getExprLoc(), FD, 0);
+    Builder.CreateMemSetInline(Dest, ByteVal, Size);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin___memset_chk: {
     // fold __builtin_memset_chk(x, y, cst1, cst2) to memset iff cst1<=cst2.
     Expr::EvalResult SizeResult, DstSizeResult;

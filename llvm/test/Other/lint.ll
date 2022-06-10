@@ -6,6 +6,8 @@ declare fastcc void @bar()
 declare void @llvm.stackrestore(i8*)
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 declare void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memset.p0i8.i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.inline.p0i8.i8.i64(i8* nocapture, i8, i64, i1) nounwind
 declare void @has_sret(i8* sret(i8) %p)
 declare void @has_noaliases(i32* noalias %p, i32* %q)
 declare void @one_arg(i32)
@@ -86,6 +88,11 @@ call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (i32* @CG to i8*), i8* bitcast 
 call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* bitcast (i32* @CG to i8*), i8* bitcast (i32* @CG2 to i8*), i64 1, i1 0)
 ; CHECK: Unusual: noalias argument aliases another argument
 call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast (i32* @CG to i8*), i8* bitcast (i32* @CG to i8*), i64 1, i1 0)
+
+; CHECK: Write to read-only memory
+call void @llvm.memset.p0i8.i8.i64(i8* bitcast (i32* @CG to i8*), i8 1, i64 1, i1 0)
+; CHECK: Write to read-only memory
+call void @llvm.memset.inline.p0i8.i8.i64(i8* bitcast (i32* @CG to i8*), i8 1, i64 1, i1 0)
 
 ; CHECK: Undefined behavior: Buffer overflow
   %wider = bitcast i8* %buf to i16*
