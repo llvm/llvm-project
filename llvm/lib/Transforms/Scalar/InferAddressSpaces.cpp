@@ -1021,8 +1021,7 @@ static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
   MDNode *NoAliasMD = MI->getMetadata(LLVMContext::MD_noalias);
 
   if (auto *MSI = dyn_cast<MemSetInst>(MI)) {
-    B.CreateMemSet(NewV, MSI->getValue(), MSI->getLength(),
-                   MaybeAlign(MSI->getDestAlignment()),
+    B.CreateMemSet(NewV, MSI->getValue(), MSI->getLength(), MSI->getDestAlign(),
                    false, // isVolatile
                    TBAA, ScopeMD, NoAliasMD);
   } else if (auto *MTI = dyn_cast<MemTransferInst>(MI)) {

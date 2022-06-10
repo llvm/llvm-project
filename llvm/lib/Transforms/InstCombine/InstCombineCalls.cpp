@@ -274,7 +274,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     return nullptr;
   const uint64_t Len = LenC->getLimitedValue();
   assert(Len && "0-sized memory setting should be removed already.");
-  const Align Alignment = assumeAligned(MI->getDestAlignment());
+  const Align Alignment = MI->getDestAlign().valueOrOne();
 
   // If it is an atomic and alignment is less than the size then we will
   // introduce the unaligned memory access which will be later transformed
