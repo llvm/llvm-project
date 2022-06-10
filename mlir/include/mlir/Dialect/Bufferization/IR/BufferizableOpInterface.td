@@ -194,6 +194,32 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
+          Resolve all inplacability conflicts by inserting explicit
+          `bufferization.alloc_tensor` ops. Examples of inplacability conflicts
+          are read-after-write conflicts or writes into non-writable buffers.
+
+          This method should rewrite the IR in such a way that for each tensor
+          OpOperand t, buffer(t) can be directly used when during bufferization.
+          The bufferization does no longer have to care about inplacability
+          conflicts.
+
+          This method can query analysis information from the given analysis
+          state.
+        }],
+        /*retType=*/"LogicalResult",
+        /*methodName=*/"resolveConflicts",
+        /*args=*/(ins "RewriterBase &":$rewriter,
+                      "const AnalysisState &":$state),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          auto bufferizableOp =
+              cast<BufferizableOpInterface>($_op.getOperation());
+          return bufferizableOp.resolveTensorOpOperandConflicts(
+              rewriter, state);
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
           Bufferize this op, i.e., rewrite it into a memref-based equivalent.
           Buffers of tensor SSA values can be retrieved via `state.getBuffer`.
           Uses of tensor results of the existing tensor op can be replaced with
@@ -301,6 +327,11 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
   ];
 
   let extraClassDeclaration = [{
+    /// Resolve out-of-place tensor OpOperands with explicit allocations in the
+    /// form of `bufferization.alloc_tensor` ops.
+    LogicalResult resolveTensorOpOperandConflicts(
+        RewriterBase &rewriter, const AnalysisState &state);
+
     /// Return `true` if the given OpOperand creates an alias but does neither
     /// read nor write. This implies that `bufferizesToMemoryRead` and
     /// `bufferizesToMemoryWrite` must return `false`. This method will never
