@@ -459,6 +459,10 @@ bool ARMParallelDSP::Search(Value *V, BasicBlock *BB, Reduction &R) {
     if (ValidLHS && ValidRHS)
       return true;
 
+    // Ensure we don't add the root as the incoming accumulator.
+    if (R.getRoot() == I)
+      return false;
+
     return R.InsertAcc(I);
   }
   case Instruction::Mul: {
@@ -535,6 +539,7 @@ bool ARMParallelDSP::MatchSMLAD(Function &F) {
       InsertParallelMACs(R);
       Changed = true;
       AllAdds.insert(R.getAdds().begin(), R.getAdds().end());
+      LLVM_DEBUG(dbgs() << "BB after inserting parallel MACs:\n" << BB);
     }
   }
 
