@@ -1256,7 +1256,7 @@ void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createTask(const LocationDescription &Loc,
                             InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
-                            bool Tied) {
+                            bool Tied, Value *Final) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -1285,7 +1285,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
   OI.EntryBB = TaskAllocaBB;
   OI.OuterAllocaBB = AllocaIP.getBlock();
   OI.ExitBB = TaskExitBB;
-  OI.PostOutlineCB = [this, &Loc, Tied](Function &OutlinedFn) {
+  OI.PostOutlineCB = [this, &Loc, Tied, Final](Function &OutlinedFn) {
     // The input IR here looks like the following-
     // ```
     // func @current_fn() {
@@ -1330,10 +1330,17 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     Value *ThreadID = getOrCreateThreadID(Ident);
 
     // Argument - `flags`
-    // If task is tied, then (Flags & 1) == 1.
-    // If task is untied, then (Flags & 1) == 0.
+    // Task is tied iff (Flags & 1) == 1.
+    // Task is untied iff (Flags & 1) == 0.
+    // Task is final iff (Flags & 2) == 2.
+    // Task is not final iff (Flags & 2) == 0.
     // TODO: Handle the other flags.
     Value *Flags = Builder.getInt32(Tied);
+    if (Final) {
+      Value *FinalFlag =
+          Builder.CreateSelect(Final, Builder.getInt32(2), Builder.getInt32(0));
+      Flags = Builder.CreateOr(FinalFlag, Flags);
+    }
 
     // Argument - `sizeof_kmp_task_t` (TaskSize)
     // Tasksize refers to the size in bytes of kmp_task_t data structure
