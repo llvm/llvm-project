@@ -34,27 +34,20 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const LRTable::Action &A) {
 }
 
 std::string LRTable::dumpStatistics() const {
-  StateID NumOfStates = 0;
-  for (StateID It : States)
-    NumOfStates = std::max(It, NumOfStates);
   return llvm::formatv(R"(
 Statistics of the LR parsing table:
     number of states: {0}
     number of actions: {1}
     size of the table (bytes): {2}
 )",
-                       NumOfStates, Actions.size(), bytes())
+                       StateOffset.size() - 1, Actions.size(), bytes())
       .str();
 }
 
 std::string LRTable::dumpForTests(const Grammar &G) const {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
-  StateID MaxState = 0;
-  for (StateID It : States)
-    MaxState = std::max(MaxState, It);
-  OS << "LRTable:\n";
-  for (StateID S = 0; S <= MaxState; ++S) {
+  for (StateID S = 0; S < StateOffset.size() - 1; ++S) {
     OS << llvm::formatv("State {0}\n", S);
     for (uint16_t Terminal = 0; Terminal < NumTerminals; ++Terminal) {
       SymbolID TokID = tokenSymbol(static_cast<tok::TokenKind>(Terminal));
@@ -97,26 +90,22 @@ LRTable::StateID LRTable::getGoToState(StateID State,
 }
 
 llvm::ArrayRef<LRTable::Action> LRTable::find(StateID Src, SymbolID ID) const {
-  size_t Idx = isToken(ID) ? static_cast<size_t>(symbolToToken(ID)) : ID;
-  assert(isToken(ID) ? Idx + 1 < TerminalOffset.size()
-                     : Idx + 1 < NontermOffset.size());
-  std::pair<size_t, size_t> TargetStateRange =
-      isToken(ID) ? std::make_pair(TerminalOffset[Idx], TerminalOffset[Idx + 1])
-                  : std::make_pair(NontermOffset[Idx], NontermOffset[Idx + 1]);
-  auto TargetedStates =
-      llvm::makeArrayRef(States.data() + TargetStateRange.first,
-                         States.data() + TargetStateRange.second);
+  assert(Src + 1 < StateOffset.size());
+  std::pair<size_t, size_t> Range =
+      std::make_pair(StateOffset[Src], StateOffset[Src + 1]);
+  auto SymbolRange = llvm::makeArrayRef(Symbols.data() + Range.first,
+                                        Symbols.data() + Range.second);
 
-  assert(llvm::is_sorted(TargetedStates) &&
-         "subrange of the StateIdx should be sorted!");
-  const LRTable::StateID *Start = llvm::partition_point(
-      TargetedStates, [&Src](LRTable::StateID S) { return S < Src; });
-  if (Start == TargetedStates.end())
+  assert(llvm::is_sorted(SymbolRange) &&
+         "subrange of the Symbols should be sorted!");
+  const LRTable::StateID *Start =
+      llvm::partition_point(SymbolRange, [&ID](SymbolID S) { return S < ID; });
+  if (Start == SymbolRange.end())
     return {};
   const LRTable::StateID *End = Start;
-  while (End != TargetedStates.end() && *End == Src)
+  while (End != SymbolRange.end() && *End == ID)
     ++End;
-  return llvm::makeArrayRef(&Actions[Start - States.data()],
+  return llvm::makeArrayRef(&Actions[Start - Symbols.data()],
                             /*length=*/End - Start);
 }
 

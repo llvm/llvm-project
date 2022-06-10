@@ -111,6 +111,8 @@ int main(int argc, char *argv[]) {
     auto LRTable = clang::pseudo::LRTable::buildSLR(*G);
     if (PrintTable)
       llvm::outs() << LRTable.dumpForTests(*G);
+    if (PrintStatistics)
+      llvm::outs() << LRTable.dumpStatistics();
 
     if (ParseableStream) {
       clang::pseudo::ForestArena Arena;
