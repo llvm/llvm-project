@@ -5,10 +5,6 @@
 // sched_getaffinity).
 // UNSUPPORTED: android
 
-#ifndef _GNU_SOURCE
-#  define _GNU_SOURCE
-#endif
-
 #include <assert.h>
 #include <pthread.h>
 #include <sys/sysinfo.h>
