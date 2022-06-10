@@ -64,6 +64,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -2210,6 +2211,11 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         errs() << "Live stack: " << LI << '\n';
       }
     }
+    break;
+
+  case MachineOperand::MO_CFIIndex:
+    if (MO->getCFIIndex() >= MF->getFrameInstructions().size())
+      report("CFI instruction has invalid index", MO, MONum);
     break;
 
   default:

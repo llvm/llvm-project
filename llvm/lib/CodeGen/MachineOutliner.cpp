@@ -665,17 +665,20 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
        ++I) {
     if (I->isDebugInstr())
       continue;
-    MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
-    if (I->isCFIInstruction()) {
-      unsigned CFIIndex = NewMI->getOperand(0).getCFIIndex();
-      MCCFIInstruction CFI = Instrs[CFIIndex];
-      (void)MF.addFrameInst(CFI);
-    }
-    NewMI->dropMemRefs(MF);
 
     // Don't keep debug information for outlined instructions.
-    NewMI->setDebugLoc(DebugLoc());
-    MBB.insert(MBB.end(), NewMI);
+    auto DL = DebugLoc();
+    if (I->isCFIInstruction()) {
+      unsigned CFIIndex = I->getOperand(0).getCFIIndex();
+      MCCFIInstruction CFI = Instrs[CFIIndex];
+      BuildMI(MBB, MBB.end(), DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(MF.addFrameInst(CFI));
+    } else {
+      MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
+      NewMI->dropMemRefs(MF);
+      NewMI->setDebugLoc(DL);
+      MBB.insert(MBB.end(), NewMI);
+    }
   }
 
   // Set normal properties for a late MachineFunction.
