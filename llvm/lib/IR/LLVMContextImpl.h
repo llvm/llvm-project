@@ -1503,6 +1503,9 @@ public:
   /// Collection of per-GlobalValue partitions used in this context.
   DenseMap<const GlobalValue *, StringRef> GlobalValuePartitions;
 
+  DenseMap<const GlobalValue *, GlobalValue::SanitizerMetadata>
+      GlobalValueSanitizerMetadata;
+
   /// DiscriminatorTable - This table maps file:line locations to an
   /// integer representing the next DWARF path discriminator to assign to
   /// instructions in different blocks at the same location.
