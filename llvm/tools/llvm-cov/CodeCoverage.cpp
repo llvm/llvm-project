@@ -883,6 +883,9 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
         }
         CoverageArches.emplace_back(Arch);
       }
+      if (CoverageArches.size() == 1)
+        CoverageArches.insert(CoverageArches.end(), ObjectFilenames.size() - 1,
+                              CoverageArches[0]);
       if (CoverageArches.size() != ObjectFilenames.size()) {
         error("Number of architectures doesn't match the number of objects");
         return 1;
