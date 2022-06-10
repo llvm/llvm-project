@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -verify %s
 // expected-no-diagnostics
 
 // This test case was reported in <rdar:problem/6080742>.

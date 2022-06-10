@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fblocks -x objective-c-header -emit-pch -o %t.pch %S/Inputs/localization-pch.h
 
-// RUN: %clang_analyze_cc1 -fblocks -analyzer-store=region \
+// RUN: %clang_analyze_cc1 -fblocks \
 // RUN:   -analyzer-config optin.osx.cocoa.localizability.NonLocalizedStringChecker:AggressiveReport=true \
 // RUN:   -analyzer-checker=optin.osx.cocoa.localizability.NonLocalizedStringChecker \
 // RUN:   -analyzer-checker=optin.osx.cocoa.localizability.EmptyLocalizationContextChecker \

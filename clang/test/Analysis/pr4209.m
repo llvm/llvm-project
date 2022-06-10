@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core -analyzer-store=region -Wno-incomplete-implementation -verify %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core -Wno-incomplete-implementation -verify %s
 
 // This test case was crashing due to how CFRefCount.cpp resolved the
 // ObjCInterfaceDecl* and ClassName in EvalObjCMessageExpr.

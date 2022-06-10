@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -Werror %s -analyzer-store=region -verify
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -Werror %s -analyzer-store=region -analyzer-werror -verify=werror
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -Werror %s -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -Werror %s -analyzer-werror -verify=werror
 
 // This test case illustrates that using '-analyze' overrides the effect of
 // -Werror.  This allows basic warnings not to interfere with producing

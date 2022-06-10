@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.BoolAssignment,alpha.security.taint -analyzer-store=region -verify -std=c99 -Dbool=_Bool %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.BoolAssignment,alpha.security.taint -analyzer-store=region -verify -x c++ %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.BoolAssignment,alpha.security.taint -verify -std=c99 -Dbool=_Bool %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.BoolAssignment,alpha.security.taint -verify -x c++ %s
 
 // Test C++'s bool and C's _Bool.
 // FIXME: We stopped warning on these when SValBuilder got smarter about
