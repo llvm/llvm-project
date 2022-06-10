@@ -1199,6 +1199,11 @@ be disassembled and lookups can be performed using the addresses found in the cr
 
 def SymbolicateCrashLogs(debugger, command_args):
     option_parser = CrashLogOptionParser()
+
+    if not len(command_args):
+        option_parser.print_help()
+        return
+
     try:
         (options, args) = option_parser.parse_args(command_args)
     except:
