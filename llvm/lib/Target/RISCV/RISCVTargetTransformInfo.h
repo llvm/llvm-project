@@ -105,6 +105,10 @@ public:
                                              Optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind CostKind);
 
+  bool isElementTypeLegalForScalableVector(Type *Ty) const {
+    return TLI->isLegalElementTypeForRVV(Ty);
+  }
+
   bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
     if (!ST->hasVInstructions())
       return false;
