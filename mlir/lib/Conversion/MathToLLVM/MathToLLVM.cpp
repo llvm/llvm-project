@@ -25,8 +25,8 @@ using CopySignOpLowering =
 using CosOpLowering = VectorConvertToLLVMPattern<math::CosOp, LLVM::CosOp>;
 using CtPopFOpLowering =
     VectorConvertToLLVMPattern<math::CtPopOp, LLVM::CtPopOp>;
-using ExpOpLowering = VectorConvertToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
 using Exp2OpLowering = VectorConvertToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
+using ExpOpLowering = VectorConvertToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
 using FloorOpLowering =
     VectorConvertToLLVMPattern<math::FloorOp, LLVM::FFloorOp>;
 using FmaOpLowering = VectorConvertToLLVMPattern<math::FmaOp, LLVM::FMAOp>;
@@ -35,10 +35,10 @@ using Log10OpLowering =
 using Log2OpLowering = VectorConvertToLLVMPattern<math::Log2Op, LLVM::Log2Op>;
 using LogOpLowering = VectorConvertToLLVMPattern<math::LogOp, LLVM::LogOp>;
 using PowFOpLowering = VectorConvertToLLVMPattern<math::PowFOp, LLVM::PowOp>;
-using SinOpLowering = VectorConvertToLLVMPattern<math::SinOp, LLVM::SinOp>;
-using SqrtOpLowering = VectorConvertToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 using RoundOpLowering =
     VectorConvertToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
+using SinOpLowering = VectorConvertToLLVMPattern<math::SinOp, LLVM::SinOp>;
+using SqrtOpLowering = VectorConvertToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 
 // A `CtLz/CtTz(a)` is converted into `CtLz/CtTz(a, false)`.
 template <typename MathOp, typename LLVMOp>
@@ -275,9 +275,9 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     CountLeadingZerosOpLowering,
     CountTrailingZerosOpLowering,
     CtPopFOpLowering,
-    ExpOpLowering,
     Exp2OpLowering,
     ExpM1OpLowering,
+    ExpOpLowering,
     FloorOpLowering,
     FmaOpLowering,
     Log10OpLowering,
@@ -285,10 +285,10 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     Log2OpLowering,
     LogOpLowering,
     PowFOpLowering,
+    RoundOpLowering,
     RsqrtOpLowering,
     SinOpLowering,
-    SqrtOpLowering,
-    RoundOpLowering
+    SqrtOpLowering
   >(converter);
   // clang-format on
 }
