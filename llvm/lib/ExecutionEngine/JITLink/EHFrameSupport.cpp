@@ -213,10 +213,6 @@ Error EHFrameEdgeFixer::processCIE(ParseContext &PC, Block &B,
     uint64_t CodeAlignmentFactor = 0;
     if (auto Err = RecordReader.readULEB128(CodeAlignmentFactor))
       return Err;
-    if (CodeAlignmentFactor != 1)
-      return make_error<JITLinkError>("Unsupported CIE code alignment factor " +
-                                      Twine(CodeAlignmentFactor) +
-                                      " (expected 1)");
   }
 
   // Read and validate the data alignment factor.
@@ -224,10 +220,6 @@ Error EHFrameEdgeFixer::processCIE(ParseContext &PC, Block &B,
     int64_t DataAlignmentFactor = 0;
     if (auto Err = RecordReader.readSLEB128(DataAlignmentFactor))
       return Err;
-    if (DataAlignmentFactor != -8)
-      return make_error<JITLinkError>("Unsupported CIE data alignment factor " +
-                                      Twine(DataAlignmentFactor) +
-                                      " (expected -8)");
   }
 
   // Skip the return address register field.
