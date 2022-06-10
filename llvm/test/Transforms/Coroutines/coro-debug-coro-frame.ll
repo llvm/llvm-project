@@ -57,7 +57,7 @@ declare void @pi32(i32*)
 declare void @pi64(i64*)
 declare void @pdouble(double*)
 
-define void @f(i32 %a, i32 %b, i64 %c, double %d) "coroutine.presplit"="0" !dbg !8 {
+define void @f(i32 %a, i32 %b, i64 %c, double %d) presplitcoroutine !dbg !8 {
 entry:
     %__promise = alloca %promise_type, align 8
     %0 = bitcast %promise_type* %__promise to i8*
@@ -183,7 +183,7 @@ unreachable:                                      ; preds = %after.coro.free
 
 }
 
-define void @bar(i32 %a, i64 %c, double %d) "coroutine.presplit"="0" !dbg !19 {
+define void @bar(i32 %a, i64 %c, double %d) presplitcoroutine !dbg !19 {
 entry:
     %__promise = alloca %promise_type, align 8
     %0 = bitcast %promise_type* %__promise to i8*

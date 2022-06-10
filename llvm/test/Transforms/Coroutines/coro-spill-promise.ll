@@ -6,7 +6,7 @@
 declare void @consume(i32*)
 declare void @consume2(%"class.task::promise_type"*)
 
-define i8* @f() "coroutine.presplit"="1" {
+define i8* @f() presplitcoroutine {
 entry:
   %data = alloca i32, align 4
   %__promise = alloca %"class.task::promise_type", align 64

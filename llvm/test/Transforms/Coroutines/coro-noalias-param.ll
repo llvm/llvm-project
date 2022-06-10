@@ -1,7 +1,7 @@
 ; RUN: opt < %s -S -passes=coro-early | FileCheck %s
 %struct.A = type <{ i64, i64, i32, [4 x i8] }>
 
-define void @f(%struct.A* nocapture readonly noalias align 8 %a) "coroutine.presplit"="0" {
+define void @f(%struct.A* nocapture readonly noalias align 8 %a) presplitcoroutine {
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call i8* @malloc(i32 %size)
