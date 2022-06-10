@@ -59,7 +59,7 @@ define void @test(i1 %c) {
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb152:
 ; CHECK-NEXT:    [[TMP1848]] = load i8*, i8** inttoptr (i64 16 to i8**), align 16
-; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* poison, align 1
 ; CHECK-NEXT:    br label [[BB150]]
 ;
 bb16:                                             ; preds = %bb
