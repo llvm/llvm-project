@@ -597,6 +597,8 @@ private:
   CFGBlock *VisitObjCMessageExpr(ObjCMessageExpr *E, AddStmtChoice asc);
   CFGBlock *VisitPseudoObjectExpr(PseudoObjectExpr *E);
   CFGBlock *VisitReturnStmt(Stmt *S);
+  CFGBlock *VisitCoroutineSuspendExpr(CoroutineSuspendExpr *S,
+                                      AddStmtChoice asc);
   CFGBlock *VisitSEHExceptStmt(SEHExceptStmt *S);
   CFGBlock *VisitSEHFinallyStmt(SEHFinallyStmt *S);
   CFGBlock *VisitSEHLeaveStmt(SEHLeaveStmt *S);
@@ -2297,6 +2299,10 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
     case Stmt::CoreturnStmtClass:
       return VisitReturnStmt(S);
 
+    case Stmt::CoyieldExprClass:
+    case Stmt::CoawaitExprClass:
+      return VisitCoroutineSuspendExpr(cast<CoroutineSuspendExpr>(S), asc);
+
     case Stmt::SEHExceptStmtClass:
       return VisitSEHExceptStmt(cast<SEHExceptStmt>(S));
 
@@ -3149,6 +3155,27 @@ CFGBlock *CFGBuilder::VisitReturnStmt(Stmt *S) {
       if (CFGBlock *R = Visit(RV))
         B = R;
 
+  return B;
+}
+
+CFGBlock *CFGBuilder::VisitCoroutineSuspendExpr(CoroutineSuspendExpr *E,
+                                                AddStmtChoice asc) {
+  // We're modelling the pre-coro-xform CFG. Thus just evalate the various
+  // active components of the co_await or co_yield. Note we do not model the
+  // edge from the builtin_suspend to the exit node.
+  if (asc.alwaysAdd(*this, E)) {
+    autoCreateBlock();
+    appendStmt(Block, E);
+  }
+  CFGBlock *B = Block;
+  if (auto *R = Visit(E->getResumeExpr()))
+    B = R;
+  if (auto *R = Visit(E->getSuspendExpr()))
+    B = R;
+  if (auto *R = Visit(E->getReadyExpr()))
+    B = R;
+  if (auto *R = Visit(E->getCommonExpr()))
+    B = R;
   return B;
 }
 
