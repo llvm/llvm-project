@@ -1012,7 +1012,7 @@ private:
         I.getParent()->getFirstInsertionPt() == I.getParent()->end())
       return PI.setAborted(&I);
 
-    // TODO: We could use SimplifyInstruction here to fold PHINodes and
+    // TODO: We could use simplifyInstruction here to fold PHINodes and
     // SelectInsts. However, doing so requires to change the current
     // dead-operand-tracking mechanism. For instance, suppose neither loading
     // from %U nor %other traps. Then "load (select undef, %U, %other)" does not

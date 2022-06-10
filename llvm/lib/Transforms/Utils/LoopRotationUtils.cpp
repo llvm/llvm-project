@@ -439,7 +439,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // With the operands remapped, see if the instruction constant folds or is
       // otherwise simplifyable.  This commonly occurs because the entry from PHI
       // nodes allows icmps and other instructions to fold.
-      Value *V = SimplifyInstruction(C, SQ);
+      Value *V = simplifyInstruction(C, SQ);
       if (V && LI->replacementPreservesLCSSAForm(C, V)) {
         // If so, then delete the temporary instruction and stick the folded value
         // in the map.

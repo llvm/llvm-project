@@ -5931,7 +5931,7 @@ const SCEV *ScalarEvolution::createNodeForPHI(PHINode *PN) {
   // PHI's incoming blocks are in a different loop, in which case doing so
   // risks breaking LCSSA form. Instcombine would normally zap these, but
   // it doesn't have DominatorTree information, so it may miss cases.
-  if (Value *V = SimplifyInstruction(PN, {getDataLayout(), &TLI, &DT, &AC}))
+  if (Value *V = simplifyInstruction(PN, {getDataLayout(), &TLI, &DT, &AC}))
     if (LI.replacementPreservesLCSSAForm(PN, V))
       return getSCEV(V);
 

@@ -276,7 +276,7 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
     }
   }
 
-  if (Value *V = SimplifyInstruction(P, SQ)) {
+  if (Value *V = simplifyInstruction(P, SQ)) {
     P->replaceAllUsesWith(V);
     P->eraseFromParent();
     Changed = true;

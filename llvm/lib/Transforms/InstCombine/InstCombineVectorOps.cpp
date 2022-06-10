@@ -377,7 +377,7 @@ ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
 Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   Value *SrcVec = EI.getVectorOperand();
   Value *Index = EI.getIndexOperand();
-  if (Value *V = SimplifyExtractElementInst(SrcVec, Index,
+  if (Value *V = simplifyExtractElementInst(SrcVec, Index,
                                             SQ.getWithInstruction(&EI)))
     return replaceInstUsesWith(EI, V);
 
@@ -1488,7 +1488,7 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
   Value *ScalarOp = IE.getOperand(1);
   Value *IdxOp    = IE.getOperand(2);
 
-  if (auto *V = SimplifyInsertElementInst(
+  if (auto *V = simplifyInsertElementInst(
           VecOp, ScalarOp, IdxOp, SQ.getWithInstruction(&IE)))
     return replaceInstUsesWith(IE, V);
 
@@ -2533,7 +2533,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
   SimplifyQuery ShufQuery = SQ.getWithInstruction(&SVI);
-  if (auto *V = SimplifyShuffleVectorInst(LHS, RHS, SVI.getShuffleMask(),
+  if (auto *V = simplifyShuffleVectorInst(LHS, RHS, SVI.getShuffleMask(),
                                           SVI.getType(), ShufQuery))
     return replaceInstUsesWith(SVI, V);
 
@@ -2588,7 +2588,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     if (!ScaledMask.empty()) {
       // If the shuffled source vector simplifies, cast that value to this
       // shuffle's type.
-      if (auto *V = SimplifyShuffleVectorInst(X, UndefValue::get(XType),
+      if (auto *V = simplifyShuffleVectorInst(X, UndefValue::get(XType),
                                               ScaledMask, XType, ShufQuery))
         return BitCastInst::Create(Instruction::BitCast, V, SVI.getType());
     }

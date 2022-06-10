@@ -996,7 +996,7 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
   if ((V1State.isConstant() || V2State.isConstant())) {
     Value *V1 = isConstant(V1State) ? getConstant(V1State) : I.getOperand(0);
     Value *V2 = isConstant(V2State) ? getConstant(V2State) : I.getOperand(1);
-    Value *R = SimplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL));
+    Value *R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL));
     auto *C = dyn_cast_or_null<Constant>(R);
     if (C) {
       // X op Y -> undef.

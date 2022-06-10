@@ -831,7 +831,7 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
           LHS = CmpLHS->DoPHITranslation(BB, PredBB);
           RHS = PN->getIncomingValue(i);
         }
-        Value *Res = SimplifyCmpInst(Pred, LHS, RHS, {DL});
+        Value *Res = simplifyCmpInst(Pred, LHS, RHS, {DL});
         if (!Res) {
           if (!isa<Constant>(RHS))
             continue;
@@ -2662,7 +2662,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
     // If this instruction can be simplified after the operands are updated,
     // just use the simplified value instead.  This frequently happens due to
     // phi translation.
-    if (Value *IV = SimplifyInstruction(
+    if (Value *IV = simplifyInstruction(
             New,
             {BB->getModule()->getDataLayout(), TLI, nullptr, nullptr, New})) {
       ValueMapping[&*BI] = IV;

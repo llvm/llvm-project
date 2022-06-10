@@ -51,7 +51,7 @@ static bool runImpl(Function &F, const SimplifyQuery &SQ,
           DeadInstsInBB.push_back(&I);
           Changed = true;
         } else if (!I.use_empty()) {
-          if (Value *V = SimplifyInstruction(&I, SQ, ORE)) {
+          if (Value *V = simplifyInstruction(&I, SQ, ORE)) {
             // Mark all uses for resimplification next time round the loop.
             for (User *U : I.users())
               Next->insert(cast<Instruction>(U));

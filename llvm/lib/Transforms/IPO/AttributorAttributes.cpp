@@ -5851,7 +5851,7 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
     const DataLayout &DL = I.getModule()->getDataLayout();
     SimplifyQuery Q(DL, TLI, DT, AC, &I);
     if (Value *SimplifiedI =
-            SimplifyInstructionWithOperands(&I, NewOps, Q, ORE)) {
+            simplifyInstructionWithOperands(&I, NewOps, Q, ORE)) {
       SimplifiedAssociatedValue = AA::combineOptionalValuesInAAValueLatice(
           SimplifiedAssociatedValue, SimplifiedI, I.getType());
       return SimplifiedAssociatedValue != Optional<Value *>(nullptr);

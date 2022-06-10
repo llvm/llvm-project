@@ -1984,11 +1984,11 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
 
   Value *SimpleV = nullptr;
   if (auto FI = dyn_cast<FPMathOperator>(&I))
-    SimpleV = SimplifyBinOp(I.getOpcode(), CLHS ? CLHS : LHS, CRHS ? CRHS : RHS,
+    SimpleV = simplifyBinOp(I.getOpcode(), CLHS ? CLHS : LHS, CRHS ? CRHS : RHS,
                             FI->getFastMathFlags(), DL);
   else
     SimpleV =
-        SimplifyBinOp(I.getOpcode(), CLHS ? CLHS : LHS, CRHS ? CRHS : RHS, DL);
+        simplifyBinOp(I.getOpcode(), CLHS ? CLHS : LHS, CRHS ? CRHS : RHS, DL);
 
   if (Constant *C = dyn_cast_or_null<Constant>(SimpleV))
     SimplifiedValues[&I] = C;
@@ -2018,7 +2018,7 @@ bool CallAnalyzer::visitFNeg(UnaryOperator &I) {
   if (!COp)
     COp = SimplifiedValues.lookup(Op);
 
-  Value *SimpleV = SimplifyFNegInst(
+  Value *SimpleV = simplifyFNegInst(
       COp ? COp : Op, cast<FPMathOperator>(I).getFastMathFlags(), DL);
 
   if (Constant *C = dyn_cast_or_null<Constant>(SimpleV))

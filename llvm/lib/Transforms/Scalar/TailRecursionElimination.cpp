@@ -729,7 +729,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
   // call.
   for (PHINode *PN : ArgumentPHIs) {
     // If the PHI Node is a dynamic constant, replace it with the value it is.
-    if (Value *PNV = SimplifyInstruction(PN, F.getParent()->getDataLayout())) {
+    if (Value *PNV = simplifyInstruction(PN, F.getParent()->getDataLayout())) {
       PN->replaceAllUsesWith(PNV);
       PN->eraseFromParent();
     }

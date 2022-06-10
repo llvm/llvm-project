@@ -2644,7 +2644,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *FalseVal = SI.getFalseValue();
   Type *SelType = SI.getType();
 
-  if (Value *V = SimplifySelectInst(CondVal, TrueVal, FalseVal,
+  if (Value *V = simplifySelectInst(CondVal, TrueVal, FalseVal,
                                     SQ.getWithInstruction(&SI)))
     return replaceInstUsesWith(SI, V);
 
@@ -3190,7 +3190,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // between the load and select masks.
     // (i.e (load_mask & select_mask) == 0 == no overlap)
     bool CanMergeSelectIntoLoad = false;
-    if (Value *V = SimplifyAndInst(CondVal, Mask, SQ.getWithInstruction(&SI)))
+    if (Value *V = simplifyAndInst(CondVal, Mask, SQ.getWithInstruction(&SI)))
       CanMergeSelectIntoLoad = match(V, m_Zero());
 
     if (CanMergeSelectIntoLoad) {

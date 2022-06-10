@@ -1347,7 +1347,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // If the instruction can be simplified (e.g. X+0 = X) then replace it with
     // its simpler value.
-    if (Value *V = SimplifyInstruction(&Inst, SQ)) {
+    if (Value *V = simplifyInstruction(&Inst, SQ)) {
       LLVM_DEBUG(dbgs() << "EarlyCSE Simplify: " << Inst << "  to: " << *V
                         << '\n');
       if (!DebugCounter::shouldExecute(CSECounter)) {

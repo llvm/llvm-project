@@ -485,7 +485,7 @@ void PruningFunctionCloner::CloneBlock(
       // a mapping to that value rather than inserting a new instruction into
       // the basic block.
       if (Value *V =
-              SimplifyInstruction(NewInst, BB->getModule()->getDataLayout())) {
+              simplifyInstruction(NewInst, BB->getModule()->getDataLayout())) {
         // On the off-chance that this simplifies to an instruction in the old
         // function, map it back into the new function.
         if (NewFunc != OldFunc)
@@ -768,7 +768,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
       continue;
 
     // See if this instruction simplifies.
-    Value *SimpleV = SimplifyInstruction(I, DL);
+    Value *SimpleV = simplifyInstruction(I, DL);
     if (!SimpleV)
       continue;
 
