@@ -127,6 +127,17 @@ struct FieldParser<
   }
 };
 
+/// Parse an affine map.
+template <>
+struct FieldParser<AffineMap> {
+  static FailureOr<AffineMap> parse(AsmParser &parser) {
+    AffineMap map;
+    if (failed(parser.parseAffineMap(map)))
+      return failure();
+    return map;
+  }
+};
+
 } // namespace mlir
 
 #endif // MLIR_IR_DIALECTIMPLEMENTATION_H

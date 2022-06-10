@@ -13,6 +13,7 @@
 #ifndef GPU_BASE
 #define GPU_BASE
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//
@@ -115,6 +116,15 @@ def GPU_AsyncOpInterface : OpInterface<"AsyncOpInterface"> {
       }]
     >
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// GPU Attributes.
+//===----------------------------------------------------------------------===//
+
+class GPU_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
+    : AttrDef<GPU_Dialect, attrName, traits> {
+  let mnemonic = attrMnemonic;
 }
 
 #endif // GPU_BASE

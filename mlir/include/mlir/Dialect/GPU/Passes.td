@@ -34,6 +34,7 @@ def GpuMapParallelLoopsPass
   let summary = "Greedily maps loops to GPU hardware dimensions.";
   let constructor = "mlir::createGpuMapParallelLoopsPass()";
   let description = "Greedily maps loops to GPU hardware dimensions.";
+  let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
 #endif // MLIR_DIALECT_GPU_PASSES
