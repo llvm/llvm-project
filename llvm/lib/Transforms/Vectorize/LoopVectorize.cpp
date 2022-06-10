@@ -8181,18 +8181,6 @@ static VPWidenIntOrFpInductionRecipe *createWidenInductionRecipes(
            CM.isProfitableToScalarize(I, VF);
   };
 
-  bool NeedsScalarIV = LoopVectorizationPlanner::getDecisionAndClampRange(
-      [&](ElementCount VF) {
-        // Returns true if we should generate a scalar version of \p IV.
-        if (ShouldScalarizeInstruction(PhiOrTrunc, VF))
-          return true;
-        auto isScalarInst = [&](User *U) -> bool {
-          auto *I = cast<Instruction>(U);
-          return OrigLoop.contains(I) && ShouldScalarizeInstruction(I, VF);
-        };
-        return any_of(PhiOrTrunc->users(), isScalarInst);
-      },
-      Range);
   bool NeedsScalarIVOnly = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](ElementCount VF) {
         return ShouldScalarizeInstruction(PhiOrTrunc, VF);
@@ -8207,11 +8195,11 @@ static VPWidenIntOrFpInductionRecipe *createWidenInductionRecipes(
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep(), SE);
   if (auto *TruncI = dyn_cast<TruncInst>(PhiOrTrunc)) {
     return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, IndDesc, TruncI,
-                                             NeedsScalarIV, !NeedsScalarIVOnly);
+                                             !NeedsScalarIVOnly);
   }
   assert(isa<PHINode>(PhiOrTrunc) && "must be a phi node here");
   return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, IndDesc,
-                                           NeedsScalarIV, !NeedsScalarIVOnly);
+                                           !NeedsScalarIVOnly);
 }
 
 VPRecipeBase *VPRecipeBuilder::tryToOptimizeInductionPHI(

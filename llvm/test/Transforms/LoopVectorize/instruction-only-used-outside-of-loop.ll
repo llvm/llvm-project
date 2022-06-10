@@ -212,13 +212,15 @@ define i32 @optimizable_trunc_used_outside() {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[VEC_IND]], i32 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -231,7 +233,7 @@ define i32 @optimizable_trunc_used_outside() {
 ; CHECK-NEXT:    [[EXITCOND_NOT_I_I:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT_I_I]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[IV_TRUNC_LCSSA:%.*]] = phi i32 [ [[IV_TRUNC]], [[LOOP]] ], [ [[TMP1]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[IV_TRUNC_LCSSA:%.*]] = phi i32 [ [[IV_TRUNC]], [[LOOP]] ], [ [[TMP4]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[IV_TRUNC_LCSSA]]
 ;
 entry:

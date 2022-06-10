@@ -1007,24 +1007,22 @@ public:
 class VPWidenIntOrFpInductionRecipe : public VPRecipeBase, public VPValue {
   PHINode *IV;
   const InductionDescriptor &IndDesc;
-  bool NeedsScalarIV;
   bool NeedsVectorIV;
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 const InductionDescriptor &IndDesc,
-                                bool NeedsScalarIV, bool NeedsVectorIV)
+                                bool NeedsVectorIV)
       : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start, Step}),
         VPValue(IV, this), IV(IV), IndDesc(IndDesc),
-        NeedsScalarIV(NeedsScalarIV), NeedsVectorIV(NeedsVectorIV) {}
+        NeedsVectorIV(NeedsVectorIV) {}
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 const InductionDescriptor &IndDesc,
-                                TruncInst *Trunc, bool NeedsScalarIV,
-                                bool NeedsVectorIV)
+                                TruncInst *Trunc, bool NeedsVectorIV)
       : VPRecipeBase(VPWidenIntOrFpInductionSC, {Start, Step}),
         VPValue(Trunc, this), IV(IV), IndDesc(IndDesc),
-        NeedsScalarIV(NeedsScalarIV), NeedsVectorIV(NeedsVectorIV) {}
+        NeedsVectorIV(NeedsVectorIV) {}
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
 
@@ -1074,9 +1072,6 @@ public:
     const TruncInst *TruncI = getTruncInst();
     return TruncI ? TruncI->getType() : IV->getType();
   }
-
-  /// Returns true if a scalar phi needs to be created for the induction.
-  bool needsScalarIV() const { return NeedsScalarIV; }
 
   /// Returns true if a vector phi needs to be created for the induction.
   bool needsVectorIV() const { return NeedsVectorIV; }
