@@ -224,26 +224,26 @@ func.func @entry() {
   // complex.conj test
   %conj_test = arith.constant dense<[
     (-1.0, -1.0),
-    // CHECK:      -1.0
-    // CHECK-NEXT: 1.0
+    // CHECK:      -1
+    // CHECK-NEXT: 1
     (-1.0, 1.0),
-    // CHECK-NEXT:  -1.0
-    // CHECK-NEXT:  -1.0
+    // CHECK-NEXT:  -1
+    // CHECK-NEXT:  -1
     (0.0, 0.0),
     // CHECK-NEXT:  0
     // CHECK-NEXT:  0
     (0.0, 1.0),
     // CHECK-NEXT:  0
-    // CHECK-NEXT:  -1.0
+    // CHECK-NEXT:  -1
     (1.0, -1.0),
-    // CHECK-NEXT:  1.0
-    // CHECK-NEXT:  -1.0
+    // CHECK-NEXT:  1
+    // CHECK-NEXT:  1
     (1.0, 0.0),
-    // CHECK-NEXT:  1.0
+    // CHECK-NEXT:  1
     // CHECK-NEXT:  0
     (1.0, 1.0)
-    // CHECK-NEXT:  1.0
-    // CHECK-NEXT:  -1.0
+    // CHECK-NEXT:  1
+    // CHECK-NEXT:  -1
   ]> : tensor<7xcomplex<f32>>
   %conj_test_cast = tensor.cast %conj_test
     :  tensor<7xcomplex<f32>> to tensor<?xcomplex<f32>>
