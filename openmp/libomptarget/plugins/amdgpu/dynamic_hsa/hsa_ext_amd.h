@@ -29,20 +29,9 @@ typedef enum hsa_amd_memory_pool_global_flag_s {
 } hsa_amd_memory_pool_global_flag_t;
 
 typedef enum {
-  HSA_AMD_SEGMENT_GLOBAL = 0,
-  HSA_AMD_SEGMENT_READONLY = 1,
-  HSA_AMD_SEGMENT_PRIVATE = 2,
-  HSA_AMD_SEGMENT_GROUP = 3,
-} hsa_amd_segment_t;
-
-typedef enum {
-  HSA_AMD_MEMORY_POOL_INFO_SEGMENT = 0,
   HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS = 1,
   HSA_AMD_MEMORY_POOL_INFO_SIZE = 2,
   HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED = 5,
-  HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_GRANULE = 6,
-  HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALIGNMENT = 7,
-  HSA_AMD_MEMORY_POOL_INFO_ACCESSIBLE_BY_ALL = 15,
 } hsa_amd_memory_pool_info_t;
 
 typedef enum {
@@ -54,13 +43,7 @@ typedef enum {
 } hsa_amd_memory_pool_access_t;
 
 typedef enum hsa_amd_agent_info_s {
-  HSA_AMD_AGENT_INFO_CACHELINE_SIZE = 0xA001,
   HSA_AMD_AGENT_INFO_COMPUTE_UNIT_COUNT = 0xA002,
-  HSA_AMD_AGENT_INFO_MAX_CLOCK_FREQUENCY = 0xA003,
-  HSA_AMD_AGENT_INFO_PRODUCT_NAME = 0xA009,
-  HSA_AMD_AGENT_INFO_MAX_WAVES_PER_CU = 0xA00A,
-  HSA_AMD_AGENT_INFO_NUM_SIMDS_PER_CU = 0xA00B,
-  HSA_AMD_AGENT_INFO_COOPERATIVE_QUEUES = 0xA010
 } hsa_amd_agent_info_t;
 
 hsa_status_t hsa_amd_memory_pool_get_info(hsa_amd_memory_pool_t memory_pool,
