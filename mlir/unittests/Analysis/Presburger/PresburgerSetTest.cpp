@@ -124,6 +124,10 @@ TEST(SetTest, containsPoint) {
         EXPECT_FALSE(setB.containsPoint({x, y}));
     }
   }
+
+  // The PresburgerSet has only one id, x, so we supply one value.
+  EXPECT_TRUE(PresburgerSet(parsePoly("(x) : (x - 2*(x floordiv 2) == 0)"))
+                  .containsPoint({0}));
 }
 
 TEST(SetTest, Union) {
