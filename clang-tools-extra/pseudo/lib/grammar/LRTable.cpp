@@ -47,6 +47,7 @@ Statistics of the LR parsing table:
 std::string LRTable::dumpForTests(const Grammar &G) const {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
+  OS << "LRTable:\n";
   for (StateID S = 0; S < StateOffset.size() - 1; ++S) {
     OS << llvm::formatv("State {0}\n", S);
     for (uint16_t Terminal = 0; Terminal < NumTerminals; ++Terminal) {
