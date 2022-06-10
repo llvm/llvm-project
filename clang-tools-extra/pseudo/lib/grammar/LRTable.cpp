@@ -91,7 +91,7 @@ LRTable::StateID LRTable::getGoToState(StateID State,
 }
 
 llvm::ArrayRef<LRTable::Action> LRTable::find(StateID Src, SymbolID ID) const {
-  assert(Src + 1 < StateOffset.size());
+  assert(Src + 1u < StateOffset.size());
   std::pair<size_t, size_t> Range =
       std::make_pair(StateOffset[Src], StateOffset[Src + 1]);
   auto SymbolRange = llvm::makeArrayRef(Symbols.data() + Range.first,
