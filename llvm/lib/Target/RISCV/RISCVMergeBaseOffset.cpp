@@ -214,6 +214,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
       MachineInstr &TailTail = *MRI->use_instr_begin(TailDestReg);
       if (TailTail.getOpcode() == RISCV::ADDI) {
         Offset += TailTail.getOperand(2).getImm();
+        LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);
         DeadInstrs.insert(&Tail);
         foldOffset(HiLUI, LoADDI, TailTail, Offset);
         return true;
