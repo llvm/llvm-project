@@ -2,7 +2,7 @@ set(LIBS
   MLIRPdllLspServerLib
   )
 
-add_mlir_tool(mlir-pdll-lsp-server
+add_llvm_tool(mlir-pdll-lsp-server
   mlir-pdll-lsp-server.cpp
 
   DEPENDS

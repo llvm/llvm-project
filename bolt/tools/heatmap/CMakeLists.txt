@@ -5,7 +5,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_bolt_tool(llvm-bolt-heatmap
+add_llvm_tool(llvm-bolt-heatmap
   heatmap.cpp
   )
 
