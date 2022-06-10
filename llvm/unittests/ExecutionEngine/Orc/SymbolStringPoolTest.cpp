@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -50,4 +51,15 @@ TEST(SymbolStringPool, ClearDeadEntries) {
   EXPECT_TRUE(SP.empty()) << "pool should be empty";
 }
 
+TEST(SymbolStringPool, DebugDump) {
+  SymbolStringPool SP;
+  auto A1 = SP.intern("a");
+  auto A2 = A1;
+  auto B = SP.intern("b");
+
+  std::string DumpString;
+  raw_string_ostream(DumpString) << SP;
+
+  EXPECT_EQ(DumpString, "a: 2\nb: 1\n");
+}
 }

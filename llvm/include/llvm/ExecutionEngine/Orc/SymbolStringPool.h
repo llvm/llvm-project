@@ -19,6 +19,9 @@
 #include <mutex>
 
 namespace llvm {
+
+class raw_ostream;
+
 namespace orc {
 
 class SymbolStringPtr;
@@ -26,6 +29,10 @@ class SymbolStringPtr;
 /// String pool for symbol names used by the JIT.
 class SymbolStringPool {
   friend class SymbolStringPtr;
+
+  // Implemented in DebugUtils.h.
+  friend raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
+
 public:
   /// Destroy a SymbolStringPool.
   ~SymbolStringPool();
