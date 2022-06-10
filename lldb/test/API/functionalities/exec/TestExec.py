@@ -69,8 +69,8 @@ class ExecTestCase(TestBase):
             self.addTearDownHook(cleanup)
 
         # The stop reason of the thread should be breakpoint.
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        STOPPED_DUE_TO_BREAKPOINT)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         STOPPED_DUE_TO_BREAKPOINT)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint(
         process, breakpoint1)
@@ -94,7 +94,7 @@ class ExecTestCase(TestBase):
         if not skip_exec:
             self.assertNotEqual(process.GetState(), lldb.eStateExited,
                                 "Process should not have exited!")
-            self.assertEqual(process.GetState(), lldb.eStateStopped,
+            self.assertState(process.GetState(), lldb.eStateStopped,
                              "Process should be stopped at __dyld_start")
 
             threads = lldbutil.get_stopped_threads(
@@ -137,8 +137,8 @@ class ExecTestCase(TestBase):
             self, 'Set breakpoint 1 here', lldb.SBFileSpec('main.cpp', False))
 
         # The stop reason of the thread should be breakpoint.
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
-                        STOPPED_DUE_TO_BREAKPOINT)
+        self.assertState(process.GetState(), lldb.eStateStopped,
+                         STOPPED_DUE_TO_BREAKPOINT)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint1)
         self.assertEqual(len(threads), 1)
@@ -164,7 +164,7 @@ class ExecTestCase(TestBase):
 
         self.assertNotEqual(process.GetState(), lldb.eStateExited,
                             "Process should not have exited!")
-        self.assertEqual(process.GetState(), lldb.eStateStopped,
+        self.assertState(process.GetState(), lldb.eStateStopped,
                          "Process should be stopped at __dyld_start")
 
         threads = lldbutil.get_stopped_threads(

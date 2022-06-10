@@ -119,6 +119,12 @@ LogicalResult mlir::test::TestProduceParamOrForwardOperandOp::verify() {
   return success();
 }
 
+LogicalResult
+mlir::test::TestConsumeOperand::apply(transform::TransformResults &results,
+                                      transform::TransformState &state) {
+  return success();
+}
+
 LogicalResult mlir::test::TestConsumeOperandIfMatchesParamOrFail::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   ArrayRef<Operation *> payload = state.getPayloadOps(getOperand());

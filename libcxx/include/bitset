@@ -116,6 +116,7 @@ template <size_t N> struct hash<std::bitset<N>>;
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__bit_reference>
 #include <__config>
+#include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <climits>
 #include <cstddef>

@@ -803,10 +803,7 @@ bool DependenceInfo::isLoopInvariant(const SCEV *Expression,
 
   // If the expression is invariant in the outermost loop of the loop nest, it
   // is invariant anywhere in the loop nest.
-  const Loop *OutermostLoop = LoopNest;
-  while (OutermostLoop->getParentLoop())
-    OutermostLoop = OutermostLoop->getParentLoop();
-  return SE->isLoopInvariant(Expression, OutermostLoop);
+  return SE->isLoopInvariant(Expression, LoopNest->getOutermostLoop());
 }
 
 

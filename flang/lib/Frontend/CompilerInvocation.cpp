@@ -263,13 +263,18 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     llvm::StringRef xValue = a->getValue();
     // Principal languages.
     dashX = llvm::StringSwitch<InputKind>(xValue)
-                .Case("f90", Language::Fortran)
+                // Flang does not differentiate between pre-processed and not
+                // pre-processed inputs.
+                .Case("f95", Language::Fortran)
+                .Case("f95-cpp-input", Language::Fortran)
                 .Default(Language::Unknown);
 
-    // Some special cases cannot be combined with suffixes.
+    // Flang's intermediate representations.
     if (dashX.isUnknown())
       dashX = llvm::StringSwitch<InputKind>(xValue)
                   .Case("ir", Language::LLVM_IR)
+                  .Case("fir", Language::MLIR)
+                  .Case("mlir", Language::MLIR)
                   .Default(Language::Unknown);
 
     if (dashX.isUnknown())

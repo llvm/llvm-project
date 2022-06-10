@@ -1,4 +1,5 @@
 // RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s
+// RUN: %flang_fc1 -emit-llvm -triple x86_64-unknown-linux-gnu %s -o - | FileCheck %s
 
 // Test of building and passing boxchar.
 
