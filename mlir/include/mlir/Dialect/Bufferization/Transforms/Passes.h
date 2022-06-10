@@ -78,6 +78,11 @@ std::unique_ptr<Pass> createAllocTensorEliminationPass();
 /// Create a pass that bufferizes ops from the bufferization dialect.
 std::unique_ptr<Pass> createBufferizationBufferizePass();
 
+/// Create a pass that resolves out-of-place tensor OpOperands with copies.
+std::unique_ptr<Pass> createTensorCopyInsertionPass();
+std::unique_ptr<Pass>
+createTensorCopyInsertionPass(const OneShotBufferizationOptions &options);
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

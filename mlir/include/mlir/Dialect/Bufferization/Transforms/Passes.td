@@ -324,6 +324,25 @@ def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
   ];
 }
 
+def TensorCopyInsertion : Pass<"tensor-copy-insertion"> {
+  let summary = "Make all tensor IR inplaceable by inserting copies";
+  let description = [{
+    This pass runs One-Shot Analysis and inserts copies for all OpOperands that
+    were decided to bufferize out-of-place. After running this pass, a
+    bufferization can write to buffers directly (without making copies) and no
+    longer has to care about potential read-after-write conflicts.
+  }];
+  let options = [
+    Option<"allowReturnAllocs", "allow-return-allocs", "bool",
+            /*default=*/"false",
+           "Allows returning/yielding new allocations from a block.">,
+    Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
+           "bool", /*default=*/"0",
+           "Bufferize function boundaries (experimental).">,
+  ];
+  let constructor = "mlir::bufferization::createTensorCopyInsertionPass()";
+}
+
 def AllocTensorElimination : Pass<"eliminate-alloc-tensors"> {
   let summary = "Try to eliminate all alloc_tensor ops.";
   let description = [{
