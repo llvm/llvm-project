@@ -1485,7 +1485,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
       } else
         llvm_unreachable("unexpected type of machine operand!");
 
-      MES->SwitchSection(mySection);
+      MES->switchSection(mySection);
       unsigned byteSize = is32bit ? 4 : 8;
       getStreamer().emitCodeAlignment(byteSize, &getSTI(), byteSize);
 

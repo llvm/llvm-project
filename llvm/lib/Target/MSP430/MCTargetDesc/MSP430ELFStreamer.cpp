@@ -43,7 +43,7 @@ MSP430TargetELFStreamer::MSP430TargetELFStreamer(MCStreamer &S,
   // MSP430 EABI (slaa534.pdf, part 13).
   MCSection *AttributeSection = getStreamer().getContext().getELFSection(
       ".MSP430.attributes", ELF::SHT_MSP430_ATTRIBUTES, 0);
-  Streamer.SwitchSection(AttributeSection);
+  Streamer.switchSection(AttributeSection);
 
   // Format version.
   Streamer.emitInt8(0x41);

@@ -262,6 +262,10 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
                          .getZExtValue();
     uint32_t isaNumber = minor + 1000 * major;
     addControlConstant("__oclc_ISA_version", isaNumber, 32);
+
+    // This constant must always match the default code object ABI version
+    // of the AMDGPU backend.
+    addControlConstant("__oclc_ABI_version", 400, 32);
   }
 
   // Determine libraries we need to link - order matters due to dependencies

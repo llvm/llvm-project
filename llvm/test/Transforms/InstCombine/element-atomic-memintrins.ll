@@ -420,7 +420,7 @@ define void @test_undefined(i8* %dest, i8* %src, i1 %c1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[OK:%.*]], label [[UNDEFINED:%.*]]
 ; CHECK:       undefined:
-; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* poison, align 1
 ; CHECK-NEXT:    br label [[OK]]
 ; CHECK:       ok:
 ; CHECK-NEXT:    ret void

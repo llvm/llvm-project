@@ -42,7 +42,7 @@ set(LIBS
   MLIRIR
   )
 
-add_mlir_tool(mlir-lsp-server
+add_llvm_tool(mlir-lsp-server
   mlir-lsp-server.cpp
 
   DEPENDS

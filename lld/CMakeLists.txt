@@ -156,10 +156,6 @@ if(LLD_BUILT_STANDALONE)
   endif()
 endif() # standalone
 
-set(LLD_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
-    "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
-mark_as_advanced(LLD_TOOLS_INSTALL_DIR)
-
 set(LLD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(LLD_INCLUDE_DIR ${LLD_SOURCE_DIR}/include )
 set(LLD_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})

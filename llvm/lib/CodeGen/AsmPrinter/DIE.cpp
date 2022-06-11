@@ -164,7 +164,7 @@ DIEAbbrev &DIEAbbrevSet::uniqueAbbreviation(DIE &Die) {
 void DIEAbbrevSet::Emit(const AsmPrinter *AP, MCSection *Section) const {
   if (!Abbreviations.empty()) {
     // Start the debug abbrev section.
-    AP->OutStreamer->SwitchSection(Section);
+    AP->OutStreamer->switchSection(Section);
     AP->emitDwarfAbbrevs(Abbreviations);
   }
 }
