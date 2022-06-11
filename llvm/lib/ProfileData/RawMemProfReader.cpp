@@ -424,11 +424,9 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
     }
 
     auto &CallStack = Entry.getSecond();
-    CallStack.erase(std::remove_if(CallStack.begin(), CallStack.end(),
-                                   [&AllVAddrsToDiscard](const uint64_t A) {
-                                     return AllVAddrsToDiscard.contains(A);
-                                   }),
-                    CallStack.end());
+    llvm::erase_if(CallStack, [&AllVAddrsToDiscard](const uint64_t A) {
+      return AllVAddrsToDiscard.contains(A);
+    });
     if (CallStack.empty())
       EntriesToErase.push_back(Entry.getFirst());
   }
