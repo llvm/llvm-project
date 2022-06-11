@@ -10,20 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
     steps:
-    - name: Setup Automation Script
-      run:  |
-        curl -O -L https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$GITHUB_SHA/llvm/utils/git/github-automation.py
-        curl -O -L https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$GITHUB_SHA/llvm/utils/git/requirements.txt
-        chmod a+x github-automation.py
-        pip install -r requirements.txt
+      - name: Setup Automation Script
+        run: |
+          curl -O -L https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$GITHUB_SHA/llvm/utils/git/github-automation.py
+          curl -O -L https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$GITHUB_SHA/llvm/utils/git/requirements.txt
+          chmod a+x github-automation.py
+          pip install -r requirements.txt
 
-    - name: Update watchers
-      # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
-      env:
-        LABEL_NAME: ${{ github.event.label.name }}
-      run: |
-        ./github-automation.py \
-          --token '${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}' \
-          issue-subscriber \
-          --issue-number '${{ github.event.issue.number }}' \
-          --label-name "$LABEL_NAME"
+      - name: Update watchers
+        # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+        env:
+          LABEL_NAME: ${{ github.event.label.name }}
+        run: |
+          ./github-automation.py \
+            --token '${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}' \
+            issue-subscriber \
+            --issue-number '${{ github.event.issue.number }}' \
+            --label-name "$LABEL_NAME"
