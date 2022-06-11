@@ -3557,7 +3557,7 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   if (Record.size() > 15)
     NewGV->setPartition(StringRef(Strtab.data() + Record[14], Record[15]));
 
-  if (Record.size() > 16 && Record[16] != UINT_MAX) {
+  if (Record.size() > 16 && Record[16]) {
     llvm::GlobalValue::SanitizerMetadata Meta =
         deserializeSanitizerMetadata(Record[16]);
     NewGV->setSanitizerMetadata(Meta);
