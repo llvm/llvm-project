@@ -368,69 +368,58 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; SSE-LABEL: test_v2f16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pushq %rbp
-; SSE-NEXT:    pushq %r14
 ; SSE-NEXT:    pushq %rbx
-; SSE-NEXT:    subq $16, %rsp
-; SSE-NEXT:    movl %esi, %ebx
-; SSE-NEXT:    movl %edi, %r14d
-; SSE-NEXT:    movzwl %bx, %ebp
-; SSE-NEXT:    movl %ebp, %edi
-; SSE-NEXT:    callq __gnu_h2f_ieee@PLT
-; SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE-NEXT:    movzwl %r14w, %edi
-; SSE-NEXT:    callq __gnu_h2f_ieee@PLT
+; SSE-NEXT:    subq $40, %rsp
+; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pextrw $0, %xmm1, %ebx
+; SSE-NEXT:    pextrw $0, %xmm0, %ebp
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    callq __extendhfsf2@PLT
+; SSE-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    callq __extendhfsf2@PLT
 ; SSE-NEXT:    ucomiss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; SSE-NEXT:    movw %bp, {{[0-9]+}}(%rsp)
-; SSE-NEXT:    cmoval %r14d, %ebx
-; SSE-NEXT:    movw %bx, (%rsp)
-; SSE-NEXT:    movl (%rsp), %eax
-; SSE-NEXT:    # kill: def $ax killed $ax killed $eax
-; SSE-NEXT:    addq $16, %rsp
+; SSE-NEXT:    cmoval %ebp, %ebx
+; SSE-NEXT:    pinsrw $0, %ebx, %xmm0
+; SSE-NEXT:    addq $40, %rsp
 ; SSE-NEXT:    popq %rbx
-; SSE-NEXT:    popq %r14
 ; SSE-NEXT:    popq %rbp
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_v2f16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    pushq %rbp
-; AVX-NEXT:    pushq %r14
 ; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    subq $16, %rsp
-; AVX-NEXT:    movl %esi, %ebx
-; AVX-NEXT:    movl %edi, %r14d
-; AVX-NEXT:    movzwl %bx, %ebp
-; AVX-NEXT:    movl %ebp, %edi
-; AVX-NEXT:    callq __gnu_h2f_ieee@PLT
-; AVX-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; AVX-NEXT:    movzwl %r14w, %edi
-; AVX-NEXT:    callq __gnu_h2f_ieee@PLT
+; AVX-NEXT:    subq $40, %rsp
+; AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vpextrw $0, %xmm1, %ebx
+; AVX-NEXT:    vpextrw $0, %xmm0, %ebp
+; AVX-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX-NEXT:    callq __extendhfsf2@PLT
+; AVX-NEXT:    vmovd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vucomiss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; AVX-NEXT:    movw %bp, {{[0-9]+}}(%rsp)
-; AVX-NEXT:    cmoval %r14d, %ebx
-; AVX-NEXT:    movw %bx, (%rsp)
-; AVX-NEXT:    movl (%rsp), %eax
-; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX-NEXT:    addq $16, %rsp
+; AVX-NEXT:    cmoval %ebp, %ebx
+; AVX-NEXT:    vpinsrw $0, %ebx, %xmm0, %xmm0
+; AVX-NEXT:    addq $40, %rsp
 ; AVX-NEXT:    popq %rbx
-; AVX-NEXT:    popq %r14
 ; AVX-NEXT:    popq %rbp
 ; AVX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_v2f16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    movzwl %si, %eax
-; AVX512BW-NEXT:    vmovd %eax, %xmm0
+; AVX512BW-NEXT:    vpextrw $0, %xmm0, %eax
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, %ecx
+; AVX512BW-NEXT:    movzwl %cx, %ecx
+; AVX512BW-NEXT:    vmovd %ecx, %xmm0
 ; AVX512BW-NEXT:    vcvtph2ps %xmm0, %xmm0
-; AVX512BW-NEXT:    movzwl %di, %ecx
-; AVX512BW-NEXT:    vmovd %ecx, %xmm1
+; AVX512BW-NEXT:    movzwl %ax, %eax
+; AVX512BW-NEXT:    vmovd %eax, %xmm1
 ; AVX512BW-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX512BW-NEXT:    vucomiss %xmm0, %xmm1
-; AVX512BW-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    cmoval %edi, %esi
-; AVX512BW-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
-; AVX512BW-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
-; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512BW-NEXT:    cmoval %eax, %ecx
+; AVX512BW-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512FP16-LABEL: test_v2f16:
