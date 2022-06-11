@@ -147,6 +147,24 @@ Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
       format, formatLength, scratchArea, scratchBytes, sourceFile, sourceLine);
 }
 
+static ExternalFileUnit *GetOrCreateUnit(int unitNumber, Direction direction,
+    std::optional<bool> isUnformatted, const Terminator &terminator,
+    Cookie &errorCookie) {
+  if (ExternalFileUnit *
+      unit{ExternalFileUnit::LookUpOrCreateAnonymous(
+          unitNumber, direction, isUnformatted, terminator)}) {
+    errorCookie = nullptr;
+    return unit;
+  } else {
+    errorCookie = &New<NoopStatementState>{terminator}(
+        terminator.sourceFileName(), terminator.sourceLine(), unitNumber)
+                       .release()
+                       ->ioStatementState();
+    errorCookie->GetIoErrorHandler().SetPendingError(IostatBadUnitNumber);
+    return nullptr;
+  }
+}
+
 template <Direction DIR, template <Direction> class STATE, typename... A>
 Cookie BeginExternalListIO(
     int unitNumber, const char *sourceFile, int sourceLine, A &&...xs) {
@@ -154,16 +172,20 @@ Cookie BeginExternalListIO(
   if (unitNumber == DefaultUnit) {
     unitNumber = DIR == Direction::Input ? 5 : 6;
   }
-  ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-      unitNumber, DIR, false /*!unformatted*/, terminator)};
-  if (!unit.isUnformatted.has_value()) {
-    unit.isUnformatted = false;
+  Cookie errorCookie{nullptr};
+  ExternalFileUnit *unit{GetOrCreateUnit(
+      unitNumber, DIR, false /*!unformatted*/, terminator, errorCookie)};
+  if (!unit) {
+    return errorCookie;
+  }
+  if (!unit->isUnformatted.has_value()) {
+    unit->isUnformatted = false;
   }
   Iostat iostat{IostatOk};
-  if (*unit.isUnformatted) {
+  if (*unit->isUnformatted) {
     iostat = IostatFormattedIoOnUnformattedUnit;
   }
-  if (ChildIo * child{unit.GetChildIo()}) {
+  if (ChildIo * child{unit->GetChildIo()}) {
     if (iostat == IostatOk) {
       iostat = child->CheckFormattingAndDirection(false, DIR);
     }
@@ -175,18 +197,18 @@ Cookie BeginExternalListIO(
           iostat, nullptr /* no unit */, sourceFile, sourceLine);
     }
   } else {
-    if (iostat == IostatOk && unit.access == Access::Direct) {
+    if (iostat == IostatOk && unit->access == Access::Direct) {
       iostat = IostatListIoOnDirectAccessUnit;
     }
     if (iostat == IostatOk) {
-      iostat = unit.SetDirection(DIR);
+      iostat = unit->SetDirection(DIR);
     }
     if (iostat == IostatOk) {
-      return &unit.BeginIoStatement<STATE<DIR>>(
-          std::forward<A>(xs)..., unit, sourceFile, sourceLine);
+      return &unit->BeginIoStatement<STATE<DIR>>(
+          std::forward<A>(xs)..., *unit, sourceFile, sourceLine);
     } else {
-      return &unit.BeginIoStatement<ErroneousIoStatementState>(
-          iostat, &unit, sourceFile, sourceLine);
+      return &unit->BeginIoStatement<ErroneousIoStatementState>(
+          iostat, unit, sourceFile, sourceLine);
     }
   }
 }
@@ -210,16 +232,20 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
   if (unitNumber == DefaultUnit) {
     unitNumber = DIR == Direction::Input ? 5 : 6;
   }
-  ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-      unitNumber, DIR, false /*!unformatted*/, terminator)};
-  Iostat iostat{IostatOk};
-  if (!unit.isUnformatted.has_value()) {
-    unit.isUnformatted = false;
+  Cookie errorCookie{nullptr};
+  ExternalFileUnit *unit{GetOrCreateUnit(
+      unitNumber, DIR, false /*!unformatted*/, terminator, errorCookie)};
+  if (!unit) {
+    return errorCookie;
   }
-  if (*unit.isUnformatted) {
+  Iostat iostat{IostatOk};
+  if (!unit->isUnformatted.has_value()) {
+    unit->isUnformatted = false;
+  }
+  if (*unit->isUnformatted) {
     iostat = IostatFormattedIoOnUnformattedUnit;
   }
-  if (ChildIo * child{unit.GetChildIo()}) {
+  if (ChildIo * child{unit->GetChildIo()}) {
     if (iostat == IostatOk) {
       iostat = child->CheckFormattingAndDirection(false, DIR);
     }
@@ -232,14 +258,14 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
     }
   } else {
     if (iostat == IostatOk) {
-      iostat = unit.SetDirection(DIR);
+      iostat = unit->SetDirection(DIR);
     }
     if (iostat == IostatOk) {
-      return &unit.BeginIoStatement<ExternalFormattedIoStatementState<DIR>>(
-          unit, format, formatLength, sourceFile, sourceLine);
+      return &unit->BeginIoStatement<ExternalFormattedIoStatementState<DIR>>(
+          *unit, format, formatLength, sourceFile, sourceLine);
     } else {
-      return &unit.BeginIoStatement<ErroneousIoStatementState>(
-          iostat, &unit, sourceFile, sourceLine);
+      return &unit->BeginIoStatement<ErroneousIoStatementState>(
+          iostat, unit, sourceFile, sourceLine);
     }
   }
 }
@@ -262,16 +288,20 @@ template <Direction DIR>
 Cookie BeginUnformattedIO(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-      unitNumber, DIR, true /*unformatted*/, terminator)};
-  Iostat iostat{IostatOk};
-  if (!unit.isUnformatted.has_value()) {
-    unit.isUnformatted = true;
+  Cookie errorCookie{nullptr};
+  ExternalFileUnit *unit{GetOrCreateUnit(
+      unitNumber, DIR, true /*unformatted*/, terminator, errorCookie)};
+  if (!unit) {
+    return errorCookie;
   }
-  if (!*unit.isUnformatted) {
+  Iostat iostat{IostatOk};
+  if (!unit->isUnformatted.has_value()) {
+    unit->isUnformatted = true;
+  }
+  if (!*unit->isUnformatted) {
     iostat = IostatUnformattedIoOnFormattedUnit;
   }
-  if (ChildIo * child{unit.GetChildIo()}) {
+  if (ChildIo * child{unit->GetChildIo()}) {
     if (iostat == IostatOk) {
       iostat = child->CheckFormattingAndDirection(true, DIR);
     }
@@ -284,24 +314,24 @@ Cookie BeginUnformattedIO(
     }
   } else {
     if (iostat == IostatOk) {
-      iostat = unit.SetDirection(DIR);
+      iostat = unit->SetDirection(DIR);
     }
     if (iostat == IostatOk) {
       IoStatementState &io{
-          unit.BeginIoStatement<ExternalUnformattedIoStatementState<DIR>>(
-              unit, sourceFile, sourceLine)};
+          unit->BeginIoStatement<ExternalUnformattedIoStatementState<DIR>>(
+              *unit, sourceFile, sourceLine)};
       if constexpr (DIR == Direction::Output) {
-        if (unit.access == Access::Sequential) {
+        if (unit->access == Access::Sequential) {
           // Create space for (sub)record header to be completed by
           // ExternalFileUnit::AdvanceRecord()
-          unit.recordLength.reset(); // in case of prior BACKSPACE
+          unit->recordLength.reset(); // in case of prior BACKSPACE
           io.Emit("\0\0\0\0", 4); // placeholder for record length header
         }
       }
       return &io;
     } else {
-      return &unit.BeginIoStatement<ErroneousIoStatementState>(
-          iostat, &unit, sourceFile, sourceLine);
+      return &unit->BeginIoStatement<ErroneousIoStatementState>(
+          iostat, unit, sourceFile, sourceLine);
     }
   }
 }
@@ -320,12 +350,21 @@ Cookie IONAME(BeginUnformattedInput)(
 
 Cookie IONAME(BeginOpenUnit)( // OPEN(without NEWUNIT=)
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
-  bool wasExtant{false};
   Terminator terminator{sourceFile, sourceLine};
-  ExternalFileUnit &unit{
-      ExternalFileUnit::LookUpOrCreate(unitNumber, terminator, wasExtant)};
-  return &unit.BeginIoStatement<OpenStatementState>(
-      unit, wasExtant, sourceFile, sourceLine);
+  bool wasExtant{false};
+  if (ExternalFileUnit *
+      unit{ExternalFileUnit::LookUpOrCreate(
+          unitNumber, terminator, wasExtant)}) {
+    return &unit->BeginIoStatement<OpenStatementState>(
+        *unit, wasExtant, sourceFile, sourceLine);
+  } else {
+    auto &io{
+        New<NoopStatementState>{terminator}(sourceFile, sourceLine, unitNumber)
+            .release()
+            ->ioStatementState()};
+    io.GetIoErrorHandler().SetPendingError(IostatBadUnitNumber);
+    return &io;
+  }
 }
 
 Cookie IONAME(BeginOpenNewUnit)( // OPEN(NEWUNIT=j)
@@ -411,19 +450,29 @@ Cookie IONAME(BeginBackspace)(
 Cookie IONAME(BeginEndfile)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-      unitNumber, Direction::Output, std::nullopt, terminator)};
-  return &unit.BeginIoStatement<ExternalMiscIoStatementState>(
-      unit, ExternalMiscIoStatementState::Endfile, sourceFile, sourceLine);
+  Cookie errorCookie{nullptr};
+  if (ExternalFileUnit *
+      unit{GetOrCreateUnit(unitNumber, Direction::Output, std::nullopt,
+          terminator, errorCookie)}) {
+    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
+        *unit, ExternalMiscIoStatementState::Endfile, sourceFile, sourceLine);
+  } else {
+    return errorCookie;
+  }
 }
 
 Cookie IONAME(BeginRewind)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
-      unitNumber, Direction::Input, std::nullopt, terminator)};
-  return &unit.BeginIoStatement<ExternalMiscIoStatementState>(
-      unit, ExternalMiscIoStatementState::Rewind, sourceFile, sourceLine);
+  Cookie errorCookie{nullptr};
+  if (ExternalFileUnit *
+      unit{GetOrCreateUnit(unitNumber, Direction::Input, std::nullopt,
+          terminator, errorCookie)}) {
+    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
+        *unit, ExternalMiscIoStatementState::Rewind, sourceFile, sourceLine);
+  } else {
+    return errorCookie;
+  }
 }
 
 Cookie IONAME(BeginInquireUnit)(
