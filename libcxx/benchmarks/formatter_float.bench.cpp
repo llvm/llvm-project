@@ -216,17 +216,27 @@ struct FloatingPoint {
   void run(benchmark::State& state) const {
     std::array<F, 1000> data{Value<V::value>::template make_data<F>()};
     std::array<char, 20'000> output;
-    std::string fmt{std::string("{:") + Alignment<A::value>::fmt + Precision<P::value>::fmt +
-                    Localization<L::value>::fmt + DisplayType<DT::value>::fmt + "}"};
 
     while (state.KeepRunningBatch(1000))
       for (F value : data)
-        benchmark::DoNotOptimize(std::format_to(output.begin(), fmt, value));
+        benchmark::DoNotOptimize(std::format_to(output.begin(), std::string_view{fmt.data(), fmt.size()}, value));
   }
 
   std::string name() const {
     return "FloatingPoint" + L::name() + DT::name() + T::name() + V::name() + A::name() + P::name();
   }
+
+  static constexpr std::string make_fmt() {
+    return std::string("{:") + Alignment<A::value>::fmt + Precision<P::value>::fmt + Localization<L::value>::fmt +
+           DisplayType<DT::value>::fmt + "}";
+  }
+
+  static constexpr auto fmt = []() {
+    constexpr size_t s = make_fmt().size();
+    std::array<char, s> r;
+    std::ranges::copy(make_fmt(), r.begin());
+    return r;
+  }();
 };
 
 int main(int argc, char** argv) {

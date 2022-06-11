@@ -15,9 +15,9 @@
 // <format>
 
 // template<class... Args>
-//   size_t formatted_size(string_view fmt, const Args&... args);
+//   size_t formatted_size(format-string<Args...> fmt, const Args&... args);
 // template<class... Args>
-//   size_t formatted_size(wstring_view fmt, const Args&... args);
+//   size_t formatted_size(wformat-string<Args...> fmt, const Args&... args);
 
 #include <format>
 #include <cassert>
@@ -33,22 +33,11 @@ auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string
   assert(size == expected.size());
 };
 
-auto test_exception = []<class CharT, class... Args>(std::string_view what, std::basic_string_view<CharT> fmt,
-                                                     const Args&... args) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  try {
-    std::formatted_size(fmt, args...);
-    assert(false);
-  } catch (const std::format_error& e) {
-    LIBCPP_ASSERT(e.what() == what);
-    return;
-  }
-  assert(false);
-#else
-  (void)what;
-  (void)fmt;
-  (void)sizeof...(args);
-#endif
+auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, const Args&...) {
+  // After P2216 most exceptions thrown by std::formatted_siz3 become ill-formed.
+  // Therefore this tests does nothing.
+  // A basic ill-formed test is done in formatted_size.verify.cpp
+  // The exceptions are tested by other functions that don't use the basic-format-string as fmt argument.
 };
 
 int main(int, char**) {

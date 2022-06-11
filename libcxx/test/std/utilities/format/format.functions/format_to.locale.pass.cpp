@@ -17,10 +17,10 @@
 
 // template<class Out, class... Args>
 //   Out format_to(Out out, const locale& loc,
-//                 string_view fmt, const Args&... args);
+//                 format-string<Args...> fmt, const Args&... args);
 // template<class Out, class... Args>
 //   Out format_to(Out out, const locale& loc,
-//                 wstring_view fmt, const Args&... args);
+//                 wformat-string<Args...> fmt, const Args&... args);
 
 #include <format>
 #include <algorithm>
@@ -60,23 +60,11 @@ auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string
   }
 };
 
-auto test_exception = []<class CharT, class... Args>(std::string_view what, std::basic_string_view<CharT> fmt,
-                                                     const Args&... args) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  try {
-    std::basic_string<CharT> out;
-    std::format_to(std::back_inserter(out), std::locale(), fmt, args...);
-    assert(false);
-  } catch (const std::format_error& e) {
-    LIBCPP_ASSERT(e.what() == what);
-    return;
-  }
-  assert(false);
-#else
-  (void)what;
-  (void)fmt;
-  (void)sizeof...(args);
-#endif
+auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, const Args&...) {
+  // After P2216 most exceptions thrown by std::format_to become ill-formed.
+  // Therefore this tests does nothing.
+  // A basic ill-formed test is done in format_to.locale.verify.cpp
+  // The exceptions are tested by other functions that don't use the basic-format-string as fmt argument.
 };
 
 int main(int, char**) {
