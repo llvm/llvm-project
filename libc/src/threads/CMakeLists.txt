@@ -36,6 +36,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  thrd_detach
+  SRCS
+    thrd_detach.cpp
+  HDRS
+    thrd_detach.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
   mtx_init
   SRCS
     mtx_init.cpp
