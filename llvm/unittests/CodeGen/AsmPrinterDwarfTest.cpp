@@ -59,7 +59,7 @@ protected:
     MCSection *Sec =
         TestPrinter->getCtx().getELFSection(".tst", ELF::SHT_PROGBITS, 0);
     SecBeginSymbol = Sec->getBeginSymbol();
-    TestPrinter->getMS().SwitchSection(Sec);
+    TestPrinter->getMS().switchSection(Sec);
     Val->setFragment(&Sec->getDummyFragment());
 
     return true;

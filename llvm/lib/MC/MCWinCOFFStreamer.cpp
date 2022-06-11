@@ -70,16 +70,16 @@ void MCWinCOFFStreamer::initSections(bool NoExecStack,
   // FIXME: this is identical to the ELF one.
   // This emulates the same behavior of GNU as. This makes it easier
   // to compare the output as the major sections are in the same order.
-  SwitchSection(getContext().getObjectFileInfo()->getTextSection());
+  switchSection(getContext().getObjectFileInfo()->getTextSection());
   emitCodeAlignment(4, &STI);
 
-  SwitchSection(getContext().getObjectFileInfo()->getDataSection());
+  switchSection(getContext().getObjectFileInfo()->getDataSection());
   emitCodeAlignment(4, &STI);
 
-  SwitchSection(getContext().getObjectFileInfo()->getBSSSection());
+  switchSection(getContext().getObjectFileInfo()->getBSSSection());
   emitCodeAlignment(4, &STI);
 
-  SwitchSection(getContext().getObjectFileInfo()->getTextSection());
+  switchSection(getContext().getObjectFileInfo()->getTextSection());
 }
 
 void MCWinCOFFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
@@ -287,7 +287,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
        << Log2_32_Ceil(ByteAlignment);
 
     pushSection();
-    SwitchSection(MFI->getDrectveSection());
+    switchSection(MFI->getDrectveSection());
     emitBytes(Directive);
     popSection();
   }
@@ -299,7 +299,7 @@ void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
 
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
   pushSection();
-  SwitchSection(Section);
+  switchSection(Section);
   emitValueToAlignment(ByteAlignment, 0, 1, 0);
   emitLabel(Symbol);
   Symbol->setExternal(false);

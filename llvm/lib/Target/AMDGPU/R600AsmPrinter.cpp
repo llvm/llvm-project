@@ -111,7 +111,7 @@ bool R600AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   MCContext &Context = getObjFileLowering().getContext();
   MCSectionELF *ConfigSection =
       Context.getELFSection(".AMDGPU.config", ELF::SHT_PROGBITS, 0);
-  OutStreamer->SwitchSection(ConfigSection);
+  OutStreamer->switchSection(ConfigSection);
 
   EmitProgramInfoR600(MF);
 
@@ -120,7 +120,7 @@ bool R600AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (isVerbose()) {
     MCSectionELF *CommentSection =
         Context.getELFSection(".AMDGPU.csdata", ELF::SHT_PROGBITS, 0);
-    OutStreamer->SwitchSection(CommentSection);
+    OutStreamer->switchSection(CommentSection);
 
     R600MachineFunctionInfo *MFI = MF.getInfo<R600MachineFunctionInfo>();
     OutStreamer->emitRawComment(

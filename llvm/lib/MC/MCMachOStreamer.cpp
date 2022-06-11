@@ -463,7 +463,7 @@ void MCMachOStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
   }
 
   pushSection();
-  SwitchSection(Section);
+  switchSection(Section);
 
   // The symbol may not be present, which only creates the section.
   if (Symbol) {

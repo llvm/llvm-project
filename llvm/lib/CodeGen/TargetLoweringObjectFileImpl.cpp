@@ -310,7 +310,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
     auto *S = C.getELFSection(".linker-options", ELF::SHT_LLVM_LINKER_OPTIONS,
                               ELF::SHF_EXCLUDE);
 
-    Streamer.SwitchSection(S);
+    Streamer.switchSection(S);
 
     for (const auto *Operand : LinkerOptions->operands()) {
       if (cast<MDNode>(Operand)->getNumOperands() != 2)
@@ -326,7 +326,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
     auto *S = C.getELFSection(".deplibs", ELF::SHT_LLVM_DEPENDENT_LIBRARIES,
                               ELF::SHF_MERGE | ELF::SHF_STRINGS, 1);
 
-    Streamer.SwitchSection(S);
+    Streamer.switchSection(S);
 
     for (const auto *Operand : DependentLibraries->operands()) {
       Streamer.emitBytes(
@@ -350,7 +350,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
       auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
           TM->getFunctionSections() ? Name->getString() : StringRef());
 
-      Streamer.SwitchSection(S);
+      Streamer.switchSection(S);
       Streamer.emitInt64(GUID->getZExtValue());
       Streamer.emitInt64(Hash->getZExtValue());
       Streamer.emitULEB128IntValue(Name->getString().size());
@@ -365,7 +365,7 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
   GetObjCImageInfo(M, Version, Flags, Section);
   if (!Section.empty()) {
     auto *S = C.getELFSection(Section, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
-    Streamer.SwitchSection(S);
+    Streamer.switchSection(S);
     Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
     Streamer.emitInt32(Version);
     Streamer.emitInt32(Flags);
@@ -399,7 +399,7 @@ void TargetLoweringObjectFileELF::emitPersonalityValue(
   MCSection *Sec = getContext().getELFNamedSection(".data", Label->getName(),
                                                    ELF::SHT_PROGBITS, Flags, 0);
   unsigned Size = DL.getPointerSize();
-  Streamer.SwitchSection(Sec);
+  Streamer.switchSection(Sec);
   Streamer.emitValueToAlignment(DL.getPointerABIAlignment(0).value());
   Streamer.emitSymbolAttribute(Label, MCSA_ELF_TypeObject);
   const MCExpr *E = MCConstantExpr::create(Size, getContext());
@@ -1226,7 +1226,7 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   // Get the section.
   MCSectionMachO *S = getContext().getMachOSection(
       Segment, Section, TAA, StubSize, SectionKind::getData());
-  Streamer.SwitchSection(S);
+  Streamer.switchSection(S);
   Streamer.emitLabel(getContext().
                      getOrCreateSymbol(StringRef("L_OBJC_IMAGE_INFO")));
   Streamer.emitInt32(VersionVal);
@@ -1777,7 +1777,7 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
                                COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                    COFF::IMAGE_SCN_MEM_READ,
                                SectionKind::getReadOnly());
-    Streamer.SwitchSection(S);
+    Streamer.switchSection(S);
     Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
     Streamer.emitInt32(Version);
     Streamer.emitInt32(Flags);
@@ -1794,7 +1794,7 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
     // spec, this section is a space-separated string containing flags for
     // linker.
     MCSection *Sec = getDrectveSection();
-    Streamer.SwitchSection(Sec);
+    Streamer.switchSection(Sec);
     for (const auto *Option : LinkerOptions->operands()) {
       for (const auto &Piece : cast<MDNode>(Option)->operands()) {
         // Lead with a space for consistency with our dllexport implementation.
@@ -1813,7 +1813,7 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
                                  getMangler());
     OS.flush();
     if (!Flags.empty()) {
-      Streamer.SwitchSection(getDrectveSection());
+      Streamer.switchSection(getDrectveSection());
       Streamer.emitBytes(Flags);
     }
     Flags.clear();
@@ -1839,7 +1839,7 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
         OS.flush();
 
         if (!Flags.empty()) {
-          Streamer.SwitchSection(getDrectveSection());
+          Streamer.switchSection(getDrectveSection());
           Streamer.emitBytes(Flags);
         }
         Flags.clear();

@@ -73,12 +73,12 @@ void RISCVTargetELFStreamer::finishAttributeSection() {
     return;
 
   if (AttributeSection) {
-    Streamer.SwitchSection(AttributeSection);
+    Streamer.switchSection(AttributeSection);
   } else {
     MCAssembler &MCA = getStreamer().getAssembler();
     AttributeSection = MCA.getContext().getELFSection(
         ".riscv.attributes", ELF::SHT_RISCV_ATTRIBUTES, 0);
-    Streamer.SwitchSection(AttributeSection);
+    Streamer.switchSection(AttributeSection);
 
     Streamer.emitInt8(ELFAttrs::Format_Version);
   }

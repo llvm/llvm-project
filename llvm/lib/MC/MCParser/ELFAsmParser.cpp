@@ -212,7 +212,7 @@ bool ELFAsmParser::ParseSectionSwitch(StringRef Section, unsigned Type,
   }
   Lex();
 
-  getStreamer().SwitchSection(getContext().getELFSection(Section, Type, Flags),
+  getStreamer().switchSection(getContext().getELFSection(Section, Type, Flags),
                               Subsection);
 
   return false;
@@ -678,7 +678,7 @@ EndStmt:
   MCSectionELF *Section =
       getContext().getELFSection(SectionName, Type, Flags, Size, GroupName,
                                  IsComdat, UniqueID, LinkedToSym);
-  getStreamer().SwitchSection(Section, Subsection);
+  getStreamer().switchSection(Section, Subsection);
   // Check that flags are used consistently. However, the GNU assembler permits
   // to leave out in subsequent uses of the same sections; for compatibility,
   // do likewise.
@@ -718,7 +718,7 @@ bool ELFAsmParser::ParseDirectivePrevious(StringRef DirName, SMLoc) {
   MCSectionSubPair PreviousSection = getStreamer().getPreviousSection();
   if (PreviousSection.first == nullptr)
       return TokError(".previous without corresponding .section");
-  getStreamer().SwitchSection(PreviousSection.first, PreviousSection.second);
+  getStreamer().switchSection(PreviousSection.first, PreviousSection.second);
 
   return false;
 }
@@ -861,7 +861,7 @@ bool ELFAsmParser::ParseDirectiveVersion(StringRef, SMLoc) {
   MCSection *Note = getContext().getELFSection(".note", ELF::SHT_NOTE, 0);
 
   getStreamer().pushSection();
-  getStreamer().SwitchSection(Note);
+  getStreamer().switchSection(Note);
   getStreamer().emitInt32(Data.size() + 1); // namesz
   getStreamer().emitInt32(0);               // descsz = 0 (no description).
   getStreamer().emitInt32(1);               // type = NT_VERSION

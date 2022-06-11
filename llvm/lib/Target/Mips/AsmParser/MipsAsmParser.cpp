@@ -3413,10 +3413,10 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
   const MipsMCExpr *LoExpr =
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
-  getStreamer().SwitchSection(ReadOnlySection);
+  getStreamer().switchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitInt32(ImmOp32);
-  getStreamer().SwitchSection(CS);
+  getStreamer().switchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))
     return true;
@@ -3465,11 +3465,11 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
   const MipsMCExpr *LoExpr =
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
-  getStreamer().SwitchSection(ReadOnlySection);
+  getStreamer().switchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitValueToAlignment(8);
   getStreamer().emitIntValue(ImmOp64, 8);
-  getStreamer().SwitchSection(CS);
+  getStreamer().switchSection(CS);
 
   unsigned TmpReg = getATReg(IDLoc);
   if (!TmpReg)
@@ -3548,11 +3548,11 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
   const MipsMCExpr *LoExpr =
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
-  getStreamer().SwitchSection(ReadOnlySection);
+  getStreamer().switchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
   getStreamer().emitValueToAlignment(8);
   getStreamer().emitIntValue(ImmOp64, 8);
-  getStreamer().SwitchSection(CS);
+  getStreamer().switchSection(CS);
 
   if (emitPartialAddress(TOut, IDLoc, Sym))
     return true;
@@ -8180,7 +8180,7 @@ bool MipsAsmParser::parseRSectionDirective(StringRef Section) {
 
   MCSection *ELFSection = getContext().getELFSection(
       Section, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
-  getParser().getStreamer().SwitchSection(ELFSection);
+  getParser().getStreamer().switchSection(ELFSection);
 
   getParser().Lex(); // Eat EndOfStatement token.
   return false;
@@ -8198,7 +8198,7 @@ bool MipsAsmParser::parseSSectionDirective(StringRef Section, unsigned Type) {
 
   MCSection *ELFSection = getContext().getELFSection(
       Section, Type, ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_MIPS_GPREL);
-  getParser().getStreamer().SwitchSection(ELFSection);
+  getParser().getStreamer().switchSection(ELFSection);
 
   getParser().Lex(); // Eat EndOfStatement token.
   return false;

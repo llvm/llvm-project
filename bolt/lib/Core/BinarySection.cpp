@@ -71,7 +71,7 @@ void BinarySection::emitAsData(MCStreamer &Streamer, StringRef NewName) const {
   MCSectionELF *ELFSection =
       BC.Ctx->getELFSection(SectionName, getELFType(), getELFFlags());
 
-  Streamer.SwitchSection(ELFSection);
+  Streamer.switchSection(ELFSection);
   Streamer.emitValueToAlignment(getAlignment());
 
   if (BC.HasRelocations && opts::HotData && isReordered())

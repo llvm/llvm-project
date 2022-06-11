@@ -55,7 +55,7 @@ void DwarfStringPool::emitStringOffsetsTableHeader(AsmPrinter &Asm,
                                                    MCSymbol *StartSym) {
   if (getNumIndexedStrings() == 0)
     return;
-  Asm.OutStreamer->SwitchSection(Section);
+  Asm.OutStreamer->switchSection(Section);
   unsigned EntrySize = Asm.getDwarfOffsetByteSize();
   // We are emitting the header for a contribution to the string offsets
   // table. The header consists of an entry with the contribution's
@@ -78,7 +78,7 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
     return;
 
   // Start the dwarf str section.
-  Asm.OutStreamer->SwitchSection(StrSection);
+  Asm.OutStreamer->switchSection(StrSection);
 
   // Get all of the string pool entries and sort them by their offset.
   SmallVector<const StringMapEntry<EntryTy> *, 64> Entries;
@@ -117,7 +117,7 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
         Entries[Entry.getValue().Index] = &Entry;
     }
 
-    Asm.OutStreamer->SwitchSection(OffsetSection);
+    Asm.OutStreamer->switchSection(OffsetSection);
     unsigned size = Asm.getDwarfOffsetByteSize();
     for (const auto &Entry : Entries)
       if (UseRelativeOffsets)
