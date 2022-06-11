@@ -106,7 +106,7 @@ define void @PR43218() {
 ; CHECK-NEXT:    ret void
 ; CHECK:       unreachable_infloop:
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x i64> [[BOGUS:%.*]], i32 0
-; CHECK-NEXT:    [[T0:%.*]] = inttoptr i64 [[EXTRACT]] to i16****
+; CHECK-NEXT:    [[T0:%.*]] = inttoptr i64 [[EXTRACT]] to ptr
 ; CHECK-NEXT:    [[BOGUS]] = insertelement <2 x i64> [[BOGUS]], i64 undef, i32 1
 ; CHECK-NEXT:    br label [[UNREACHABLE_INFLOOP:%.*]]
 ;
@@ -115,7 +115,7 @@ end:
 
 unreachable_infloop:
   %extract = extractelement <2 x i64> %bogus, i32 0
-  %t0 = inttoptr i64 %extract to i16****
+  %t0 = inttoptr i64 %extract to ptr
   %bogus = insertelement <2 x i64> %bogus, i64 undef, i32 1
   br label %unreachable_infloop
 }

@@ -59,13 +59,13 @@ define <2 x i16> @t2_vec_nonsplat(<2 x i32> %x, <2 x i16> %y) {
 
 ; Basic vector tests
 
-define <3 x i16> @t3_vec_nonsplat_undef0(<3 x i32> %x, <3 x i16> %y) {
-; CHECK-LABEL: @t3_vec_nonsplat_undef0(
+define <3 x i16> @t3_vec_nonsplat_poison0(<3 x i32> %x, <3 x i16> %y) {
+; CHECK-LABEL: @t3_vec_nonsplat_poison0(
 ; CHECK-NEXT:    [[X_TR:%.*]] = trunc <3 x i32> [[X:%.*]] to <3 x i16>
-; CHECK-NEXT:    [[T5:%.*]] = shl <3 x i16> [[X_TR]], <i16 8, i16 0, i16 8>
+; CHECK-NEXT:    [[T5:%.*]] = shl <3 x i16> [[X_TR]], <i16 8, i16 poison, i16 8>
 ; CHECK-NEXT:    ret <3 x i16> [[T5]]
 ;
-  %t0 = sub <3 x i16> <i16 32, i16 undef, i16 32>, %y
+  %t0 = sub <3 x i16> <i16 32, i16 poison, i16 32>, %y
   %t1 = zext <3 x i16> %t0 to <3 x i32>
   %t2 = shl <3 x i32> %x, %t1
   %t3 = trunc <3 x i32> %t2 to <3 x i16>
@@ -74,32 +74,32 @@ define <3 x i16> @t3_vec_nonsplat_undef0(<3 x i32> %x, <3 x i16> %y) {
   ret <3 x i16> %t5
 }
 
-define <3 x i16> @t4_vec_nonsplat_undef1(<3 x i32> %x, <3 x i16> %y) {
-; CHECK-LABEL: @t4_vec_nonsplat_undef1(
+define <3 x i16> @t4_vec_nonsplat_poison1(<3 x i32> %x, <3 x i16> %y) {
+; CHECK-LABEL: @t4_vec_nonsplat_poison1(
 ; CHECK-NEXT:    [[X_TR:%.*]] = trunc <3 x i32> [[X:%.*]] to <3 x i16>
-; CHECK-NEXT:    [[T5:%.*]] = shl <3 x i16> [[X_TR]], <i16 8, i16 0, i16 8>
+; CHECK-NEXT:    [[T5:%.*]] = shl <3 x i16> [[X_TR]], <i16 8, i16 poison, i16 8>
 ; CHECK-NEXT:    ret <3 x i16> [[T5]]
 ;
   %t0 = sub <3 x i16> <i16 32, i16 32, i16 32>, %y
   %t1 = zext <3 x i16> %t0 to <3 x i32>
   %t2 = shl <3 x i32> %x, %t1
   %t3 = trunc <3 x i32> %t2 to <3 x i16>
-  %t4 = add <3 x i16> %y, <i16 -24, i16 undef, i16 -24>
+  %t4 = add <3 x i16> %y, <i16 -24, i16 poison, i16 -24>
   %t5 = shl <3 x i16> %t3, %t4
   ret <3 x i16> %t5
 }
 
-define <3 x i16> @t5_vec_nonsplat_undef1(<3 x i32> %x, <3 x i16> %y) {
-; CHECK-LABEL: @t5_vec_nonsplat_undef1(
+define <3 x i16> @t5_vec_nonsplat_poison1(<3 x i32> %x, <3 x i16> %y) {
+; CHECK-LABEL: @t5_vec_nonsplat_poison1(
 ; CHECK-NEXT:    [[X_TR:%.*]] = trunc <3 x i32> [[X:%.*]] to <3 x i16>
-; CHECK-NEXT:    [[T5:%.*]] = shl <3 x i16> [[X_TR]], <i16 8, i16 0, i16 8>
+; CHECK-NEXT:    [[T5:%.*]] = shl <3 x i16> [[X_TR]], <i16 8, i16 poison, i16 8>
 ; CHECK-NEXT:    ret <3 x i16> [[T5]]
 ;
-  %t0 = sub <3 x i16> <i16 32, i16 undef, i16 32>, %y
+  %t0 = sub <3 x i16> <i16 32, i16 poison, i16 32>, %y
   %t1 = zext <3 x i16> %t0 to <3 x i32>
   %t2 = shl <3 x i32> %x, %t1
   %t3 = trunc <3 x i32> %t2 to <3 x i16>
-  %t4 = add <3 x i16> %y, <i16 -24, i16 undef, i16 -24>
+  %t4 = add <3 x i16> %y, <i16 -24, i16 poison, i16 -24>
   %t5 = shl <3 x i16> %t3, %t4
   ret <3 x i16> %t5
 }
@@ -235,17 +235,17 @@ define i16 @shl_tr_shl_constant_shift_amount_uses(i32 %x) {
 ; the problematic transform, it needs a datalayout to specify
 ; that the narrow types are legal, but i64 is not.
 
-define i1 @PR51657(i64 %x) {
+define i1 @PR51657(i64 %x, i1 %c1) {
 ; CHECK-LABEL: @PR51657(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[COND_FALSE:%.*]], label [[COND_END:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[COND_FALSE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
-  br i1 undef, label %cond.false, label %cond.end
+  br i1 %c1, label %cond.false, label %cond.end
 
 cond.false:
   %shl = shl i64 %x, 64

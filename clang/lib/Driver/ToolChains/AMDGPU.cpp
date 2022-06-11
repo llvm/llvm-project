@@ -863,10 +863,10 @@ void ROCMToolChain::addClangTargetOptions(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
       FastRelaxedMath, CorrectSqrt, ABIVer, false));
 
-  llvm::for_each(BCLibs, [&](StringRef BCFile) {
+  for (StringRef BCFile : BCLibs) {
     CC1Args.push_back("-mlink-builtin-bitcode");
     CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
-  });
+  }
 }
 
 bool RocmInstallationDetector::checkCommonBitcodeLibs(

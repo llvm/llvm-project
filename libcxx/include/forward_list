@@ -184,9 +184,13 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/min.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/move_iterator.h>
+#include <__iterator/next.h>
 #include <__utility/forward.h>
 #include <initializer_list>
-#include <iterator>
+#include <iterator> // TODO: Remove this include
 #include <limits>
 #include <memory>
 #include <type_traits>

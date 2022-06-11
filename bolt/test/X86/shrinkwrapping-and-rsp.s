@@ -8,9 +8,9 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
-# RUN: llvm-bolt %t.exe -o %t.out -data %t.fdata \
-# RUN:     -frame-opt=all -simplify-conditional-tail-calls=false \
-# RUN:     -eliminate-unreachable=false | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.out --data %t.fdata \
+# RUN:     --frame-opt=all --simplify-conditional-tail-calls=false \
+# RUN:     --eliminate-unreachable=false | FileCheck %s
 
 # Here we have a function that aligns the stack at prologue. Stack pointer
 # analysis can't try to infer offset positions after AND because that depends

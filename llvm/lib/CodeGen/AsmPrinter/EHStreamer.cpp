@@ -457,7 +457,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   // Sometimes we want not to emit the data into separate section (e.g. ARM
   // EHABI). In this case LSDASection will be NULL.
   if (LSDASection)
-    Asm->OutStreamer->SwitchSection(LSDASection);
+    Asm->OutStreamer->switchSection(LSDASection);
   Asm->emitAlignment(Align(4));
 
   // Emit the LSDA.
