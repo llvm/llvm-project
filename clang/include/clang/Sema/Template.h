@@ -398,7 +398,7 @@ enum class TemplateSubstitutionKind : char {
       return newScope;
     }
 
-    /// deletes the given scope, and all otuer scopes, down to the
+    /// deletes the given scope, and all outer scopes, down to the
     /// given outermost scope.
     static void deleteScopes(LocalInstantiationScope *Scope,
                              LocalInstantiationScope *Outermost) {
