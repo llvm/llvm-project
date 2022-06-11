@@ -5909,10 +5909,28 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     bool isVol = MSI.isVolatile();
     bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MS = DAG.getMemset(Root, sdl, Op1, Op2, Op3, Alignment, isVol, isTC,
+    SDValue MS = DAG.getMemset(
+        Root, sdl, Op1, Op2, Op3, Alignment, isVol, /* AlwaysInline */ false,
+        isTC, MachinePointerInfo(I.getArgOperand(0)), I.getAAMetadata());
+    updateDAGForMaybeTailCall(MS);
+    return;
+  }
+  case Intrinsic::memset_inline: {
+    const auto &MSII = cast<MemSetInlineInst>(I);
+    SDValue Dst = getValue(I.getArgOperand(0));
+    SDValue Value = getValue(I.getArgOperand(1));
+    SDValue Size = getValue(I.getArgOperand(2));
+    assert(isa<ConstantSDNode>(Size) && "memset_inline needs constant size");
+    // @llvm.memset defines 0 and 1 to both mean no alignment.
+    Align DstAlign = MSII.getDestAlign().valueOrOne();
+    bool isVol = MSII.isVolatile();
+    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
+    SDValue Root = isVol ? getRoot() : getMemoryRoot();
+    SDValue MC = DAG.getMemset(Root, sdl, Dst, Value, Size, DstAlign, isVol,
+                               /* AlwaysInline */ true, isTC,
                                MachinePointerInfo(I.getArgOperand(0)),
                                I.getAAMetadata());
-    updateDAGForMaybeTailCall(MS);
+    updateDAGForMaybeTailCall(MC);
     return;
   }
   case Intrinsic::memmove: {
