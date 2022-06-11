@@ -53,7 +53,7 @@ void WinException::endModule() {
 
   if (M->getModuleFlag("ehcontguard") && !EHContTargets.empty()) {
     // Emit the symbol index of each ehcont target.
-    OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGEHContSection());
+    OS.switchSection(Asm->OutContext.getObjectFileInfo()->getGEHContSection());
     for (const MCSymbol *S : EHContTargets) {
       OS.emitCOFFSymbolIndex(S);
     }
@@ -150,7 +150,7 @@ void WinException::endFunction(const MachineFunction *MF) {
     // Just switch sections to the right xdata section.
     MCSection *XData = Asm->OutStreamer->getAssociatedXDataSection(
         Asm->OutStreamer->getCurrentSectionOnly());
-    Asm->OutStreamer->SwitchSection(XData);
+    Asm->OutStreamer->switchSection(XData);
 
     // Emit the tables appropriate to the personality function in use. If we
     // don't recognize the personality, assume it uses an Itanium-style LSDA.
@@ -249,7 +249,7 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
 void WinException::endFunclet() {
   if (isAArch64 && CurrentFuncletEntry &&
       (shouldEmitMoves || shouldEmitPersonality)) {
-    Asm->OutStreamer->SwitchSection(CurrentFuncletTextSection);
+    Asm->OutStreamer->switchSection(CurrentFuncletTextSection);
     Asm->OutStreamer->emitWinCFIFuncletOrFuncEnd();
   }
   endFuncletImpl();
@@ -301,7 +301,7 @@ void WinException::endFuncletImpl() {
     // Switch back to the funclet start .text section now that we are done
     // writing to .xdata, and emit an .seh_endproc directive to mark the end of
     // the function.
-    Asm->OutStreamer->SwitchSection(CurrentFuncletTextSection);
+    Asm->OutStreamer->switchSection(CurrentFuncletTextSection);
     Asm->OutStreamer->emitWinCFIEndProc();
   }
 

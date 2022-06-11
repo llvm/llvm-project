@@ -721,7 +721,7 @@ void StackMaps::serializeToStackMapSection() {
   // Create the section.
   MCSection *StackMapSection =
       OutContext.getObjectFileInfo()->getStackMapSection();
-  OS.SwitchSection(StackMapSection);
+  OS.switchSection(StackMapSection);
 
   // Emit a dummy symbol to force section inclusion.
   OS.emitLabel(OutContext.getOrCreateSymbol(Twine("__LLVM_StackMaps")));
