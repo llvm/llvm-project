@@ -3,13 +3,13 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32"
 target triple = "i386-pc-linux-gnu"
 
-define void @_ada_c32001b(i32 %tmp5) {
+define void @_ada_c32001b(i32 %tmp5, i32* %src) {
 entry:
 	%max289 = select i1 false, i32 %tmp5, i32 0		; <i32> [#uses=1]
 	%tmp6 = mul i32 %max289, 4		; <i32> [#uses=1]
 	%tmp7 = alloca i8, i32 0		; <i8*> [#uses=1]
 	%tmp8 = bitcast i8* %tmp7 to [0 x [0 x i32]]*		; <[0 x [0 x i32]]*> [#uses=1]
-	%tmp11 = load i32, i32* null, align 1		; <i32> [#uses=1]
+	%tmp11 = load i32, i32* %src, align 1		; <i32> [#uses=1]
 	%tmp12 = icmp eq i32 %tmp11, 3		; <i1> [#uses=1]
 	%tmp13 = zext i1 %tmp12 to i8		; <i8> [#uses=1]
 	%tmp14 = ashr i32 %tmp6, 2		; <i32> [#uses=1]

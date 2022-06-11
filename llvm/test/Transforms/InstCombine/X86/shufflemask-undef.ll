@@ -68,9 +68,9 @@ target triple = "i386-apple-darwin9"
 	%struct.PPStreamToken = type { { i16, i16, i32 } }
 	%struct._VMConstants = type { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, float, float, float, float, float, float, float, float, float, float, float, float, [256 x float], [528 x i8], { void (i8*, i8*, i32, i8*)*, float (float)*, float (float)*, float (float)*, i32 (float)* } }
 
-define i32 @foo(%struct.State* %dst, <4 x float>* %prgrm, <4 x float>** %buffs, %struct._VMConstants* %cnstn, %struct.PPStreamToken* %pstrm, %struct.PluginBufferData* %gpctx, %struct.VMTextures* %txtrs, %struct.VMGPStack* %gpstk) nounwind {
+define i32 @foo(%struct.State* %dst, <4 x float>* %prgrm, <4 x float>** %buffs, %struct._VMConstants* %cnstn, %struct.PPStreamToken* %pstrm, %struct.PluginBufferData* %gpctx, %struct.VMTextures* %txtrs, %struct.VMGPStack* %gpstk, <4 x float>* %src) nounwind {
 bb266.i:
-	getelementptr <4 x float>, <4 x float>* null, i32 11		; <<4 x float>*>:0 [#uses=1]
+	getelementptr <4 x float>, <4 x float>* %src, i32 11		; <<4 x float>*>:0 [#uses=1]
 	load <4 x float>, <4 x float>* %0, align 16		; <<4 x float>>:1 [#uses=1]
 	shufflevector <4 x float> %1, <4 x float> undef, <4 x i32> < i32 0, i32 1, i32 1, i32 1 >		; <<4 x float>>:2 [#uses=1]
 	shufflevector <4 x float> %2, <4 x float> undef, <4 x i32> < i32 0, i32 4, i32 1, i32 5 >		; <<4 x float>>:3 [#uses=1]
@@ -95,10 +95,10 @@ bb266.i:
 	br i1 %16, label %bb5574.i, label %bb4521.i
 
 bb4521.i:		; preds = %bb266.i
-	unreachable
+	ret i32 0
 
 bb5574.i:		; preds = %bb266.i
-	unreachable
+  ret i32 1
 }
 
 declare <4 x float> @llvm.x86.sse.cmp.ps(<4 x float>, <4 x float>, i8) nounwind readnone

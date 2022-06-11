@@ -12,7 +12,7 @@ define <4 x i1> @PR38984_1() {
 ; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
 ;
 entry:
-  %0 = load i16, i16* getelementptr ([4 x i16], [4 x i16]* @offsets, i16 0, i16 undef), align 1
+  %0 = load i16, i16* getelementptr ([4 x i16], [4 x i16]* @offsets, i16 0, i16 0), align 1
   %1 = insertelement <4 x i16> undef, i16 %0, i32 3
   %2 = getelementptr i32, i32* null, <4 x i16> %1
   %3 = getelementptr i32, i32* null, <4 x i16> %1
@@ -24,7 +24,7 @@ entry:
 define <4 x i1> @PR38984_2() {
 ; CHECK-LABEL: @PR38984_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* getelementptr ([4 x i16], [4 x i16]* @offsets, i16 0, i16 undef), align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* getelementptr inbounds ([4 x i16], [4 x i16]* @offsets, i16 0, i16 0), align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 [[TMP0]], i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, i16* getelementptr inbounds ([21 x i16], [21 x i16]* @a, i16 1, i16 0), <4 x i16> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, i16* null, <4 x i16> [[TMP1]]
@@ -32,7 +32,7 @@ define <4 x i1> @PR38984_2() {
 ; CHECK-NEXT:    ret <4 x i1> [[TMP4]]
 ;
 entry:
-  %0 = load i16, i16* getelementptr ([4 x i16], [4 x i16]* @offsets, i16 0, i16 undef)
+  %0 = load i16, i16* getelementptr ([4 x i16], [4 x i16]* @offsets, i16 0, i16 0)
   %1 = insertelement <4 x i16> undef, i16 %0, i32 3
   %2 = getelementptr i16, i16* getelementptr ([21 x i16], [21 x i16]* @a, i64 1, i32 0), <4 x i16> %1
   %3 = getelementptr i16, i16* null, <4 x i16> %1
