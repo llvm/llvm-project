@@ -4,7 +4,7 @@
 # /cherry-pick <commit> <...>
 #
 # This comment will attempt to cherry-pick the given commits to the latest
-# release branch (release/Y.x) and if successful push the result to a branch
+# release branch (release/Y.x) and if successful, push the result to a branch
 # on github.
 #
 # /branch <owner>/<repo>/<branch>
@@ -31,9 +31,9 @@ jobs:
     name: Backport Commits
     runs-on: ubuntu-20.04
     if: >-
-        (github.repository == 'llvm/llvm-project') &&
-        !startswith(github.event.comment.body, '<!--IGNORE-->') &&
-        contains(github.event.action == 'opened' && github.event.issue.body || github.event.comment.body, '/cherry-pick')
+      (github.repository == 'llvm/llvm-project') &&
+      !startswith(github.event.comment.body, '<!--IGNORE-->') &&
+      contains(github.event.action == 'opened' && github.event.issue.body || github.event.comment.body, '/cherry-pick')
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@v2
@@ -64,16 +64,16 @@ jobs:
     name: Create Pull Request
     runs-on: ubuntu-20.04
     if: >-
-        (github.repository == 'llvm/llvm-project') &&
-        !startswith(github.event.comment.body, '<!--IGNORE-->') &&
-        contains(github.event.comment.body, '/branch')
+      (github.repository == 'llvm/llvm-project') &&
+      !startswith(github.event.comment.body, '<!--IGNORE-->') &&
+      contains(github.event.comment.body, '/branch')
 
     steps:
       - name: Fetch LLVM sources
         uses: actions/checkout@v2
 
       - name: Setup Environment
-        run:  |
+        run: |
           pip install -r ./llvm/utils/git/requirements.txt
 
       - name: Create Pull Request
