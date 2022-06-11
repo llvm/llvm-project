@@ -246,11 +246,11 @@ void HIPAMDToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
-  llvm::for_each(getHIPDeviceLibs(DriverArgs), [&](auto BCFile) {
+  for (auto BCFile : getHIPDeviceLibs(DriverArgs)) {
     CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                : "-mlink-bitcode-file");
     CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
-  });
+  }
 }
 
 llvm::opt::DerivedArgList *
