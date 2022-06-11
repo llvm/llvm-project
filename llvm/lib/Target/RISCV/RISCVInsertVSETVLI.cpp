@@ -969,6 +969,12 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info, const MachineInstr &MI
     return;
   }
 
+  if (RISCV::isFaultFirstLoad(MI)) {
+    // Update AVL to vl-output of the fault first load.
+    Info.setAVLReg(MI.getOperand(1).getReg());
+    return;
+  }
+
   // If this is something that updates VL/VTYPE that we don't know about, set
   // the state to unknown.
   if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
@@ -1259,11 +1265,7 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
       continue;
     }
 
-    // If this is something that updates VL/VTYPE that we don't know about,
-    // set the state to unknown.
-    if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
-        MI.modifiesRegister(RISCV::VTYPE))
-      CurInfo = VSETVLIInfo::getUnknown();
+    transferAfter(CurInfo, MI);
   }
 }
 
