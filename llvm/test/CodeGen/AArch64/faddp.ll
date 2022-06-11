@@ -191,10 +191,9 @@ entry:
 define <4 x double> @addp_v4f64(<4 x double> %a) {
 ; CHECK-LABEL: addp_v4f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    fadd v0.2d, v2.2d, v0.2d
-; CHECK-NEXT:    fadd v1.2d, v3.2d, v1.2d
+; CHECK-NEXT:    faddp v1.2d, v0.2d, v1.2d
+; CHECK-NEXT:    dup v0.2d, v1.d[0]
+; CHECK-NEXT:    dup v1.2d, v1.d[1]
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
@@ -231,10 +230,9 @@ entry:
 define <8 x float> @addp_v8f32_slow(<8 x float> %a) {
 ; CHECK-LABEL: addp_v8f32_slow:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev64 v2.4s, v0.4s
-; CHECK-NEXT:    rev64 v3.4s, v1.4s
-; CHECK-NEXT:    fadd v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fadd v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    faddp v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    zip1 v0.4s, v1.4s, v1.4s
+; CHECK-NEXT:    zip2 v1.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
@@ -245,14 +243,12 @@ entry:
 define <16 x float> @addp_v16f32(<16 x float> %a) {
 ; CHECK-LABEL: addp_v16f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev64 v4.4s, v0.4s
-; CHECK-NEXT:    rev64 v5.4s, v1.4s
-; CHECK-NEXT:    rev64 v6.4s, v2.4s
-; CHECK-NEXT:    rev64 v7.4s, v3.4s
-; CHECK-NEXT:    fadd v0.4s, v4.4s, v0.4s
-; CHECK-NEXT:    fadd v1.4s, v5.4s, v1.4s
-; CHECK-NEXT:    fadd v2.4s, v6.4s, v2.4s
-; CHECK-NEXT:    fadd v3.4s, v7.4s, v3.4s
+; CHECK-NEXT:    faddp v3.4s, v2.4s, v3.4s
+; CHECK-NEXT:    faddp v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    zip1 v2.4s, v3.4s, v3.4s
+; CHECK-NEXT:    zip1 v0.4s, v1.4s, v1.4s
+; CHECK-NEXT:    zip2 v1.4s, v1.4s, v1.4s
+; CHECK-NEXT:    zip2 v3.4s, v3.4s, v3.4s
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <16 x float> %a, <16 x float> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
