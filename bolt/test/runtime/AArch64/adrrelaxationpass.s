@@ -6,7 +6,7 @@
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:   %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt -adr-relaxation=true
+# RUN: llvm-bolt %t.exe -o %t.bolt --adr-relaxation=true
 # RUN: llvm-objdump -d --disassemble-symbols=main %t.bolt | FileCheck %s
 # RUN: %t.bolt
 

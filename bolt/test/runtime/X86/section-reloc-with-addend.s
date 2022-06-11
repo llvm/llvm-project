@@ -13,7 +13,7 @@
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
-# RUN: llvm-bolt %t.exe -relocs=1 -print-finalized -print-only=main -o %t.out
+# RUN: llvm-bolt %t.exe --relocs=1 --print-finalized --print-only=main -o %t.out
 
 # RUN: %t.out 1 2
 

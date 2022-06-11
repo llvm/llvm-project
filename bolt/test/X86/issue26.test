@@ -1,7 +1,7 @@
 # This reproduces issue 26 from our github repo
 
 # RUN: yaml2obj %p/Inputs/issue26.yaml &> %t.exe
-# RUN: llvm-bolt %t.exe -relocs -print-cfg -o %t.out \
+# RUN: llvm-bolt %t.exe --relocs --print-cfg -o %t.out \
 # RUN:    | FileCheck %s
 
 CHECK-NOT: BOLT-WARNING: CFG invalid in XYZ @ .LBB0

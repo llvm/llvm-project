@@ -5,10 +5,11 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: link_fdata %s %t.o %t.fdata2 "FDATA2"
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -data %t.fdata -reorder-blocks=none -print-finalized \
-# RUN:    -tail-duplication=cache -o %t.out | FileCheck %s
-# RUN: llvm-bolt %t.exe -data %t.fdata2 -reorder-blocks=none -print-finalized \
-# RUN:    -tail-duplication=cache -o %t.out2 | FileCheck --check-prefix="CHECK2" %s
+# RUN: llvm-bolt %t.exe --data %t.fdata --reorder-blocks=none \
+# RUN:    --print-finalized --tail-duplication=cache -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --data %t.fdata2 --reorder-blocks=none \
+# RUN:    --print-finalized --tail-duplication=cache -o %t.out2 \
+# RUN:    | FileCheck --check-prefix="CHECK2" %s
 
 # A test where the tail is duplicated to eliminate an uncoditional jump
 # FDATA: 1 main #.BB0_br# 1 main #.BB4# 0 100

@@ -8,7 +8,7 @@
 ; RUN: llvm-dwp -e main.exe -o main.exe.dwp
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-types main.exe.dwp | FileCheck -check-prefix=PRE-BOLT %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-tu-index main.exe.dwp | FileCheck -check-prefix=PRE-BOLT-DWP-TU-INDEX %s
-; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections -write-dwp
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --write-dwp
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-types main.exe.bolt.dwp | FileCheck -check-prefix=BOLT %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-tu-index main.exe.bolt.dwp | FileCheck -check-prefix=BOLT-DWP-TU-INDEX %s
 

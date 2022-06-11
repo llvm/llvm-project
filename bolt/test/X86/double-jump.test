@@ -1,8 +1,8 @@
 # Test the double jump removqal peephole.
 
 RUN: %clang %cflags %p/Inputs/double_jump.cpp -o %t.exe
-RUN: (llvm-bolt %t.exe -peepholes=double-jumps \
-RUN:   -eliminate-unreachable -o %t 2>&1 \
+RUN: (llvm-bolt %t.exe --peepholes=double-jumps \
+RUN:   --eliminate-unreachable -o %t 2>&1 \
 RUN:   && llvm-objdump -d %t --print-imm-hex --no-show-raw-insn) | FileCheck %s
 
 CHECK: BOLT-INFO: Peephole: 1 double jumps patched.

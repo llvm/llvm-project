@@ -2,7 +2,7 @@
 // is properly emitted in the new section.
 
 // RUN: %clang %cflags %s -o %t.exe -Wl,-q
-// RUN: llvm-bolt %t.exe -o %t.bolt -lite=0 -use-old-text=0
+// RUN: llvm-bolt %t.exe -o %t.bolt --lite=0 --use-old-text=0
 // RUN: llvm-objdump -j .text -d --disassemble-symbols=arr %t.bolt | \
 // RUN:   FileCheck %s
 

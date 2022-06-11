@@ -43,7 +43,7 @@
 # CHECK-ADDR-SEC: 0x00000000: Addrs: [
 # CHECK-ADDR-SEC: 0x0000000000601000
 
-# RUN: llvm-bolt %t.exe --reorder-blocks=reverse -update-debug-sections -dwarf-output-path=%T -o %t.bolt.2.exe --write-dwp=true
+# RUN: llvm-bolt %t.exe --reorder-blocks=reverse --update-debug-sections --dwarf-output-path=%T -o %t.bolt.2.exe --write-dwp=true
 # RUN: not llvm-dwarfdump --show-form --verbose --debug-info %t.bolt.2.exe.dwp &> %tAddrIndexTestDwp
 # RUN: cat %tAddrIndexTestDwp | FileCheck %s --check-prefix=CHECK-DWP-DEBUG
 

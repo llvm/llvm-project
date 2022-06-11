@@ -4,7 +4,7 @@
 # REQUIRES: system-linux
 
 # RUN: %clang %cflags -no-pie %s -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt -use-old-text=0 -lite=0 -trap-old-code
+# RUN: llvm-bolt %t.exe -o %t.bolt --use-old-text=0 --lite=0 --trap-old-code
 # RUN: %t.bolt
 
 .text

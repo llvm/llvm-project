@@ -3,13 +3,14 @@
 REQUIRES: system-linux
 
 RUN: %clangxx %cxxflags -no-pie %p/Inputs/exceptions_split.cpp -Wl,-q -g -o %t_exc_split
-RUN: llvm-bolt %t_exc_split -o %t.exc -instrument -instrumentation-file=%t.fdata
+RUN: llvm-bolt %t_exc_split -o %t.exc --instrument --instrumentation-file=%t.fdata
 
 RUN: %t.exc arg1 arg2 arg3
 
-RUN: llvm-bolt %t_exc_split -o %t.exc.bolted -data %t.fdata \
-RUN:   -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions=3 \
-RUN:   -split-eh=1 | FileCheck --check-prefix=EXCEPTIONS %s
+RUN: llvm-bolt %t_exc_split -o %t.exc.bolted --data %t.fdata \
+RUN:   --reorder-blocks=ext-tsp --reorder-functions=hfsort+ \
+RUN:   --split-functions=3 --split-eh=1 \
+RUN:   | FileCheck --check-prefix=EXCEPTIONS %s
 EXCEPTIONS-NOT: invalid (possibly stale) profile
 
 # Check that cold symbols are emitted with local binding.

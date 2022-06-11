@@ -5,7 +5,7 @@ RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %S/Inputs/entry.s -o %
 RUN: link_fdata %S/Inputs/entry.s %t.o %t.fdata --nmtool llvm-nm
 RUN: llvm-strip --strip-unneeded %t.o
 RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
-RUN: llvm-bolt %t.exe -data %t.fdata -o /dev/null -reorder-blocks=normal \
-RUN:   -funcs=_start -print-reordered -sequential-disassembly | FileCheck %s
+RUN: llvm-bolt %t.exe --data %t.fdata -o /dev/null --reorder-blocks=normal \
+RUN:   --funcs=_start --print-reordered --sequential-disassembly | FileCheck %s
 
 CHECK:  BB Layout : .LBB00, {{.*}}

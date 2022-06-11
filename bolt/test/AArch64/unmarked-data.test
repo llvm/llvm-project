@@ -1,7 +1,7 @@
 // This test checks that multiple data objects in text of which only first is marked get disassembled properly
 
 // RUN: yaml2obj %S/Inputs/unmarked-data.yaml -o %t.exe
-// RUN: llvm-bolt %t.exe -o %t.bolt -lite=0 -use-old-text=0 2>&1 | FileCheck %s
+// RUN: llvm-bolt %t.exe -o %t.bolt --lite=0 --use-old-text=0 2>&1 | FileCheck %s
 // CHECK-NOT: BOLT-WARNING
 // RUN: llvm-objdump -j .text -d --disassemble-symbols=first,second %t.bolt | FileCheck %s -check-prefix=CHECK-SYMBOL
 // CHECK-SYMBOL: <first>:

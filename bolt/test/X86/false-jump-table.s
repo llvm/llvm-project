@@ -7,8 +7,8 @@
 # RUN:   %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 
-# RUN: llvm-bolt %t.exe -print-cfg \
-# RUN:    -print-only=inc_dup -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --print-cfg \
+# RUN:    --print-only=inc_dup -o %t.out | FileCheck %s
 
 	.file	"jump_table.c"
 	.section	.rodata

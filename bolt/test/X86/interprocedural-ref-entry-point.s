@@ -19,7 +19,8 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clangxx %cxxflags -no-pie %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.out -dump-dot-all -funcs=main.* 2>&1 | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.out --dump-dot-all --funcs=main.* \
+# RUN:   2>&1 | FileCheck %s
 #
 # CHECK-NOT: Assertion `isValid()' failed.
 

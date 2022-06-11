@@ -4,8 +4,8 @@
 REQUIRES: x86_64-linux
 
 RUN: %clangxx -g %S/Inputs/exception3.cpp -o %t.exe
-RUN: llvm-bolt -align-blocks=0 %t.exe -o %t && %t 2>&1 | FileCheck %s
-RUN: llvm-bolt -reorder-blocks=reverse -align-blocks=0 %t.exe -o %t && %t 2>&1 \
+RUN: llvm-bolt --align-blocks=0 %t.exe -o %t && %t 2>&1 | FileCheck %s
+RUN: llvm-bolt --reorder-blocks=reverse --align-blocks=0 %t.exe -o %t && %t 2>&1 \
 RUN:   | FileCheck %s
 
 CHECK: catch 2

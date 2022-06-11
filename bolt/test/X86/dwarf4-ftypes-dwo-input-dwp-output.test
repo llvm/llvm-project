@@ -6,7 +6,7 @@
 ; RUN: --filetype=obj %p/Inputs/dwarf4-ftypes-split-dwarf.s -o=main.o
 ; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o -o main.exe
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-types main.dwo | FileCheck -check-prefix=PRE-BOLT %s
-; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections -write-dwp
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --write-dwp
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-types main.exe.bolt.dwp | FileCheck -check-prefix=BOLT %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-tu-index main.exe.bolt.dwp | FileCheck -check-prefix=BOLT-DWP-TU-INDEX %s
 

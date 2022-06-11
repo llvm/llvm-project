@@ -2,8 +2,8 @@
 
 RUN: yaml2obj %p/Inputs/rels-so.yaml &> %t.so
 RUN: yaml2obj %p/Inputs/rels-exe.yaml &> %t.exe
-RUN: llvm-bolt %t.so -o %t.bolt.so -use-old-text=0 -lite=0
-RUN: llvm-bolt %t.exe -o %t.bolt.exe -use-old-text=0 -lite=0
+RUN: llvm-bolt %t.so -o %t.bolt.so --use-old-text=0 --lite=0
+RUN: llvm-bolt %t.exe -o %t.bolt.exe --use-old-text=0 --lite=0
 
 // Check relocations in library:
 
@@ -27,7 +27,7 @@ CHECKEXE: {{.*}} R_AARCH64_JUMP_SLOT    {{.*}} inc + 0
 // the initial binary was built with gcc and ld with -mtls-dialect=trad flag.
 
 RUN: yaml2obj %p/Inputs/tls-trad.yaml &> %t.trad.so
-RUN: llvm-bolt %t.trad.so -o %t.trad.bolt.so -use-old-text=0 -lite=0
+RUN: llvm-bolt %t.trad.so -o %t.trad.bolt.so --use-old-text=0 --lite=0
 RUN: llvm-readelf -rW %t.trad.so | FileCheck %s -check-prefix=CHECKTRAD
 
 CHECKTRAD: {{.*}} R_AARCH64_TLS_DTPMOD64 {{.*}} t1 + 0
@@ -37,7 +37,7 @@ CHECKTRAD: {{.*}} R_AARCH64_TLS_DTPREL64 {{.*}} t1 + 0
 // it is emitted correctly.
 
 RUN: yaml2obj %p/Inputs/tls-ld.yaml &> %t.ld.so
-RUN: llvm-bolt %t.ld.so -o %t.ld.bolt.so -use-old-text=0 -lite=0
+RUN: llvm-bolt %t.ld.so -o %t.ld.bolt.so --use-old-text=0 --lite=0
 RUN: llvm-readelf -rW %t.ld.bolt.so | FileCheck %s -check-prefix=CHECKLD
 
 CHECKLD: {{.*}} R_AARCH64_TLSDESC        {{.*}} t1 + 0

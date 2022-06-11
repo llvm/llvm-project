@@ -5,7 +5,7 @@ RUN: %clangxx %cxxflags %S/Inputs/inlined.cpp -c -o %T/inlined.o
 RUN: %clangxx %cxxflags %S/Inputs/inlinee.cpp -c -o %T/inlinee.o -g
 RUN: %clangxx %cxxflags %T/inlined.o %T/inlinee.o -o %t
 
-RUN: llvm-bolt %t -o %t.bolt -update-debug-sections -reorder-blocks=reverse \
-RUN:   -inline-small-functions -force-inline=main | FileCheck %s
+RUN: llvm-bolt %t -o %t.bolt --update-debug-sections --reorder-blocks=reverse \
+RUN:   --inline-small-functions --force-inline=main | FileCheck %s
 
 CHECK-NOT: BOLT: 0 out of {{.*}} functions were overwritten

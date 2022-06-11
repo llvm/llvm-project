@@ -4,8 +4,8 @@
 // to the symbol name e.g. memcpy@@GLIBC_2.17
 
 // RUN: yaml2obj %p/Inputs/plt-gnu-ld.yaml &> %t.exe
-// RUN: llvm-bolt %t.exe -o %t.bolt.exe -use-old-text=0 -lite=0 \
-// RUN:   -print-cfg -print-only=main | FileCheck %s
+// RUN: llvm-bolt %t.exe -o %t.bolt.exe --use-old-text=0 --lite=0 \
+// RUN:   --print-cfg --print-only=main | FileCheck %s
 
 // CHECK: memcpy@PLT
 // CHECK: memset@PLT

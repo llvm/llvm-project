@@ -5,8 +5,9 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 
-# RUN: llvm-bolt %t.exe -data %t.fdata -print-finalized \
-# RUN:    -tail-duplication=moderate -tail-duplication-minimum-offset 1 -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --data %t.fdata --print-finalized \
+# RUN:    --tail-duplication=moderate --tail-duplication-minimum-offset=1 \
+# RUN:    -o %t.out | FileCheck %s
 
 # FDATA: 1 main f 1 main 19 0 10
 # FDATA: 1 main f 1 main 11 0 13

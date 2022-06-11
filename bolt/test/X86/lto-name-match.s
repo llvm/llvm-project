@@ -4,7 +4,7 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe
-# RUN: llvm-bolt %t.exe -data %t.fdata -o /dev/null | FileCheck %s
+# RUN: llvm-bolt %t.exe --data %t.fdata -o /dev/null | FileCheck %s
 
 ## Check that profile is correctly matched by functions with variable suffixes.
 ## E.g., LTO-generated name foo.llvm.123 should match foo.llvm.*.

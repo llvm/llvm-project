@@ -1,8 +1,8 @@
 # Check that we don't accidentally optimize out a tail call.
 
 RUN: %clang %cflags %S/Inputs/sctc_bug3.s -o %t
-RUN: llvm-bolt %t -o /dev/null -funcs=main -print-after-lowering \
-RUN:   -sequential-disassembly 2>&1 | FileCheck %s
+RUN: llvm-bolt %t -o /dev/null --funcs=main --print-after-lowering \
+RUN:   --sequential-disassembly 2>&1 | FileCheck %s
 
 CHECK: .LBB00 (1 instructions, align : 1)
 CHECK:  cmpq   %rdi, 0x0
