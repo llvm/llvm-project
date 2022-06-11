@@ -48,16 +48,16 @@
 # RUN:   %s -o %t.o
 # RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
-# RUN: llvm-bolt %t.exe -instrument -instrumentation-file=%t.fdata \
+# RUN: llvm-bolt %t.exe --instrument --instrumentation-file=%t.fdata \
 # RUN:   -o %t.instrumented
 
 # Instrumented program needs to finish returning zero
 # RUN: %t.instrumented 120
 
 # Test that the instrumented data makes sense
-# RUN:  llvm-bolt %t.exe -o %t.bolted -data %t.fdata \
-# RUN:    -reorder-blocks=ext-tsp -reorder-functions=hfsort+ \
-# RUN:    -print-only=interp -print-finalized | FileCheck %s
+# RUN:  llvm-bolt %t.exe -o %t.bolted --data %t.fdata \
+# RUN:    --reorder-blocks=ext-tsp --reorder-functions=hfsort+ \
+# RUN:    --print-only=interp --print-finalized | FileCheck %s
 
 # RUN: %t.bolted 120
 
