@@ -39885,7 +39885,9 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         if ((InsertPSMask & (1u << i)) || (i == (int)DstIdx)) {
           // No change if element is already zero or the inserted element.
           continue;
-        } else if (KnownUndef0[i] || KnownZero0[i]) {
+        }
+
+        if (KnownUndef0[i] || KnownZero0[i]) {
           // If the target mask is undef/zero then we must zero the element.
           InsertPSMask |= (1u << i);
           Updated = true;
@@ -51338,7 +51340,7 @@ static bool isOrXorXorTree(SDValue X, bool Root = true) {
 
 /// Recursive helper for combineVectorSizedSetCCEquality() to emit the memcmp
 /// expansion.
-template<typename F>
+template <typename F>
 static SDValue emitOrXorXorTree(SDValue X, SDLoc &DL, SelectionDAG &DAG,
                                 EVT VecVT, EVT CmpVT, bool HasPT, F SToV) {
   SDValue Op0 = X.getOperand(0);
@@ -51351,7 +51353,8 @@ static SDValue emitOrXorXorTree(SDValue X, SDLoc &DL, SelectionDAG &DAG,
     if (HasPT)
       return DAG.getNode(ISD::OR, DL, VecVT, A, B);
     return DAG.getNode(ISD::AND, DL, CmpVT, A, B);
-  } else if (X.getOpcode() == ISD::XOR) {
+  }
+  if (X.getOpcode() == ISD::XOR) {
     SDValue A = SToV(Op0);
     SDValue B = SToV(Op1);
     if (VecVT != CmpVT)
