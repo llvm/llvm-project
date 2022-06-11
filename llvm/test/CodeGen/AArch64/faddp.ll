@@ -175,6 +175,92 @@ entry:
   ret double %1
 }
 
+
+define <2 x double> @addp_v2f64(<2 x double> %a) {
+; CHECK-LABEL: addp_v2f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    fadd v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    ret
+entry:
+  %s = shufflevector <2 x double> %a, <2 x double> poison, <2 x i32> <i32 1, i32 0>
+  %b = fadd reassoc <2 x double> %s, %a
+  ret <2 x double> %b
+}
+
+define <4 x double> @addp_v4f64(<4 x double> %a) {
+; CHECK-LABEL: addp_v4f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    fadd v0.2d, v2.2d, v0.2d
+; CHECK-NEXT:    fadd v1.2d, v3.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %s = shufflevector <4 x double> %a, <4 x double> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %b = fadd reassoc <4 x double> %s, %a
+  ret <4 x double> %b
+}
+
+define <4 x float> @addp_v4f32(<4 x float> %a) {
+; CHECK-LABEL: addp_v4f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev64 v1.4s, v0.4s
+; CHECK-NEXT:    fadd v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ret
+entry:
+  %s = shufflevector <4 x float> %a, <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %b = fadd reassoc <4 x float> %s, %a
+  ret <4 x float> %b
+}
+
+define <8 x float> @addp_v8f32(<8 x float> %a) {
+; CHECK-LABEL: addp_v8f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev64 v2.4s, v0.4s
+; CHECK-NEXT:    rev64 v3.4s, v1.4s
+; CHECK-NEXT:    fadd v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    fadd v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    ret
+entry:
+  %s = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %b = fadd <8 x float> %s, %a
+  ret <8 x float> %b
+}
+
+define <8 x float> @addp_v8f32_slow(<8 x float> %a) {
+; CHECK-LABEL: addp_v8f32_slow:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev64 v2.4s, v0.4s
+; CHECK-NEXT:    rev64 v3.4s, v1.4s
+; CHECK-NEXT:    fadd v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    fadd v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    ret
+entry:
+  %s = shufflevector <8 x float> %a, <8 x float> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  %b = fadd reassoc <8 x float> %s, %a
+  ret <8 x float> %b
+}
+
+define <16 x float> @addp_v16f32(<16 x float> %a) {
+; CHECK-LABEL: addp_v16f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev64 v4.4s, v0.4s
+; CHECK-NEXT:    rev64 v5.4s, v1.4s
+; CHECK-NEXT:    rev64 v6.4s, v2.4s
+; CHECK-NEXT:    rev64 v7.4s, v3.4s
+; CHECK-NEXT:    fadd v0.4s, v4.4s, v0.4s
+; CHECK-NEXT:    fadd v1.4s, v5.4s, v1.4s
+; CHECK-NEXT:    fadd v2.4s, v6.4s, v2.4s
+; CHECK-NEXT:    fadd v3.4s, v7.4s, v3.4s
+; CHECK-NEXT:    ret
+entry:
+  %s = shufflevector <16 x float> %a, <16 x float> poison, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+  %b = fadd reassoc <16 x float> %s, %a
+  ret <16 x float> %b
+}
+
+
 attributes #0 = { strictfp }
 
 declare <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float>, <2 x float>, metadata, metadata)
