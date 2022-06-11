@@ -61,6 +61,9 @@ public:
     // Test overflow.
     T z = T(FPBits(FPBits::MAX_NORMAL));
     EXPECT_FP_EQ(func(T(1.75), z, -z), T(0.75) * z);
+    // Exact cancellation.
+    EXPECT_FP_EQ(func(T(3.0), T(5.0), -T(15.0)), T(0.0));
+    EXPECT_FP_EQ(func(T(-3.0), T(5.0), T(15.0)), T(0.0));
   }
 
   void test_subnormal_range(Func func) {
@@ -72,9 +75,9 @@ public:
          v += STEP, w -= STEP) {
       T x = T(FPBits(get_random_bit_pattern())), y = T(FPBits(v)),
         z = T(FPBits(w));
-      T result = func(x, y, z);
       mpfr::TernaryInput<T> input{x, y, z};
-      ASSERT_MPFR_MATCH(mpfr::Operation::Fma, input, result, 0.5);
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input, func(x, y, z),
+                                     0.5);
     }
   }
 
@@ -86,9 +89,9 @@ public:
          v += STEP, w -= STEP) {
       T x = T(FPBits(v)), y = T(FPBits(w)),
         z = T(FPBits(get_random_bit_pattern()));
-      T result = func(x, y, z);
       mpfr::TernaryInput<T> input{x, y, z};
-      ASSERT_MPFR_MATCH(mpfr::Operation::Fma, input, result, 0.5);
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input, func(x, y, z),
+                                     0.5);
     }
   }
 };
