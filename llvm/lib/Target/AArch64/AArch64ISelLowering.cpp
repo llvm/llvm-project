@@ -1071,6 +1071,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // ADDP custom lowering
     for (MVT VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 })
       setOperationAction(ISD::ADD, VT, Custom);
+    // FADDP custom lowering
+    for (MVT VT : { MVT::v16f16, MVT::v8f32, MVT::v4f64 })
+      setOperationAction(ISD::FADD, VT, Custom);
   }
 
   if (Subtarget->hasSVE()) {
@@ -19317,9 +19320,13 @@ void AArch64TargetLowering::ReplaceBITCASTResults(
 }
 
 static void ReplaceAddWithADDP(SDNode *N, SmallVectorImpl<SDValue> &Results,
-                               SelectionDAG &DAG) {
+                               SelectionDAG &DAG,
+                               const AArch64Subtarget *Subtarget) {
   EVT VT = N->getValueType(0);
-  if (!VT.is256BitVector())
+  if (!VT.is256BitVector() ||
+      (VT.getScalarType().isFloatingPoint() &&
+       !N->getFlags().hasAllowReassociation()) ||
+      (VT.getScalarType() == MVT::f16 && !Subtarget->hasFullFP16()))
     return;
 
   SDValue X = N->getOperand(0);
@@ -19537,7 +19544,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
     Results.push_back(LowerVECREDUCE(SDValue(N, 0), DAG));
     return;
   case ISD::ADD:
-    ReplaceAddWithADDP(N, Results, DAG);
+  case ISD::FADD:
+    ReplaceAddWithADDP(N, Results, DAG, Subtarget);
     return;
 
   case ISD::CTPOP:
