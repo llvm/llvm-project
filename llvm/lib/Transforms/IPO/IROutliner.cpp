@@ -1183,14 +1183,14 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
     // adding an extra input.  We ignore this case for now, and so ignore the
     // region.
     Optional<unsigned> OGVN = Cand.getGVN(Incoming);
-    if (!OGVN.hasValue() && (Blocks.find(IncomingBlock) != Blocks.end())) {
+    if (!OGVN.hasValue() && Blocks.contains(IncomingBlock)) {
       Region.IgnoreRegion = true;
       return None;
     }
 
     // If the incoming block isn't in the region, we don't have to worry about
     // this incoming value.
-    if (Blocks.find(IncomingBlock) == Blocks.end())
+    if (!Blocks.contains(IncomingBlock))
       continue;
 
     // Collect the canonical numbers of the values in the PHINode.
@@ -1701,7 +1701,7 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
   for (PHINode &CurrPN : OverallPhiBlock->phis()) {
     // If this PHINode has already been matched to another PHINode to be merged,
     // we skip it.
-    if (UsedPHIs.find(&CurrPN) != UsedPHIs.end())
+    if (UsedPHIs.contains(&CurrPN))
       continue;
 
     CurrentCanonNums.clear();
