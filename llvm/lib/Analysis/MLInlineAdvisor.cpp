@@ -51,6 +51,12 @@ static cl::opt<float> SizeIncreaseThreshold(
              "blocking any further inlining."),
     cl::init(2.0));
 
+static cl::opt<bool> KeepFPICache(
+    "ml-advisor-keep-fpi-cache", cl::Hidden,
+    cl::desc(
+        "For test - keep the ML Inline advisor's FunctionPropertiesInfo cache"),
+    cl::init(false));
+
 // clang-format off
 const std::array<TensorSpec, NumberOfFeatures> llvm::FeatureMap{
 #define POPULATE_NAMES(_, NAME) TensorSpec::createSpec<int64_t>(NAME, {1} ),
@@ -175,7 +181,8 @@ void MLInlineAdvisor::onPassEntry() {
 
 void MLInlineAdvisor::onPassExit(LazyCallGraph::SCC *LastSCC) {
   // No need to keep this around - function passes will invalidate it.
-  FPICache.clear();
+  if (!KeepFPICache)
+    FPICache.clear();
   if (!LastSCC || ForceStop)
     return;
   // Keep track of the nodes and edges we last saw. Then, in onPassEntry,
@@ -206,13 +213,12 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   assert(!ForceStop);
   Function *Caller = Advice.getCaller();
   Function *Callee = Advice.getCallee();
-
   // The caller features aren't valid anymore.
   {
-    PreservedAnalyses PA = PreservedAnalyses::all();
-    PA.abandon<FunctionPropertiesAnalysis>();
+    PreservedAnalyses PA = PreservedAnalyses::none();
     FAM.invalidate(*Caller, PA);
   }
+  Advice.updateCachedCallerFPI(FAM.getResult<LoopAnalysis>(*Caller));
   int64_t IRSizeAfter =
       getIRSize(*Caller) + (CalleeWasDeleted ? 0 : Advice.CalleeIRSize);
   CurrentIRSize += IRSizeAfter - (Advice.CallerIRSize + Advice.CalleeIRSize);
@@ -366,13 +372,21 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getMandatoryAdvice(CallBase &CB,
   return std::make_unique<InlineAdvice>(this, CB, getCallerORE(CB), Advice);
 }
 
-const LoopInfo &MLInlineAdvisor::getLoopInfo(Function &F) const {
-  return FAM.getResult<LoopAnalysis>(F);
-}
-
 std::unique_ptr<MLInlineAdvice>
 MLInlineAdvisor::getMandatoryAdviceImpl(CallBase &CB) {
   return std::make_unique<MLInlineAdvice>(this, CB, getCallerORE(CB), true);
+}
+
+void MLInlineAdvisor::print(raw_ostream &OS) const {
+  OS << "[MLInlineAdvisor] Nodes: " << NodeCount << " Edges: " << EdgeCount
+     << "\n";
+  OS << "[MLInlineAdvisor] FPI:\n";
+  for (auto I : FPICache) {
+    OS << I.getFirst()->getName() << ":\n";
+    I.getSecond().print(OS);
+    OS << "\n";
+  }
+  OS << "\n";
 }
 
 MLInlineAdvice::MLInlineAdvice(MLInlineAdvisor *Advisor, CallBase &CB,
@@ -400,12 +414,11 @@ void MLInlineAdvice::reportContextForRemark(
   OR << NV("ShouldInline", isInliningRecommended());
 }
 
-void MLInlineAdvice::updateCachedCallerFPI() {
-  FPU->finish(getAdvisor()->getLoopInfo(*Caller));
+void MLInlineAdvice::updateCachedCallerFPI(const LoopInfo &LI) const {
+  FPU->finish(LI);
 }
 
 void MLInlineAdvice::recordInliningImpl() {
-  updateCachedCallerFPI();
   ORE.emit([&]() {
     OptimizationRemark R(DEBUG_TYPE, "InliningSuccess", DLoc, Block);
     reportContextForRemark(R);
@@ -415,7 +428,6 @@ void MLInlineAdvice::recordInliningImpl() {
 }
 
 void MLInlineAdvice::recordInliningWithCalleeDeletedImpl() {
-  updateCachedCallerFPI();
   ORE.emit([&]() {
     OptimizationRemark R(DEBUG_TYPE, "InliningSuccessWithCalleeDeleted", DLoc,
                          Block);
