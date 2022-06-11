@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
 # RUN: %clang %cflags -dwarf-5 %t1.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt -update-debug-sections
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 

@@ -2067,7 +2067,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   MCSymbol *ColdStartLabel = LocalCtx->createTempSymbol();
   MCSymbol *ColdEndLabel = LocalCtx->createTempSymbol();
 
-  Streamer->SwitchSection(Section);
+  Streamer->switchSection(Section);
   Streamer->emitLabel(StartLabel);
   emitFunctionBody(*Streamer, BF, /*EmitColdPart=*/false,
                    /*EmitCodeOnly=*/true);
@@ -2079,14 +2079,14 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
                                 ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
     ColdSection->setHasInstructions(true);
 
-    Streamer->SwitchSection(ColdSection);
+    Streamer->switchSection(ColdSection);
     Streamer->emitLabel(ColdStartLabel);
     emitFunctionBody(*Streamer, BF, /*EmitColdPart=*/true,
                      /*EmitCodeOnly=*/true);
     Streamer->emitLabel(ColdEndLabel);
     // To avoid calling MCObjectStreamer::flushPendingLabels() which is private
     Streamer->emitBytes(StringRef(""));
-    Streamer->SwitchSection(Section);
+    Streamer->switchSection(Section);
   }
 
   // To avoid calling MCObjectStreamer::flushPendingLabels() which is private or

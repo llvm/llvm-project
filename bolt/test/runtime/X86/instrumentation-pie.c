@@ -23,15 +23,15 @@ REQUIRES: system-linux,bolt-runtime
 
 RUN: %clang %cflags %s -o %t.exe -Wl,-q -pie -fpie
 
-RUN: llvm-bolt %t.exe -instrument -instrumentation-file=%t.fdata \
+RUN: llvm-bolt %t.exe --instrument --instrumentation-file=%t.fdata \
 RUN:   -o %t.instrumented
 
 # Instrumented program needs to finish returning zero
 RUN: %t.instrumented 1 2 3 | FileCheck %s -check-prefix=CHECK-OUTPUT
 
 # Test that the instrumented data makes sense
-RUN:  llvm-bolt %t.exe -o %t.bolted -data %t.fdata \
-RUN:    -reorder-blocks=ext-tsp -reorder-functions=hfsort+
+RUN:  llvm-bolt %t.exe -o %t.bolted --data %t.fdata \
+RUN:    --reorder-blocks=ext-tsp --reorder-functions=hfsort+
 
 RUN: %t.bolted 1 2 3  | FileCheck %s -check-prefix=CHECK-OUTPUT
 

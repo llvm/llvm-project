@@ -319,7 +319,7 @@ bool COFFAsmParser::ParseSectionSwitch(StringRef Section,
     return TokError("unexpected token in section switching directive");
   Lex();
 
-  getStreamer().SwitchSection(getContext().getCOFFSection(
+  getStreamer().switchSection(getContext().getCOFFSection(
       Section, Characteristics, Kind, COMDATSymName, Type));
 
   return false;
