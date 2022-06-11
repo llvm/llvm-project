@@ -1151,6 +1151,8 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fputil
 )
 
+# TODO(lntue): The current implementation of fputil::general::fma<float> is only
+# correctly rounded for the default rounding mode round-to-nearest tie-to-even.
 add_fp_unittest(
   fmaf_test
   NEED_MPFR
@@ -1162,6 +1164,8 @@ add_fp_unittest(
     libc.include.math
     libc.src.math.fmaf
     libc.src.__support.FPUtil.fputil
+  FLAGS
+    FMA_OPT__ONLY
 )
 
 add_fp_unittest(
