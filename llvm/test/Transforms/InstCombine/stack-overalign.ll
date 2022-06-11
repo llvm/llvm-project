@@ -19,7 +19,7 @@
 
 define void @foo() nounwind {
 entry:
-  %src = alloca [1024 x i8], align 1
+  %src = alloca [1024 x i8], align 64
   %src1 = getelementptr [1024 x i8], [1024 x i8]* %src, i32 0, i32 0
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 32 getelementptr inbounds ([1024 x i8], [1024 x i8]* @dst, i32 0, i32 0), i8* align 32 %src1, i32 1024, i1 false)
   call void @frob(i8* %src1) nounwind
