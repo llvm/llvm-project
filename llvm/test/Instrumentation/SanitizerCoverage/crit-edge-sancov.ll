@@ -13,7 +13,7 @@
 ; Of the below checks, we really only care that the calls to
 ; @__sanitizer_cov_trace_pc retain !dbg metadata.
 
-define void @update_shadow() !dbg !3 {
+define void @update_shadow(i1 %c) !dbg !3 {
 ; CHECK-LABEL: @update_shadow(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @__sanitizer_cov_trace_pc() #[[ATTR0:[0-9]+]], !dbg [[DBG6:![0-9]+]]
@@ -25,7 +25,7 @@ define void @update_shadow() !dbg !3 {
 ; CHECK:       [[DBG7]] = !DILocation(line: 0, scope: !3)
 ; CHECK:       [[DBG8]] = !DILocation(line: 129, column: 2, scope: !3)
 entry:
-  br i1 undef, label %for.inc.i, label %if.end22.i
+  br i1 %c, label %for.inc.i, label %if.end22.i
 
 if.end22.i:                                       ; preds = %entry
   br label %for.inc.i, !dbg !8
