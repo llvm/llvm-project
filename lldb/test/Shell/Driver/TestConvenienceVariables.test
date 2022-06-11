@@ -6,9 +6,15 @@ RUN: %lldb %t/target.out -s %p/Inputs/convenience.in -o quit | FileCheck %s
 CHECK: stop reason = breakpoint 1.1
 CHECK: script print(lldb.debugger)
 CHECK-NEXT: Debugger (instance: {{.*}}, id: {{[0-9]+}})
+CHECK: script lldb.debugger
+CHECK-NEXT: Debugger (instance: {{.*}}, id: {{[0-9]+}})
 CHECK: script print(lldb.target)
 CHECK-NEXT: target.out
+CHECK: script lldb.target
+CHECK-NEXT: target.out
 CHECK: script print(lldb.process)
+CHECK-NEXT: SBProcess: pid = {{[0-9]+}}, state = stopped, threads = {{[0-9]+}}, executable = target.out
+CHECK: script lldb.process
 CHECK-NEXT: SBProcess: pid = {{[0-9]+}}, state = stopped, threads = {{[0-9]+}}, executable = target.out
 CHECK: script print(lldb.thread.GetStopDescription(100))
 CHECK-NEXT: breakpoint 1.1

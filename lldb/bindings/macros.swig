@@ -1,6 +1,6 @@
 %define STRING_EXTENSION_LEVEL(Class, Level)
 %extend {
-  std::string lldb:: ## Class ## ::__str__(){
+  std::string lldb:: ## Class ## ::__repr__(){
     lldb::SBStream stream;
     $self->GetDescription (stream, Level);
     const char *desc = stream.GetData();
@@ -15,7 +15,7 @@
 
 %define STRING_EXTENSION(Class)
 %extend {
-  std::string lldb:: ## Class ## ::__str__(){
+  std::string lldb:: ## Class ## ::__repr__(){
     lldb::SBStream stream;
     $self->GetDescription (stream);
     const char *desc = stream.GetData();
