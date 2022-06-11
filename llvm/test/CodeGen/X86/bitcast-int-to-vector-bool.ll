@@ -31,7 +31,7 @@ define <2 x i1> @bitcast_i2_2i1(i2 zeroext %a0) {
 ; AVX2-LABEL: bitcast_i2_2i1:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0

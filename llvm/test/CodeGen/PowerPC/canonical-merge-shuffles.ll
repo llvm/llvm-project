@@ -1002,13 +1002,10 @@ define dso_local <2 x i64> @testSplat8(<8 x i8>* nocapture readonly %ptr) local_
 ; CHECK-NOVSX-LABEL: testSplat8:
 ; CHECK-NOVSX:       # %bb.0: # %entry
 ; CHECK-NOVSX-NEXT:    ld r3, 0(r3)
-; CHECK-NOVSX-NEXT:    addis r4, r2, .LCPI19_0@toc@ha
-; CHECK-NOVSX-NEXT:    addi r4, r4, .LCPI19_0@toc@l
-; CHECK-NOVSX-NEXT:    lvx v2, 0, r4
+; CHECK-NOVSX-NEXT:    addi r4, r1, -16
+; CHECK-NOVSX-NEXT:    std r3, -8(r1)
 ; CHECK-NOVSX-NEXT:    std r3, -16(r1)
-; CHECK-NOVSX-NEXT:    addi r3, r1, -16
-; CHECK-NOVSX-NEXT:    lvx v3, 0, r3
-; CHECK-NOVSX-NEXT:    vperm v2, v3, v3, v2
+; CHECK-NOVSX-NEXT:    lvx v2, 0, r4
 ; CHECK-NOVSX-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: testSplat8:
