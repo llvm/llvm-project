@@ -80,7 +80,7 @@ void HugifyRuntimeLibrary::emitBinary(BinaryContext &BC, MCStreamer &Streamer) {
   MCSymbol *InitPtr = BC.Ctx->getOrCreateSymbol("__bolt_hugify_init_ptr");
 
   Section->setAlignment(llvm::Align(BC.RegularPageSize));
-  Streamer.SwitchSection(Section);
+  Streamer.switchSection(Section);
 
   Streamer.emitLabel(InitPtr);
   Streamer.emitSymbolAttribute(InitPtr, MCSymbolAttr::MCSA_Global);

@@ -1609,7 +1609,7 @@ void DwarfLineTable::emit(BinaryContext &BC, MCStreamer &Streamer) {
   }
 
   // Switch to the section where the table will be emitted into.
-  Streamer.SwitchSection(BC.MOFI->getDwarfLineSection());
+  Streamer.switchSection(BC.MOFI->getDwarfLineSection());
 
   const uint16_t DwarfVersion = BC.Ctx->getDwarfVersion();
   // Handle the rest of the Compile Units.

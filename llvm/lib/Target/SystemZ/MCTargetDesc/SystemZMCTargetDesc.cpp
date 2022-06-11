@@ -194,7 +194,7 @@ void SystemZTargetStreamer::emitConstantPools() {
     return;
   // Switch to the .text section.
   const MCObjectFileInfo &OFI = *Streamer.getContext().getObjectFileInfo();
-  Streamer.SwitchSection(OFI.getTextSection());
+  Streamer.switchSection(OFI.getTextSection());
   for (auto &I : EXRLTargets2Sym) {
     Streamer.emitLabel(I.second);
     const MCInstSTIPair &MCI_STI = I.first;

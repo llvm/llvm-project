@@ -1159,7 +1159,7 @@ updateDebugData(DWARFContext &DWCtx, std::string &Storage,
   if (SectionIter == KnownSections.end())
     return None;
 
-  Streamer.SwitchSection(SectionIter->second.first);
+  Streamer.switchSection(SectionIter->second.first);
   StringRef OutData = SectionContents;
   uint32_t DWPOffset = 0;
 
@@ -1294,7 +1294,7 @@ static void extractTypesFromDWPDWARF5(
                const DWARFUnitIndex::Entry::SectionContribution *V2) -> bool {
               return V1->Offset < V2->Offset;
             });
-  Streamer.SwitchSection(MCOFI.getDwarfInfoDWOSection());
+  Streamer.switchSection(MCOFI.getDwarfInfoDWOSection());
   for (const auto *C : TUContributions)
     Streamer.emitBytes(Contents.slice(C->Offset, C->Offset + C->Length));
 }

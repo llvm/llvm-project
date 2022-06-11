@@ -183,7 +183,7 @@ void MCPseudoProbeSection::emit(MCObjectStreamer *MCOS) {
     if (auto *S =
             Ctx.getObjectFileInfo()->getPseudoProbeSection(ProbeSec.first)) {
       // Switch to the .pseudoprobe section or a comdat group.
-      MCOS->SwitchSection(S);
+      MCOS->switchSection(S);
       // Emit probes grouped by GUID.
       ProbeSec.second.emit(MCOS, LastProbe);
     }

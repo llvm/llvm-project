@@ -430,7 +430,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
       std::string SectionName = (".custom_section." + Name->getString()).str();
       MCSectionWasm *MySection =
           OutContext.getWasmSection(SectionName, SectionKind::getMetadata());
-      OutStreamer->SwitchSection(MySection);
+      OutStreamer->switchSection(MySection);
       OutStreamer->emitBytes(Contents->getString());
       OutStreamer->popSection();
     }
@@ -471,7 +471,7 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
     MCSectionWasm *Producers = OutContext.getWasmSection(
         ".custom_section.producers", SectionKind::getMetadata());
     OutStreamer->pushSection();
-    OutStreamer->SwitchSection(Producers);
+    OutStreamer->switchSection(Producers);
     OutStreamer->emitULEB128IntValue(FieldCount);
     for (auto &Producers : {std::make_pair("language", &Languages),
             std::make_pair("processed-by", &Tools)}) {
@@ -544,7 +544,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   MCSectionWasm *FeaturesSection = OutContext.getWasmSection(
       ".custom_section.target_features", SectionKind::getMetadata());
   OutStreamer->pushSection();
-  OutStreamer->SwitchSection(FeaturesSection);
+  OutStreamer->switchSection(FeaturesSection);
 
   OutStreamer->emitULEB128IntValue(EmittedFeatures.size());
   for (auto &F : EmittedFeatures) {

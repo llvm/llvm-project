@@ -562,7 +562,7 @@ void llvm::emitDWARF5AccelTable(
   if (CompUnits.empty())
     return;
 
-  Asm->OutStreamer->SwitchSection(
+  Asm->OutStreamer->switchSection(
       Asm->getObjFileLowering().getDwarfDebugNamesSection());
 
   Contents.finalize(Asm, "names");

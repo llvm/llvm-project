@@ -72,10 +72,10 @@ static void EmitCamlGlobal(const Module &M, AsmPrinter &AP, const char *Id) {
 
 void OcamlGCMetadataPrinter::beginAssembly(Module &M, GCModuleInfo &Info,
                                            AsmPrinter &AP) {
-  AP.OutStreamer->SwitchSection(AP.getObjFileLowering().getTextSection());
+  AP.OutStreamer->switchSection(AP.getObjFileLowering().getTextSection());
   EmitCamlGlobal(M, AP, "code_begin");
 
-  AP.OutStreamer->SwitchSection(AP.getObjFileLowering().getDataSection());
+  AP.OutStreamer->switchSection(AP.getObjFileLowering().getDataSection());
   EmitCamlGlobal(M, AP, "data_begin");
 }
 
@@ -99,16 +99,16 @@ void OcamlGCMetadataPrinter::finishAssembly(Module &M, GCModuleInfo &Info,
                                             AsmPrinter &AP) {
   unsigned IntPtrSize = M.getDataLayout().getPointerSize();
 
-  AP.OutStreamer->SwitchSection(AP.getObjFileLowering().getTextSection());
+  AP.OutStreamer->switchSection(AP.getObjFileLowering().getTextSection());
   EmitCamlGlobal(M, AP, "code_end");
 
-  AP.OutStreamer->SwitchSection(AP.getObjFileLowering().getDataSection());
+  AP.OutStreamer->switchSection(AP.getObjFileLowering().getDataSection());
   EmitCamlGlobal(M, AP, "data_end");
 
   // FIXME: Why does ocaml emit this??
   AP.OutStreamer->emitIntValue(0, IntPtrSize);
 
-  AP.OutStreamer->SwitchSection(AP.getObjFileLowering().getDataSection());
+  AP.OutStreamer->switchSection(AP.getObjFileLowering().getDataSection());
   EmitCamlGlobal(M, AP, "frametable");
 
   int NumDescriptors = 0;

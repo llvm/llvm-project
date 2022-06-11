@@ -238,7 +238,7 @@ bool COFFMasmParser::ParseSectionSwitch(StringRef Section,
     return TokError("unexpected token in section switching directive");
   Lex();
 
-  getStreamer().SwitchSection(getContext().getCOFFSection(
+  getStreamer().switchSection(getContext().getCOFFSection(
       Section, Characteristics, Kind, COMDATSymName, Type));
 
   return false;
@@ -266,7 +266,7 @@ bool COFFMasmParser::ParseDirectiveSegment(StringRef Directive, SMLoc Loc) {
             COFF::IMAGE_SCN_MEM_READ;
   }
   SectionKind Kind = computeSectionKind(Flags);
-  getStreamer().SwitchSection(getContext().getCOFFSection(
+  getStreamer().switchSection(getContext().getCOFFSection(
       SectionName, Flags, Kind, "", (COFF::COMDATType)(0)));
   return false;
 }
@@ -294,7 +294,7 @@ bool COFFMasmParser::ParseDirectiveIncludelib(StringRef Directive, SMLoc Loc) {
   unsigned Flags = COFF::IMAGE_SCN_MEM_PRELOAD | COFF::IMAGE_SCN_MEM_16BIT;
   SectionKind Kind = computeSectionKind(Flags);
   getStreamer().pushSection();
-  getStreamer().SwitchSection(getContext().getCOFFSection(
+  getStreamer().switchSection(getContext().getCOFFSection(
       ".drectve", Flags, Kind, "", (COFF::COMDATType)(0)));
   getStreamer().emitBytes("/DEFAULTLIB:");
   getStreamer().emitBytes(Lib);

@@ -534,7 +534,7 @@ void AMDGPUTargetELFStreamer::EmitNote(
     NoteFlags = ELF::SHF_ALLOC;
 
   S.pushSection();
-  S.SwitchSection(
+  S.switchSection(
       Context.getELFSection(ElfNote::SectionName, ELF::SHT_NOTE, NoteFlags));
   S.emitInt32(NameSZ);                                        // namesz
   S.emitValue(DescSZ, 4);                                     // descz

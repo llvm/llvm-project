@@ -101,7 +101,7 @@ public:
     // Create a mock function
     MCSection *Section = C.MOFI->getTextSection();
     Section->setHasInstructions(true);
-    TheStreamer->SwitchSection(Section);
+    TheStreamer->switchSection(Section);
     TheStreamer->emitCFIStartProc(true);
 
     // Create a mock dwarfloc
@@ -115,7 +115,7 @@ public:
     TheStreamer->emitCFIEndProc();
 
     // Start emission of .debug_line
-    TheStreamer->SwitchSection(C.MOFI->getDwarfLineSection());
+    TheStreamer->switchSection(C.MOFI->getDwarfLineSection());
     MCDwarfLineTableHeader Header;
     MCDwarfLineTableParams Params = Assembler.getDWARFLinetableParams();
     Optional<MCDwarfLineStr> LineStr(None);
@@ -133,7 +133,7 @@ public:
     TheStreamer->emitLabel(LineEndSym);
     if (LineStr) {
       SmallString<0> Data = LineStr->getFinalizedData();
-      TheStreamer->SwitchSection(TheStreamer->getContext()
+      TheStreamer->switchSection(TheStreamer->getContext()
                                      .getObjectFileInfo()
                                      ->getDwarfLineStrSection());
       TheStreamer->emitBinaryData(Data.str());

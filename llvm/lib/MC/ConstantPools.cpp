@@ -92,7 +92,7 @@ AssemblerConstantPools::getOrCreateConstantPool(MCSection *Section) {
 static void emitConstantPool(MCStreamer &Streamer, MCSection *Section,
                              ConstantPool &CP) {
   if (!CP.empty()) {
-    Streamer.SwitchSection(Section);
+    Streamer.switchSection(Section);
     CP.emitEntries(Streamer);
   }
 }

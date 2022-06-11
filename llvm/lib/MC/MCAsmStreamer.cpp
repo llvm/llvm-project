@@ -2088,7 +2088,7 @@ void MCAsmStreamer::emitWinEHHandler(const MCSymbol *Sym, bool Unwind,
 void MCAsmStreamer::emitWinEHHandlerData(SMLoc Loc) {
   MCStreamer::emitWinEHHandlerData(Loc);
 
-  // Switch sections. Don't call SwitchSection directly, because that will
+  // Switch sections. Don't call switchSection directly, because that will
   // cause the section switch to be visible in the emitted assembly.
   // We only do this so the section switch that terminates the handler
   // data block is visible.
@@ -2387,7 +2387,7 @@ void MCAsmStreamer::finishImpl() {
   if (!Tables.empty()) {
     assert(Tables.size() == 1 && "asm output only supports one line table");
     if (auto *Label = Tables.begin()->second.getLabel()) {
-      SwitchSection(getContext().getObjectFileInfo()->getDwarfLineSection());
+      switchSection(getContext().getObjectFileInfo()->getDwarfLineSection());
       emitLabel(Label);
     }
   }

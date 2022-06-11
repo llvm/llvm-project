@@ -110,7 +110,7 @@ void XCoreAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     return;
 
   const DataLayout &DL = getDataLayout();
-  OutStreamer->SwitchSection(getObjFileLowering().SectionForGlobal(GV, TM));
+  OutStreamer->switchSection(getObjFileLowering().SectionForGlobal(GV, TM));
 
   MCSymbol *GVSym = getSymbol(GV);
   const Constant *C = GV->getInitializer();

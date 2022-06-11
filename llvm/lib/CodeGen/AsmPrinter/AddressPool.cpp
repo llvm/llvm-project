@@ -44,7 +44,7 @@ void AddressPool::emit(AsmPrinter &Asm, MCSection *AddrSection) {
     return;
 
   // Start the dwarf addr section.
-  Asm.OutStreamer->SwitchSection(AddrSection);
+  Asm.OutStreamer->switchSection(AddrSection);
 
   MCSymbol *EndLabel = nullptr;
 
