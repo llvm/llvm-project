@@ -39885,7 +39885,9 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
         if ((InsertPSMask & (1u << i)) || (i == (int)DstIdx)) {
           // No change if element is already zero or the inserted element.
           continue;
-        } else if (KnownUndef0[i] || KnownZero0[i]) {
+        }
+
+        if (KnownUndef0[i] || KnownZero0[i]) {
           // If the target mask is undef/zero then we must zero the element.
           InsertPSMask |= (1u << i);
           Updated = true;
