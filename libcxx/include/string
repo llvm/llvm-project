@@ -692,8 +692,8 @@ private:
     {
         value_type __data_[__min_cap];
         unsigned char __padding_[sizeof(value_type) - 1];
-        size_type __size_ : 7;
-        size_type __is_long_ : 1;
+        unsigned char __size_ : 7;
+        unsigned char __is_long_ : 1;
     };
 
 // The __endian_factor is required because the field we use to store the size
@@ -736,13 +736,15 @@ private:
 
     struct __short
     {
-        size_type __is_long_ : 1;
-        size_type __size_ : 7;
+        unsigned char __is_long_ : 1;
+        unsigned char __size_ : 7;
         char __padding_[sizeof(value_type) - 1];
         value_type __data_[__min_cap];
     };
 
 #endif // _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
+
+    static_assert(sizeof(__short) == (sizeof(value_type) * (__min_cap + 1)), "__short has an unexpected size.");
 
     union __ulx{__long __lx; __short __lxx;};
 
