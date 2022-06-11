@@ -58,7 +58,7 @@ define ptr @constexpr_zero_gep_scalar_base_scalar_index() {
 ; CHECK-LABEL: @constexpr_zero_gep_scalar_base_scalar_index(
 ; CHECK-NEXT:    ret ptr @g
 ;
-  ret ptr getelementptr ([2 x i32], ptr @g, i64 0, i64 0)
+  ret ptr @g
 }
 
 define <2 x ptr> @constexpr_zero_gep_vector_base_scalar_index() {

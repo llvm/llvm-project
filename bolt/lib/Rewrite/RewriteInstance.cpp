@@ -2925,7 +2925,8 @@ void RewriteInstance::disassembleFunctions() {
       continue;
 
     if (!Function.isSimple()) {
-      assert((!BC->HasRelocations || Function.getSize() == 0) &&
+      assert((!BC->HasRelocations || Function.getSize() == 0 ||
+              Function.hasSplitJumpTable()) &&
              "unexpected non-simple function in relocation mode");
       continue;
     }

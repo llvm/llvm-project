@@ -113,7 +113,7 @@ public:
 
   /// Update streamer for a new active section.
   ///
-  /// This is called by popSection and SwitchSection, if the current
+  /// This is called by popSection and switchSection, if the current
   /// section changes.
   virtual void changeSection(const MCSection *CurSection, MCSection *Section,
                              const MCExpr *SubSection, raw_ostream &OS);
@@ -403,7 +403,7 @@ public:
 
   /// Update streamer for a new active section.
   ///
-  /// This is called by popSection and SwitchSection, if the current
+  /// This is called by popSection and switchSection, if the current
   /// section changes.
   virtual void changeSection(MCSection *, const MCExpr *);
 
@@ -436,7 +436,7 @@ public:
     if (SectionStack.empty())
       return false;
 
-    SwitchSection(SectionStack.back().first.first, Subsection);
+    switchSection(SectionStack.back().first.first, Subsection);
     return true;
   }
 
@@ -444,8 +444,11 @@ public:
   /// is required to update CurSection.
   ///
   /// This corresponds to assembler directives like .section, .text, etc.
-  virtual void SwitchSection(MCSection *Section,
+  virtual void switchSection(MCSection *Section,
                              const MCExpr *Subsection = nullptr);
+  void SwitchSection(MCSection *Section, const MCExpr *Subsection = nullptr) {
+    switchSection(Section, Subsection);
+  }
 
   /// Set the current section where code is being emitted to \p Section.
   /// This is required to update CurSection. This version does not call

@@ -202,7 +202,7 @@ static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
 
     MCSectionELF *Section = OutStreamer.getContext().getELFSection(
         sectionName, ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
-    OutStreamer.SwitchSection(Section);
+    OutStreamer.switchSection(Section);
 
     Sym = AP.OutContext.getOrCreateSymbol(Twine(symbolName));
     if (Sym->isUndefined()) {
@@ -231,7 +231,7 @@ static MCSymbol *smallData(AsmPrinter &AP, const MachineInstr &MI,
     MCSectionELF *Section = OutStreamer.getContext().getELFSection(
         ".lita", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
 
-    OutStreamer.SwitchSection(Section);
+    OutStreamer.switchSection(Section);
     Sym = AP.OutContext.getOrCreateSymbol(Twine(LitaName));
     if (Sym->isUndefined()) {
       OutStreamer.emitLabel(Sym);
@@ -331,7 +331,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
       MCSymbol *Sym =
           smallData(*this, MI, *OutStreamer, Imm, 8, getSubtargetInfo());
 
-      OutStreamer->SwitchSection(Current.first, Current.second);
+      OutStreamer->switchSection(Current.first, Current.second);
       MCInst TmpInst;
       MCOperand &Reg = MappedInst.getOperand(0);
       TmpInst.setOpcode(Hexagon::L2_loadrdgp);
@@ -348,7 +348,7 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
       MCSectionSubPair Current = OutStreamer->getCurrentSection();
       MCSymbol *Sym =
           smallData(*this, MI, *OutStreamer, Imm, 4, getSubtargetInfo());
-      OutStreamer->SwitchSection(Current.first, Current.second);
+      OutStreamer->switchSection(Current.first, Current.second);
       MCInst TmpInst;
       MCOperand &Reg = MappedInst.getOperand(0);
       TmpInst.setOpcode(Hexagon::L2_loadrigp);

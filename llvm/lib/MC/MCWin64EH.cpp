@@ -228,14 +228,14 @@ void llvm::Win64EH::UnwindEmitter::Emit(MCStreamer &Streamer) const {
   // Emit the unwind info structs first.
   for (const auto &CFI : Streamer.getWinFrameInfos()) {
     MCSection *XData = Streamer.getAssociatedXDataSection(CFI->TextSection);
-    Streamer.SwitchSection(XData);
+    Streamer.switchSection(XData);
     ::EmitUnwindInfo(Streamer, CFI.get());
   }
 
   // Now emit RUNTIME_FUNCTION entries.
   for (const auto &CFI : Streamer.getWinFrameInfos()) {
     MCSection *PData = Streamer.getAssociatedPDataSection(CFI->TextSection);
-    Streamer.SwitchSection(PData);
+    Streamer.switchSection(PData);
     EmitRuntimeFunction(Streamer, CFI.get());
   }
 }
@@ -246,7 +246,7 @@ void llvm::Win64EH::UnwindEmitter::EmitUnwindInfo(MCStreamer &Streamer,
   // Switch sections (the static function above is meant to be called from
   // here and from Emit().
   MCSection *XData = Streamer.getAssociatedXDataSection(info->TextSection);
-  Streamer.SwitchSection(XData);
+  Streamer.switchSection(XData);
 
   ::EmitUnwindInfo(Streamer, info);
 }
@@ -2227,7 +2227,7 @@ void llvm::Win64EH::ARM64UnwindEmitter::Emit(MCStreamer &Streamer) const {
     if (Info->empty())
       continue;
     MCSection *XData = Streamer.getAssociatedXDataSection(CFI->TextSection);
-    Streamer.SwitchSection(XData);
+    Streamer.switchSection(XData);
     ARM64EmitUnwindInfo(Streamer, Info);
   }
 
@@ -2240,7 +2240,7 @@ void llvm::Win64EH::ARM64UnwindEmitter::Emit(MCStreamer &Streamer) const {
     if (!Info->Symbol)
       continue;
     MCSection *PData = Streamer.getAssociatedPDataSection(CFI->TextSection);
-    Streamer.SwitchSection(PData);
+    Streamer.switchSection(PData);
     ARMEmitRuntimeFunction(Streamer, Info);
   }
 }
@@ -2255,13 +2255,13 @@ void llvm::Win64EH::ARM64UnwindEmitter::EmitUnwindInfo(MCStreamer &Streamer,
   // end hasn't been marked yet, the xdata function length won't cover the
   // whole function, only up to this point.
   if (!info->FuncletOrFuncEnd) {
-    Streamer.SwitchSection(info->TextSection);
+    Streamer.switchSection(info->TextSection);
     info->FuncletOrFuncEnd = Streamer.emitCFILabel();
   }
   // Switch sections (the static function above is meant to be called from
   // here and from Emit().
   MCSection *XData = Streamer.getAssociatedXDataSection(info->TextSection);
-  Streamer.SwitchSection(XData);
+  Streamer.switchSection(XData);
   ARM64EmitUnwindInfo(Streamer, info, /* TryPacked = */ !HandlerData);
 }
 
@@ -2272,7 +2272,7 @@ void llvm::Win64EH::ARMUnwindEmitter::Emit(MCStreamer &Streamer) const {
     if (Info->empty())
       continue;
     MCSection *XData = Streamer.getAssociatedXDataSection(CFI->TextSection);
-    Streamer.SwitchSection(XData);
+    Streamer.switchSection(XData);
     ARMEmitUnwindInfo(Streamer, Info);
   }
 
@@ -2285,7 +2285,7 @@ void llvm::Win64EH::ARMUnwindEmitter::Emit(MCStreamer &Streamer) const {
     if (!Info->Symbol)
       continue;
     MCSection *PData = Streamer.getAssociatedPDataSection(CFI->TextSection);
-    Streamer.SwitchSection(PData);
+    Streamer.switchSection(PData);
     ARMEmitRuntimeFunction(Streamer, Info);
   }
 }
@@ -2300,12 +2300,12 @@ void llvm::Win64EH::ARMUnwindEmitter::EmitUnwindInfo(MCStreamer &Streamer,
   // end hasn't been marked yet, the xdata function length won't cover the
   // whole function, only up to this point.
   if (!info->FuncletOrFuncEnd) {
-    Streamer.SwitchSection(info->TextSection);
+    Streamer.switchSection(info->TextSection);
     info->FuncletOrFuncEnd = Streamer.emitCFILabel();
   }
   // Switch sections (the static function above is meant to be called from
   // here and from Emit().
   MCSection *XData = Streamer.getAssociatedXDataSection(info->TextSection);
-  Streamer.SwitchSection(XData);
+  Streamer.switchSection(XData);
   ARMEmitUnwindInfo(Streamer, info, /* TryPacked = */ !HandlerData);
 }

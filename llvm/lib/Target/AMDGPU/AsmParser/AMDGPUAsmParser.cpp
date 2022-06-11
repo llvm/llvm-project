@@ -4561,13 +4561,13 @@ bool AMDGPUAsmParser::validateFlatLdsDMA(const MCInst &Inst,
 bool AMDGPUAsmParser::validateExeczVcczOperands(const OperandVector &Operands) {
   if (!isGFX11Plus())
     return true;
-  for (auto& Operand: Operands) {
+  for (auto &Operand : Operands) {
     if (!Operand->isReg())
       continue;
     unsigned Reg = Operand->getReg();
     if (Reg == SRC_EXECZ || Reg == SRC_VCCZ) {
       Error(getRegLoc(Reg, Operands),
-        "execz and vccz are not supported on this GPU");
+            "execz and vccz are not supported on this GPU");
       return false;
     }
   }
