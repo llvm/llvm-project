@@ -2757,7 +2757,7 @@ bool SMSchedule::normalizeNonPipelinedInstructions(
     if (OldCycle != NewCycle) {
       InstrToCycle[&SU] = NewCycle;
       auto &OldS = getInstructions(OldCycle);
-      OldS.erase(std::remove(OldS.begin(), OldS.end(), &SU), OldS.end());
+      llvm::erase_value(OldS, &SU);
       getInstructions(NewCycle).emplace_back(&SU);
       LLVM_DEBUG(dbgs() << "SU(" << SU.NodeNum
                         << ") is not pipelined; moving from cycle " << OldCycle
