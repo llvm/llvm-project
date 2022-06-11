@@ -86,22 +86,22 @@ define void @test64(i8* nocapture readonly %pix2, i32 signext %i_pix2) {
 ; P9BE-AIX32-LABEL: test64:
 ; P9BE-AIX32:       # %bb.0: # %entry
 ; P9BE-AIX32-NEXT:    lwzux 4, 3, 4
-; P9BE-AIX32-NEXT:    lwz 5, L..C0(2) # %const.0
 ; P9BE-AIX32-NEXT:    xxlxor 4, 4, 4
-; P9BE-AIX32-NEXT:    lxv 3, 0(5)
-; P9BE-AIX32-NEXT:    stw 4, -32(1)
+; P9BE-AIX32-NEXT:    stw 4, -48(1)
 ; P9BE-AIX32-NEXT:    lwz 4, 4(3)
-; P9BE-AIX32-NEXT:    lxv 2, -32(1)
-; P9BE-AIX32-NEXT:    stw 4, -16(1)
-; P9BE-AIX32-NEXT:    mtfprwz 0, 4
+; P9BE-AIX32-NEXT:    lxv 0, -48(1)
+; P9BE-AIX32-NEXT:    stw 4, -32(1)
+; P9BE-AIX32-NEXT:    lwz 4, L..C0(2) # %const.0
 ; P9BE-AIX32-NEXT:    lwz 3, 8(3)
-; P9BE-AIX32-NEXT:    xxinsertw 2, 0, 4
-; P9BE-AIX32-NEXT:    mtfprwz 0, 3
+; P9BE-AIX32-NEXT:    lxv 1, -32(1)
+; P9BE-AIX32-NEXT:    lxv 3, 0(4)
+; P9BE-AIX32-NEXT:    stw 3, -16(1)
 ; P9BE-AIX32-NEXT:    lwz 3, L..C1(2) # %const.1
+; P9BE-AIX32-NEXT:    xxmrghw 2, 0, 1
+; P9BE-AIX32-NEXT:    lxv 0, -16(1)
 ; P9BE-AIX32-NEXT:    vperm 2, 4, 2, 3
-; P9BE-AIX32-NEXT:    lxv 3, -16(1)
 ; P9BE-AIX32-NEXT:    lxv 4, 0(3)
-; P9BE-AIX32-NEXT:    xxinsertw 3, 0, 4
+; P9BE-AIX32-NEXT:    xxmrghw 3, 1, 0
 ; P9BE-AIX32-NEXT:    vperm 3, 3, 3, 4
 ; P9BE-AIX32-NEXT:    vspltisw 4, 8
 ; P9BE-AIX32-NEXT:    vnegw 3, 3

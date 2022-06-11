@@ -19406,6 +19406,12 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       return UpdateBuildVector(Ops);
     }
 
+    if (InVec.getOpcode() == ISD::SCALAR_TO_VECTOR && InVec.hasOneUse()) {
+      Ops.push_back(InVec.getOperand(0));
+      Ops.append(NumElts - 1, DAG.getUNDEF(InVec.getOperand(0).getValueType()));
+      return UpdateBuildVector(Ops);
+    }
+
     if (InVec.isUndef()) {
       Ops.append(NumElts, DAG.getUNDEF(InVal.getValueType()));
       return UpdateBuildVector(Ops);
