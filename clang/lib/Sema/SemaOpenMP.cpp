@@ -11966,8 +11966,8 @@ bool OpenMPAtomicCompareCaptureChecker::checkStmt(Stmt *S,
       UpdateStmt = S1;
       CondUpdateStmt = S2;
       // Check if form 45.
-      if (dyn_cast<BinaryOperator>(BO->getRHS()->IgnoreImpCasts()) &&
-          dyn_cast<IfStmt>(S2))
+      if (isa<BinaryOperator>(BO->getRHS()->IgnoreImpCasts()) &&
+          isa<IfStmt>(S2))
         return checkForm45(CS, ErrorInfo);
       // It cannot be set before we the check for form45.
       IsPostfixUpdate = true;
