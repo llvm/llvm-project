@@ -25,8 +25,32 @@
 #include <string_view>
 #include <utility>
 #include <vector>
-#include "small_string.h"
 #include "types.h"
+
+// A constexpr-friendly lightweight string, primarily useful for comparisons.
+// Unlike `std::string_view`, it copies the given string into an
+// internal buffer and can work with non-contiguous inputs.
+template <class Char>
+class BasicSmallString {
+  std::basic_string<Char> buffer_{};
+
+public:
+  constexpr BasicSmallString(std::basic_string_view<Char> v) : buffer_(v) {}
+
+  template <class I, class S>
+  constexpr BasicSmallString(I b, const S& e) {
+    for (; b != e; ++b) {
+      buffer_ += *b;
+    }
+  }
+
+  template <std::ranges::range R>
+  constexpr BasicSmallString(R&& from) : BasicSmallString(from.begin(), from.end()) {}
+
+  friend constexpr bool operator==(const BasicSmallString& lhs, const BasicSmallString& rhs) {
+    return lhs.buffer_ == rhs.buffer_;
+  }
+};
 
 template <std::ranges::view View, std::ranges::range Expected>
 constexpr bool is_equal(View& view, const Expected& expected) {
@@ -55,7 +79,7 @@ constexpr bool test_with_piping(T&& input, Separator&& separator, std::array<U, 
   for (auto e : input | std::ranges::views::lazy_split(separator)) {
     if (expected_it == expected.end())
       return false;
-    if (SmallString(e) != *expected_it)
+    if (!std::ranges::equal(e, *expected_it))
       return false;
 
     ++expected_it;

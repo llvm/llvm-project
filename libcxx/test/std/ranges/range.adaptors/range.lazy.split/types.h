@@ -11,9 +11,9 @@
 
 #include <concepts>
 #include <ranges>
+#include <string>
 #include <string_view>
 #include <type_traits>
-#include "small_string.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -55,18 +55,21 @@ static_assert( std::is_move_constructible_v<ForwardView>);
 
 // Iterator types differ based on constness of this class.
 struct ForwardDiffView : std::ranges::view_base {
-  SmallString buffer_;
+  std::string buffer_;
   constexpr explicit ForwardDiffView() = default;
   constexpr ForwardDiffView(const char* ptr) : ForwardDiffView(std::string_view(ptr)) {}
-  constexpr ForwardDiffView(std::string_view v) : buffer_(v) {}
+  constexpr ForwardDiffView(std::string_view v) {
+    // Workaround https://github.com/llvm/llvm-project/issues/55867
+    buffer_ = v;
+  }
   constexpr ForwardDiffView(ForwardDiffView&&) = default;
   constexpr ForwardDiffView& operator=(ForwardDiffView&&) = default;
   constexpr ForwardDiffView(const ForwardDiffView&) = default;
   constexpr ForwardDiffView& operator=(const ForwardDiffView&) = default;
-  constexpr forward_iterator<char*> begin() { return forward_iterator<char*>(buffer_.begin()); }
-  constexpr forward_iterator<char*> end()  { return forward_iterator<char*>(buffer_.end()); }
-  constexpr forward_iterator<const char*> begin() const { return forward_iterator<const char*>(buffer_.begin()); }
-  constexpr forward_iterator<const char*> end() const { return forward_iterator<const char*>(buffer_.end()); }
+  constexpr forward_iterator<char*> begin() { return forward_iterator<char*>(buffer_.begin().base()); }
+  constexpr forward_iterator<char*> end()  { return forward_iterator<char*>(buffer_.end().base()); }
+  constexpr forward_iterator<const char*> begin() const { return forward_iterator<const char*>(buffer_.begin().base()); }
+  constexpr forward_iterator<const char*> end() const { return forward_iterator<const char*>(buffer_.end().base()); }
 };
 static_assert( std::ranges::forward_range<ForwardView>);
 static_assert( std::ranges::forward_range<const ForwardView>);
@@ -135,21 +138,27 @@ static_assert( std::ranges::view<ForwardOnlyIfNonConstView>);
 // InputView
 
 struct InputView : std::ranges::view_base {
-  SmallString buffer_;
+  std::string buffer_;
 
   constexpr InputView() = default;
   constexpr InputView(const char* s) : InputView(std::string_view(s)) {}
-  constexpr InputView(std::string_view v) : buffer_(v) {}
+  constexpr InputView(std::string_view v) {
+    // Workaround https://github.com/llvm/llvm-project/issues/55867
+    buffer_ = v;
+  }
 
-  constexpr cpp20_input_iterator<char*> begin() { return cpp20_input_iterator<char*>(buffer_.begin()); }
+  constexpr cpp20_input_iterator<char*> begin() { return cpp20_input_iterator<char*>(buffer_.begin().base()); }
   constexpr sentinel_wrapper<cpp20_input_iterator<char*>> end() {
-    return sentinel_wrapper(cpp20_input_iterator<char*>(buffer_.end()));
+    return sentinel_wrapper(cpp20_input_iterator<char*>(buffer_.end().base()));
   }
   constexpr cpp20_input_iterator<const char*> begin() const {
-    return cpp20_input_iterator<const char*>(buffer_.begin());
+    return cpp20_input_iterator<const char*>(buffer_.begin().base());
   }
   constexpr sentinel_wrapper<cpp20_input_iterator<const char*>> end() const {
-    return sentinel_wrapper(cpp20_input_iterator<const char*>(buffer_.end()));
+    return sentinel_wrapper(cpp20_input_iterator<const char*>(buffer_.end().base()));
+  }
+  friend constexpr bool operator==(const InputView& lhs, const InputView& rhs) {
+    return lhs.buffer_ == rhs.buffer_;
   }
 };
 

@@ -17,10 +17,10 @@
 #include <ranges>
 
 #include <cassert>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
-#include "small_string.h"
 #include "types.h"
 
 struct ElementWithCounting {
@@ -72,24 +72,15 @@ struct RangeWithCounting {
 static_assert( std::ranges::forward_range<RangeWithCounting>);
 static_assert(!std::ranges::view<RangeWithCounting>);
 
-struct StrRange {
-  SmallString buffer_;
-  constexpr explicit StrRange() = default;
-  constexpr StrRange(const char* ptr) : buffer_(ptr) {}
-  constexpr const char* begin() const { return buffer_.begin(); }
-  constexpr const char* end() const { return buffer_.end(); }
-  constexpr bool operator==(const StrRange& rhs) const { return buffer_ == rhs.buffer_; }
-};
-static_assert( std::ranges::random_access_range<StrRange>);
-static_assert(!std::ranges::view<StrRange>);
-static_assert( std::is_copy_constructible_v<StrRange>);
-
 struct StrView : std::ranges::view_base {
-  SmallString buffer_;
+  std::string_view buffer_;
   constexpr explicit StrView() = default;
   constexpr StrView(const char* ptr) : buffer_(ptr) {}
+  // Intentionally don't forward to range constructor for std::string_view since
+  // this test needs to work on C++20 as well and the range constructor is only for
+  // C++23 and later.
   template <std::ranges::range R>
-  constexpr StrView(R&& r) : buffer_(std::forward<R>(r)) {}
+  constexpr StrView(R&& r) : buffer_(r.begin(), r.end()) {}
   constexpr const char* begin() const { return buffer_.begin(); }
   constexpr const char* end() const { return buffer_.end(); }
   constexpr bool operator==(const StrView& rhs) const { return buffer_ == rhs.buffer_; }
@@ -102,9 +93,9 @@ constexpr bool test() {
   {
     using V = std::ranges::lazy_split_view<StrView, StrView>;
 
-    // Calling the constructor with `(StrRange, range_value_t)`.
+    // Calling the constructor with `(std::string, range_value_t)`.
     {
-      StrRange input;
+      std::string input;
       V v(input, ' ');
       assert(v.base() == input);
     }

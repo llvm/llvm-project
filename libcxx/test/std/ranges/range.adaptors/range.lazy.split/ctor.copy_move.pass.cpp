@@ -16,12 +16,7 @@
 #include <cassert>
 #include <string_view>
 #include <utility>
-#include "small_string.h"
 #include "types.h"
-
-constexpr bool operator==(const InputView& lhs, const InputView& rhs) {
-  return SmallString(lhs) == SmallString(rhs);
-}
 
 constexpr bool test() {
   // Can copy `lazy_split_view`.
