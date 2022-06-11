@@ -176,6 +176,91 @@ struct TestPatternDriver
       llvm::cl::desc("Seed the worklist in general top-down order"),
       llvm::cl::init(GreedyRewriteConfig().useTopDownTraversal)};
 };
+
+struct TestStrictPatternDriver
+    : public PassWrapper<TestStrictPatternDriver, OperationPass<func::FuncOp>> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestStrictPatternDriver)
+
+  TestStrictPatternDriver() = default;
+  TestStrictPatternDriver(const TestStrictPatternDriver &other)
+      : PassWrapper(other) {}
+
+  StringRef getArgument() const final { return "test-strict-pattern-driver"; }
+  StringRef getDescription() const final {
+    return "Run strict mode of pattern driver";
+  }
+
+  void runOnOperation() override {
+    mlir::RewritePatternSet patterns(&getContext());
+    patterns.add<InsertSameOp, ReplaceWithSameOp, EraseOp>(&getContext());
+    SmallVector<Operation *> ops;
+    getOperation()->walk([&](Operation *op) {
+      StringRef opName = op->getName().getStringRef();
+      if (opName == "test.insert_same_op" ||
+          opName == "test.replace_with_same_op" || opName == "test.erase_op") {
+        ops.push_back(op);
+      }
+    });
+
+    // Check if these transformations introduce visiting of operations that
+    // are not in the `ops` set (The new created ops are valid). An invalid
+    // operation will trigger the assertion while processing.
+    (void)applyOpPatternsAndFold(makeArrayRef(ops), std::move(patterns),
+                                 /*strict=*/true);
+  }
+
+private:
+  // New inserted operation is valid for further transformation.
+  class InsertSameOp : public RewritePattern {
+  public:
+    InsertSameOp(MLIRContext *context)
+        : RewritePattern("test.insert_same_op", /*benefit=*/1, context) {}
+
+    LogicalResult matchAndRewrite(Operation *op,
+                                  PatternRewriter &rewriter) const override {
+      if (op->hasAttr("skip"))
+        return failure();
+
+      Operation *newOp =
+          rewriter.create(op->getLoc(), op->getName().getIdentifier(),
+                          op->getOperands(), op->getResultTypes());
+      op->setAttr("skip", rewriter.getBoolAttr(true));
+      newOp->setAttr("skip", rewriter.getBoolAttr(true));
+
+      return success();
+    }
+  };
+
+  // Replace an operation may introduce the re-visiting of its users.
+  class ReplaceWithSameOp : public RewritePattern {
+  public:
+    ReplaceWithSameOp(MLIRContext *context)
+        : RewritePattern("test.replace_with_same_op", /*benefit=*/1, context) {}
+
+    LogicalResult matchAndRewrite(Operation *op,
+                                  PatternRewriter &rewriter) const override {
+      Operation *newOp =
+          rewriter.create(op->getLoc(), op->getName().getIdentifier(),
+                          op->getOperands(), op->getResultTypes());
+      rewriter.replaceOp(op, newOp->getResults());
+      return success();
+    }
+  };
+
+  // Remove an operation may introduce the re-visiting of its opreands.
+  class EraseOp : public RewritePattern {
+  public:
+    EraseOp(MLIRContext *context)
+        : RewritePattern("test.erase_op", /*benefit=*/1, context) {}
+    LogicalResult matchAndRewrite(Operation *op,
+                                  PatternRewriter &rewriter) const override {
+      rewriter.eraseOp(op);
+      return success();
+    }
+  };
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1471,6 +1556,7 @@ void registerPatternsTestPass() {
   PassRegistration<TestDerivedAttributeDriver>();
 
   PassRegistration<TestPatternDriver>();
+  PassRegistration<TestStrictPatternDriver>();
 
   PassRegistration<TestLegalizePatternDriver>([] {
     return std::make_unique<TestLegalizePatternDriver>(legalizerConversionMode);
