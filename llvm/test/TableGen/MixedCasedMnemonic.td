@@ -40,7 +40,7 @@ def :MnemonicAlias<"Insta", "aInst">;
 def :MnemonicAlias<"InstB", "BInst">;
 
 // Check that the matcher lower()s the mnemonics it matches.
-// MATCHER: static const char *const MnemonicTable =
+// MATCHER: static const char MnemonicTable[] =
 // MATCHER-NEXT: "\005ainst\005binst";
 
 // Check that aInst appears before BInst in the match table.
