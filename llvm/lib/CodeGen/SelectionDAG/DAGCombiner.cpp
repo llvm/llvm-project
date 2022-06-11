@@ -22313,6 +22313,19 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       return DAG.getVectorShuffle(VT, DL, Insert, DAG.getUNDEF(VT), ZeroMask);
     }
 
+    // splat(scalar_to_vector(x), 0) -> build_vector(x,...,x)
+    // splat(insert_vector_elt(v, x, c), c) -> build_vector(x,...,x)
+    if ((!LegalOperations || TLI.isOperationLegal(ISD::BUILD_VECTOR, VT)) &&
+        N0.hasOneUse()) {
+      if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && SplatIndex == 0)
+        return DAG.getSplatBuildVector(VT, SDLoc(N), N0.getOperand(0));
+
+      if (N0.getOpcode() == ISD::INSERT_VECTOR_ELT)
+        if (auto *Idx = dyn_cast<ConstantSDNode>(N0.getOperand(2)))
+          if (Idx->getAPIntValue() == SplatIndex)
+            return DAG.getSplatBuildVector(VT, SDLoc(N), N0.getOperand(1));
+    }
+
     // If this is a bit convert that changes the element type of the vector but
     // not the number of vector elements, look through it.  Be careful not to
     // look though conversions that change things like v4f32 to v2f64.
