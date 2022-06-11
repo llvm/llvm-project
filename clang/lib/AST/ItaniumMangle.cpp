@@ -5646,8 +5646,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
     assert(RD && "unexpected type for record value");
 
     // Drop trailing zero-initialized elements.
-    llvm::SmallVector<const FieldDecl *, 16> Fields(RD->field_begin(),
-                                                    RD->field_end());
+    llvm::SmallVector<const FieldDecl *, 16> Fields(RD->fields());
     while (
         !Fields.empty() &&
         (Fields.back()->isUnnamedBitfield() ||

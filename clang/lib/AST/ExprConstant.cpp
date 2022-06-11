@@ -6560,7 +6560,7 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
 
   // We don't have a good way to iterate fields in reverse, so collect all the
   // fields first and then walk them backwards.
-  SmallVector<FieldDecl*, 16> Fields(RD->field_begin(), RD->field_end());
+  SmallVector<FieldDecl*, 16> Fields(RD->fields());
   for (const FieldDecl *FD : llvm::reverse(Fields)) {
     if (FD->isUnnamedBitfield())
       continue;
