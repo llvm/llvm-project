@@ -681,7 +681,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       MCSection *Cur = OutStreamer->getCurrentSectionOnly();
       MCSection *Nt = MMI->getContext().getELFSection(
           ".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
-      OutStreamer->SwitchSection(Nt);
+      OutStreamer->switchSection(Nt);
 
       // Emitting note header.
       const int WordSize = TT.isArch64Bit() && !TT.isX32() ? 8 : 4;
@@ -698,12 +698,12 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       emitAlignment(WordSize == 4 ? Align(4) : Align(8)); // padding
 
       OutStreamer->endSection(Nt);
-      OutStreamer->SwitchSection(Cur);
+      OutStreamer->switchSection(Cur);
     }
   }
 
   if (TT.isOSBinFormatMachO())
-    OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
+    OutStreamer->switchSection(getObjFileLowering().getTextSection());
 
   if (TT.isOSBinFormatCOFF()) {
     // Emit an absolute @feat.00 symbol.  This appears to be some kind of
@@ -779,7 +779,7 @@ static void emitNonLazyStubs(MachineModuleInfo *MMI, MCStreamer &OutStreamer) {
   // Output stubs for external and common global variables.
   Stubs = MMIMacho.GetGVStubList();
   if (!Stubs.empty()) {
-    OutStreamer.SwitchSection(MMI->getContext().getMachOSection(
+    OutStreamer.switchSection(MMI->getContext().getMachOSection(
         "__IMPORT", "__pointers", MachO::S_NON_LAZY_SYMBOL_POINTERS,
         SectionKind::getMetadata()));
 
@@ -843,7 +843,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       MCSection *ReadOnlySection = getObjFileLowering().getSectionForConstant(
           getDataLayout(), SectionKind::getReadOnly(),
           /*C=*/nullptr, Alignment);
-      OutStreamer->SwitchSection(ReadOnlySection);
+      OutStreamer->switchSection(ReadOnlySection);
       OutStreamer->emitLabel(AddrSymbol);
 
       unsigned PtrSize = MAI->getCodePointerSize();

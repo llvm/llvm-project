@@ -8,10 +8,10 @@ target triple = "armv7-unknown-linux-gnueabi"
 
 define i32 @allones_struct() {
 ; CHECK-LABEL: @allones_struct()
-; CHECK-NEXT:    %1 = load [1 x i32], [1 x i32]* bitcast (%struct.anon* @onesstruct to [1 x i32]*), align 4
+; CHECK-NEXT:    %1 = load [1 x i32], ptr @onesstruct, align 4
 ; CHECK-NEXT:    %2 = extractvalue [1 x i32] %1, 0
 ; CHECK-NEXT:    ret i32 %2
-  %1 = load [1 x i32], [1 x i32]* bitcast (%struct.anon* @onesstruct to [1 x i32]*), align 4
+  %1 = load [1 x i32], ptr @onesstruct, align 4
   %2 = extractvalue [1 x i32] %1, 0
   ret i32 %2
 }
@@ -19,28 +19,28 @@ define i32 @allones_struct() {
 define i32 @allones_int() {
 ; CHECK-LABEL: @allones_int()
 ; CHECK-NEXT:    ret i32 -1
-  %1 = load i32, i32* bitcast (%struct.anon* @onesstruct to i32*), align 4
+  %1 = load i32, ptr @onesstruct, align 4
   ret i32 %1
 }
 
-define i32* @allones_ptr() {
+define ptr @allones_ptr() {
 ; CHECK-LABEL: @allones_ptr()
-; CHECK-NEXT:    ret i32* inttoptr (i32 -1 to i32*)
-  %1 = load i32*, i32** bitcast (%struct.anon* @onesstruct to i32**), align 4
-  ret i32* %1
+; CHECK-NEXT:    ret ptr inttoptr (i32 -1 to ptr)
+  %1 = load ptr, ptr @onesstruct, align 4
+  ret ptr %1
 }
 
-define i32 addrspace(1)* @allones_ptr1() {
+define ptr addrspace(1) @allones_ptr1() {
 ; CHECK-LABEL: @allones_ptr1()
-; CHECK-NEXT:    ret i32 addrspace(1)* inttoptr (i32 -1 to i32 addrspace(1)*)
-  %1 = load i32 addrspace(1)*, i32 addrspace(1)** bitcast (%struct.anon* @onesstruct to i32 addrspace(1)**), align 4
-  ret i32 addrspace(1)* %1
+; CHECK-NEXT:    ret ptr addrspace(1) inttoptr (i32 -1 to ptr addrspace(1))
+  %1 = load ptr addrspace(1), ptr @onesstruct, align 4
+  ret ptr addrspace(1) %1
 }
 
-define i32 addrspace(2)* @allones_ptr2() {
+define ptr addrspace(2) @allones_ptr2() {
 ; CHECK-LABEL: @allones_ptr2()
-; CHECK-NEXT:    %1 = load i32 addrspace(2)*, i32 addrspace(2)** bitcast (%struct.anon* @onesstruct to i32 addrspace(2)**), align 4
-; CHECK-NEXT:    ret i32 addrspace(2)* %1
-  %1 = load i32 addrspace(2)*, i32 addrspace(2)** bitcast (%struct.anon* @onesstruct to i32 addrspace(2)**), align 4
-  ret i32 addrspace(2)* %1
+; CHECK-NEXT:    %1 = load ptr addrspace(2), ptr @onesstruct, align 4
+; CHECK-NEXT:    ret ptr addrspace(2) %1
+  %1 = load ptr addrspace(2), ptr @onesstruct, align 4
+  ret ptr addrspace(2) %1
 }

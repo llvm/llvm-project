@@ -1000,13 +1000,15 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
     unsigned SrcAS, const AttributeList &FuncAttributes) const {
   const int MVCFastLen = 16;
 
-  // Don't expand Op into scalar loads/stores in these cases:
-  if (Op.isMemcpy() && Op.allowOverlap() && Op.size() <= MVCFastLen)
-    return false;  // Small memcpy: Use MVC
-  if (Op.isMemset() && Op.size() - 1 <= MVCFastLen)
-    return false;  // Small memset (first byte with STC/MVI): Use MVC
-  if (Op.isZeroMemset())
-    return false;  // Memset zero: Use XC
+  if (Limit != ~unsigned(0)) {
+    // Don't expand Op into scalar loads/stores in these cases:
+    if (Op.isMemcpy() && Op.allowOverlap() && Op.size() <= MVCFastLen)
+      return false; // Small memcpy: Use MVC
+    if (Op.isMemset() && Op.size() - 1 <= MVCFastLen)
+      return false; // Small memset (first byte with STC/MVI): Use MVC
+    if (Op.isZeroMemset())
+      return false; // Memset zero: Use XC
+  }
 
   return TargetLowering::findOptimalMemOpLowering(MemOps, Limit, Op, DstAS,
                                                   SrcAS, FuncAttributes);
@@ -1258,12 +1260,17 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
 
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
-Register SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
-                                                  const MachineFunction &MF) const {
+Register
+SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
+                                         const MachineFunction &MF) const {
+  const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
 
-  Register Reg = StringSwitch<Register>(RegName)
-                   .Case("r15", SystemZ::R15D)
-                   .Default(0);
+  Register Reg =
+      StringSwitch<Register>(RegName)
+          .Case("r4", Subtarget->isTargetXPLINK64() ? SystemZ::R4D : 0)
+          .Case("r15", Subtarget->isTargetELF() ? SystemZ::R15D : 0)
+          .Default(0);
+
   if (Reg)
     return Reg;
   report_fatal_error("Invalid register name global variable");

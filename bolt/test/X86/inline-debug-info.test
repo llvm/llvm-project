@@ -5,8 +5,9 @@
 
 # RUN: %clang %cflags -O1 -g %p/Inputs/inline-main.c %p/Inputs/inline-foo.c \
 # RUN:   -I%p/../Inputs -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -update-debug-sections -print-debug-info \
-# RUN:   -print-only=main -print-after-lowering -force-inline=foo -o %t.bolt \
+# RUN: llvm-bolt %t.exe --update-debug-sections --print-debug-info \
+# RUN:   --print-only=main --print-after-lowering --force-inline=foo \
+# RUN:   -o %t.bolt \
 # RUN:   | FileCheck %s
 
 ## The call to puts() should come from inline-foo.c:

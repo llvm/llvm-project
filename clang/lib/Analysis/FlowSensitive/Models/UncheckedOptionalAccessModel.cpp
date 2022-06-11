@@ -165,8 +165,8 @@ auto isValueOrNotEqX() {
 }
 
 auto isCallReturningOptional() {
-  return callExpr(callee(functionDecl(returns(anyOf(
-      optionalOrAliasType(), referenceType(pointee(optionalOrAliasType())))))));
+  return callExpr(hasType(qualType(anyOf(
+      optionalOrAliasType(), referenceType(pointee(optionalOrAliasType()))))));
 }
 
 /// Creates a symbolic value for an `optional` value using `HasValueVal` as the
@@ -450,7 +450,8 @@ void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
 
   auto *OptionalLoc =
       State.Env.getStorageLocation(*E->getArg(0), SkipPast::Reference);
-  assert(OptionalLoc != nullptr);
+  if (OptionalLoc == nullptr)
+    return;
 
   State.Env.setValue(*OptionalLoc, createOptionalValue(State.Env, HasValueVal));
 

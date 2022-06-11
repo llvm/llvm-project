@@ -153,7 +153,7 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
     FPI.updateForBB(*BB, -1);
 }
 
-void FunctionPropertiesUpdater::finish(const LoopInfo &LI) {
+void FunctionPropertiesUpdater::finish(const LoopInfo &LI) const {
   DenseSet<const BasicBlock *> ReIncluded;
   std::deque<const BasicBlock *> Worklist;
 

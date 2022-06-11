@@ -3,10 +3,10 @@
 declare i32 @escape(i32)
 
 ; CHECK-LABEL: define {{.*}}@foo(
-define i32 @foo() {
+define i32 @foo(i1 %c1) {
 entry:
   %baz = alloca i32
-  br i1 undef, label %lhs, label %rhs
+  br i1 %c1, label %lhs, label %rhs
 
 lhs:
   store i32 1, i32* %baz

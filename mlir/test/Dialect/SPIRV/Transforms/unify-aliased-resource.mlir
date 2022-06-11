@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -spirv-unify-aliased-resource %s -o - | FileCheck %s
+// RUN: mlir-opt -split-input-file -spirv-unify-aliased-resource -verify-diagnostics %s | FileCheck %s
 
 spv.module Logical GLSL450 {
   spv.GlobalVariable @var01s bind(0, 1) {aliased} : !spv.ptr<!spv.struct<(!spv.rtarray<f32, stride=4> [0])>, StorageBuffer>
@@ -213,3 +213,68 @@ spv.module Logical GLSL450 {
 //     CHECK:   %[[CAST2:.+]] = spv.Bitcast %[[VAL0]] : i32 to f32
 //     CHECK:   spv.Store "StorageBuffer" %[[AC]], %[[CAST2]] : f32
 //     CHECK:   spv.ReturnValue %[[CAST1]] : i32
+
+// -----
+
+spv.module Logical GLSL450 {
+  spv.GlobalVariable @var01s_i64 bind(0, 1) {aliased} : !spv.ptr<!spv.struct<(!spv.rtarray<i64, stride=4> [0])>, StorageBuffer>
+  spv.GlobalVariable @var01s_f32 bind(0, 1) {aliased} : !spv.ptr<!spv.struct<(!spv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+
+  spv.func @load_different_scalar_bitwidth(%index: i32) -> i64 "None" {
+    %c0 = spv.Constant 0 : i32
+
+    %addr0 = spv.mlir.addressof @var01s_i64 : !spv.ptr<!spv.struct<(!spv.rtarray<i64, stride=4> [0])>, StorageBuffer>
+    %ac0 = spv.AccessChain %addr0[%c0, %index] : !spv.ptr<!spv.struct<(!spv.rtarray<i64, stride=4> [0])>, StorageBuffer>, i32, i32
+    %val0 = spv.Load "StorageBuffer" %ac0 : i64
+
+    spv.ReturnValue %val0 : i64
+  }
+}
+
+// CHECK-LABEL: spv.module
+
+// CHECK-NOT: @var01s_i64
+//     CHECK: spv.GlobalVariable @var01s_f32 bind(0, 1) : !spv.ptr<!spv.struct<(!spv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+// CHECK-NOT: @var01s_i64
+
+//     CHECK: spv.func @load_different_scalar_bitwidth(%[[INDEX:.+]]: i32)
+//     CHECK:   %[[ZERO:.+]] = spv.Constant 0 : i32
+//     CHECK:   %[[ADDR:.+]] = spv.mlir.addressof @var01s_f32
+
+//     CHECK:   %[[TWO:.+]] = spv.Constant 2 : i32
+//     CHECK:   %[[BASE:.+]] = spv.IMul %[[INDEX]], %[[TWO]] : i32
+//     CHECK:   %[[AC0:.+]] = spv.AccessChain %[[ADDR]][%[[ZERO]], %[[BASE]]]
+//     CHECK:   %[[LOAD0:.+]] = spv.Load "StorageBuffer" %[[AC0]] : f32
+
+//     CHECK:   %[[ONE:.+]] = spv.Constant 1 : i32
+//     CHECK:   %[[ADD:.+]] = spv.IAdd %[[BASE]], %[[ONE]] : i32
+//     CHECK:   %[[AC1:.+]] = spv.AccessChain %[[ADDR]][%[[ZERO]], %[[ADD]]]
+//     CHECK:   %[[LOAD1:.+]] = spv.Load "StorageBuffer" %[[AC1]] : f32
+
+//     CHECK:   %[[CC:.+]] = spv.CompositeConstruct %[[LOAD1]], %[[LOAD0]]
+//     CHECK:   %[[CAST:.+]] = spv.Bitcast %[[CC]] : vector<2xf32> to i64
+//     CHECK:   spv.ReturnValue %[[CAST]]
+
+// -----
+
+spv.module Logical GLSL450 {
+  spv.GlobalVariable @var01s_i64 bind(0, 1) {aliased} : !spv.ptr<!spv.struct<(!spv.rtarray<i64, stride=4> [0])>, StorageBuffer>
+  spv.GlobalVariable @var01s_f32 bind(0, 1) {aliased} : !spv.ptr<!spv.struct<(!spv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+
+  spv.func @store_different_scalar_bitwidth(%i0: i32, %i1: i32) "None" {
+    %c0 = spv.Constant 0 : i32
+
+    %addr0 = spv.mlir.addressof @var01s_f32 : !spv.ptr<!spv.struct<(!spv.rtarray<f32, stride=4> [0])>, StorageBuffer>
+    %ac0 = spv.AccessChain %addr0[%c0, %i0] : !spv.ptr<!spv.struct<(!spv.rtarray<f32, stride=4> [0])>, StorageBuffer>, i32, i32
+    %f32val = spv.Load "StorageBuffer" %ac0 : f32
+    %f64val = spv.FConvert %f32val : f32 to f64
+    %i64val = spv.Bitcast %f64val : f64 to i64
+
+    %addr1 = spv.mlir.addressof @var01s_i64 : !spv.ptr<!spv.struct<(!spv.rtarray<i64, stride=4> [0])>, StorageBuffer>
+    %ac1 = spv.AccessChain %addr1[%c0, %i1] : !spv.ptr<!spv.struct<(!spv.rtarray<i64, stride=4> [0])>, StorageBuffer>, i32, i32
+    // expected-error@+1 {{failed to legalize operation 'spv.Store'}}
+    spv.Store "StorageBuffer" %ac1, %i64val : i64
+
+    spv.Return
+  }
+}

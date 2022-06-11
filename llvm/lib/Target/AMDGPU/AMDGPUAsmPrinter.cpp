@@ -248,7 +248,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   auto &ReadOnlySection = *ObjectFileInfo.getReadOnlySection();
 
   Streamer.pushSection();
-  Streamer.SwitchSection(&ReadOnlySection);
+  Streamer.switchSection(&ReadOnlySection);
 
   // CP microcode requires the kernel descriptor to be allocated on 64 byte
   // alignment.
@@ -352,7 +352,7 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   if ((AMDGPU::isGFX10Plus(STI) || AMDGPU::isGFX90A(STI)) &&
       (STI.getTargetTriple().getOS() == Triple::AMDHSA ||
        STI.getTargetTriple().getOS() == Triple::AMDPAL)) {
-    OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
+    OutStreamer->switchSection(getObjFileLowering().getTextSection());
     getTargetStreamer()->EmitCodeEnd(STI);
   }
 
@@ -472,7 +472,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (!STM.isAmdHsaOS() && !STM.isAmdPalOS()) {
     MCSectionELF *ConfigSection =
         Context.getELFSection(".AMDGPU.config", ELF::SHT_PROGBITS, 0);
-    OutStreamer->SwitchSection(ConfigSection);
+    OutStreamer->switchSection(ConfigSection);
   }
 
   if (MFI->isModuleEntryFunction()) {
@@ -509,7 +509,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (isVerbose()) {
     MCSectionELF *CommentSection =
         Context.getELFSection(".AMDGPU.csdata", ELF::SHT_PROGBITS, 0);
-    OutStreamer->SwitchSection(CommentSection);
+    OutStreamer->switchSection(CommentSection);
 
     if (!MFI->isEntryFunction()) {
       OutStreamer->emitRawComment(" Function info:", false);
@@ -608,7 +608,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 
   if (DumpCodeInstEmitter) {
 
-    OutStreamer->SwitchSection(
+    OutStreamer->switchSection(
         Context.getELFSection(".AMDGPU.disasm", ELF::SHT_PROGBITS, 0));
 
     for (size_t i = 0; i < DisasmLines.size(); ++i) {

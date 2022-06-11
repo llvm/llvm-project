@@ -2,7 +2,7 @@
 # RUN: mkdir %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 -dwarf-version=4 %s -o %t/shared-abbrev.o
 # RUN: %clang %cflags %t/shared-abbrev.o -o %t/shared-abbrev.exe
-# RUN: llvm-bolt %t/shared-abbrev.exe -o %t/shared-abbrev.exe.bolt -update-debug-sections
+# RUN: llvm-bolt %t/shared-abbrev.exe -o %t/shared-abbrev.exe.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --debug-info %t/shared-abbrev.exe.bolt | FileCheck %s
 
 # CHECK: 0x00000000:

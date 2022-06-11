@@ -9487,12 +9487,10 @@ outliner::OutlinedFunction X86InstrInfo::getOutliningCandidateInfo(
   // We check to see if CFI Instructions are present, and if they are
   // we find the number of CFI Instructions in the candidates.
   unsigned CFICount = 0;
-  MachineBasicBlock::iterator MBBI = RepeatedSequenceLocs[0].front();
-  for (unsigned Loc = RepeatedSequenceLocs[0].getStartIdx();
-       Loc < RepeatedSequenceLocs[0].getEndIdx() + 1; Loc++) {
-    if (MBBI->isCFIInstruction())
+  for (auto &I : make_range(RepeatedSequenceLocs[0].front(),
+                            std::next(RepeatedSequenceLocs[0].back()))) {
+    if (I.isCFIInstruction())
       CFICount++;
-    MBBI++;
   }
 
   // We compare the number of found CFI Instructions to  the number of CFI

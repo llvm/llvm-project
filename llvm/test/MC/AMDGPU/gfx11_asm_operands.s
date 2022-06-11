@@ -141,4 +141,3 @@ v_add_co_u32 v0, s0, v1, pops_exiting_wave_id
 v_add_co_u32 v0, s0, v1, src_pops_exiting_wave_id
 // GFX10: encoding: [0x00,0x00,0x0f,0xd7,0x01,0xdf,0x01,0x00]
 // GFX11-ERR: error: register not available on this GPU
-

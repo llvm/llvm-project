@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
 
 // FLAT
 
@@ -108,9 +108,6 @@ global_atomic_swap v0, v[1:2], v3, off offset:2047 glc
 
 global_atomic_swap_x2 v[1:2], v[3:4], v[5:6], off offset:2047 glc
 // GFX11: encoding: [0xff,0x47,0x06,0xdd,0x03,0x05,0x7c,0x01]
-
-global_atomic_cmpswap_x2 v[1:4], v3, v[5:8], off offset:2047 glc
-// GFX11-NOT: encoding: [0xff,0x47,0x0a,0xdd,0x03,0x05,0x7c,0x01]
 
 // SCRATCH
 
