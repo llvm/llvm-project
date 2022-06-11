@@ -214,10 +214,9 @@ entry:
 define <16 x half> @addp_v16f16(<16 x half> %a) {
 ; CHECK-LABEL: addp_v16f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    rev32 v2.8h, v0.8h
-; CHECK-NEXT:    rev32 v3.8h, v1.8h
-; CHECK-NEXT:    fadd v0.8h, v2.8h, v0.8h
-; CHECK-NEXT:    fadd v1.8h, v3.8h, v1.8h
+; CHECK-NEXT:    faddp v1.8h, v0.8h, v1.8h
+; CHECK-NEXT:    zip1 v0.8h, v1.8h, v1.8h
+; CHECK-NEXT:    zip2 v1.8h, v1.8h, v1.8h
 ; CHECK-NEXT:    ret
 ;
 ; CHECKNOFP16-LABEL: addp_v16f16:
