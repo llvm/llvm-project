@@ -2,11 +2,11 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX11 %s
 
-; Check SPI_TMPRING_SIZE.WAVESIZE = 5
+; SPI_TMPRING_SIZE.WAVESIZE = 5
 ; GFX10: .long 165608
 ; GFX10-NEXT: .long 20480
 
-; Check SPI_TMPRING_SIZE.WAVESIZE = 17
+; SPI_TMPRING_SIZE.WAVESIZE = 17
 ; GFX11: .long 165608
 ; GFX11-NEXT: .long 69632
 

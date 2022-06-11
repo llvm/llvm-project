@@ -2,7 +2,7 @@ set(LIBS
   TableGenLspServerLib
   )
 
-add_llvm_tool(tblgen-lsp-server
+add_mlir_tool(tblgen-lsp-server
   tblgen-lsp-server.cpp
 
   DEPENDS
