@@ -3221,7 +3221,7 @@ Note that this intrinsic cannot yet be called in a ``constexpr`` context.
 Guaranteed inlined memset
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-. code-block:: c
+.. code-block:: c
 
   void __builtin_memset_inline(void *dst, int value, size_t size);
 
