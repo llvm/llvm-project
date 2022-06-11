@@ -52,7 +52,7 @@ struct VPlanTransforms {
 
   /// Try to remove dead recipes. At the moment, only dead header recipes are
   /// removed.
-  static void removeDeadRecipes(VPlan &Plan, Loop &OrigLoop);
+  static void removeDeadRecipes(VPlan &Plan);
 
   /// If any user of a VPWidenIntOrFpInductionRecipe needs scalar values,
   /// provide them by building scalar steps off of the canonical scalar IV and
