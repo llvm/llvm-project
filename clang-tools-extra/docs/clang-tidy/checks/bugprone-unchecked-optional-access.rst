@@ -4,8 +4,8 @@ bugprone-unchecked-optional-access
 ==================================
 
 *Note*: This check uses a flow-sensitive static analysis to produce its
- results. Therefore, it may be more resource intensive (RAM, CPU) than the
- average clang-tidy check.
+results. Therefore, it may be more resource intensive (RAM, CPU) than the
+average clang-tidy check.
 
 This check identifies unsafe accesses to values contained in
 ``std::optional<T>``, ``absl::optional<T>``, or ``base::Optional<T>``
