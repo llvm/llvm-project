@@ -63,7 +63,7 @@ PresburgerRelation::unionSet(const PresburgerRelation &set) const {
 /// A point is contained in the union iff any of the parts contain the point.
 bool PresburgerRelation::containsPoint(ArrayRef<int64_t> point) const {
   return llvm::any_of(disjuncts, [&](const IntegerRelation &disjunct) {
-    return (disjunct.containsPoint(point));
+    return (disjunct.containsPointNoLocal(point));
   });
 }
 
