@@ -19353,8 +19353,18 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
 
   // We must know which element is being inserted for folds below here.
   unsigned Elt = IndexC->getZExtValue();
+
   if (SDValue Shuf = combineInsertEltToShuffle(N, Elt))
     return Shuf;
+
+  // Handle <1 x ???> vector insertion special cases.
+  if (VT.getVectorNumElements() == 1) {
+    // insert_vector_elt(x, extract_vector_elt(y, 0), 0) -> y
+    if (InVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        InVal.getOperand(0).getValueType() == VT &&
+        isNullConstant(InVal.getOperand(1)))
+      return InVal.getOperand(0);
+  }
 
   // Canonicalize insert_vector_elt dag nodes.
   // Example:
