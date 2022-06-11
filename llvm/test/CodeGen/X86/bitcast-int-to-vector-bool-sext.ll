@@ -36,7 +36,7 @@ define <2 x i64> @ext_i2_2i64(i2 %a0) {
 ; AVX2-LABEL: ext_i2_2i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
@@ -207,7 +207,7 @@ define <4 x i64> @ext_i4_4i64(i4 %a0) {
 ; AVX1-LABEL: ext_i4_4i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
@@ -418,8 +418,7 @@ define <8 x i64> @ext_i8_8i64(i8 %a0) {
 ;
 ; AVX1-LABEL: ext_i8_8i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX1-NEXT:    vmovq %rdi, %xmm0
+; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm1
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
