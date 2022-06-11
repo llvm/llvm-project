@@ -87,6 +87,7 @@ InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   // Handle -fatal_warnings early since it converts missing argument warnings
   // to errors.
   errorHandler().fatalWarnings = args.hasArg(OPT_fatal_warnings);
+  errorHandler().suppressWarnings = args.hasArg(OPT_w);
 
   if (missingCount)
     error(Twine(args.getArgString(missingIndex)) + ": missing argument");

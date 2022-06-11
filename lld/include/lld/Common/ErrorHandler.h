@@ -101,6 +101,7 @@ public:
   StringRef logName = "lld";
   bool exitEarly = true;
   bool fatalWarnings = false;
+  bool suppressWarnings = false;
   bool verbose = false;
   bool vsDiagnostics = false;
   bool disableOutput = false;
