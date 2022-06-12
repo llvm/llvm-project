@@ -137,6 +137,9 @@ struct AssemblerInvocation {
   unsigned IncrementalLinkerCompatible : 1;
   unsigned EmbedBitcode : 1;
 
+  /// Whether to emit DWARF unwind info.
+  EmitDwarfUnwindType EmitDwarfUnwind;
+
   /// The name of the relocation model to use.
   std::string RelocationModel;
 
@@ -317,6 +320,14 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
                             .Default(0);
   }
 
+  if (auto *A = Args.getLastArg(OPT_femit_dwarf_unwind_EQ)) {
+    Opts.EmitDwarfUnwind =
+        llvm::StringSwitch<EmitDwarfUnwindType>(A->getValue())
+            .Case("always", EmitDwarfUnwindType::Always)
+            .Case("no-compact-unwind", EmitDwarfUnwindType::NoCompactUnwind)
+            .Case("default", EmitDwarfUnwindType::Default);
+  }
+
   return Success;
 }
 
@@ -367,6 +378,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   assert(MRI && "Unable to create target register info!");
 
   MCTargetOptions MCOptions;
+  MCOptions.EmitDwarfUnwind = Opts.EmitDwarfUnwind;
+
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, Opts.Triple, MCOptions));
   assert(MAI && "Unable to create target asm info!");
