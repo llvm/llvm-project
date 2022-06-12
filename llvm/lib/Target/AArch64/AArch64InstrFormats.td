@@ -109,15 +109,19 @@ class TriOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$MHS, node:$RHS), res>;
 class BinOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$RHS), res>;
 class UnOpFrag<dag res>  : PatFrag<(ops node:$LHS), res>;
 
-// Helper fragment for an extract of the high portion of a 128-bit vector.
+// Helper fragment for an extract of the high portion of a 128-bit vector. The
+// ComplexPattern match both extract_subvector and bitcast(extract_subvector(..)).
 def extract_high_v16i8 :
-   UnOpFrag<(extract_subvector (v16i8 node:$LHS), (i64 8))>;
+    ComplexPattern<v8i8, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
 def extract_high_v8i16 :
-   UnOpFrag<(extract_subvector (v8i16 node:$LHS), (i64 4))>;
+    ComplexPattern<v4i16, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
 def extract_high_v4i32 :
-   UnOpFrag<(extract_subvector (v4i32 node:$LHS), (i64 2))>;
-def extract_high_v2i64 :
-   UnOpFrag<(extract_subvector (v2i64 node:$LHS), (i64 1))>;
+    ComplexPattern<v2i32, 1, "SelectExtractHigh", [extract_subvector, bitconvert]>;
+
+def extract_high_dup_v8i16 :
+   BinOpFrag<(extract_subvector (v8i16 (AArch64duplane16 (v8i16 node:$LHS), node:$RHS)), (i64 4))>;
+def extract_high_dup_v4i32 :
+   BinOpFrag<(extract_subvector (v4i32 (AArch64duplane32 (v4i32 node:$LHS), node:$RHS)), (i64 2))>;
 
 //===----------------------------------------------------------------------===//
 // Asm Operand Classes.
@@ -6516,8 +6520,8 @@ multiclass SIMDDifferentThreeVectorBD<bit U, bits<4> opc, string asm,
                                               asm#"2", ".1q", ".2d", ".2d", []>;
   }
 
-  def : Pat<(v8i16 (IntOp (v8i8 (extract_high_v16i8 V128:$Rn)),
-                          (v8i8 (extract_high_v16i8 V128:$Rm)))),
+  def : Pat<(v8i16 (IntOp (v8i8 (extract_high_v16i8 (v16i8 V128:$Rn))),
+                          (v8i8 (extract_high_v16i8 (v16i8 V128:$Rm))))),
       (!cast<Instruction>(NAME#"v16i8") V128:$Rn, V128:$Rm)>;
 }
 
@@ -6530,8 +6534,8 @@ multiclass SIMDLongThreeVectorHS<bit U, bits<4> opc, string asm,
   def v8i16_v4i32  : BaseSIMDDifferentThreeVector<U, 0b011, opc,
                                                   V128, V128, V128,
                                                   asm#"2", ".4s", ".8h", ".8h",
-      [(set (v4i32 V128:$Rd), (OpNode (extract_high_v8i16 V128:$Rn),
-                                      (extract_high_v8i16 V128:$Rm)))]>;
+      [(set (v4i32 V128:$Rd), (OpNode (extract_high_v8i16 (v8i16 V128:$Rn)),
+                                      (extract_high_v8i16 (v8i16 V128:$Rm))))]>;
   def v2i32_v2i64  : BaseSIMDDifferentThreeVector<U, 0b100, opc,
                                                   V128, V64, V64,
                                                   asm, ".2d", ".2s", ".2s",
@@ -6539,8 +6543,8 @@ multiclass SIMDLongThreeVectorHS<bit U, bits<4> opc, string asm,
   def v4i32_v2i64  : BaseSIMDDifferentThreeVector<U, 0b101, opc,
                                                   V128, V128, V128,
                                                   asm#"2", ".2d", ".4s", ".4s",
-      [(set (v2i64 V128:$Rd), (OpNode (extract_high_v4i32 V128:$Rn),
-                                      (extract_high_v4i32 V128:$Rm)))]>;
+      [(set (v2i64 V128:$Rd), (OpNode (extract_high_v4i32 (v4i32 V128:$Rn)),
+                                      (extract_high_v4i32 (v4i32 V128:$Rm))))]>;
 }
 
 multiclass SIMDLongThreeVectorBHSabdl<bit U, bits<4> opc, string asm,
@@ -6554,8 +6558,8 @@ multiclass SIMDLongThreeVectorBHSabdl<bit U, bits<4> opc, string asm,
                                                  V128, V128, V128,
                                                  asm#"2", ".8h", ".16b", ".16b",
       [(set (v8i16 V128:$Rd),
-            (zext (v8i8 (OpNode (extract_high_v16i8 V128:$Rn),
-                                (extract_high_v16i8 V128:$Rm)))))]>;
+            (zext (v8i8 (OpNode (extract_high_v16i8 (v16i8 V128:$Rn)),
+                                (extract_high_v16i8 (v16i8 V128:$Rm))))))]>;
   def v4i16_v4i32  : BaseSIMDDifferentThreeVector<U, 0b010, opc,
                                                   V128, V64, V64,
                                                   asm, ".4s", ".4h", ".4h",
@@ -6565,8 +6569,8 @@ multiclass SIMDLongThreeVectorBHSabdl<bit U, bits<4> opc, string asm,
                                                   V128, V128, V128,
                                                   asm#"2", ".4s", ".8h", ".8h",
       [(set (v4i32 V128:$Rd),
-            (zext (v4i16 (OpNode (extract_high_v8i16 V128:$Rn),
-                                  (extract_high_v8i16 V128:$Rm)))))]>;
+            (zext (v4i16 (OpNode (extract_high_v8i16 (v8i16 V128:$Rn)),
+                                  (extract_high_v8i16 (v8i16 V128:$Rm))))))]>;
   def v2i32_v2i64  : BaseSIMDDifferentThreeVector<U, 0b100, opc,
                                                   V128, V64, V64,
                                                   asm, ".2d", ".2s", ".2s",
@@ -6576,8 +6580,8 @@ multiclass SIMDLongThreeVectorBHSabdl<bit U, bits<4> opc, string asm,
                                                   V128, V128, V128,
                                                   asm#"2", ".2d", ".4s", ".4s",
       [(set (v2i64 V128:$Rd),
-            (zext (v2i32 (OpNode (extract_high_v4i32 V128:$Rn),
-                                 (extract_high_v4i32 V128:$Rm)))))]>;
+            (zext (v2i32 (OpNode (extract_high_v4i32 (v4i32 V128:$Rn)),
+                                 (extract_high_v4i32 (v4i32 V128:$Rm))))))]>;
 }
 
 multiclass SIMDLongThreeVectorTiedBHSabal<bit U, bits<4> opc,
@@ -6594,8 +6598,8 @@ multiclass SIMDLongThreeVectorTiedBHSabal<bit U, bits<4> opc,
                                                  asm#"2", ".8h", ".16b", ".16b",
     [(set (v8i16 V128:$dst),
           (add (v8i16 V128:$Rd),
-               (zext (v8i8 (OpNode (extract_high_v16i8 V128:$Rn),
-                                   (extract_high_v16i8 V128:$Rm))))))]>;
+               (zext (v8i8 (OpNode (extract_high_v16i8 (v16i8 V128:$Rn)),
+                                   (extract_high_v16i8 (v16i8 V128:$Rm)))))))]>;
   def v4i16_v4i32  : BaseSIMDDifferentThreeVectorTied<U, 0b010, opc,
                                                   V128, V64, V64,
                                                   asm, ".4s", ".4h", ".4h",
@@ -6607,8 +6611,8 @@ multiclass SIMDLongThreeVectorTiedBHSabal<bit U, bits<4> opc,
                                                   asm#"2", ".4s", ".8h", ".8h",
     [(set (v4i32 V128:$dst),
           (add (v4i32 V128:$Rd),
-               (zext (v4i16 (OpNode (extract_high_v8i16 V128:$Rn),
-                                    (extract_high_v8i16 V128:$Rm))))))]>;
+               (zext (v4i16 (OpNode (extract_high_v8i16 (v8i16 V128:$Rn)),
+                                    (extract_high_v8i16 (v8i16 V128:$Rm)))))))]>;
   def v2i32_v2i64  : BaseSIMDDifferentThreeVectorTied<U, 0b100, opc,
                                                   V128, V64, V64,
                                                   asm, ".2d", ".2s", ".2s",
@@ -6620,8 +6624,8 @@ multiclass SIMDLongThreeVectorTiedBHSabal<bit U, bits<4> opc,
                                                   asm#"2", ".2d", ".4s", ".4s",
     [(set (v2i64 V128:$dst),
           (add (v2i64 V128:$Rd),
-               (zext (v2i32 (OpNode (extract_high_v4i32 V128:$Rn),
-                                    (extract_high_v4i32 V128:$Rm))))))]>;
+               (zext (v2i32 (OpNode (extract_high_v4i32 (v4i32 V128:$Rn)),
+                                    (extract_high_v4i32 (v4i32 V128:$Rm)))))))]>;
 }
 
 multiclass SIMDLongThreeVectorBHS<bit U, bits<4> opc, string asm,
@@ -6633,8 +6637,8 @@ multiclass SIMDLongThreeVectorBHS<bit U, bits<4> opc, string asm,
   def v16i8_v8i16  : BaseSIMDDifferentThreeVector<U, 0b001, opc,
                                                  V128, V128, V128,
                                                  asm#"2", ".8h", ".16b", ".16b",
-      [(set (v8i16 V128:$Rd), (OpNode (extract_high_v16i8 V128:$Rn),
-                                      (extract_high_v16i8 V128:$Rm)))]>;
+      [(set (v8i16 V128:$Rd), (OpNode (extract_high_v16i8 (v16i8 V128:$Rn)),
+                                      (extract_high_v16i8 (v16i8 V128:$Rm))))]>;
   def v4i16_v4i32  : BaseSIMDDifferentThreeVector<U, 0b010, opc,
                                                   V128, V64, V64,
                                                   asm, ".4s", ".4h", ".4h",
@@ -6642,8 +6646,8 @@ multiclass SIMDLongThreeVectorBHS<bit U, bits<4> opc, string asm,
   def v8i16_v4i32  : BaseSIMDDifferentThreeVector<U, 0b011, opc,
                                                   V128, V128, V128,
                                                   asm#"2", ".4s", ".8h", ".8h",
-      [(set (v4i32 V128:$Rd), (OpNode (extract_high_v8i16 V128:$Rn),
-                                      (extract_high_v8i16 V128:$Rm)))]>;
+      [(set (v4i32 V128:$Rd), (OpNode (extract_high_v8i16 (v8i16 V128:$Rn)),
+                                      (extract_high_v8i16 (v8i16 V128:$Rm))))]>;
   def v2i32_v2i64  : BaseSIMDDifferentThreeVector<U, 0b100, opc,
                                                   V128, V64, V64,
                                                   asm, ".2d", ".2s", ".2s",
@@ -6651,8 +6655,8 @@ multiclass SIMDLongThreeVectorBHS<bit U, bits<4> opc, string asm,
   def v4i32_v2i64  : BaseSIMDDifferentThreeVector<U, 0b101, opc,
                                                   V128, V128, V128,
                                                   asm#"2", ".2d", ".4s", ".4s",
-      [(set (v2i64 V128:$Rd), (OpNode (extract_high_v4i32 V128:$Rn),
-                                      (extract_high_v4i32 V128:$Rm)))]>;
+      [(set (v2i64 V128:$Rd), (OpNode (extract_high_v4i32 (v4i32 V128:$Rn)),
+                                      (extract_high_v4i32 (v4i32 V128:$Rm))))]>;
 }
 
 multiclass SIMDLongThreeVectorTiedBHS<bit U, bits<4> opc,
@@ -6668,8 +6672,8 @@ multiclass SIMDLongThreeVectorTiedBHS<bit U, bits<4> opc,
                                                  asm#"2", ".8h", ".16b", ".16b",
     [(set (v8i16 V128:$dst),
           (OpNode (v8i16 V128:$Rd),
-                  (extract_high_v16i8 V128:$Rn),
-                  (extract_high_v16i8 V128:$Rm)))]>;
+                  (extract_high_v16i8 (v16i8 V128:$Rn)),
+                  (extract_high_v16i8 (v16i8 V128:$Rm))))]>;
   def v4i16_v4i32  : BaseSIMDDifferentThreeVectorTied<U, 0b010, opc,
                                                   V128, V64, V64,
                                                   asm, ".4s", ".4h", ".4h",
@@ -6680,8 +6684,8 @@ multiclass SIMDLongThreeVectorTiedBHS<bit U, bits<4> opc,
                                                   asm#"2", ".4s", ".8h", ".8h",
     [(set (v4i32 V128:$dst),
           (OpNode (v4i32 V128:$Rd),
-                  (extract_high_v8i16 V128:$Rn),
-                  (extract_high_v8i16 V128:$Rm)))]>;
+                  (extract_high_v8i16 (v8i16 V128:$Rn)),
+                  (extract_high_v8i16 (v8i16 V128:$Rm))))]>;
   def v2i32_v2i64  : BaseSIMDDifferentThreeVectorTied<U, 0b100, opc,
                                                   V128, V64, V64,
                                                   asm, ".2d", ".2s", ".2s",
@@ -6692,8 +6696,8 @@ multiclass SIMDLongThreeVectorTiedBHS<bit U, bits<4> opc,
                                                   asm#"2", ".2d", ".4s", ".4s",
     [(set (v2i64 V128:$dst),
           (OpNode (v2i64 V128:$Rd),
-                  (extract_high_v4i32 V128:$Rn),
-                  (extract_high_v4i32 V128:$Rm)))]>;
+                  (extract_high_v4i32 (v4i32 V128:$Rn)),
+                  (extract_high_v4i32 (v4i32 V128:$Rm))))]>;
 }
 
 multiclass SIMDLongThreeVectorSQDMLXTiedHS<bit U, bits<4> opc, string asm,
@@ -6710,8 +6714,8 @@ multiclass SIMDLongThreeVectorSQDMLXTiedHS<bit U, bits<4> opc, string asm,
                                                   asm#"2", ".4s", ".8h", ".8h",
     [(set (v4i32 V128:$dst),
           (Accum (v4i32 V128:$Rd),
-                 (v4i32 (int_aarch64_neon_sqdmull (extract_high_v8i16 V128:$Rn),
-                                            (extract_high_v8i16 V128:$Rm)))))]>;
+                 (v4i32 (int_aarch64_neon_sqdmull (extract_high_v8i16 (v8i16 V128:$Rn)),
+                                            (extract_high_v8i16 (v8i16 V128:$Rm))))))]>;
   def v2i32_v2i64  : BaseSIMDDifferentThreeVectorTied<U, 0b100, opc,
                                                   V128, V64, V64,
                                                   asm, ".2d", ".2s", ".2s",
@@ -6724,8 +6728,8 @@ multiclass SIMDLongThreeVectorSQDMLXTiedHS<bit U, bits<4> opc, string asm,
                                                   asm#"2", ".2d", ".4s", ".4s",
     [(set (v2i64 V128:$dst),
           (Accum (v2i64 V128:$Rd),
-                 (v2i64 (int_aarch64_neon_sqdmull (extract_high_v4i32 V128:$Rn),
-                                            (extract_high_v4i32 V128:$Rm)))))]>;
+                 (v2i64 (int_aarch64_neon_sqdmull (extract_high_v4i32 (v4i32 V128:$Rn)),
+                                            (extract_high_v4i32 (v4i32 V128:$Rm))))))]>;
 }
 
 multiclass SIMDWideThreeVectorBHS<bit U, bits<4> opc, string asm,
@@ -6738,7 +6742,7 @@ multiclass SIMDWideThreeVectorBHS<bit U, bits<4> opc, string asm,
                                                   V128, V128, V128,
                                                   asm#"2", ".8h", ".8h", ".16b",
        [(set (v8i16 V128:$Rd), (OpNode (v8i16 V128:$Rn),
-                                       (extract_high_v16i8 V128:$Rm)))]>;
+                                       (extract_high_v16i8 (v16i8 V128:$Rm))))]>;
   def v4i16_v4i32  : BaseSIMDDifferentThreeVector<U, 0b010, opc,
                                                   V128, V128, V64,
                                                   asm, ".4s", ".4s", ".4h",
@@ -6747,7 +6751,7 @@ multiclass SIMDWideThreeVectorBHS<bit U, bits<4> opc, string asm,
                                                   V128, V128, V128,
                                                   asm#"2", ".4s", ".4s", ".8h",
        [(set (v4i32 V128:$Rd), (OpNode (v4i32 V128:$Rn),
-                                       (extract_high_v8i16 V128:$Rm)))]>;
+                                       (extract_high_v8i16 (v8i16 V128:$Rm))))]>;
   def v2i32_v2i64  : BaseSIMDDifferentThreeVector<U, 0b100, opc,
                                                   V128, V128, V64,
                                                   asm, ".2d", ".2d", ".2s",
@@ -6756,7 +6760,7 @@ multiclass SIMDWideThreeVectorBHS<bit U, bits<4> opc, string asm,
                                                   V128, V128, V128,
                                                   asm#"2", ".2d", ".2d", ".4s",
        [(set (v2i64 V128:$Rd), (OpNode (v2i64 V128:$Rn),
-                                       (extract_high_v4i32 V128:$Rm)))]>;
+                                       (extract_high_v4i32 (v4i32 V128:$Rm))))]>;
 }
 
 //----------------------------------------------------------------------------
@@ -8775,9 +8779,8 @@ multiclass SIMDIndexedLongSD<bit U, bits<4> opc, string asm,
                                       V128_lo, VectorIndexH,
                                       asm#"2", ".4s", ".4s", ".8h", ".h",
     [(set (v4i32 V128:$Rd),
-          (OpNode (extract_high_v8i16 V128:$Rn),
-                  (extract_high_v8i16 (AArch64duplane16 (v8i16 V128_lo:$Rm),
-                                                      VectorIndexH:$idx))))]> {
+          (OpNode (extract_high_v8i16 (v8i16 V128:$Rn)),
+                  (extract_high_dup_v8i16 (v8i16 V128_lo:$Rm), VectorIndexH:$idx)))]> {
 
     bits<3> idx;
     let Inst{11} = idx{2};
@@ -8802,9 +8805,8 @@ multiclass SIMDIndexedLongSD<bit U, bits<4> opc, string asm,
                                       V128, VectorIndexS,
                                       asm#"2", ".2d", ".2d", ".4s", ".s",
     [(set (v2i64 V128:$Rd),
-          (OpNode (extract_high_v4i32 V128:$Rn),
-                  (extract_high_v4i32 (AArch64duplane32 (v4i32 V128:$Rm),
-                                                      VectorIndexS:$idx))))]> {
+          (OpNode (extract_high_v4i32 (v4i32 V128:$Rn)),
+                  (extract_high_dup_v4i32 (v4i32 V128:$Rm), VectorIndexS:$idx)))]> {
     bits<2> idx;
     let Inst{11} = idx{1};
     let Inst{21} = idx{0};
@@ -8867,10 +8869,8 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
     [(set (v4i32 V128:$dst),
           (Accum (v4i32 V128:$Rd),
                  (v4i32 (int_aarch64_neon_sqdmull
-                            (extract_high_v8i16 V128:$Rn),
-                            (extract_high_v8i16
-                                (AArch64duplane16 (v8i16 V128_lo:$Rm),
-                                                VectorIndexH:$idx))))))]> {
+                            (extract_high_v8i16 (v8i16 V128:$Rn)),
+                            (extract_high_dup_v8i16 (v8i16 V128_lo:$Rm), VectorIndexH:$idx)))))]> {
     bits<3> idx;
     let Inst{11} = idx{2};
     let Inst{21} = idx{1};
@@ -8899,10 +8899,8 @@ multiclass SIMDIndexedLongSQDMLXSDTied<bit U, bits<4> opc, string asm,
     [(set (v2i64 V128:$dst),
           (Accum (v2i64 V128:$Rd),
                  (v2i64 (int_aarch64_neon_sqdmull
-                            (extract_high_v4i32 V128:$Rn),
-                            (extract_high_v4i32
-                                (AArch64duplane32 (v4i32 V128:$Rm),
-                                                VectorIndexS:$idx))))))]> {
+                            (extract_high_v4i32 (v4i32 V128:$Rn)),
+                            (extract_high_dup_v4i32 (v4i32 V128:$Rm), VectorIndexS:$idx)))))]> {
     bits<2> idx;
     let Inst{11} = idx{1};
     let Inst{21} = idx{0};
@@ -8955,9 +8953,8 @@ multiclass SIMDVectorIndexedLongSD<bit U, bits<4> opc, string asm,
                                       V128_lo, VectorIndexH,
                                       asm#"2", ".4s", ".4s", ".8h", ".h",
     [(set (v4i32 V128:$Rd),
-          (OpNode (extract_high_v8i16 V128:$Rn),
-                  (extract_high_v8i16 (AArch64duplane16 (v8i16 V128_lo:$Rm),
-                                                      VectorIndexH:$idx))))]> {
+          (OpNode (extract_high_v8i16 (v8i16 V128:$Rn)),
+                  (extract_high_dup_v8i16 (v8i16 V128_lo:$Rm), VectorIndexH:$idx)))]> {
 
     bits<3> idx;
     let Inst{11} = idx{2};
@@ -8982,9 +8979,8 @@ multiclass SIMDVectorIndexedLongSD<bit U, bits<4> opc, string asm,
                                       V128, VectorIndexS,
                                       asm#"2", ".2d", ".2d", ".4s", ".s",
     [(set (v2i64 V128:$Rd),
-          (OpNode (extract_high_v4i32 V128:$Rn),
-                  (extract_high_v4i32 (AArch64duplane32 (v4i32 V128:$Rm),
-                                                      VectorIndexS:$idx))))]> {
+          (OpNode (extract_high_v4i32 (v4i32 V128:$Rn)),
+                  (extract_high_dup_v4i32 (v4i32 V128:$Rm), VectorIndexS:$idx)))]> {
     bits<2> idx;
     let Inst{11} = idx{1};
     let Inst{21} = idx{0};
@@ -9014,9 +9010,8 @@ multiclass SIMDVectorIndexedLongSDTied<bit U, bits<4> opc, string asm,
                                       asm#"2", ".4s", ".4s", ".8h", ".h",
     [(set (v4i32 V128:$dst),
           (OpNode (v4i32 V128:$Rd),
-                  (extract_high_v8i16 V128:$Rn),
-                  (extract_high_v8i16 (AArch64duplane16 (v8i16 V128_lo:$Rm),
-                                                      VectorIndexH:$idx))))]> {
+                  (extract_high_v8i16 (v8i16 V128:$Rn)),
+                  (extract_high_dup_v8i16 (v8i16 V128_lo:$Rm), VectorIndexH:$idx)))]> {
     bits<3> idx;
     let Inst{11} = idx{2};
     let Inst{21} = idx{1};
@@ -9041,9 +9036,8 @@ multiclass SIMDVectorIndexedLongSDTied<bit U, bits<4> opc, string asm,
                                       asm#"2", ".2d", ".2d", ".4s", ".s",
     [(set (v2i64 V128:$dst),
           (OpNode (v2i64 V128:$Rd),
-                  (extract_high_v4i32 V128:$Rn),
-                  (extract_high_v4i32 (AArch64duplane32 (v4i32 V128:$Rm),
-                                                      VectorIndexS:$idx))))]> {
+                  (extract_high_v4i32 (v4i32 V128:$Rn)),
+                  (extract_high_dup_v4i32 (v4i32 V128:$Rm), VectorIndexS:$idx)))]> {
     bits<2> idx;
     let Inst{11} = idx{1};
     let Inst{21} = idx{0};
@@ -9728,7 +9722,7 @@ multiclass SIMDVectorLShiftLongBHSD<bit U, bits<5> opc, string asm,
                                   V128, V128, vecshiftL8,
                                   asm#"2", ".8h", ".16b",
       [(set (v8i16 V128:$Rd),
-            (OpNode (extract_high_v16i8 V128:$Rn), vecshiftL8:$imm))]> {
+            (OpNode (extract_high_v16i8 (v16i8 V128:$Rn)), vecshiftL8:$imm))]> {
     bits<3> imm;
     let Inst{18-16} = imm;
   }
@@ -9744,7 +9738,7 @@ multiclass SIMDVectorLShiftLongBHSD<bit U, bits<5> opc, string asm,
                                   V128, V128, vecshiftL16,
                                   asm#"2", ".4s", ".8h",
       [(set (v4i32 V128:$Rd),
-            (OpNode (extract_high_v8i16 V128:$Rn), vecshiftL16:$imm))]> {
+            (OpNode (extract_high_v8i16 (v8i16 V128:$Rn)), vecshiftL16:$imm))]> {
 
     bits<4> imm;
     let Inst{19-16} = imm;
@@ -9761,7 +9755,7 @@ multiclass SIMDVectorLShiftLongBHSD<bit U, bits<5> opc, string asm,
                                   V128, V128, vecshiftL32,
                                   asm#"2", ".2d", ".4s",
       [(set (v2i64 V128:$Rd),
-            (OpNode (extract_high_v4i32 V128:$Rn), vecshiftL32:$imm))]> {
+            (OpNode (extract_high_v4i32 (v4i32 V128:$Rn)), vecshiftL32:$imm))]> {
     bits<5> imm;
     let Inst{20-16} = imm;
   }
