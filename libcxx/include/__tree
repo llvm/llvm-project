@@ -33,12 +33,10 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if defined(__GNUC__) && !defined(__clang__) // gcc.gnu.org/PR37804
 template <class, class, class, class> class _LIBCPP_TEMPLATE_VIS map;
 template <class, class, class, class> class _LIBCPP_TEMPLATE_VIS multimap;
 template <class, class, class> class _LIBCPP_TEMPLATE_VIS set;
 template <class, class, class> class _LIBCPP_TEMPLATE_VIS multiset;
-#endif
 
 template <class _Tp, class _Compare, class _Allocator> class __tree;
 template <class _Tp, class _NodePtr, class _DiffType>
