@@ -10,44 +10,42 @@ define half @roundeven_f16(half %h) {
 ; SSE2:       ## %bb.0: ## %entry
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
-; SSE2-NEXT:    movzwl %di, %edi
 ; SSE2-NEXT:    callq ___extendhfsf2
 ; SSE2-NEXT:    callq _roundevenf
 ; SSE2-NEXT:    callq ___truncsfhf2
-; SSE2-NEXT:    popq %rcx
+; SSE2-NEXT:    popq %rax
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: roundeven_f16:
 ; SSE41:       ## %bb.0: ## %entry
 ; SSE41-NEXT:    pushq %rax
 ; SSE41-NEXT:    .cfi_def_cfa_offset 16
-; SSE41-NEXT:    movzwl %di, %edi
 ; SSE41-NEXT:    callq ___extendhfsf2
 ; SSE41-NEXT:    roundss $8, %xmm0, %xmm0
 ; SSE41-NEXT:    callq ___truncsfhf2
-; SSE41-NEXT:    popq %rcx
+; SSE41-NEXT:    popq %rax
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: roundeven_f16:
 ; AVX1:       ## %bb.0: ## %entry
 ; AVX1-NEXT:    pushq %rax
 ; AVX1-NEXT:    .cfi_def_cfa_offset 16
-; AVX1-NEXT:    movzwl %di, %edi
 ; AVX1-NEXT:    callq ___extendhfsf2
 ; AVX1-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    callq ___truncsfhf2
-; AVX1-NEXT:    popq %rcx
+; AVX1-NEXT:    popq %rax
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: roundeven_f16:
 ; AVX512F:       ## %bb.0: ## %entry
-; AVX512F-NEXT:    movzwl %di, %eax
+; AVX512F-NEXT:    vpextrw $0, %xmm0, %eax
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm0
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    ## kill: def $ax killed $ax killed $eax
+; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512FP16-LABEL: roundeven_f16:
