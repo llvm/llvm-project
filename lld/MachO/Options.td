@@ -887,7 +887,6 @@ def e : Separate<["-"], "e">,
     Group<grp_rare>;
 def w : Flag<["-"], "w">,
     HelpText<"Suppress all warnings">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def final_output : Separate<["-"], "final_output">,
     MetaVarName<"<name>">,
