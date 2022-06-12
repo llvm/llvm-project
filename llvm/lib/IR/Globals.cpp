@@ -236,9 +236,7 @@ void GlobalValue::setSanitizerMetadata(const SanitizerMetadata &Meta) {
 void GlobalValue::removeSanitizerMetadata() {
   DenseMap<const GlobalValue *, SanitizerMetadata> &MetadataMap =
       getContext().pImpl->GlobalValueSanitizerMetadata;
-  auto It = MetadataMap.find(this);
-  if (It != MetadataMap.end())
-    MetadataMap.erase(It);
+  MetadataMap.erase(this);
   HasSanitizerMetadata = false;
 }
 
