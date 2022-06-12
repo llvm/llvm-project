@@ -114,7 +114,7 @@ void ConstantInitBuilderBase::abandon(size_t newEnd) {
   if (newEnd == 0) {
     for (auto &entry : SelfReferences) {
       auto dummy = entry.Dummy;
-      dummy->replaceAllUsesWith(llvm::UndefValue::get(dummy->getType()));
+      dummy->replaceAllUsesWith(llvm::PoisonValue::get(dummy->getType()));
       dummy->eraseFromParent();
     }
     SelfReferences.clear();
