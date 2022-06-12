@@ -10,6 +10,7 @@
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_JOIN_TYPES_H
 
 #include <concepts>
+#include <cstdint>
 #include <tuple>
 
 #include "test_macros.h"
