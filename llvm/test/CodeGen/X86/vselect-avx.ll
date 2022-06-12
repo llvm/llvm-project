@@ -198,12 +198,10 @@ define void @blendv_split(<8 x i32>* %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32
   ret void
 }
 
+; Regression test for rGea8fb3b60196
 define void @vselect_concat() {
 ; AVX-LABEL: vselect_concat:
 ; AVX:       ## %bb.0: ## %entry
-; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; AVX-NEXT:    vmovaps %ymm0, (%rax)
-; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 entry:
   %0 = load <8 x i32>, <8 x i32>* undef
