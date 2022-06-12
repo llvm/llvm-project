@@ -134,6 +134,16 @@ static bool convertExternsToLinkOnce(Module *MOUT, LLVMContext &Ctx) {
       if (i->getCallingConv() == llvm::CallingConv::AMDGPU_KERNEL) {
         F->removeFnAttr(llvm::Attribute::OptimizeNone);
       } else {
+        if (!strncmp(F->getName().str().c_str(), "__ockl_devmem_request",
+                     strlen("__ockl_devmem_request")))
+          continue;
+        if (!strncmp(F->getName().str().c_str(), "__ockl_dm_alloc",
+                     strlen("__ockl_dm_alloc")))
+          continue;
+        if (!strncmp(F->getName().str().c_str(), "__ockl_dm_dealloc",
+                     strlen("__ockl_dm_dealloc")))
+          continue;
+        // all other functions
         F->setLinkage(GlobalValue::LinkOnceODRLinkage);
         F->setVisibility(GlobalValue::ProtectedVisibility);
         F->removeFnAttr(llvm::Attribute::OptimizeNone);
