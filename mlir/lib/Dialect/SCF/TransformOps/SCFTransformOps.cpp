@@ -176,7 +176,7 @@ loopScheduling(scf::ForOp forOp,
   for (const auto &it : wrappedSchedule) {
     for (Operation *op : it.second) {
       unsigned cycle = opCycles[op];
-      schedule.push_back(std::make_pair(op, cycle / iterationInterval));
+      schedule.emplace_back(op, cycle / iterationInterval);
     }
   }
 }
