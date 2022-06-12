@@ -65,7 +65,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
 //===----------------------------------------------------------------------===//
 // FIXME: Now, we only support CallingConv::C with fixed arguments which are
 // passed with integer registers.
-static const MCPhysReg ArgGPRs[] = {
+const MCPhysReg ArgGPRs[] = {
     LoongArch::R4, LoongArch::R5, LoongArch::R6,  LoongArch::R7,
     LoongArch::R8, LoongArch::R9, LoongArch::R10, LoongArch::R11};
 
