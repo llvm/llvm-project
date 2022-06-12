@@ -179,8 +179,6 @@ X86InstructionSelector::getRegClass(LLT Ty, const RegisterBank &RB) const {
       return &X86::GR64RegClass;
   }
   if (RB.getID() == X86::VECRRegBankID) {
-    if (Ty.getSizeInBits() == 16)
-      return STI.hasAVX512() ? &X86::FR16XRegClass : &X86::FR16RegClass;
     if (Ty.getSizeInBits() == 32)
       return STI.hasAVX512() ? &X86::FR32XRegClass : &X86::FR32RegClass;
     if (Ty.getSizeInBits() == 64)

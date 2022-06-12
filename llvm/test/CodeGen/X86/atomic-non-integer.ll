@@ -4,9 +4,9 @@
 ; RUN: llc < %s -mtriple=i386-linux-generic -verify-machineinstrs -mattr=avx | FileCheck %s --check-prefixes=X86,X86-AVX
 ; RUN: llc < %s -mtriple=i386-linux-generic -verify-machineinstrs -mattr=avx512f | FileCheck %s --check-prefixes=X86,X86-AVX
 ; RUN: llc < %s -mtriple=i386-linux-generic -verify-machineinstrs | FileCheck %s --check-prefixes=X86,X86-NOSSE
-; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=sse2 | FileCheck %s --check-prefixes=X64-SSE
-; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=avx | FileCheck %s --check-prefixes=X64-AVX
-; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=avx512f | FileCheck %s --check-prefixes=X64-AVX
+; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=sse2 | FileCheck %s --check-prefixes=X64,X64-SSE
+; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=avx | FileCheck %s --check-prefixes=X64,X64-AVX
+; RUN: llc < %s -mtriple=x86_64-linux-generic -verify-machineinstrs -mattr=avx512f | FileCheck %s --check-prefixes=X64,X64-AVX
 
 ; Note: This test is testing that the lowering for atomics matches what we
 ; currently emit for non-atomics + the atomic restriction.  The presence of
@@ -16,45 +16,17 @@
 ;  and their calling convention which remain unresolved.)
 
 define void @store_half(half* %fptr, half %v) {
-; X86-SSE1-LABEL: store_half:
-; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE1-NEXT:    movw %ax, (%ecx)
-; X86-SSE1-NEXT:    retl
+; X86-LABEL: store_half:
+; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %ax, (%ecx)
+; X86-NEXT:    retl
 ;
-; X86-SSE2-LABEL: store_half:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movw %cx, (%eax)
-; X86-SSE2-NEXT:    retl
-;
-; X86-AVX-LABEL: store_half:
-; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    movw %cx, (%eax)
-; X86-AVX-NEXT:    retl
-;
-; X86-NOSSE-LABEL: store_half:
-; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NOSSE-NEXT:    movw %ax, (%ecx)
-; X86-NOSSE-NEXT:    retl
-;
-; X64-SSE-LABEL: store_half:
-; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    pextrw $0, %xmm0, %eax
-; X64-SSE-NEXT:    movw %ax, (%rdi)
-; X64-SSE-NEXT:    retq
-;
-; X64-AVX-LABEL: store_half:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpextrw $0, %xmm0, %eax
-; X64-AVX-NEXT:    movw %ax, (%rdi)
-; X64-AVX-NEXT:    retq
+; X64-LABEL: store_half:
+; X64:       # %bb.0:
+; X64-NEXT:    movw %si, (%rdi)
+; X64-NEXT:    retq
   store atomic half %v, half* %fptr unordered, align 2
   ret void
 }
@@ -221,43 +193,16 @@ define void @store_fp128(fp128* %fptr, fp128 %v) {
 }
 
 define half @load_half(half* %fptr) {
-; X86-SSE1-LABEL: load_half:
-; X86-SSE1:       # %bb.0:
-; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    movzwl (%eax), %eax
-; X86-SSE1-NEXT:    retl
+; X86-LABEL: load_half:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    retl
 ;
-; X86-SSE2-LABEL: load_half:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movzwl (%eax), %eax
-; X86-SSE2-NEXT:    pinsrw $0, %eax, %xmm0
-; X86-SSE2-NEXT:    retl
-;
-; X86-AVX-LABEL: load_half:
-; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    movzwl (%eax), %eax
-; X86-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; X86-AVX-NEXT:    retl
-;
-; X86-NOSSE-LABEL: load_half:
-; X86-NOSSE:       # %bb.0:
-; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    movzwl (%eax), %eax
-; X86-NOSSE-NEXT:    retl
-;
-; X64-SSE-LABEL: load_half:
-; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movzwl (%rdi), %eax
-; X64-SSE-NEXT:    pinsrw $0, %eax, %xmm0
-; X64-SSE-NEXT:    retq
-;
-; X64-AVX-LABEL: load_half:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    movzwl (%rdi), %eax
-; X64-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; X64-AVX-NEXT:    retq
+; X64-LABEL: load_half:
+; X64:       # %bb.0:
+; X64-NEXT:    movzwl (%rdi), %eax
+; X64-NEXT:    retq
   %v = load atomic half, half* %fptr unordered, align 2
   ret half %v
 }

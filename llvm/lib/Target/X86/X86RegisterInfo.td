@@ -537,8 +537,6 @@ def FR32 : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 15)>;
 
 def FR64 : RegisterClass<"X86", [f64], 64, (add FR32)>;
 
-def FR16 : RegisterClass<"X86", [f16], 16, (add FR32)> {let Size = 32;}
-
 
 // FIXME: This sets up the floating point register files as though they are f64
 // values, though they really are f80 values.  This will cause us to spill
@@ -601,7 +599,7 @@ def FR32X : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 31)>;
 
 def FR64X : RegisterClass<"X86", [f64], 64, (add FR32X)>;
 
-def FR16X : RegisterClass<"X86", [f16], 16, (add FR32X)> {let Size = 32;}
+def FR16X : RegisterClass<"X86", [f16], 16, (add FR32X)>;
 
 // Extended VR128 and VR256 for AVX-512 instructions
 def VR128X : RegisterClass<"X86", [v4f32, v2f64, v8f16, v16i8, v8i16, v4i32, v2i64, f128],

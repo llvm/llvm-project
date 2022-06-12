@@ -28,8 +28,8 @@ body: |
     liveins: $rdi, $rsi
 
   ; CHECK-LABEL: name: test
-  ; CHECK: INLINEASM &foo, 0 /* attdialect */, 4456458 /* regdef:GR64 */, def $rsi, 4456458 /* regdef:GR64 */, def dead $rdi,
-    INLINEASM &foo, 0, 4456458, def $rsi, 4456458, def dead $rdi, 2147549193, killed $rdi, 2147483657, killed $rsi, 12, implicit-def dead early-clobber $eflags
+  ; CHECK: INLINEASM &foo, 0 /* attdialect */, 4390922 /* regdef:GR64 */, def $rsi, 4390922 /* regdef:GR64 */, def dead $rdi,
+    INLINEASM &foo, 0, 4390922, def $rsi, 4390922, def dead $rdi, 2147549193, killed $rdi, 2147483657, killed $rsi, 12, implicit-def dead early-clobber $eflags
     $rax = MOV64rr killed $rsi
     RET64 killed $rax
 ...
@@ -45,8 +45,8 @@ body: |
 
   ; Verify that the register ties are preserved.
   ; CHECK-LABEL: name: test2
-  ; CHECK: INLINEASM &foo, 0 /* attdialect */, 4456458 /* regdef:GR64 */, def $rsi, 4456458 /* regdef:GR64 */, def dead $rdi, 2147549193 /* reguse tiedto:$1 */, killed $rdi(tied-def 5), 2147483657 /* reguse tiedto:$0 */, killed $rsi(tied-def 3), 12 /* clobber */, implicit-def dead early-clobber $eflags
-    INLINEASM &foo, 0, 4456458, def $rsi, 4456458, def dead $rdi, 2147549193, killed $rdi(tied-def 5), 2147483657, killed $rsi(tied-def 3), 12, implicit-def dead early-clobber $eflags
+  ; CHECK: INLINEASM &foo, 0 /* attdialect */, 4390922 /* regdef:GR64 */, def $rsi, 4390922 /* regdef:GR64 */, def dead $rdi, 2147549193 /* reguse tiedto:$1 */, killed $rdi(tied-def 5), 2147483657 /* reguse tiedto:$0 */, killed $rsi(tied-def 3), 12 /* clobber */, implicit-def dead early-clobber $eflags
+    INLINEASM &foo, 0, 4390922, def $rsi, 4390922, def dead $rdi, 2147549193, killed $rdi(tied-def 5), 2147483657, killed $rsi(tied-def 3), 12, implicit-def dead early-clobber $eflags
     $rax = MOV64rr killed $rsi
     RET64 killed $rax
 ...

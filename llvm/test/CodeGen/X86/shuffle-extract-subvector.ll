@@ -4,30 +4,28 @@
 define void @f(<4 x half>* %a, <4 x half>* %b, <8 x half>* %c) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pinsrw $0, (%rdi), %xmm0
-; CHECK-NEXT:    pinsrw $0, 2(%rdi), %xmm1
-; CHECK-NEXT:    pinsrw $0, 4(%rdi), %xmm2
-; CHECK-NEXT:    pinsrw $0, 6(%rdi), %xmm3
-; CHECK-NEXT:    pinsrw $0, (%rsi), %xmm4
-; CHECK-NEXT:    pinsrw $0, 2(%rsi), %xmm5
-; CHECK-NEXT:    pinsrw $0, 4(%rsi), %xmm6
-; CHECK-NEXT:    pinsrw $0, 6(%rsi), %xmm7
-; CHECK-NEXT:    pextrw $0, %xmm7, %eax
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movzwl 2(%rdi), %ecx
+; CHECK-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movzwl 6(%rdi), %r8d
+; CHECK-NEXT:    movzwl 4(%rdi), %r11d
+; CHECK-NEXT:    movq (%rsi), %rsi
+; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movdqa -{{[0-9]+}}(%rsp), %xmm0
+; CHECK-NEXT:    pextrw $1, %xmm0, %r9d
+; CHECK-NEXT:    movd %xmm0, %r10d
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    pextrw $3, %xmm0, %eax
+; CHECK-NEXT:    pextrw $2, %xmm0, %edi
+; CHECK-NEXT:    movw %r11w, 8(%rdx)
+; CHECK-NEXT:    movw %cx, 4(%rdx)
+; CHECK-NEXT:    movw %r8w, 12(%rdx)
+; CHECK-NEXT:    movw %si, (%rdx)
+; CHECK-NEXT:    movw %di, 10(%rdx)
 ; CHECK-NEXT:    movw %ax, 14(%rdx)
-; CHECK-NEXT:    pextrw $0, %xmm3, %eax
-; CHECK-NEXT:    movw %ax, 12(%rdx)
-; CHECK-NEXT:    pextrw $0, %xmm6, %eax
-; CHECK-NEXT:    movw %ax, 10(%rdx)
-; CHECK-NEXT:    pextrw $0, %xmm2, %eax
-; CHECK-NEXT:    movw %ax, 8(%rdx)
-; CHECK-NEXT:    pextrw $0, %xmm5, %eax
-; CHECK-NEXT:    movw %ax, 6(%rdx)
-; CHECK-NEXT:    pextrw $0, %xmm1, %eax
-; CHECK-NEXT:    movw %ax, 4(%rdx)
-; CHECK-NEXT:    pextrw $0, %xmm4, %eax
-; CHECK-NEXT:    movw %ax, 2(%rdx)
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    movw %ax, (%rdx)
+; CHECK-NEXT:    movw %r10w, 2(%rdx)
+; CHECK-NEXT:    movw %r9w, 6(%rdx)
 ; CHECK-NEXT:    retq
   %tmp4 = load <4 x half>, <4 x half>* %a
   %tmp5 = load <4 x half>, <4 x half>* %b

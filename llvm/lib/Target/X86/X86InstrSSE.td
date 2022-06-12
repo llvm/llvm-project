@@ -112,8 +112,6 @@ multiclass sse12_fp_packed_logical_rm<bits<8> opc, RegisterClass RC, Domain d,
 // This is expanded by ExpandPostRAPseudos.
 let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
     isPseudo = 1, SchedRW = [WriteZero] in {
-  def FsFLD0SH : I<0, Pseudo, (outs FR16:$dst), (ins), "",
-                   [(set FR16:$dst, fp16imm0)]>, Requires<[HasSSE2, NoAVX512]>;
   def FsFLD0SS : I<0, Pseudo, (outs FR32:$dst), (ins), "",
                    [(set FR32:$dst, fp32imm0)]>, Requires<[HasSSE1, NoAVX512]>;
   def FsFLD0SD : I<0, Pseudo, (outs FR64:$dst), (ins), "",
@@ -3967,20 +3965,6 @@ defm PINSRW : sse2_pinsrw, PD;
 
 } // ExeDomain = SSEPackedInt
 
-// Always select FP16 instructions if available.
-let Predicates = [UseSSE2], AddedComplexity = -10 in {
-  def : Pat<(f16 (load addr:$src)), (COPY_TO_REGCLASS (PINSRWrm (v8i16 (IMPLICIT_DEF)), addr:$src, 0), FR16)>;
-  def : Pat<(store f16:$src, addr:$dst), (MOV16mr addr:$dst, (EXTRACT_SUBREG (PEXTRWrr (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit))>;
-  def : Pat<(i16 (bitconvert f16:$src)), (EXTRACT_SUBREG (PEXTRWrr (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit)>;
-  def : Pat<(f16 (bitconvert i16:$src)), (COPY_TO_REGCLASS (PINSRWrr (v8i16 (IMPLICIT_DEF)), (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit), 0), FR16)>;
-}
-
-let Predicates = [HasAVX, NoBWI] in {
-  def : Pat<(f16 (load addr:$src)), (COPY_TO_REGCLASS (VPINSRWrm (v8i16 (IMPLICIT_DEF)), addr:$src, 0), FR16)>;
-  def : Pat<(i16 (bitconvert f16:$src)), (EXTRACT_SUBREG (VPEXTRWrr (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0), sub_16bit)>;
-  def : Pat<(f16 (bitconvert i16:$src)), (COPY_TO_REGCLASS (VPINSRWrr (v8i16 (IMPLICIT_DEF)), (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit), 0), FR16)>;
-}
-
 //===---------------------------------------------------------------------===//
 // SSE2 - Packed Mask Creation
 //===---------------------------------------------------------------------===//
@@ -5208,12 +5192,6 @@ let Predicates = [HasAVX, NoBWI] in
   defm VPEXTRW : SS41I_extract16<0x15, "vpextrw">, VEX, VEX_WIG;
 
 defm PEXTRW      : SS41I_extract16<0x15, "pextrw">;
-
-let Predicates = [UseSSE41] in
-  def : Pat<(store f16:$src, addr:$dst), (PEXTRWmr addr:$dst, (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0)>;
-
-let Predicates = [HasAVX, NoBWI] in
-  def : Pat<(store f16:$src, addr:$dst), (VPEXTRWmr addr:$dst, (v8i16 (COPY_TO_REGCLASS FR16:$src, VR128)), 0)>;
 
 
 /// SS41I_extract32 - SSE 4.1 extract 32 bits to int reg or memory destination
@@ -7597,21 +7575,6 @@ let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
         (VPBROADCASTWYrr (VMOVDI2PDIrr
                           (i32 (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
                                               GR16:$src, sub_16bit))))>;
-
-  def : Pat<(v8f16 (X86VBroadcastld16 addr:$src)),
-            (VPBROADCASTWrm addr:$src)>;
-  def : Pat<(v16f16 (X86VBroadcastld16 addr:$src)),
-            (VPBROADCASTWYrm addr:$src)>;
-
-  def : Pat<(v8f16 (X86VBroadcast (v8f16 VR128:$src))),
-            (VPBROADCASTWrr VR128:$src)>;
-  def : Pat<(v16f16 (X86VBroadcast (v8f16 VR128:$src))),
-            (VPBROADCASTWYrr VR128:$src)>;
-
-  def : Pat<(v8f16 (X86VBroadcast (f16 FR16:$src))),
-            (VPBROADCASTWrr (COPY_TO_REGCLASS FR16:$src, VR128))>;
-  def : Pat<(v16f16 (X86VBroadcast (f16 FR16:$src))),
-            (VPBROADCASTWYrr (COPY_TO_REGCLASS FR16:$src, VR128))>;
 }
 let Predicates = [HasAVX2, NoVLX] in {
   def : Pat<(v4i32 (X86VBroadcast GR32:$src)),
