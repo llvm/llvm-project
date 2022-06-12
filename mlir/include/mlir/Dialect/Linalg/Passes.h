@@ -130,7 +130,7 @@ createLinalgStrategyInterchangePass(
 /// Create a LinalgStrategyPeelPass.
 std::unique_ptr<OperationPass<func::FuncOp>> createLinalgStrategyPeelPass(
     StringRef opName = "",
-    linalg::LinalgPeelOptions opt = linalg::LinalgPeelOptions(),
+    const linalg::LinalgPeelOptions &opt = linalg::LinalgPeelOptions(),
     const linalg::LinalgTransformationFilter &filter =
         linalg::LinalgTransformationFilter());
 
