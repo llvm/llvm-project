@@ -64,18 +64,8 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
       (T.getArch() == Triple::aarch64 || T.getArch() == Triple::aarch64_32))
     SupportsCompactUnwindWithoutEHFrame = true;
 
-  switch (Ctx->emitDwarfUnwindInfo()) {
-  case EmitDwarfUnwindType::Always:
-    OmitDwarfIfHaveCompactUnwind = false;
-    break;
-  case EmitDwarfUnwindType::NoCompactUnwind:
+  if (T.isWatchABI())
     OmitDwarfIfHaveCompactUnwind = true;
-    break;
-  case EmitDwarfUnwindType::Default:
-    OmitDwarfIfHaveCompactUnwind =
-        T.isWatchABI() || SupportsCompactUnwindWithoutEHFrame;
-    break;
-  }
 
   FDECFIEncoding = dwarf::DW_EH_PE_pcrel;
 
