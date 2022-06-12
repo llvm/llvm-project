@@ -296,3 +296,60 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         ret = self.expect_gdbremote_sequence()
         self.assertEqual(set([ret["pid1"], ret["pid2"]]),
                          set([parent_pid, child_pid]))
+
+    def vkill_test(self, kill_parent=False, kill_child=False):
+        assert kill_parent or kill_child
+        self.build()
+        self.prep_debug_monitor_and_inferior(inferior_args=["fork"])
+        self.add_qSupported_packets(["multiprocess+",
+                                     "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
+        ], True)
+        ret = self.expect_gdbremote_sequence()
+        parent_pid = ret["parent_pid"]
+        parent_tid = ret["parent_tid"]
+        child_pid = ret["child_pid"]
+        child_tid = ret["child_tid"]
+        self.reset_test_sequence()
+
+        if kill_parent:
+            self.test_sequence.add_log_lines([
+                # kill the process
+                "read packet: $vKill;{}#00".format(parent_pid),
+                "send packet: $OK#00",
+            ], True)
+        if kill_child:
+            self.test_sequence.add_log_lines([
+                # kill the process
+                "read packet: $vKill;{}#00".format(child_pid),
+                "send packet: $OK#00",
+            ], True)
+        self.test_sequence.add_log_lines([
+            # check child PID/TID
+            "read packet: $Hgp{}.{}#00".format(child_pid, child_tid),
+            "send packet: ${}#00".format("Eff" if kill_child else "OK"),
+            # check parent PID/TID
+            "read packet: $Hgp{}.{}#00".format(parent_pid, parent_tid),
+            "send packet: ${}#00".format("Eff" if kill_parent else "OK"),
+        ], True)
+        self.expect_gdbremote_sequence()
+
+    @add_test_categories(["fork"])
+    def test_vkill_child(self):
+        self.vkill_test(kill_child=True)
+
+    @add_test_categories(["fork"])
+    def test_vkill_parent(self):
+        self.vkill_test(kill_parent=True)
+
+    @add_test_categories(["fork"])
+    def test_vkill_both(self):
+        self.vkill_test(kill_parent=True, kill_child=True)
