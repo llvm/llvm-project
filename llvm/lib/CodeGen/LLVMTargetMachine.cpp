@@ -264,6 +264,9 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
          "Cannot emit MC with limited codegen pipeline");
 
   Ctx = &MMIWP->getMMI().getContext();
+  // libunwind is unable to load compact unwind dynamically, so we must generate
+  // DWARF unwind info for the JIT.
+  Options.MCOptions.EmitDwarfUnwind = EmitDwarfUnwindType::Always;
   if (Options.MCOptions.MCSaveTempLabels)
     Ctx->setAllowTemporaryLabels(false);
 
