@@ -293,7 +293,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       ++offset_;
       std::size_t chars{
           static_cast<std::size_t>(&format_[offset_] - &format_[start])};
-      if (PeekNext() == quote) {
+      if (offset_ < formatLength_ && format_[offset_] == quote) {
         // subtle: handle doubled quote character in a literal by including
         // the first in the output, then treating the second as the start
         // of another character literal.
