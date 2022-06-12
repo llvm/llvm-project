@@ -211,36 +211,36 @@ define i1 @test_urem_oversized(i66 %X) nounwind {
 ; PPC-NEXT:    lis 6, -12795
 ; PPC-NEXT:    ori 6, 6, 40665
 ; PPC-NEXT:    mulhwu 7, 5, 6
-; PPC-NEXT:    lis 8, 12057
-; PPC-NEXT:    ori 8, 8, 37186
-; PPC-NEXT:    mullw 10, 4, 6
-; PPC-NEXT:    addc 7, 10, 7
+; PPC-NEXT:    lis 9, 12057
+; PPC-NEXT:    ori 9, 9, 37186
+; PPC-NEXT:    mullw 11, 4, 6
+; PPC-NEXT:    addc 7, 11, 7
+; PPC-NEXT:    lis 11, -5526
+; PPC-NEXT:    ori 11, 11, 61135
+; PPC-NEXT:    mulhwu 8, 4, 6
+; PPC-NEXT:    addze 8, 8
+; PPC-NEXT:    mulhwu 10, 5, 9
+; PPC-NEXT:    mullw 4, 4, 9
+; PPC-NEXT:    mullw 9, 5, 9
+; PPC-NEXT:    addc 7, 9, 7
+; PPC-NEXT:    addze 9, 10
+; PPC-NEXT:    rotlwi 10, 7, 31
 ; PPC-NEXT:    mullw 3, 3, 6
-; PPC-NEXT:    mullw 11, 5, 6
-; PPC-NEXT:    mulhwu 6, 4, 6
-; PPC-NEXT:    addze 6, 6
-; PPC-NEXT:    slwi 4, 4, 1
-; PPC-NEXT:    mulhwu 9, 5, 8
-; PPC-NEXT:    mullw 8, 5, 8
-; PPC-NEXT:    addc 7, 8, 7
-; PPC-NEXT:    addze 9, 9
+; PPC-NEXT:    mullw 6, 5, 6
 ; PPC-NEXT:    slwi 5, 5, 1
-; PPC-NEXT:    add 6, 6, 9
 ; PPC-NEXT:    add 3, 5, 3
-; PPC-NEXT:    rotlwi 8, 11, 31
-; PPC-NEXT:    sub 4, 6, 4
-; PPC-NEXT:    lis 5, -5526
-; PPC-NEXT:    rlwimi 8, 7, 31, 0, 0
-; PPC-NEXT:    rotlwi 7, 7, 31
+; PPC-NEXT:    rotlwi 5, 6, 31
+; PPC-NEXT:    rlwimi 5, 7, 31, 0, 0
+; PPC-NEXT:    add 7, 8, 9
+; PPC-NEXT:    add 4, 4, 7
 ; PPC-NEXT:    add 3, 4, 3
-; PPC-NEXT:    ori 5, 5, 61135
-; PPC-NEXT:    rlwimi 7, 3, 31, 0, 0
-; PPC-NEXT:    cmplw 8, 5
-; PPC-NEXT:    cmplwi 1, 7, 13
+; PPC-NEXT:    rlwimi 10, 3, 31, 0, 0
+; PPC-NEXT:    cmplw 5, 11
+; PPC-NEXT:    cmplwi 1, 10, 13
 ; PPC-NEXT:    rlwinm 3, 3, 31, 31, 31
 ; PPC-NEXT:    crand 20, 6, 0
 ; PPC-NEXT:    crandc 21, 4, 6
-; PPC-NEXT:    rlwimi. 3, 11, 1, 30, 30
+; PPC-NEXT:    rlwimi. 3, 6, 1, 30, 30
 ; PPC-NEXT:    cror 20, 20, 21
 ; PPC-NEXT:    crnand 20, 2, 20
 ; PPC-NEXT:    li 3, 1

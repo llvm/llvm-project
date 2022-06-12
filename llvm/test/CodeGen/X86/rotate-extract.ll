@@ -13,11 +13,12 @@ define i64 @rolq_extract_shl(i64 %i) nounwind {
 ; X86-LABEL: rolq_extract_shl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    shldl $3, %edx, %ecx
+; X86-NEXT:    shll $3, %eax
 ; X86-NEXT:    shll $3, %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    shldl $7, %ecx, %eax
+; X86-NEXT:    shrdl $25, %edx, %eax
 ; X86-NEXT:    shrdl $25, %ecx, %edx
 ; X86-NEXT:    retl
 ;

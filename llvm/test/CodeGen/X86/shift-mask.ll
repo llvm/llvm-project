@@ -578,8 +578,10 @@ define i64 @test_i64_lshr_lshr_2(i64 %a0) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shldl $5, %eax, %edx
-; X86-NEXT:    shll $5, %eax
-; X86-NEXT:    shrdl $3, %edx, %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    shll $5, %ecx
+; X86-NEXT:    shrl $27, %eax
+; X86-NEXT:    shldl $29, %ecx, %eax
 ; X86-NEXT:    shrl $3, %edx
 ; X86-NEXT:    retl
 ;
