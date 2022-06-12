@@ -233,6 +233,10 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
                         });
 
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_vKill,
+      &GDBRemoteCommunicationServerLLGS::Handle_vKill);
+
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qLLDBSaveCore,
       &GDBRemoteCommunicationServerLLGS::Handle_qSaveCore);
 
@@ -481,6 +485,10 @@ GDBRemoteCommunicationServerLLGS::SendWResponse(
 
   LLDB_LOG(log, "pid = {0}, returning exit type {1}", process->GetID(),
            *wait_status);
+
+  // If the process was killed through vKill, return "OK".
+  if (m_vkilled_processes.find(process->GetID()) != m_vkilled_processes.end())
+    return SendOKResponse();
 
   StreamGDBRemote response;
   response.Format("{0:g}", *wait_status);
@@ -1049,9 +1057,13 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Exited(
   lldb::pid_t pid = process->GetID();
   m_mainloop.AddPendingCallback([this, pid](MainLoopBase &loop) {
     m_debugged_processes.erase(pid);
+    auto vkill_it = m_vkilled_processes.find(pid);
+    if (vkill_it != m_vkilled_processes.end())
+      m_vkilled_processes.erase(vkill_it);
+    // Terminate the main loop only if vKill has not been used.
     // When running in non-stop mode, wait for the vStopped to clear
     // the notification queue.
-    if (m_debugged_processes.empty() && !m_non_stop) {
+    else if (m_debugged_processes.empty() && !m_non_stop) {
       // Close the pipe to the inferior terminal i/o if we launched it and set
       // one up.
       MaybeCloseInferiorTerminalConnection();
@@ -1440,6 +1452,30 @@ GDBRemoteCommunicationServerLLGS::Handle_k(StringExtractorGDBRemote &packet) {
   // in all-stop mode, and "OK" in non-stop mode; in both cases this
   // is followed by the actual stop reason.
   return SendContinueSuccessResponse();
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_vKill(
+    StringExtractorGDBRemote &packet) {
+  StopSTDIOForwarding();
+
+  packet.SetFilePos(6); // vKill;
+  uint32_t pid = packet.GetU32(LLDB_INVALID_PROCESS_ID, 16);
+  if (pid == LLDB_INVALID_PROCESS_ID)
+    return SendIllFormedResponse(packet,
+                                 "vKill failed to parse the process id");
+
+  auto it = m_debugged_processes.find(pid);
+  if (it == m_debugged_processes.end())
+    return SendErrorResponse(42);
+
+  Status error = it->second->Kill();
+  if (error.Fail())
+    return SendErrorResponse(error.ToError());
+
+  // OK response is sent when the process dies.
+  m_vkilled_processes.insert(pid);
+  return PacketResult::Success;
 }
 
 GDBRemoteCommunication::PacketResult

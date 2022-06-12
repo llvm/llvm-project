@@ -11,6 +11,7 @@
 
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/MainLoop.h"
@@ -95,6 +96,7 @@ protected:
   std::recursive_mutex m_debugged_process_mutex;
   std::unordered_map<lldb::pid_t, std::unique_ptr<NativeProcessProtocol>>
       m_debugged_processes;
+  std::unordered_set<lldb::pid_t> m_vkilled_processes;
 
   Communication m_stdio_communication;
   MainLoop::ReadHandleUP m_stdio_handle_up;
@@ -128,6 +130,8 @@ protected:
   void EnqueueStopReplyPackets(lldb::tid_t thread_to_skip);
 
   PacketResult Handle_k(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_vKill(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qProcessInfo(StringExtractorGDBRemote &packet);
 
