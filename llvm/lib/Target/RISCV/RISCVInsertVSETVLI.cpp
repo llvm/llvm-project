@@ -1413,11 +1413,10 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
 
 void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
   const MachineFunction *MF = MBB.getParent();
-  const RISCVInstrInfo *TII = MF->getSubtarget<RISCVSubtarget>().getInstrInfo();
 
   for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr &MI = *I++;
-    if (TII->isFaultFirstLoad(MI)) {
+    if (RISCV::isFaultFirstLoad(MI)) {
       Register VLOutput = MI.getOperand(1).getReg();
       if (!MRI->use_nodbg_empty(VLOutput))
         BuildMI(MBB, I, MI.getDebugLoc(), TII->get(RISCV::PseudoReadVL),

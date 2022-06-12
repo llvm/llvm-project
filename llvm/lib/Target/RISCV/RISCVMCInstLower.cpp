@@ -145,7 +145,6 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
 
   const TargetRegisterInfo *TRI =
       MF->getSubtarget<RISCVSubtarget>().getRegisterInfo();
-  const RISCVInstrInfo *TII = MF->getSubtarget<RISCVSubtarget>().getInstrInfo();
 
   assert(TRI && "TargetRegisterInfo expected");
 
@@ -160,7 +159,7 @@ static bool lowerRISCVVMachineInstrToMCInst(const MachineInstr *MI,
   if (RISCVII::hasSEWOp(TSFlags))
     --NumOps;
 
-  bool hasVLOutput = TII->isFaultFirstLoad(*MI);
+  bool hasVLOutput = RISCV::isFaultFirstLoad(*MI);
   for (unsigned OpNo = 0; OpNo != NumOps; ++OpNo) {
     const MachineOperand &MO = MI->getOperand(OpNo);
     // Skip vl ouput. It should be the second output.
