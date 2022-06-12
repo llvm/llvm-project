@@ -37,9 +37,7 @@ entry:
 define <4 x i32> @test_smull_high_s16_bitcasta1(<2 x i64> %aa, <8 x i16> %b) #0 {
 ; CHECK-LE-LABEL: test_smull_high_s16_bitcasta1:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-LE-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-LE-NEXT:    smull2 v0.4s, v0.8h, v1.8h
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_smull_high_s16_bitcasta1:
@@ -63,9 +61,7 @@ entry:
 define <4 x i32> @test_smull_high_s16_bitcastb1(<8 x i16> %a, <16 x i8> %bb) #0 {
 ; CHECK-LE-LABEL: test_smull_high_s16_bitcastb1:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-LE-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-LE-NEXT:    smull2 v0.4s, v0.8h, v1.8h
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_smull_high_s16_bitcastb1:
@@ -89,9 +85,7 @@ entry:
 define <4 x i32> @test_smull_high_s16_bitcasta2(<2 x i64> %a, <8 x i16> %b) #0 {
 ; CHECK-LE-LABEL: test_smull_high_s16_bitcasta2:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-LE-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-LE-NEXT:    smull2 v0.4s, v0.8h, v1.8h
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_smull_high_s16_bitcasta2:
@@ -117,9 +111,7 @@ entry:
 define <4 x i32> @test_smull_high_s16_bitcastb2(<8 x i16> %a, <16 x i8> %b) #0 {
 ; CHECK-LE-LABEL: test_smull_high_s16_bitcastb2:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-LE-NEXT:    smull v0.4s, v0.4h, v1.4h
+; CHECK-LE-NEXT:    smull2 v0.4s, v0.8h, v1.8h
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_smull_high_s16_bitcastb2:
@@ -374,9 +366,7 @@ entry:
 define <4 x i32> @test_umull_high_s16_bitcasta1(<2 x i64> %aa, <8 x i16> %b) #0 {
 ; CHECK-LE-LABEL: test_umull_high_s16_bitcasta1:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-LE-NEXT:    umull v0.4s, v0.4h, v1.4h
+; CHECK-LE-NEXT:    umull2 v0.4s, v0.8h, v1.8h
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_umull_high_s16_bitcasta1:
@@ -400,9 +390,7 @@ entry:
 define <8 x i16> @test_vabdl_high_u82(<16 x i8> %a, <8 x i16> %bb) {
 ; CHECK-LE-LABEL: test_vabdl_high_u82:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-LE-NEXT:    uabdl v0.8h, v0.8b, v1.8b
+; CHECK-LE-NEXT:    uabdl2 v0.8h, v0.16b, v1.16b
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_vabdl_high_u82:
@@ -427,9 +415,7 @@ entry:
 define <8 x i16> @test_vabdl_high_s82(<16 x i8> %a, <8 x i16> %bb) {
 ; CHECK-LE-LABEL: test_vabdl_high_s82:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-LE-NEXT:    sabdl v0.8h, v0.8b, v1.8b
+; CHECK-LE-NEXT:    sabdl2 v0.8h, v0.16b, v1.16b
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_vabdl_high_s82:
@@ -454,9 +440,7 @@ entry:
 define <4 x i32> @test_vqdmlal_high_s16_bitcast(<4 x i32> %a, <8 x i16> %b, <16 x i8> %cc) {
 ; CHECK-LE-LABEL: test_vqdmlal_high_s16_bitcast:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-LE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-LE-NEXT:    sqdmlal v0.4s, v1.4h, v2.4h
+; CHECK-LE-NEXT:    sqdmlal2 v0.4s, v1.8h, v2.8h
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_vqdmlal_high_s16_bitcast:
@@ -510,9 +494,7 @@ entry:
 define <8 x i16> @test_pmull_high_p8_64(<2 x i64> %aa, <2 x i64> %bb) {
 ; CHECK-LE-LABEL: test_pmull_high_p8_64:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-LE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-LE-NEXT:    pmull v0.8h, v0.8b, v1.8b
+; CHECK-LE-NEXT:    pmull2 v0.8h, v0.16b, v1.16b
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_pmull_high_p8_64:
@@ -568,8 +550,7 @@ define <8 x i16> @foov8i16(<16 x i8> %a1, <2 x i64> %b1) {
 define <2 x i64> @hadd32_zext_asr(<16 x i8> %src1a) {
 ; CHECK-LE-LABEL: hadd32_zext_asr:
 ; CHECK-LE:       // %bb.0:
-; CHECK-LE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-LE-NEXT:    ushll v0.2d, v0.2s, #1
+; CHECK-LE-NEXT:    ushll2 v0.2d, v0.4s, #1
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: hadd32_zext_asr:
