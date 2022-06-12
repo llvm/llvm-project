@@ -20,7 +20,6 @@
 namespace llvm {
 
 class MCTargetOptions;
-enum class EmitDwarfUnwindType;
 
 namespace mc {
 
@@ -32,8 +31,6 @@ bool getIncrementalLinkerCompatible();
 int getDwarfVersion();
 
 bool getDwarf64();
-
-EmitDwarfUnwindType getEmitDwarfUnwind();
 
 bool getShowMCInst();
 

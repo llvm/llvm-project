@@ -877,12 +877,6 @@ void MCContext::RemapDebugPaths() {
 // Dwarf Management
 //===----------------------------------------------------------------------===//
 
-EmitDwarfUnwindType MCContext::emitDwarfUnwindInfo() const {
-  if (!TargetOptions)
-    return EmitDwarfUnwindType::Default;
-  return TargetOptions->EmitDwarfUnwind;
-}
-
 void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
   // MCDwarf needs the root file as well as the compilation directory.
   // If we find a '.file 0' directive that will supersede these values.

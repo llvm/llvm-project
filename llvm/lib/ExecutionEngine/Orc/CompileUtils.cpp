@@ -12,7 +12,6 @@
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
