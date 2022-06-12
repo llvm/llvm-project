@@ -515,7 +515,7 @@ define %S2 @test8(%S2* %arg) {
 ; CHECK-NEXT:    [[S2_NEXT_S1:%.*]] = load ptr, ptr [[S2_NEXT_S1_PTR]], align 8, !tbaa [[TBAA3]]
 ; CHECK-NEXT:    [[S2_NEXT_NEXT_PTR:%.*]] = getelementptr [[S2]], ptr [[S2_NEXT]], i64 0, i32 1
 ; CHECK-NEXT:    [[S2_NEXT_NEXT:%.*]] = load ptr, ptr [[S2_NEXT_NEXT_PTR]], align 8, !tbaa [[TBAA7]]
-; CHECK-NEXT:    [[RESULT1:%.*]] = insertvalue [[S2]] undef, ptr [[S2_NEXT_S1]], 0
+; CHECK-NEXT:    [[RESULT1:%.*]] = insertvalue [[S2]] poison, ptr [[S2_NEXT_S1]], 0
 ; CHECK-NEXT:    [[RESULT2:%.*]] = insertvalue [[S2]] [[RESULT1]], ptr [[S2_NEXT_NEXT]], 1
 ; CHECK-NEXT:    ret [[S2]] [[RESULT2]]
 ;
@@ -535,7 +535,7 @@ entry:
   store %S2* %s2.next.next, %S2** %new.next.ptr, !tbaa !9
 
   %new.s1 = load %S1*, %S1** %new.s1.ptr
-  %result1 = insertvalue %S2 undef, %S1* %new.s1, 0
+  %result1 = insertvalue %S2 poison, %S1* %new.s1, 0
   %new.next = load %S2*, %S2** %new.next.ptr
   %result2 = insertvalue %S2 %result1, %S2* %new.next, 1
   ret %S2 %result2
@@ -594,10 +594,10 @@ entry:
   ret %S2* %s2ptr
 }
 
-define i32 @test11() {
+define i32 @test11(i1 %c) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[GOOD:%.*]], label [[BAD:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[GOOD:%.*]], label [[BAD:%.*]]
 ; CHECK:       good:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       bad:
@@ -606,7 +606,7 @@ define i32 @test11() {
 
 entry:
   %X = alloca i32
-  br i1 undef, label %good, label %bad
+  br i1 %c, label %good, label %bad
 
 good:
   %Y = getelementptr i32, i32* %X, i64 0
@@ -855,7 +855,7 @@ entry:
 
 %opaque = type opaque
 
-define i32 @test19(%opaque* %x) {
+define i64 @test19(%opaque* %x) {
 ; This input will cause us to try to compute a natural GEP when rewriting
 ; pointers in such a way that we try to GEP through the opaque type. Previously,
 ; a check for an unsized type was missing and this crashed. Ensure it behaves
@@ -866,7 +866,7 @@ define i32 @test19(%opaque* %x) {
 ; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr [[CAST1]], align 1
 ; CHECK-NEXT:    [[A_SROA_2_0_CAST1_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[CAST1]], i64 8
 ; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr [[A_SROA_2_0_CAST1_SROA_IDX]], align 1
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i64 [[A_SROA_0_0_COPYLOAD]]
 ;
 
 entry:
@@ -876,12 +876,12 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %cast2, i8* %cast1, i32 16, i1 false)
   %gep = getelementptr inbounds { i64, i8* }, { i64, i8* }* %a, i32 0, i32 0
   %val = load i64, i64* %gep
-  ret i32 undef
+  ret i64 %val
 }
 
 declare void @llvm.memcpy.p0i8.p1i8.i32(i8* nocapture, i8 addrspace(1)* nocapture, i32, i32, i1) nounwind
 
-define i32 @test19_addrspacecast(%opaque* %x) {
+define i64 @test19_addrspacecast(%opaque* %x) {
 ; This input will cause us to try to compute a natural GEP when rewriting
 ; pointers in such a way that we try to GEP through the opaque type. Previously,
 ; a check for an unsized type was missing and this crashed. Ensure it behaves
@@ -892,7 +892,7 @@ define i32 @test19_addrspacecast(%opaque* %x) {
 ; CHECK-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr addrspace(1) [[CAST1]], align 1
 ; CHECK-NEXT:    [[A_SROA_2_0_CAST1_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[CAST1]], i16 8
 ; CHECK-NEXT:    [[A_SROA_2_0_COPYLOAD:%.*]] = load ptr, ptr addrspace(1) [[A_SROA_2_0_CAST1_SROA_IDX]], align 1
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i64 [[A_SROA_0_0_COPYLOAD]]
 ;
 
 entry:
@@ -902,7 +902,7 @@ entry:
   call void @llvm.memcpy.p0i8.p1i8.i32(i8* %cast2, i8 addrspace(1)* %cast1, i32 16, i32 1, i1 false)
   %gep = getelementptr inbounds { i64, i8* }, { i64, i8* }* %a, i32 0, i32 0
   %val = load i64, i64* %gep
-  ret i32 undef
+  ret i64 %val
 }
 
 define i32 @test20() {
@@ -983,13 +983,13 @@ entry:
   ret void
 }
 
-define void @PR13916.2() {
+define void @PR13916.2(i1 %c) {
 ; Check whether we continue to handle them correctly when they start off with
 ; different pointer value chains, but during rewriting we coalesce them into the
 ; same value.
 ; CHECK-LABEL: @PR13916.2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
@@ -998,7 +998,7 @@ define void @PR13916.2() {
 
 entry:
   %a = alloca %PR13916.struct, align 1
-  br i1 undef, label %if.then, label %if.end
+  br i1 %c, label %if.then, label %if.end
 
 if.then:
   %tmp0 = bitcast %PR13916.struct* %a to i8*
@@ -1012,41 +1012,41 @@ if.end:
   ret void
 }
 
-define void @PR13990() {
+define void @PR13990(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i8* %ptr) {
 ; Ensure we can handle cases where processing one alloca causes the other
 ; alloca to become dead and get deleted. This might crash or fail under
 ; Valgrind if we regress.
 ; CHECK-LABEL: @PR13990(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    br i1 undef, label [[BB2]], label [[BB3:%.*]]
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[BB2]], label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    br i1 undef, label [[BB3]], label [[BB4:%.*]]
+; CHECK-NEXT:    br i1 [[C4:%.*]], label [[BB3]], label [[BB4:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ; CHECK:       bb4:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ;
 
 entry:
   %tmp1 = alloca i8*
   %tmp2 = alloca i8*
-  br i1 undef, label %bb1, label %bb2
+  br i1 %c1, label %bb1, label %bb2
 
 bb1:
-  store i8* undef, i8** %tmp2
-  br i1 undef, label %bb2, label %bb3
+  store i8* %ptr, i8** %tmp2
+  br i1 %c2, label %bb2, label %bb3
 
 bb2:
-  %tmp50 = select i1 undef, i8** %tmp2, i8** %tmp1
-  br i1 undef, label %bb3, label %bb4
+  %tmp50 = select i1 %c3, i8** %tmp2, i8** %tmp1
+  br i1 %c4, label %bb3, label %bb4
 
 bb3:
-  unreachable
+  ret void
 
 bb4:
-  unreachable
+  ret void
 }
 
 define double @PR13969(double %x) {
@@ -1075,14 +1075,14 @@ entry:
 %PR14034.struct = type { { {} }, i32, %PR14034.list }
 %PR14034.list = type { %PR14034.list*, %PR14034.list* }
 
-define void @PR14034() {
+define void @PR14034(%PR14034.list* %ptr, %PR14034.struct* %ptr2) {
 ; This test case tries to form GEPs into the empty leading struct members, and
 ; subsequently crashed (under valgrind) before we fixed the PR. The important
 ; thing is to handle empty structs gracefully.
 ; CHECK-LABEL: @PR14034(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [12 x i8], align 8
-; CHECK-NEXT:    [[CAST0:%.*]] = bitcast ptr undef to ptr
+; CHECK-NEXT:    [[CAST0:%.*]] = bitcast ptr [[PTR2:%.*]] to ptr
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[CAST0]], ptr align 8 [[A_SROA_0]], i32 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -1091,8 +1091,8 @@ entry:
   %a = alloca %PR14034.struct
   %list = getelementptr %PR14034.struct, %PR14034.struct* %a, i32 0, i32 2
   %prev = getelementptr %PR14034.list, %PR14034.list* %list, i32 0, i32 1
-  store %PR14034.list* undef, %PR14034.list** %prev
-  %cast0 = bitcast %PR14034.struct* undef to i8*
+  store %PR14034.list* %ptr, %PR14034.list** %prev
+  %cast0 = bitcast %PR14034.struct* %ptr2 to i8*
   %cast1 = bitcast %PR14034.struct* %a to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %cast0, i8* %cast1, i32 12, i1 false)
   ret void
@@ -1103,17 +1103,17 @@ define i32 @test22(i32 %x) {
 ; types involving wrapper aggregates and zero-length aggregate members.
 ; CHECK-LABEL: @test22(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WRAP1:%.*]] = insertvalue [1 x { i32 }] undef, i32 [[X:%.*]], 0, 0
+; CHECK-NEXT:    [[WRAP1:%.*]] = insertvalue [1 x { i32 }] poison, i32 [[X:%.*]], 0, 0
 ; CHECK-NEXT:    [[WRAP1_FCA_0_0_EXTRACT:%.*]] = extractvalue [1 x { i32 }] [[WRAP1]], 0, 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[WRAP1_FCA_0_0_EXTRACT]] to float
 ; CHECK-NEXT:    [[LOAD1_FCA_0_0_0_INSERT:%.*]] = insertvalue { [1 x { float }] } poison, float [[TMP0]], 0, 0, 0
 ; CHECK-NEXT:    [[UNWRAP1:%.*]] = extractvalue { [1 x { float }] } [[LOAD1_FCA_0_0_0_INSERT]], 0, 0
-; CHECK-NEXT:    [[WRAP2:%.*]] = insertvalue { {}, { float }, [0 x i8] } undef, { float } [[UNWRAP1]], 1
+; CHECK-NEXT:    [[WRAP2:%.*]] = insertvalue { {}, { float }, [0 x i8] } poison, { float } [[UNWRAP1]], 1
 ; CHECK-NEXT:    [[WRAP2_FCA_1_0_EXTRACT:%.*]] = extractvalue { {}, { float }, [0 x i8] } [[WRAP2]], 1, 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[WRAP2_FCA_1_0_EXTRACT]] to <4 x i8>
 ; CHECK-NEXT:    [[VALCAST1:%.*]] = bitcast <4 x i8> [[TMP1]] to i32
-; CHECK-NEXT:    [[WRAP3:%.*]] = insertvalue [1 x [1 x i32]] undef, i32 [[VALCAST1]], 0, 0
-; CHECK-NEXT:    [[WRAP4:%.*]] = insertvalue { [1 x [1 x i32]], {} } undef, [1 x [1 x i32]] [[WRAP3]], 0
+; CHECK-NEXT:    [[WRAP3:%.*]] = insertvalue [1 x [1 x i32]] poison, i32 [[VALCAST1]], 0, 0
+; CHECK-NEXT:    [[WRAP4:%.*]] = insertvalue { [1 x [1 x i32]], {} } poison, [1 x [1 x i32]] [[WRAP3]], 0
 ; CHECK-NEXT:    [[WRAP4_FCA_0_0_0_EXTRACT:%.*]] = extractvalue { [1 x [1 x i32]], {} } [[WRAP4]], 0, 0, 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[WRAP4_FCA_0_0_0_EXTRACT]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i8> [[TMP2]] to float
@@ -1128,7 +1128,7 @@ entry:
   %a2 = alloca { {}, { float }, [0 x i8] }
   %a3 = alloca { [0 x i8], { [0 x double], [1 x [1 x <4 x i8>]], {} }, { { {} } } }
 
-  %wrap1 = insertvalue [1 x { i32 }] undef, i32 %x, 0, 0
+  %wrap1 = insertvalue [1 x { i32 }] poison, i32 %x, 0, 0
   %gep1 = getelementptr { { [1 x { i32 }] } }, { { [1 x { i32 }] } }* %a1, i32 0, i32 0, i32 0
   store [1 x { i32 }] %wrap1, [1 x { i32 }]* %gep1
 
@@ -1137,7 +1137,7 @@ entry:
   %load1 = load { [1 x { float }] }, { [1 x { float }] }* %ptrcast1
   %unwrap1 = extractvalue { [1 x { float }] } %load1, 0, 0
 
-  %wrap2 = insertvalue { {}, { float }, [0 x i8] } undef, { float } %unwrap1, 1
+  %wrap2 = insertvalue { {}, { float }, [0 x i8] } poison, { float } %unwrap1, 1
   store { {}, { float }, [0 x i8] } %wrap2, { {}, { float }, [0 x i8] }* %a2
 
   %gep3 = getelementptr { {}, { float }, [0 x i8] }, { {}, { float }, [0 x i8] }* %a2, i32 0, i32 1, i32 0
@@ -1145,8 +1145,8 @@ entry:
   %load3 = load <4 x i8>, <4 x i8>* %ptrcast2
   %valcast1 = bitcast <4 x i8> %load3 to i32
 
-  %wrap3 = insertvalue [1 x [1 x i32]] undef, i32 %valcast1, 0, 0
-  %wrap4 = insertvalue { [1 x [1 x i32]], {} } undef, [1 x [1 x i32]] %wrap3, 0
+  %wrap3 = insertvalue [1 x [1 x i32]] poison, i32 %valcast1, 0, 0
+  %wrap4 = insertvalue { [1 x [1 x i32]], {} } poison, [1 x [1 x i32]] %wrap3, 0
   %gep4 = getelementptr { [0 x i8], { [0 x double], [1 x [1 x <4 x i8>]], {} }, { { {} } } }, { [0 x i8], { [0 x double], [1 x [1 x <4 x i8>]], {} }, { { {} } } }* %a3, i32 0, i32 1
   %ptrcast3 = bitcast { [0 x double], [1 x [1 x <4 x i8>]], {} }* %gep4 to { [1 x [1 x i32]], {} }*
   store { [1 x [1 x i32]], {} } %wrap4, { [1 x [1 x i32]], {} }* %ptrcast3
@@ -1531,20 +1531,20 @@ end:
   ret void
 }
 
-define void @PR15805(i1 %a, i1 %b) {
+define i64 @PR15805(i1 %a, i1 %b) {
 ; CHECK-LABEL: @PR15805(
-; CHECK-NEXT:    [[COND_SROA_SPECULATED:%.*]] = select i1 undef, i64 undef, i64 undef
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[COND_SROA_SPECULATED:%.*]] = select i1 [[B:%.*]], i64 undef, i64 undef
+; CHECK-NEXT:    ret i64 [[COND_SROA_SPECULATED]]
 ;
 
   %c = alloca i64, align 8
-  %p.0.c = select i1 undef, i64* %c, i64* %c
-  %cond.in = select i1 undef, i64* %p.0.c, i64* %c
+  %p.0.c = select i1 %a, i64* %c, i64* %c
+  %cond.in = select i1 %b, i64* %p.0.c, i64* %c
   %cond = load i64, i64* %cond.in, align 8
-  ret void
+  ret i64 %cond
 }
 
-define void @PR15805.1(i1 %a, i1 %b) {
+define void @PR15805.1(i1 %a, i1 %b, i1 %c1) {
 ; Same as the normal PR15805, but rigged to place the use before the def inside
 ; of looping unreachable code. This helps ensure that we aren't sensitive to the
 ; order in which the uses of the alloca are visited.
@@ -1552,8 +1552,8 @@ define void @PR15805.1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @PR15805.1(
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[COND_SROA_SPECULATED:%.*]] = select i1 undef, i64 undef, i64 undef
-; CHECK-NEXT:    br i1 undef, label [[LOOP:%.*]], label [[EXIT]]
+; CHECK-NEXT:    [[COND_SROA_SPECULATED:%.*]] = select i1 [[A:%.*]], i64 undef, i64 undef
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOOP:%.*]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1562,16 +1562,16 @@ define void @PR15805.1(i1 %a, i1 %b) {
   br label %exit
 
 loop:
-  %cond.in = select i1 undef, i64* %c, i64* %p.0.c
-  %p.0.c = select i1 undef, i64* %c, i64* %c
+  %cond.in = select i1 %a, i64* %c, i64* %p.0.c
+  %p.0.c = select i1 %b, i64* %c, i64* %c
   %cond = load i64, i64* %cond.in, align 8
-  br i1 undef, label %loop, label %exit
+  br i1 %c1, label %loop, label %exit
 
 exit:
   ret void
 }
 
-define void @PR16651.1(i8* %a) {
+define i8 @PR16651.1(i8* %a) {
 ; This test case caused a crash due to the volatile memcpy in combination with
 ; lowering to integer loads and stores of a width other than that of the original
 ; memcpy.
@@ -1589,8 +1589,8 @@ define void @PR16651.1(i8* %a) {
 ; CHECK-NEXT:    [[B_SROA_2_0_A_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 3
 ; CHECK-NEXT:    [[B_SROA_2_0_COPYLOAD:%.*]] = load volatile i8, ptr [[B_SROA_2_0_A_SROA_IDX]], align 1
 ; CHECK-NEXT:    store volatile i8 [[B_SROA_2_0_COPYLOAD]], ptr [[B_SROA_2]], align 1
-; CHECK-NEXT:    [[B_SROA_1_0_B_SROA_1_2_:%.*]] = load i8, ptr [[B_SROA_1]], align 2
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[B_SROA_1_0_B_SROA_1_2_V:%.*]] = load i8, ptr [[B_SROA_1]], align 2
+; CHECK-NEXT:    ret i8 [[B_SROA_1_0_B_SROA_1_2_V]]
 ;
 
 entry:
@@ -1598,11 +1598,11 @@ entry:
   %b.cast = bitcast i32* %b to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %b.cast, i8* align 4 %a, i32 4, i1 true)
   %b.gep = getelementptr inbounds i8, i8* %b.cast, i32 2
-  load i8, i8* %b.gep, align 2
-  unreachable
+  %v = load i8, i8* %b.gep, align 2
+  ret i8 %v
 }
 
-define void @PR16651.2() {
+define float @PR16651.2(<2 x float> %val, i1 %c1) {
 ; This test case caused a crash due to failing to promote given a select that
 ; can't be speculated. It shouldn't be promoted, but we missed that fact when
 ; analyzing whether we could form a vector promotion because that code didn't
@@ -1611,20 +1611,20 @@ define void @PR16651.2() {
 ; CHECK-LABEL: @PR16651.2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TV1_SROA_0:%.*]] = alloca <2 x float>, align 8
-; CHECK-NEXT:    store <2 x float> undef, ptr [[TV1_SROA_0]], align 8
-; CHECK-NEXT:    [[COND105_IN_I_I:%.*]] = select i1 undef, ptr null, ptr [[TV1_SROA_0]]
+; CHECK-NEXT:    store <2 x float> [[VAL:%.*]], ptr [[TV1_SROA_0]], align 8
+; CHECK-NEXT:    [[COND105_IN_I_I:%.*]] = select i1 [[C1:%.*]], ptr null, ptr [[TV1_SROA_0]]
 ; CHECK-NEXT:    [[COND105_I_I:%.*]] = load float, ptr [[COND105_IN_I_I]], align 8
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    ret float [[COND105_I_I]]
 ;
 
 entry:
   %tv1 = alloca { <2 x float>, <2 x float> }, align 8
   %0 = getelementptr { <2 x float>, <2 x float> }, { <2 x float>, <2 x float> }* %tv1, i64 0, i32 1
-  store <2 x float> undef, <2 x float>* %0, align 8
+  store <2 x float> %val, <2 x float>* %0, align 8
   %1 = getelementptr inbounds { <2 x float>, <2 x float> }, { <2 x float>, <2 x float> }* %tv1, i64 0, i32 1, i64 0
-  %cond105.in.i.i = select i1 undef, float* null, float* %1
+  %cond105.in.i.i = select i1 %c1, float* null, float* %1
   %cond105.i.i = load float, float* %cond105.in.i.i, align 8
-  ret void
+  ret float %cond105.i.i
 }
 
 define void @test23(i32 %x) {
@@ -1643,7 +1643,7 @@ entry:
   ret void
 }
 
-define void @PR18615() {
+define void @PR18615(i8* %ptr) {
 ; CHECK-LABEL: @PR18615(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
@@ -1651,7 +1651,7 @@ define void @PR18615() {
 entry:
   %f = alloca i8
   %gep = getelementptr i8, i8* %f, i64 -1
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* undef, i8* %gep, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %ptr, i8* %gep, i32 1, i1 false)
   ret void
 }
 
@@ -2025,7 +2025,7 @@ entry:
 
 declare void @llvm.lifetime.start.isVoid.i64.p0i8(i64, [10 x float]* nocapture)
 declare void @llvm.lifetime.end.isVoid.i64.p0i8(i64, [10 x float]* nocapture)
-@array = dso_local global [10 x float] undef, align 4
+@array = dso_local global [10 x float] zeroinitializer, align 4
 
 define void @test29(i32 %num, i32 %tid) {
 ; CHECK-LABEL: @test29(

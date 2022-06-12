@@ -6,10 +6,10 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 declare void @maybe_writes()
 
-define void @f2() {
+define void @f2(i1 %c1) {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
@@ -28,7 +28,7 @@ define void @f2() {
 ;
 entry:
   %e = alloca i16, align 1
-  br i1 undef, label %if.then, label %if.else
+  br i1 %c1, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
   br label %cleanup
@@ -51,11 +51,11 @@ cleanup7:                                         ; preds = %cleanup
   ret void
 }
 
-define void @f3() {
+define void @f3(i1 %c1) {
 ; CHECK-LABEL: @f3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[E:%.*]] = alloca i16, align 1
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
@@ -76,7 +76,7 @@ define void @f3() {
 ;
 entry:
   %e = alloca i16, align 1
-  br i1 undef, label %if.then, label %if.else
+  br i1 %c1, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
   br label %cleanup
@@ -102,11 +102,11 @@ cleanup7:                                         ; preds = %cleanup
   ret void
 }
 
-define void @f4() {
+define void @f4(i1 %c1) {
 ; CHECK-LABEL: @f4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[E:%.*]] = alloca i16, align 1
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
@@ -128,7 +128,7 @@ define void @f4() {
 ;
 entry:
   %e = alloca i16, align 1
-  br i1 undef, label %if.then, label %if.else
+  br i1 %c1, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
   br label %cleanup
@@ -155,11 +155,11 @@ cleanup7:                                         ; preds = %cleanup
   ret void
 }
 
-define void @f5() {
+define void @f5(i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @f5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[E:%.*]] = alloca i16, align 1
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
@@ -171,7 +171,7 @@ define void @f5() {
 ; CHECK-NEXT:    br label [[LBL1]]
 ; CHECK:       lbl1:
 ; CHECK-NEXT:    [[G_0:%.*]] = phi i16* [ @a, [[CLEANUP]] ], [ @a, [[CLEANUP]] ], [ [[E]], [[IF_ELSE]] ]
-; CHECK-NEXT:    br i1 undef, label [[FINAL:%.*]], label [[CLEANUP7]]
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[FINAL:%.*]], label [[CLEANUP7]]
 ; CHECK:       final:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[G_0]], align 1
 ; CHECK-NEXT:    unreachable
@@ -180,7 +180,7 @@ define void @f5() {
 ;
 entry:
   %e = alloca i16, align 1
-  br i1 undef, label %if.then, label %if.else
+  br i1 %c1, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
   br label %cleanup
@@ -196,7 +196,7 @@ if.else:                                          ; preds = %entry
 
 lbl1:                                             ; preds = %if.else, %cleanup, %cleanup
   %g.0 = phi i16* [ @a, %cleanup ], [ @a, %cleanup ], [ %e, %if.else ]
-  br i1 undef, label %final, label %cleanup7
+  br i1 %c2, label %final, label %cleanup7
 
 final:
   %0 = load i16, i16* %g.0, align 1
@@ -206,11 +206,11 @@ cleanup7:                                         ; preds = %cleanup
   ret void
 }
 
-define void @f6() {
+define void @f6(i1 %c1) {
 ; CHECK-LABEL: @f6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[E:%.*]] = alloca i16, align 1
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[CLEANUP:%.*]]
 ; CHECK:       cleanup:
@@ -234,7 +234,7 @@ define void @f6() {
 ;
 entry:
   %e = alloca i16, align 1
-  br i1 undef, label %if.then, label %if.else
+  br i1 %c1, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
   br label %cleanup

@@ -11,7 +11,7 @@ define <2 x i16> @test_load_bitcast_select(i1 %cond1, i1 %cond2) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half 0xHFFFF to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half 0xH0000 to i16
 ; CHECK-NEXT:    [[LD1_SROA_SPECULATED:%.*]] = select i1 [[COND1:%.*]], i16 [[TMP0]], i16 [[TMP1]]
-; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i16> undef, i16 [[LD1_SROA_SPECULATED]], i32 0
+; CHECK-NEXT:    [[V1:%.*]] = insertelement <2 x i16> poison, i16 [[LD1_SROA_SPECULATED]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast half 0xHFFFF to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast half 0xH0000 to i16
 ; CHECK-NEXT:    [[LD2_SROA_SPECULATED:%.*]] = select i1 [[COND2:%.*]], i16 [[TMP2]], i16 [[TMP3]]
@@ -28,7 +28,7 @@ entry:
   %sel1 = select i1 %cond1, %st.half* %true.cast, %st.half* %false.cast
   %cast1 = bitcast %st.half* %sel1 to i16*
   %ld1 = load i16, i16* %cast1, align 2
-  %v1 = insertelement <2 x i16> undef, i16 %ld1, i32 0
+  %v1 = insertelement <2 x i16> poison, i16 %ld1, i32 0
   %sel2 = select i1 %cond2, %st.half* %true.cast, %st.half* %false.cast
   %cast2 = bitcast %st.half* %sel2 to i16*
   %ld2 = load i16, i16* %cast2, align 2

@@ -79,8 +79,8 @@ bb:
   ret i32 %add
 }
 
-define i32 @test_sroa_select_gep_undef(i1 %cond) {
-; CHECK-LABEL: @test_sroa_select_gep_undef(
+define i32 @test_sroa_select_gep_poison(i1 %cond) {
+; CHECK-LABEL: @test_sroa_select_gep_poison(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 [[COND:%.*]], i32* [[A_SROA_0]], i32* poison
@@ -89,7 +89,7 @@ define i32 @test_sroa_select_gep_undef(i1 %cond) {
 ;
 bb:
   %a = alloca %pair, align 4
-  %select = select i1 %cond, %pair* %a, %pair* undef
+  %select = select i1 %cond, %pair* %a, %pair* poison
   %gep = getelementptr inbounds %pair, %pair* %select, i32 0, i32 1
   %load = load i32, i32* %gep, align 4
   ret i32 %load
