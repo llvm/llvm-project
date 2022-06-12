@@ -1412,8 +1412,6 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
 }
 
 void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
-  const MachineFunction *MF = MBB.getParent();
-
   for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr &MI = *I++;
     if (RISCV::isFaultFirstLoad(MI)) {
