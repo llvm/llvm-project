@@ -290,7 +290,7 @@ bool RISCVExpandPseudo::expandVSPILL(MachineBasicBlock &MBB,
   Register SrcReg = MBBI->getOperand(0).getReg();
   Register Base = MBBI->getOperand(1).getReg();
   Register VL = MBBI->getOperand(2).getReg();
-  auto ZvlssegInfo = TII->isRVVSpillForZvlsseg(MBBI->getOpcode());
+  auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(MBBI->getOpcode());
   if (!ZvlssegInfo)
     return false;
   unsigned NF = ZvlssegInfo->first;
@@ -335,7 +335,7 @@ bool RISCVExpandPseudo::expandVRELOAD(MachineBasicBlock &MBB,
   Register DestReg = MBBI->getOperand(0).getReg();
   Register Base = MBBI->getOperand(1).getReg();
   Register VL = MBBI->getOperand(2).getReg();
-  auto ZvlssegInfo = TII->isRVVSpillForZvlsseg(MBBI->getOpcode());
+  auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(MBBI->getOpcode());
   if (!ZvlssegInfo)
     return false;
   unsigned NF = ZvlssegInfo->first;

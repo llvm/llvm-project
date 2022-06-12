@@ -941,14 +941,14 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFrameInfo &MFI) const {
   return std::make_pair(StackSize, RVVStackAlign);
 }
 
-static bool hasRVVSpillWithFIs(MachineFunction &MF, const RISCVInstrInfo &TII) {
+static bool hasRVVSpillWithFIs(MachineFunction &MF) {
   if (!MF.getSubtarget<RISCVSubtarget>().hasVInstructions())
     return false;
-  return any_of(MF, [&TII](const MachineBasicBlock &MBB) {
-    return any_of(MBB, [&TII](const MachineInstr &MI) {
-      return TII.isRVVSpill(MI, /*CheckFIs*/ true);
-    });
-  });
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (RISCV::isRVVSpill(MI, /*CheckFIs*/ true))
+        return true;
+  return false;
 }
 
 void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
@@ -971,8 +971,6 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   // target-independent code.
   MFI.ensureMaxAlignment(RVVStackAlign);
 
-  const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
-
   // estimateStackSize has been observed to under-estimate the final stack
   // size, so give ourselves wiggle-room by checking for stack size
   // representable an 11-bit signed field rather than 12-bits.
@@ -982,7 +980,7 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   // RVV loads & stores have no capacity to hold the immediate address offsets
   // so we must always reserve an emergency spill slot if the MachineFunction
   // contains any RVV spills.
-  if (!isInt<11>(MFI.estimateStackSize(MF)) || hasRVVSpillWithFIs(MF, TII)) {
+  if (!isInt<11>(MFI.estimateStackSize(MF)) || hasRVVSpillWithFIs(MF)) {
     int RegScavFI = MFI.CreateStackObject(RegInfo->getSpillSize(*RC),
                                           RegInfo->getSpillAlign(*RC), false);
     RS->addScavengingFrameIndex(RegScavFI);

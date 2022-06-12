@@ -1878,7 +1878,7 @@ static bool isRVVWholeLoadStore(unsigned Opcode) {
   }
 }
 
-bool RISCVInstrInfo::isRVVSpill(const MachineInstr &MI, bool CheckFIs) const {
+bool RISCV::isRVVSpill(const MachineInstr &MI, bool CheckFIs) {
   // RVV lacks any support for immediate addressing for stack addresses, so be
   // conservative.
   unsigned Opcode = MI.getOpcode();
@@ -1891,7 +1891,7 @@ bool RISCVInstrInfo::isRVVSpill(const MachineInstr &MI, bool CheckFIs) const {
 }
 
 Optional<std::pair<unsigned, unsigned>>
-RISCVInstrInfo::isRVVSpillForZvlsseg(unsigned Opcode) const {
+RISCV::isRVVSpillForZvlsseg(unsigned Opcode) {
   switch (Opcode) {
   default:
     return None;
@@ -1931,7 +1931,7 @@ RISCVInstrInfo::isRVVSpillForZvlsseg(unsigned Opcode) const {
   }
 }
 
-bool RISCVInstrInfo::isFaultFirstLoad(const MachineInstr &MI) const {
+bool RISCV::isFaultFirstLoad(const MachineInstr &MI) {
   return MI.getNumExplicitDefs() == 2 && MI.modifiesRegister(RISCV::VL) &&
          !MI.isInlineAsm();
 }
