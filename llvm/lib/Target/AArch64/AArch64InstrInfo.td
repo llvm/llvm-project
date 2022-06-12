@@ -4250,25 +4250,25 @@ def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
                                 (zext (v8i8 V64:$opB))),
                            (AArch64vashr v8i16:$src, (i32 15))))),
           (UABDLv8i8_v8i16 V64:$opA, V64:$opB)>;
-def : Pat<(abs (v8i16 (sub (zext (extract_high_v16i8 V128:$opA)),
-                           (zext (extract_high_v16i8 V128:$opB))))),
+def : Pat<(abs (v8i16 (sub (zext (extract_high_v16i8 (v16i8 V128:$opA))),
+                           (zext (extract_high_v16i8 (v16i8 V128:$opB)))))),
           (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
 def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
-               (v8i16 (add (sub (zext (extract_high_v16i8 V128:$opA)),
-                                (zext (extract_high_v16i8 V128:$opB))),
+               (v8i16 (add (sub (zext (extract_high_v16i8 (v16i8 V128:$opA))),
+                                (zext (extract_high_v16i8 (v16i8 V128:$opB)))),
                            (AArch64vashr v8i16:$src, (i32 15))))),
           (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
 def : Pat<(abs (v4i32 (sub (zext (v4i16 V64:$opA)),
                            (zext (v4i16 V64:$opB))))),
           (UABDLv4i16_v4i32 V64:$opA, V64:$opB)>;
-def : Pat<(abs (v4i32 (sub (zext (extract_high_v8i16 V128:$opA)),
-                           (zext (extract_high_v8i16 V128:$opB))))),
+def : Pat<(abs (v4i32 (sub (zext (extract_high_v8i16 (v8i16 V128:$opA))),
+                           (zext (extract_high_v8i16 (v8i16 V128:$opB)))))),
           (UABDLv8i16_v4i32 V128:$opA, V128:$opB)>;
 def : Pat<(abs (v2i64 (sub (zext (v2i32 V64:$opA)),
                            (zext (v2i32 V64:$opB))))),
           (UABDLv2i32_v2i64 V64:$opA, V64:$opB)>;
-def : Pat<(abs (v2i64 (sub (zext (extract_high_v4i32 V128:$opA)),
-                           (zext (extract_high_v4i32 V128:$opB))))),
+def : Pat<(abs (v2i64 (sub (zext (extract_high_v4i32 (v4i32 V128:$opA))),
+                           (zext (extract_high_v4i32 (v4i32 V128:$opB)))))),
           (UABDLv4i32_v2i64 V128:$opA, V128:$opB)>;
 
 defm ABS    : SIMDTwoVectorBHSD<0, 0b01011, "abs", abs>;
@@ -4439,15 +4439,15 @@ def : Pat<(v4f32  (AArch64rev64 V128:$Rn)), (REV64v4i32 V128:$Rn)>;
 multiclass SIMDVectorLShiftLongBySizeBHSPats<SDPatternOperator ext> {
   def : Pat<(AArch64vshl (v8i16 (ext (v8i8 V64:$Rn))), (i32 8)),
             (SHLLv8i8 V64:$Rn)>;
-  def : Pat<(AArch64vshl (v8i16 (ext (extract_high_v16i8 V128:$Rn))), (i32 8)),
+  def : Pat<(AArch64vshl (v8i16 (ext (extract_high_v16i8 (v16i8 V128:$Rn)))), (i32 8)),
             (SHLLv16i8 V128:$Rn)>;
   def : Pat<(AArch64vshl (v4i32 (ext (v4i16 V64:$Rn))), (i32 16)),
             (SHLLv4i16 V64:$Rn)>;
-  def : Pat<(AArch64vshl (v4i32 (ext (extract_high_v8i16 V128:$Rn))), (i32 16)),
+  def : Pat<(AArch64vshl (v4i32 (ext (extract_high_v8i16 (v8i16 V128:$Rn)))), (i32 16)),
             (SHLLv8i16 V128:$Rn)>;
   def : Pat<(AArch64vshl (v2i64 (ext (v2i32 V64:$Rn))), (i32 32)),
             (SHLLv2i32 V64:$Rn)>;
-  def : Pat<(AArch64vshl (v2i64 (ext (extract_high_v4i32 V128:$Rn))), (i32 32)),
+  def : Pat<(AArch64vshl (v2i64 (ext (extract_high_v4i32 (v4i32 V128:$Rn)))), (i32 32)),
             (SHLLv4i32 V128:$Rn)>;
 }
 
