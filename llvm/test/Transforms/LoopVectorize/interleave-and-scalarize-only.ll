@@ -88,7 +88,7 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-EMPTY:
 ; DBG-NEXT:     pred.store.if:
 ; DBG-NEXT:       CLONE ir<%l> = load ir<%gep.src>
-; DBG-NEXT:       CLONE store ir<%l>, ir<%dst>
+; DBG-NEXT:       CLONE store ir<%l>, ir<%gep.dst>
 ; DBG-NEXT:     Successor(s): pred.store.continue
 ; DBG-EMPTY:
 ; DBG-NEXT:     pred.store.continue:
@@ -114,31 +114,31 @@ declare i32 @llvm.smin.i32(i32, i32)
 define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test_scalarize_with_branch_cond(
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %pred.store.continue7 ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %pred.store.continue8 ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i1
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i1 false, [[TMP0]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add i1 [[OFFSET_IDX]], false
 ; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i1 [[OFFSET_IDX]], true
-; CHECK-NEXT:    [[INDUCTION4:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[INDUCTION5:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION4]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    br i1 [[INDUCTION]], label %pred.store.if, label %pred.store.continue
 ; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[INDUCTION4:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDUCTION4]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
-; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst, align 4
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ poison, %vector.body ], [ [[TMP4]], %pred.store.if ]
-; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if6, label %pred.store.continue7
-; CHECK:       pred.store.if6:
+; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if7, label %pred.store.continue8
+; CHECK:       pred.store.if7:
+; CHECK-NEXT:    [[INDUCTION5:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    store i32 [[TMP7]], ptr %dst, align 4
-; CHECK-NEXT:    br label %pred.store.continue7
-; CHECK:       pred.store.continue7:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ poison, %pred.store.continue ], [ [[TMP7]], %pred.store.if6 ]
+; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    br label %pred.store.continue8
+; CHECK:       pred.store.continue8:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ poison, %pred.store.continue ], [ [[TMP7]], %pred.store.if7 ]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP9]], label %middle.block, label %vector.body
@@ -157,7 +157,7 @@ cond.false:
   %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
   %l = load i32, ptr %gep.src, align 4
-  store i32 %l, ptr %dst
+  store i32 %l, ptr %gep.dst
   br label %loop.latch
 
 loop.latch:
