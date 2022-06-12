@@ -6,10 +6,10 @@ target triple = "thumbv7m-none--eabi"
 
 @glob = external unnamed_addr constant [16 x i8]
 
-define void @f() {
+define void @f(i1 %c) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entr:
-; CHECK-NEXT:    br i1 undef, label [[NEXT:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 %c, label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    [[PAT:%.*]] = getelementptr [16 x i8], [16 x i8]* @glob
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -17,7 +17,7 @@ define void @f() {
 ; CHECK-NEXT:    ret void
 ;
 entr:
-  br i1 undef, label %next, label %exit
+  br i1 %c, label %next, label %exit
 
 next:
   %pat = getelementptr [16 x i8], [16 x i8]* @glob
