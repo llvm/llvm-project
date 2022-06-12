@@ -77,14 +77,6 @@ class TestingConfig(object):
             if val:
                 environment[var] = val
 
-        pass_vars_emptyable = [
-            'CLANG_MODULE_CACHE_PATH',
-        ]
-
-        for var in pass_vars_emptyable:
-            if var in os.environ:
-                environment[var] = os.environ[var]
-
         # Set the default available features based on the LitConfig.
         available_features = []
         if litConfig.useValgrind:
