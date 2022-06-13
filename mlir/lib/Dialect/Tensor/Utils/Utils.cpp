@@ -55,3 +55,16 @@ PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
   }
   return createPadScalarOp(type, source, pad, low, high, nofold, loc, b);
 }
+
+SmallVector<Value> mlir::tensor::createDynamicDimValues(OpBuilder &b,
+                                                        Location loc,
+                                                        Value rankedTensor) {
+  auto tensorTy = rankedTensor.getType().cast<RankedTensorType>();
+  SmallVector<Value> dynamicDims;
+  for (const auto &en : llvm::enumerate(tensorTy.getShape())) {
+    if (en.value() == ShapedType::kDynamicSize)
+      dynamicDims.push_back(
+          b.create<tensor::DimOp>(loc, rankedTensor, en.index()));
+  }
+  return dynamicDims;
+}
