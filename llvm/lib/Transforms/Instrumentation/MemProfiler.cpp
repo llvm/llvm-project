@@ -155,7 +155,6 @@ static uint64_t getCtorAndDtorPriority(Triple &TargetTriple) {
 struct InterestingMemoryAccess {
   Value *Addr = nullptr;
   bool IsWrite;
-  unsigned Alignment;
   Type *AccessTy;
   uint64_t TypeSize;
   Value *MaybeMask = nullptr;
@@ -181,8 +180,7 @@ public:
   void instrumentAddress(Instruction *OrigIns, Instruction *InsertBefore,
                          Value *Addr, uint32_t TypeSize, bool IsWrite);
   void instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
-                                   Instruction *I, Value *Addr,
-                                   unsigned Alignment, Type *AccessTy,
+                                   Instruction *I, Value *Addr, Type *AccessTy,
                                    bool IsWrite);
   void instrumentMemIntrinsic(MemIntrinsic *MI);
   Value *memToShadow(Value *Shadow, IRBuilder<> &IRB);
@@ -340,28 +338,24 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       return None;
     Access.IsWrite = false;
     Access.AccessTy = LI->getType();
-    Access.Alignment = LI->getAlignment();
     Access.Addr = LI->getPointerOperand();
   } else if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     if (!ClInstrumentWrites)
       return None;
     Access.IsWrite = true;
     Access.AccessTy = SI->getValueOperand()->getType();
-    Access.Alignment = SI->getAlignment();
     Access.Addr = SI->getPointerOperand();
   } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
     if (!ClInstrumentAtomics)
       return None;
     Access.IsWrite = true;
     Access.AccessTy = RMW->getValOperand()->getType();
-    Access.Alignment = 0;
     Access.Addr = RMW->getPointerOperand();
   } else if (AtomicCmpXchgInst *XCHG = dyn_cast<AtomicCmpXchgInst>(I)) {
     if (!ClInstrumentAtomics)
       return None;
     Access.IsWrite = true;
     Access.AccessTy = XCHG->getCompareOperand()->getType();
-    Access.Alignment = 0;
     Access.Addr = XCHG->getPointerOperand();
   } else if (auto *CI = dyn_cast<CallInst>(I)) {
     auto *F = CI->getCalledFunction();
@@ -383,11 +377,6 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       }
 
       auto *BasePtr = CI->getOperand(0 + OpOffset);
-      if (auto *AlignmentConstant =
-              dyn_cast<ConstantInt>(CI->getOperand(1 + OpOffset)))
-        Access.Alignment = (unsigned)AlignmentConstant->getZExtValue();
-      else
-        Access.Alignment = 1; // No alignment guarantees. We probably got Undef
       Access.MaybeMask = CI->getOperand(2 + OpOffset);
       Access.Addr = BasePtr;
     }
@@ -435,7 +424,6 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
 
 void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                               Instruction *I, Value *Addr,
-                                              unsigned Alignment,
                                               Type *AccessTy, bool IsWrite) {
   auto *VTy = cast<FixedVectorType>(AccessTy);
   uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
@@ -486,8 +474,7 @@ void MemProfiler::instrumentMop(Instruction *I, const DataLayout &DL,
 
   if (Access.MaybeMask) {
     instrumentMaskedLoadOrStore(DL, Access.MaybeMask, I, Access.Addr,
-                                Access.Alignment, Access.AccessTy,
-                                Access.IsWrite);
+                                Access.AccessTy, Access.IsWrite);
   } else {
     // Since the access counts will be accumulated across the entire allocation,
     // we only update the shadow access count for the first location and thus
