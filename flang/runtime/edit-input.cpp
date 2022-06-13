@@ -297,7 +297,9 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       }
       for (exponent = 0; next; next = io.NextInField(remaining, edit)) {
         if (*next >= '0' && *next <= '9') {
-          exponent = 10 * exponent + *next - '0';
+          if (exponent < 10000) {
+            exponent = 10 * exponent + *next - '0';
+          }
         } else if (*next == ' ' || *next == '\t') {
           if (bzMode) {
             exponent = 10 * exponent;
@@ -392,7 +394,7 @@ static bool TryFastPathRealInput(
   const char *limit{str + maxConsume};
   decimal::ConversionToBinaryResult<PRECISION> converted{
       decimal::ConvertToBinary<PRECISION>(p, edit.modes.round, limit)};
-  if (converted.flags & decimal::Invalid) {
+  if (converted.flags & (decimal::Invalid | decimal::Overflow)) {
     return false;
   }
   if (edit.digits.value_or(0) != 0) {
@@ -428,9 +430,6 @@ static bool TryFastPathRealInput(
   io.HandleRelativePosition(p - str);
   // Set FP exception flags
   if (converted.flags != decimal::ConversionResultFlags::Exact) {
-    if (converted.flags & decimal::ConversionResultFlags::Overflow) {
-      return false; // let slow path deal with it
-    }
     RaiseFPExceptions(converted.flags);
   }
   return true;
