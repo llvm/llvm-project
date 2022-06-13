@@ -18,6 +18,7 @@ from pathlib import PurePath
 
 from dex.command.CommandBase import CommandBase, StepExpectInfo
 from dex.command.StepValueInfo import StepValueInfo
+from dex.utils.Exceptions import NonFloatValueInCommand
 
 class AddressExpression(object):
     def __init__(self, name, offset=0):
@@ -56,6 +57,13 @@ class DexExpectWatchBase(CommandBase):
             self._from_line = kwargs.pop('from_line', 1)
             self._to_line = kwargs.pop('to_line', 999999)
         self._require_in_order = kwargs.pop('require_in_order', True)
+        self.float_range = kwargs.pop('float_range', None)
+        if self.float_range is not None:
+            for value in self.values:
+                try:
+                    float(value)
+                except ValueError:
+                    raise NonFloatValueInCommand(f'Non-float value \'{value}\' when float_range arg provided')
         if kwargs:
             raise TypeError('unexpected named args: {}'.format(
                 ', '.join(kwargs)))
@@ -135,6 +143,33 @@ class DexExpectWatchBase(CommandBase):
         """Return a field from watch that this ExpectWatch command is checking.
         """
 
+    def _match_expected_floating_point(self, value):
+        """Checks to see whether value is a float that falls within the
+        acceptance range of one of this command's expected float values, and
+        returns the expected value if so; otherwise returns the original
+        value."""
+        try:
+            value_as_float = float(value)
+        except ValueError:
+            return value
+
+        possible_values = self.values
+        for expected in possible_values:
+          try:
+              expected_as_float = float(expected)
+              difference = abs(value_as_float - expected_as_float)
+              if difference <= self.float_range:
+                  return expected
+          except ValueError:
+              pass
+        return value
+
+    def _maybe_fix_float(self, value):
+        if self.float_range is not None:
+            return self._match_expected_floating_point(value)
+        else:
+            return value
+
     def _handle_watch(self, step_info):
         self.times_encountered += 1
 
@@ -150,23 +185,25 @@ class DexExpectWatchBase(CommandBase):
             self.irretrievable_watches.append(step_info)
             return
 
+        expected_value = self._maybe_fix_float(step_info.expected_value)
+
         # Check to see if this value matches with a resolved address.
         matching_address = None
         for v in self.values:
             if (isinstance(v, AddressExpression) and
                     v.name in self.address_resolutions and
-                    self.resolve_value(v) == step_info.expected_value):
+                    self.resolve_value(v) == expected_value):
                 matching_address = v
                 break
 
         # If this is not an expected value, either a direct value or an address,
         # then this is an unexpected watch.
-        if step_info.expected_value not in self.values and matching_address is None:
+        if expected_value not in self.values and matching_address is None:
             self.unexpected_watches.append(step_info)
             return
 
         self.expected_watches.append(step_info)
-        value_to_remove = matching_address if matching_address is not None else step_info.expected_value
+        value_to_remove = matching_address if matching_address is not None else expected_value
         try:
             self._missing_values.remove(value_to_remove)
         except KeyError:
@@ -177,7 +214,7 @@ class DexExpectWatchBase(CommandBase):
         or not.
         """
         differences = []
-        actual_values = [w.expected_value for w in actual_watches]
+        actual_values = [self._maybe_fix_float(w.expected_value) for w in actual_watches]
         value_differences = list(difflib.Differ().compare(actual_values,
                                                           expected_values))
 
@@ -229,14 +266,16 @@ class DexExpectWatchBase(CommandBase):
             # A list of all watches where the value has changed.
             value_change_watches = []
             prev_value = None
+            all_expected_values = []
             for watch in self.expected_watches:
-                if watch.expected_value != prev_value:
+                expected_value = self._maybe_fix_float(watch.expected_value)
+                all_expected_values.append(expected_value)
+                if expected_value != prev_value:
                     value_change_watches.append(watch)
-                    prev_value = watch.expected_value
+                    prev_value = expected_value
 
             resolved_values = [self.resolve_value(v) for v in self.values]
             self.misordered_watches = self._check_watch_order(
                 value_change_watches, [
-                    v for v in resolved_values if v in
-                    [w.expected_value for w in self.expected_watches]
+                    v for v in resolved_values if v in all_expected_values
                 ])

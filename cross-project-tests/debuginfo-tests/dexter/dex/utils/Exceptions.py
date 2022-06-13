@@ -54,6 +54,14 @@ class CommandParseError(Dexception):
         self.caret = None
 
 
+class NonFloatValueInCommand(CommandParseError):
+    """If a command has the float_range arg but at least one of its expected
+    values cannot be converted to a float."""
+
+    def __init__(self, *args, **kwargs):
+        super(NonFloatValueInCommand, self).__init__(*args, **kwargs)
+        self.value = None
+
 class ToolArgumentError(Dexception):
     """If a tool argument is invalid."""
     pass
