@@ -1,7 +1,4 @@
-; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=none %s -o - --verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP,CHECK-ATPCS
-; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=all %s -o - --verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-FP-ATPCS,CHECK-ATPCS
-; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=none -mattr=+aapcs-frame-chain-leaf %s -o - --verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP,CHECK-AAPCS
-; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=all -mattr=+aapcs-frame-chain-leaf %s -o - --verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK-FP-AAPCS,CHECK-AAPCS
+; RUN: llc -mtriple=thumbv6m-eabi -frame-pointer=none %s -o - | FileCheck %s
 
 ; struct S { int x[128]; } s;
 ; int f(int *, int, int, int, struct S);
@@ -15,7 +12,6 @@
 @s = common dso_local global %struct.S zeroinitializer, align 4
 
 declare void @llvm.va_start(i8*)
-declare dso_local i32 @i(i32) local_unnamed_addr
 declare dso_local i32 @g(i32*, i32, i32, i32, i32, i32) local_unnamed_addr
 declare dso_local i32 @f(i32*, i32, i32, i32, %struct.S* byval(%struct.S) align 4) local_unnamed_addr
 declare dso_local i32 @h(i32*, i32*, i32*) local_unnamed_addr
@@ -25,7 +21,7 @@ declare dso_local i32 @u(i32*, i32*, i32*, %struct.S* byval(%struct.S) align 4, 
 ; Test access to arguments, passed on stack (including varargs)
 ;
 
-; Usual case, access via SP if FP is not available
+; Usual case, access via SP
 ; int test_args_sp(int a, int b, int c, int d, int e) {
 ;   int v[4];
 ;   return g(v, a, b, c, d, e);
@@ -40,10 +36,7 @@ entry:
 }
 ; CHECK-LABEL: test_args_sp
 ; Load `e`
-; CHECK-NOFP: ldr    r0, [sp, #32]
-; CHECK-FP-ATPCS: ldr  r0, [r7, #8]
-; CHECK-FP-AAPCS: mov    r0, r11
-; CHECK-FP-AAPCS: ldr    r0, [r0, #8]
+; CHECK:       ldr    r0, [sp, #32]
 ; CHECK-NEXT:  str    r3, [sp]
 ; Pass `e` on stack
 ; CHECK-NEXT:  str    r0, [sp, #4]
@@ -70,18 +63,9 @@ entry:
 ; Three incoming varargs in registers
 ; CHECK:       sub sp, #12
 ; CHECK:       sub sp, #28
-; Incoming arguments area is accessed via SP if FP is not available
-; CHECK-NOFP:  add r0, sp, #36
-; CHECK-NOFP:  stm r0!, {r1, r2, r3}
-; CHECK-FP-ATPCS: mov r0, r7
-; CHECK-FP-ATPCS: adds r0, #8
-; CHECK-FP-ATPCS: stm r0!, {r1, r2, r3}
-; CHECK-FP-AAPCS: mov r0, r11
-; CHECK-FP-AAPCS: str r1, [r0, #8]
-; CHECK-FP-AAPCS: mov r0, r11
-; CHECK-FP-AAPCS: str r2, [r0, #12]
-; CHECK-FP-AAPCS: mov r0, r11
-; CHECK-FP-AAPCS: str r3, [r0, #16]
+; Incoming arguments area is accessed via SP
+; CHECK:       add r0, sp, #36
+; CHECK:       stm r0!, {r1, r2, r3}
 
 ; Re-aligned stack, access via FP
 ; int test_args_realign(int a, int b, int c, int d, int e) {
@@ -99,17 +83,14 @@ entry:
 }
 ; CHECK-LABEL: test_args_realign
 ; Setup frame pointer
-; CHECK-ATPCS: add r7, sp, #8
-; CHECK-AAPCS: mov r11, sp
+; CHECK:       add r7, sp, #8
 ; Align stack
 ; CHECK:       mov  r4, sp
 ; CHECK-NEXT:  lsrs r4, r4, #4
 ; CHECK-NEXT:  lsls r4, r4, #4
 ; CHECK-NEXT:  mov  sp, r4
 ; Load `e` via FP
-; CHECK-ATPCS: ldr r0, [r7, #8]
-; CHECK-AAPCS: mov r0, r11
-; CHECK-AAPCS: ldr r0, [r0, #8]
+; CHECK:       ldr r0, [r7, #8]
 ; CHECK-NEXT:  str r3, [sp]
 ; Pass `e` as argument
 ; CHECK-NEXT:  str r0, [sp, #4]
@@ -136,23 +117,16 @@ entry:
 ; Three incoming register varargs
 ; CHECK:       sub sp, #12
 ; Setup frame pointer
-; CHECK-ATPCS: add r7, sp, #8
-; CHECK-AAPCS: mov r11, sp
+; CHECK:       add r7, sp, #8
 ; Align stack
 ; CHECK:       mov  r4, sp
 ; CHECK-NEXT:  lsrs r4, r4, #4
 ; CHECK-NEXT:  lsls r4, r4, #4
 ; CHECK-NEXT:  mov  sp, r4
 ; Incoming register varargs stored via FP
-; CHECK-ATPCS: mov r0, r7
-; CHECK-ATPCS-NEXT: adds r0, #8
-; CHECK-ATPCS-NEXT: stm r0!, {r1, r2, r3}
-; CHECK-AAPCS: mov r0, r11
-; CHECK-AAPCS: str r1, [r0, #8]
-; CHECK-AAPCS: mov r0, r11
-; CHECK-AAPCS: str r2, [r0, #12]
-; CHECK-AAPCS: mov r0, r11
-; CHECK-AAPCS: str r3, [r0, #16]
+; CHECK:      mov r0, r7
+; CHECK-NEXT: adds r0, #8
+; CHECK-NEXT: stm r0!, {r1, r2, r3}
 ; VLAs present, access via FP
 ; int test_args_vla(int a, int b, int c, int d, int e) {
 ;   int v[a];
@@ -166,14 +140,11 @@ entry:
 }
 ; CHECK-LABEL: test_args_vla
 ; Setup frame pointer
-; CHECK-ATPCS: add r7, sp, #12
-; CHECK-AAPCS: mov r11, sp
+; CHECK:       add r7, sp, #12
 ; Allocate outgoing stack arguments space
-; CHECK:       sub sp, #8
+; CHECK:       sub sp, #4
 ; Load `e` via FP
-; CHECK-ATPCS: ldr r5, [r7, #8]
-; CHECK-AAPCS: mov r5, r11
-; CHECK-AAPCS: ldr r5, [r5, #8]
+; CHECK:       ldr r5, [r7, #8]
 ; Pass `d` and `e` as arguments
 ; CHECK-NEXT:  str r3, [sp]
 ; CHECK-NEXT:  str r5, [sp, #4]
@@ -198,18 +169,11 @@ entry:
 ; Three incoming register varargs
 ; CHECK:       sub sp, #12
 ; Setup frame pointer
-; CHECK-ATPCS: add r7, sp, #8
-; CHECK-AAPCS: mov r11, sp
+; CHECK:       add r7, sp, #8
 ; Register varargs stored via FP
-; CHECK-ATPCS-DAG:  str r3, [r7, #16]
-; CHECK-ATPCS-DAG:  str r2, [r7, #12]
-; CHECK-ATPCS-DAG:  str r1, [r7, #8]
-; CHECK-AAPCS-DAG:  mov r5, r11
-; CHECK-AAPCS-DAG:  str r1, [r5, #8]
-; CHECK-AAPCS-DAG:  mov r1, r11
-; CHECK-AAPCS-DAG:  str r3, [r1, #16]
-; CHECK-AAPCS-DAG:  mov r1, r11
-; CHECK-AAPCS-DAG:  str r2, [r1, #12]
+; CHECK-DAG:  str r3, [r7, #16]
+; CHECK-DAG:  str r2, [r7, #12]
+; CHECK-DAG:  str r1, [r7, #8]
 
 ; Moving SP, access via SP
 ; int test_args_moving_sp(int a, int b, int c, int d, int e) {
@@ -231,32 +195,17 @@ entry:
   ret i32 %add7
 }
 ; CHECK-LABEL: test_args_moving_sp
-; 20 bytes callee-saved area without FP
-; CHECK-NOFP: push {r4, r5, r6, r7, lr}
-; 20 bytes callee-saved area for ATPCS
-; CHECK-FP-ATPCS: push {r4, r5, r6, r7, lr}
-; 24 bytes callee-saved area for AAPCS as codegen prefers an even number of GPRs spilled
-; CHECK-FP-AAPCS: push {lr}
-; CHECK-FP-AAPCS: mov lr, r11
-; CHECK-FP-AAPCS: push {lr}
-; CHECK-FP-AAPCS: push {r4, r5, r6, r7}
-; 20 bytes locals without FP
-; CHECK-NOFP:       sub sp, #20
-; 28 bytes locals with FP for ATPCS
-; CHECK-FP-ATPCS:       sub sp, #28
-; 24 bytes locals with FP for AAPCS
-; CHECK-FP-AAPCS:       sub sp, #24
+; 20 bytes callee-saved area
+; CHECK:       push {r4, r5, r6, r7, lr}
+; 20 bytes locals
+; CHECK:       sub sp, #20
 ; Setup base pointer
 ; CHECK:       mov r6, sp
 ; Allocate outgoing arguments space
 ; CHECK:       sub sp, #508
 ; CHECK:       sub sp, #4
-; Load `e` via BP if FP is not present (40 = 20 + 20)
-; CHECK-NOFP:  ldr r3, [r6, #40]
-; Load `e` via FP otherwise
-; CHECK-FP-ATPCS: ldr r3, [r7, #8]
-; CHECK-FP-AAPCS: mov r0, r11
-; CHECK-FP-AAPCS: ldr r3, [r0, #8]
+; Load `e` via BP, 40 = 20 + 20
+; CHECK:       ldr r3, [r6, #40]
 ; CHECK:       bl  f
 ; Stack restored before next call
 ; CHECK-NEXT:  add sp, #508
@@ -287,53 +236,14 @@ entry:
 ; CHECK-LABEL: test_varargs_moving_sp
 ; Three incoming register varargs
 ; CHECK:       sub sp, #12
-; 16 bytes callee-saves without FP
-; CHECK-NOFP: push {r4, r5, r6, lr}
-; 24 bytes callee-saves with FP
-; CHECK-FP-ATPCS: push {r4, r5, r6, r7, lr}
-; CHECK-FP-AAPCS: push {lr}
-; CHECK-FP-AAPCS: mov lr, r11
-; CHECK-FP-AAPCS: push {lr}
-; CHECK-FP-AAPCS: push {r4, r5, r6, r7}
-; Locals area
-; CHECK-NOFP:       sub sp, #20
-; CHECK-FP-ATPCS:   sub sp, #24
-; CHECK-FP-AAPCS:   sub sp, #20
-; Incoming varargs stored via BP if FP is not present (36 = 20 + 16)
-; CHECK-NOFP:      mov r0, r6
-; CHECK-NOFP-NEXT: adds r0, #36
-; CHECK-NOFP-NEXT: stm r0!, {r1, r2, r3}
-; Incoming varargs stored via FP otherwise
-; CHECK-FP-ATPCS:      mov r0, r7
-; CHECK-FP-ATPCS-NEXT: adds r0, #8
-; CHECK-FP-ATPCS-NEXT: stm r0!, {r1, r2, r3}
-; CHECK-FP-AAPCS:      mov r0, r11
-; CHECK-FP-AAPCS-NEXT: str r1, [r0, #8]
-; CHECK-FP-AAPCS-NEXT: mov r0, r11
-; CHECK-FP-AAPCS-NEXT: str r2, [r0, #12]
-; CHECK-FP-AAPCS-NEXT: mov r0, r11
-; CHECK-FP-AAPCS-NEXT: str r3, [r0, #16]
-
-; struct S { int x[128]; } s;
-; int test(S a, int b) {
-;   return i(b);
-; }
-define dso_local i32 @test_args_large_offset(%struct.S* byval(%struct.S) align 4 %0, i32 %1) local_unnamed_addr {
-  %3 = alloca i32, align 4
-  store i32 %1, i32* %3, align 4
-  %4 = load i32, i32* %3, align 4
-  %5 = call i32 @i(i32 %4)
-  ret i32 %5
-}
-; CHECK-LABEL: test_args_large_offset
-; Without FP: Access to large offset is made using SP
-; CHECK-NOFP:     ldr r0, [sp, #520]
-; With FP: Access to large offset is made through a const pool using FP
-; CHECK-FP:       ldr r0, .LCPI0_0
-; CHECK-FP-ATPCS: ldr r0, [r0, r7]
-; CHECK-FP-AAPCS: add r0, r11
-; CHECK-FP-AAPCS: ldr r0, [r0]
-; CHECK: bl i
+; 16 bytes callee-saves
+; CHECK:       push {r4, r5, r6, lr}
+; 20 bytes locals
+; CHECK:       sub sp, #20
+; Incoming varargs stored via BP, 36 = 20 + 16
+; CHECK:       mov r0, r6
+; CHECK-NEXT:  adds r0, #36
+; CHECK-NEXT:  stm r0!, {r1, r2, r3}
 
 ;
 ; Access to locals
@@ -403,8 +313,7 @@ entry:
 }
 ; CHECK-LABEL: test_local_realign
 ; Setup frame pointer
-; CHECK-ATPCS: add r7, sp, #8
-; CHECK-AAPCS: mov r11, sp
+; CHECK:       add r7, sp, #8
 ; Re-align stack
 ; CHECK:       mov r4, sp
 ; CHECK-NEXT:  lsrs r4, r4, #4
@@ -446,24 +355,15 @@ entry:
 }
 ; CHECK-LABEL: test_local_vla
 ; Setup frame pointer
-; CHECK-ATPCS: add r7, sp, #12
-; CHECK-AAPCS: mov r11, sp
-; Locas area
-; CHECK-ATPCS: sub sp, #12
-; CHECK-AAPCS: sub sp, #16
+; CHECK:       add  r7, sp, #12
 ; Setup base pointer
 ; CHECK:       mov  r6, sp
-; CHECK-ATPCS: mov  r5, r6
-; CHECK-AAPCS: adds  r5, r6, #4
+; CHECK:       mov  r5, r6
 ; Arguments to `h` compute relative to BP
 ; CHECK:       adds r0, r6, #7
-; CHECK-ATPCS-NEXT:  adds r0, #1
-; CHECK-ATPCS-NEXT:  adds r1, r6, #4
-; CHECK-ATPCS-NEXT:  mov  r2, r6
-; CHECK-AAPCS-NEXT:  adds r0, #5
-; CHECK-AAPCS-NEXT:  adds r1, r6, #7
-; CHECK-AAPCS-NEXT:  adds r1, #1
-; CHECK-AAPCS-NEXT:  adds r2, r6, #4
+; CHECK-NEXT:  adds r0, #1
+; CHECK-NEXT:  adds r1, r6, #4
+; CHECK-NEXT:  mov  r2, r6
 ; CHECK-NEXT:  bl   h
 ; Load `x`, `y`, `z` via BP (r5 should still have the value of r6 from the move
 ; above)
@@ -496,9 +396,7 @@ entry:
 }
 ; CHECK-LABEL: test_local_moving_sp
 ; Locals area
-; CHECK-NOFP: sub sp, #36
-; CHECK-FP-ATPCS: sub sp, #44
-; CHECK-FP-AAPCS: sub sp, #40
+; CHECK:      sub sp, #36
 ; Setup BP
 ; CHECK:      mov r6, sp
 ; Outoging arguments
@@ -506,24 +404,12 @@ entry:
 ; CHECK-NEXT: sub sp, #508
 ; CHECK-NEXT: sub sp, #8
 ; Argument addresses computed relative to BP
-; CHECK-NOFP:      adds r4, r6, #7
-; CHECK-NOFP-NEXT: adds r4, #13
-; CHECK-NOFP:      adds r1, r6, #7
-; CHECK-NOFP-NEXT: adds r1, #9
-; CHECK-NOFP:      adds r5, r6, #7
-; CHECK-NOFP-NEXT: adds r5, #5
-; CHECK-FP-ATPCS:      adds r0, r6, #7
-; CHECK-FP-ATPCS-NEXT: adds r0, #21
-; CHECK-FP-ATPCS:      adds r1, r6, #7
-; CHECK-FP-ATPCS-NEXT: adds r1, #17
-; CHECK-FP-ATPCS:      adds r5, r6, #7
-; CHECK-FP-ATPCS-NEXT: adds r5, #13
-; CHECK-FP-AAPCS:      adds r4, r6, #7
-; CHECK-FP-AAPCS-NEXT: adds r4, #17
-; CHECK-FP-AAPCS:      adds r1, r6, #7
-; CHECK-FP-AAPCS-NEXT: adds r1, #13
-; CHECK-FP-AAPCS:      adds r5, r6, #7
-; CHECK-FP-AAPCS-NEXT: adds r5, #9
+; CHECK:      adds r4, r6, #7
+; CHECK-NEXT: adds r4, #13
+; CHECK:      adds r1, r6, #7
+; CHECK-NEXT: adds r1, #9
+; CHECK:      adds r5, r6, #7
+; CHECK-NEXT: adds r5, #5
 ; CHECK:      bl   u
 ; Stack restored before next call
 ; CHECK:      add  sp, #508
