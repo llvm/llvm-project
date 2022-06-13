@@ -21,6 +21,7 @@
 #include "test_iterators.h"
 
 #if TEST_STD_VER > 17
+
 TEST_CONSTEXPR bool eq(int a, int b) { return a == b; }
 
 TEST_CONSTEXPR bool test_constexpr() {
@@ -62,6 +63,11 @@ test()
     std::sort(v.begin(), v.end());
     for (x = 0; x <= M; ++x)
         test(Iter(v.data()), Iter(v.data()+v.size()), x);
+}
+
+void test_instantiation() {
+    auto iter = Cpp20HostileIterator<int*>();
+    std::lower_bound(iter, iter, 0);
 }
 
 int main(int, char**)

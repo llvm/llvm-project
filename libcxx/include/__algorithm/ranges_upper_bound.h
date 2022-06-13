@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_UPPER_BOUND_H
 #define _LIBCPP___ALGORITHM_RANGES_UPPER_BOUND_H
 
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/lower_bound.h>
 #include <__config>
 #include <__functional/identity.h>
@@ -39,7 +40,7 @@ struct __fn {
       return !std::invoke(__comp, __rhs, __lhs);
     };
 
-    return std::__lower_bound_impl(__first, __last, __value, __comp_lhs_rhs_swapped, __proj);
+    return std::__lower_bound_impl<_RangesIterOps>(__first, __last, __value, __comp_lhs_rhs_swapped, __proj);
   }
 
   template <forward_range _Range, class _Type, class _Proj = identity,
@@ -53,7 +54,11 @@ struct __fn {
       return !std::invoke(__comp, __rhs, __lhs);
     };
 
-    return std::__lower_bound_impl(ranges::begin(__r), ranges::end(__r), __value, __comp_lhs_rhs_swapped, __proj);
+    return std::__lower_bound_impl<_RangesIterOps>(ranges::begin(__r),
+                                                   ranges::end(__r),
+                                                   __value,
+                                                   __comp_lhs_rhs_swapped,
+                                                   __proj);
   }
 };
 } // namespace __upper_bound

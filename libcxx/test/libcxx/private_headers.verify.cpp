@@ -78,6 +78,7 @@ END-SCRIPT
 #include <__algorithm/is_sorted.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/is_sorted.h'}}
 #include <__algorithm/is_sorted_until.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/is_sorted_until.h'}}
 #include <__algorithm/iter_swap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/iter_swap.h'}}
+#include <__algorithm/iterator_operations.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/iterator_operations.h'}}
 #include <__algorithm/lexicographical_compare.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/lexicographical_compare.h'}}
 #include <__algorithm/lower_bound.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/lower_bound.h'}}
 #include <__algorithm/make_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/make_heap.h'}}

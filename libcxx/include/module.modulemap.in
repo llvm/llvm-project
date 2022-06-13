@@ -280,6 +280,7 @@ module std [system] {
       module is_sorted                { private header "__algorithm/is_sorted.h" }
       module is_sorted_until          { private header "__algorithm/is_sorted_until.h" }
       module iter_swap                { private header "__algorithm/iter_swap.h" }
+      module iterator_operations      { private header "__algorithm/iterator_operations.h" }
       module lexicographical_compare  { private header "__algorithm/lexicographical_compare.h" }
       module lower_bound              { private header "__algorithm/lower_bound.h" }
       module make_heap                { private header "__algorithm/make_heap.h" }

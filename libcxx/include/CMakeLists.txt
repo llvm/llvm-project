@@ -41,6 +41,7 @@ set(files
   __algorithm/is_sorted.h
   __algorithm/is_sorted_until.h
   __algorithm/iter_swap.h
+  __algorithm/iterator_operations.h
   __algorithm/lexicographical_compare.h
   __algorithm/lower_bound.h
   __algorithm/make_heap.h
