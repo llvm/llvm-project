@@ -57,8 +57,8 @@ endif ()
 list(APPEND CLANG_TEST_DEPS
   apinotes-test
   c-index-test
+  cache-build-session
   clang
-  clang-cache-build-session
   clang-cas-test
   clang-fuzzer-dictionary
   clang-resource-headers
