@@ -18,7 +18,7 @@ buffer overflows on the unsafe stack cannot be used to overwrite anything
 on the safe stack.
 
 SafeStack is a part of the `Code-Pointer Integrity (CPI) Project
-<https://dslab.epfl.ch/proj/cpi/>`_.
+<https://dslab.epfl.ch/research/cpi/>`_.
 
 Performance
 -----------
@@ -84,7 +84,7 @@ Known security limitations
 A complete protection against control-flow hijack attacks requires combining
 SafeStack with another mechanism that enforces the integrity of code pointers
 that are stored on the heap or the unsafe stack, such as `CPI
-<https://dslab.epfl.ch/proj/cpi/>`_, or a forward-edge control flow integrity
+<https://dslab.epfl.ch/research/cpi/>`_, or a forward-edge control flow integrity
 mechanism that enforces correct calling conventions at indirect call sites,
 such as `IFCC <https://research.google.com/pubs/archive/42808.pdf>`_ with arity
 checks. Clang has control-flow integrity protection scheme for :doc:`C++ virtual
@@ -186,7 +186,7 @@ Deprecated: This builtin function is an alias for
 Design
 ======
 
-Please refer to the `Code-Pointer Integrity <https://dslab.epfl.ch/proj/cpi/>`__
+Please refer to the `Code-Pointer Integrity <https://dslab.epfl.ch/research/cpi/>`__
 project page for more information about the design of the SafeStack and its
 related technologies.
 

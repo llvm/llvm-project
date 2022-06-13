@@ -3,7 +3,7 @@
 #  - DW_AT_high_pc is in the form of DW_FORM_addr.
 
 RUN: yaml2obj %p/Inputs/go_dwarf.yaml &> %t.exe
-RUN: llvm-bolt %t.exe -o %t.bolt -update-debug-sections
+RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 
 # Check the original binary values.
 RUN: llvm-dwarfdump -debug-info %t.exe 2>&1 | \

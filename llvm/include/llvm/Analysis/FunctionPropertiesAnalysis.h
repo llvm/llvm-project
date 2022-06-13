@@ -111,7 +111,7 @@ class FunctionPropertiesUpdater {
 public:
   FunctionPropertiesUpdater(FunctionPropertiesInfo &FPI, const CallBase &CB);
 
-  void finish(const LoopInfo &LI);
+  void finish(const LoopInfo &LI) const;
 
 private:
   FunctionPropertiesInfo &FPI;

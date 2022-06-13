@@ -237,6 +237,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_attr_setstacksize
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_detach
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
@@ -305,6 +306,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.threads.mtx_lock
     libc.src.threads.mtx_unlock
     libc.src.threads.thrd_create
+    libc.src.threads.thrd_detach
     libc.src.threads.thrd_join
 
     # time.h entrypoints

@@ -19353,8 +19353,18 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
 
   // We must know which element is being inserted for folds below here.
   unsigned Elt = IndexC->getZExtValue();
+
   if (SDValue Shuf = combineInsertEltToShuffle(N, Elt))
     return Shuf;
+
+  // Handle <1 x ???> vector insertion special cases.
+  if (VT.getVectorNumElements() == 1) {
+    // insert_vector_elt(x, extract_vector_elt(y, 0), 0) -> y
+    if (InVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        InVal.getOperand(0).getValueType() == VT &&
+        isNullConstant(InVal.getOperand(1)))
+      return InVal.getOperand(0);
+  }
 
   // Canonicalize insert_vector_elt dag nodes.
   // Example:
@@ -19376,35 +19386,49 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     }
   }
 
-  // If we can't generate a legal BUILD_VECTOR, exit
-  if (LegalOperations && !TLI.isOperationLegal(ISD::BUILD_VECTOR, VT))
-    return SDValue();
+  // Attempt to fold the insertion into a legal BUILD_VECTOR.
+  if (!LegalOperations || TLI.isOperationLegal(ISD::BUILD_VECTOR, VT)) {
+    auto UpdateBuildVector = [&](SmallVectorImpl<SDValue> &Ops) {
+      assert(Ops.size() == NumElts && "Unexpected vector size");
 
-  // Check that the operand is a BUILD_VECTOR (or UNDEF, which can essentially
-  // be converted to a BUILD_VECTOR).  Fill in the Ops vector with the
-  // vector elements.
-  SmallVector<SDValue, 8> Ops;
-  // Do not combine these two vectors if the output vector will not replace
-  // the input vector.
-  if (InVec.getOpcode() == ISD::BUILD_VECTOR && InVec.hasOneUse()) {
-    Ops.append(InVec->op_begin(), InVec->op_end());
-  } else if (InVec.isUndef()) {
-    Ops.append(NumElts, DAG.getUNDEF(InVal.getValueType()));
-  } else {
-    return SDValue();
+      // Insert the element
+      if (Elt < Ops.size()) {
+        // All the operands of BUILD_VECTOR must have the same type;
+        // we enforce that here.
+        EVT OpVT = Ops[0].getValueType();
+        Ops[Elt] =
+            OpVT.isInteger() ? DAG.getAnyExtOrTrunc(InVal, DL, OpVT) : InVal;
+      }
+
+      // Return the new vector
+      return DAG.getBuildVector(VT, DL, Ops);
+    };
+
+    // Check that the operand is a BUILD_VECTOR (or UNDEF, which can essentially
+    // be converted to a BUILD_VECTOR).  Fill in the Ops vector with the
+    // vector elements.
+    SmallVector<SDValue, 8> Ops;
+
+    // Do not combine these two vectors if the output vector will not replace
+    // the input vector.
+    if (InVec.getOpcode() == ISD::BUILD_VECTOR && InVec.hasOneUse()) {
+      Ops.append(InVec->op_begin(), InVec->op_end());
+      return UpdateBuildVector(Ops);
+    }
+
+    if (InVec.getOpcode() == ISD::SCALAR_TO_VECTOR && InVec.hasOneUse()) {
+      Ops.push_back(InVec.getOperand(0));
+      Ops.append(NumElts - 1, DAG.getUNDEF(InVec.getOperand(0).getValueType()));
+      return UpdateBuildVector(Ops);
+    }
+
+    if (InVec.isUndef()) {
+      Ops.append(NumElts, DAG.getUNDEF(InVal.getValueType()));
+      return UpdateBuildVector(Ops);
+    }
   }
-  assert(Ops.size() == NumElts && "Unexpected vector size");
 
-  // Insert the element
-  if (Elt < Ops.size()) {
-    // All the operands of BUILD_VECTOR must have the same type;
-    // we enforce that here.
-    EVT OpVT = Ops[0].getValueType();
-    Ops[Elt] = OpVT.isInteger() ? DAG.getAnyExtOrTrunc(InVal, DL, OpVT) : InVal;
-  }
-
-  // Return the new vector
-  return DAG.getBuildVector(VT, DL, Ops);
+  return SDValue();
 }
 
 SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,

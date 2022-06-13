@@ -182,7 +182,7 @@ addAllTypesFromDWP(MCStreamer &Out,
                    const DWARFUnitIndex &TUIndex, MCSection *OutputTypes,
                    StringRef Types, const UnitIndexEntry &TUEntry,
                    uint32_t &TypesOffset, unsigned TypesContributionIndex) {
-  Out.SwitchSection(OutputTypes);
+  Out.switchSection(OutputTypes);
   for (const DWARFUnitIndex::Entry &E : TUIndex.getRows()) {
     auto *I = E.getContributions();
     if (!I)
@@ -216,7 +216,7 @@ static void addAllTypesFromTypesSection(
     MCSection *OutputTypes, const std::vector<StringRef> &TypesSections,
     const UnitIndexEntry &CUEntry, uint32_t &TypesOffset) {
   for (StringRef Types : TypesSections) {
-    Out.SwitchSection(OutputTypes);
+    Out.switchSection(OutputTypes);
     uint64_t Offset = 0;
     DataExtractor Data(Types, true, 0);
     while (Data.isValidOffset(Offset)) {
@@ -374,7 +374,7 @@ void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
 
   Data = DataExtractor(CurStrOffsetSection, true, 0);
 
-  Out.SwitchSection(StrOffsetSection);
+  Out.switchSection(StrOffsetSection);
 
   uint64_t HeaderSize = debugStrOffsetsHeaderSize(Data, Version);
   uint64_t Offset = 0;
@@ -428,7 +428,7 @@ void writeIndex(MCStreamer &Out, MCSection *Section,
     ++I;
   }
 
-  Out.SwitchSection(Section);
+  Out.switchSection(Section);
   Out.emitIntValue(IndexVersion, 4);        // Version
   Out.emitIntValue(Columns, 4);             // Columns
   Out.emitIntValue(IndexEntries.size(), 4); // Num Units
@@ -527,7 +527,7 @@ Error handleSection(
   else if (OutSection == InfoSection)
     CurInfoSection.push_back(Contents);
   else {
-    Out.SwitchSection(OutSection);
+    Out.switchSection(OutSection);
     Out.emitBytes(Contents);
   }
   return Error::success();
@@ -634,7 +634,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
         ContributionOffsets[getContributionIndex(DW_SECT_INFO, IndexVersion)];
     if (CurCUIndexSection.empty()) {
       bool FoundCUUnit = false;
-      Out.SwitchSection(InfoSection);
+      Out.switchSection(InfoSection);
       for (StringRef Info : CurInfoSection) {
         uint64_t UnitOffset = 0;
         while (Info.size() > UnitOffset) {
@@ -704,7 +704,7 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
                                   utostr(CUIndex.getVersion()) +
                                   " and expecting " + utostr(IndexVersion));
 
-    Out.SwitchSection(InfoSection);
+    Out.switchSection(InfoSection);
     for (const DWARFUnitIndex::Entry &E : CUIndex.getRows()) {
       auto *I = E.getContributions();
       if (!I)

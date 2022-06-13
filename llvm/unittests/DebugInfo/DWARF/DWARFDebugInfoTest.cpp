@@ -1961,10 +1961,10 @@ TEST(DWARFDebugInfo, TestErrorReporting) {
   MCContext *MC = DG->getMCContext();
 
   // Emit two compressed sections with broken headers.
-  AP->OutStreamer->SwitchSection(
+  AP->OutStreamer->switchSection(
       MC->getELFSection(".zdebug_foo", 0 /*Type*/, 0 /*Flags*/));
   AP->OutStreamer->emitBytes("0");
-  AP->OutStreamer->SwitchSection(
+  AP->OutStreamer->switchSection(
       MC->getELFSection(".zdebug_bar", 0 /*Type*/, 0 /*Flags*/));
   AP->OutStreamer->emitBytes("0");
 
