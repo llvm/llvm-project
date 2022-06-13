@@ -2634,6 +2634,9 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
     if (!create_on_demand || !GetSwiftScratchContextLock().try_lock())
       return nullptr;
 
+    auto unlock = llvm::make_scope_exit(
+        [this] { GetSwiftScratchContextLock().unlock(); });
+
     auto type_system_or_err = GetScratchTypeSystemForLanguage(eLanguageTypeSwift, false);
     if (!type_system_or_err) {
       llvm::consumeError(type_system_or_err.takeError());
@@ -2652,7 +2655,6 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
         lldb::eLanguageTypeSwift, *this, *lldb_module);
     typesystem_sp->GetSwiftASTContext();
     m_scratch_typesystem_for_module.insert({idx, typesystem_sp});
-    GetSwiftScratchContextLock().unlock();
     if (log)
       log->Printf("created module-wide scratch context\n");
     return typesystem_sp.get();
