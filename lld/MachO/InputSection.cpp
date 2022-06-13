@@ -58,12 +58,14 @@ static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
 std::string InputSection::getLocation(uint64_t off) const {
   // First, try to find a symbol that's near the offset. Use it as a reference
   // point.
-  for (size_t i = 0; i < symbols.size(); ++i)
-    if (symbols[i]->value <= off &&
-        (i + 1 == symbols.size() || symbols[i + 1]->value > off))
-      return (toString(getFile()) + ":(symbol " + symbols.front()->getName() +
-              "+0x" + Twine::utohexstr(off - symbols[i]->value) + ")")
-          .str();
+  auto *nextSym = llvm::upper_bound(
+      symbols, off, [](uint64_t a, const Defined *b) { return a < b->value; });
+  if (nextSym != symbols.begin()) {
+    auto &sym = *std::prev(nextSym);
+    return (toString(getFile()) + ":(symbol " + sym->getName() + "+0x" +
+            Twine::utohexstr(off - sym->value) + ")")
+        .str();
+  }
 
   // If that fails, use the section itself as a reference point.
   for (const Subsection &subsec : section.subsections) {
