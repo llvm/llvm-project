@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; bigger than NEON. However, having no support opens us up to a code generator
 ; hang when expanding BUILD_VECTOR. Here we just validate the promblematic case
 ; successfully exits code generation.
-define void @hang_when_merging_stores_after_legalisation(<8 x i32>* %a, <2 x i32> %b) #0 {
+define void @hang_when_merging_stores_after_legalisation(<8 x i32>* %a, <2 x i32> %b) vscale_range(2,2) #0 {
 ; CHECK-LABEL: hang_when_merging_stores_after_legalisation:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -37,8 +37,8 @@ define void @hang_when_merging_stores_after_legalisation(<8 x i32>* %a, <2 x i32
   ret void
 }
 
-; Ensure we don't crash when trying to lower a shuffle via and extract
-define void @crash_when_lowering_extract_shuffle(<32 x i32>* %dst, i1 %cond) #0 {
+; Ensure we don't crash when trying to lower a shuffle via an extract
+define void @crash_when_lowering_extract_shuffle(<32 x i32>* %dst, i1 %cond) vscale_range(2,2) #0 {
 ; CHECK-LABEL: crash_when_lowering_extract_shuffle:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tbnz w1, #0, .LBB1_2
@@ -132,4 +132,4 @@ exit:
   ret void
 }
 
-attributes #0 = { vscale_range(2,2) "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve" }
