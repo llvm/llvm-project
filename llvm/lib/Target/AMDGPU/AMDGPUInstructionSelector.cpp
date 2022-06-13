@@ -3985,6 +3985,24 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
   }};
 }
 
+// Check whether the flat scratch SVS swizzle bug affects this access.
+bool AMDGPUInstructionSelector::checkFlatScratchSVSSwizzleBug(
+    Register VAddr, Register SAddr, uint64_t ImmOffset) const {
+  if (!Subtarget->hasFlatScratchSVSSwizzleBug())
+    return false;
+
+  // The bug affects the swizzling of SVS accesses if there is any carry out
+  // from the two low order bits (i.e. from bit 1 into bit 2) when adding
+  // voffset to (soffset + inst_offset).
+  auto VKnown = KnownBits->getKnownBits(VAddr);
+  auto SKnown = KnownBits::computeForAddSub(
+      true, false, KnownBits->getKnownBits(SAddr),
+      KnownBits::makeConstant(APInt(32, ImmOffset)));
+  uint64_t VMax = VKnown.getMaxValue().getZExtValue();
+  uint64_t SMax = SKnown.getMaxValue().getZExtValue();
+  return (VMax & 3) + (SMax & 3) >= 4;
+}
+
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
   Register Addr = Root.getReg();
@@ -4012,6 +4030,9 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
 
   Register LHS = AddrDef->MI->getOperand(1).getReg();
   auto LHSDef = getDefSrcRegIgnoringCopies(LHS, *MRI);
+
+  if (checkFlatScratchSVSSwizzleBug(RHS, LHS, ImmOffset))
+    return None;
 
   if (LHSDef->MI->getOpcode() == AMDGPU::G_FRAME_INDEX) {
     int FI = LHSDef->MI->getOperand(1).getIndex();
