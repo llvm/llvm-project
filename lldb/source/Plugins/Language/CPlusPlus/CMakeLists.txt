@@ -11,6 +11,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   LibCxxList.cpp
   LibCxxMap.cpp
   LibCxxQueue.cpp
+  LibCxxSpan.cpp
   LibCxxTuple.cpp
   LibCxxUnorderedMap.cpp
   LibCxxVariant.cpp

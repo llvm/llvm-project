@@ -74,6 +74,10 @@ LibcxxVectorBoolSyntheticFrontEndCreator(CXXSyntheticChildren *,
 bool LibcxxContainerSummaryProvider(ValueObject &valobj, Stream &stream,
                                     const TypeSummaryOptions &options);
 
+/// Formatter for libc++ std::span<>.
+bool LibcxxSpanSummaryProvider(ValueObject &valobj, Stream &stream,
+                               const TypeSummaryOptions &options);
+
 class LibCxxMapIteratorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   LibCxxMapIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
@@ -192,6 +196,10 @@ LibcxxOptionalSyntheticFrontEndCreator(CXXSyntheticChildren *,
 SyntheticChildrenFrontEnd *
 LibcxxVariantFrontEndCreator(CXXSyntheticChildren *,
                              lldb::ValueObjectSP valobj_sp);
+
+SyntheticChildrenFrontEnd *
+LibcxxStdSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP);
 
 } // namespace formatters
 } // namespace lldb_private
