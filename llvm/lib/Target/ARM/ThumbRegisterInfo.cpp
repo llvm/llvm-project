@@ -361,6 +361,7 @@ bool ThumbRegisterInfo::rewriteFrameIndex(MachineBasicBlock::iterator II,
                                           const ARMBaseInstrInfo &TII) const {
   MachineInstr &MI = *II;
   MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
   assert(MBB.getParent()->getSubtarget<ARMSubtarget>().isThumb1Only() &&
          "This isn't needed for thumb2!");
   DebugLoc dl = MI.getDebugLoc();
@@ -396,7 +397,18 @@ bool ThumbRegisterInfo::rewriteFrameIndex(MachineBasicBlock::iterator II,
 
     if ((unsigned)Offset <= Mask * Scale) {
       // Replace the FrameIndex with the frame register (e.g., sp).
-      MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
+      Register DestReg = FrameReg;
+
+      // In case FrameReg is a high register, move it to a low reg to ensure it
+      // can be used as an operand.
+      if (ARM::hGPRRegClass.contains(FrameReg) && FrameReg != ARM::SP) {
+        DestReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
+        BuildMI(MBB, II, dl, TII.get(ARM::tMOVr), DestReg)
+            .addReg(FrameReg)
+            .add(predOps(ARMCC::AL));
+      }
+
+      MI.getOperand(FrameRegIdx).ChangeToRegister(DestReg, false);
       ImmOp.ChangeToImmediate(ImmedOffset);
 
       // If we're using a register where sp was stored, convert the instruction
@@ -526,11 +538,21 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
     MI.setDesc(TII.get(UseRR ? ARM::tLDRr : ARM::tLDRi));
     MI.getOperand(FIOperandNum).ChangeToRegister(TmpReg, false, false, true);
-    if (UseRR)
-      // Use [reg, reg] addrmode. Replace the immediate operand w/ the frame
-      // register. The offset is already handled in the vreg value.
-      MI.getOperand(FIOperandNum+1).ChangeToRegister(FrameReg, false, false,
-                                                     false);
+    if (UseRR) {
+      if (!ARM::hGPRRegClass.contains(FrameReg)) {
+        // Use [reg, reg] addrmode. Replace the immediate operand w/ the frame
+        // register. The offset is already handled in the vreg value.
+        MI.getOperand(FIOperandNum+1).ChangeToRegister(FrameReg, false, false,
+                                                       false);
+      } else {
+        // If FrameReg is a high register, add the reg values in a separate
+        // instruction as the load won't be able to access it.
+        BuildMI(MBB, II, dl, TII.get(ARM::tADDhirr), TmpReg)
+            .addReg(TmpReg)
+            .addReg(FrameReg)
+            .add(predOps(ARMCC::AL));
+      }
+    }
   } else if (MI.mayStore()) {
       VReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
       bool UseRR = false;
@@ -548,11 +570,21 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                   *this);
       MI.setDesc(TII.get(UseRR ? ARM::tSTRr : ARM::tSTRi));
       MI.getOperand(FIOperandNum).ChangeToRegister(VReg, false, false, true);
-      if (UseRR)
-        // Use [reg, reg] addrmode. Replace the immediate operand w/ the frame
-        // register. The offset is already handled in the vreg value.
-        MI.getOperand(FIOperandNum+1).ChangeToRegister(FrameReg, false, false,
-                                                       false);
+      if (UseRR) {
+        if (!ARM::hGPRRegClass.contains(FrameReg)) {
+          // Use [reg, reg] addrmode. Replace the immediate operand w/ the frame
+          // register. The offset is already handled in the vreg value.
+          MI.getOperand(FIOperandNum+1).ChangeToRegister(FrameReg, false, false,
+                                                         false);
+        } else {
+          // If FrameReg is a high register, add the reg values in a separate
+          // instruction as the load won't be able to access it.
+          BuildMI(MBB, II, dl, TII.get(ARM::tADDhirr), VReg)
+              .addReg(VReg)
+              .addReg(FrameReg)
+              .add(predOps(ARMCC::AL));
+          }
+      }
   } else {
     llvm_unreachable("Unexpected opcode!");
   }
