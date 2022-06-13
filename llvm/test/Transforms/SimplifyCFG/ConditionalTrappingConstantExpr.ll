@@ -66,3 +66,22 @@ bb9:
 bb10:
   ret i32 927
 }
+
+@g = external global i32
+
+define <1 x i64> @trapping_const_agg(i1 %c) {
+; CHECK-LABEL: @trapping_const_agg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], <1 x i64> <i64 srem (i64 1, i64 ptrtoint (i32* @g to i64))>, <1 x i64> zeroinitializer
+; CHECK-NEXT:    ret <1 x i64> [[SPEC_SELECT]]
+;
+entry:
+  br i1 %c, label %if, label %end
+
+if:
+  br label %end
+
+end:
+  %phi = phi <1 x i64> [ zeroinitializer, %entry ], [ <i64 srem (i64 1, i64 ptrtoint (i32* @g to i64))>, %if ]
+  ret <1 x i64> %phi
+}
