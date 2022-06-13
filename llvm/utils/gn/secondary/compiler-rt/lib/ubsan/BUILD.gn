@@ -124,11 +124,8 @@ shared_library("ubsan_shared") {
     ":cxx_sources",
     ":sources",
     ":standalone_sources",
+    ":version_script",
   ]
-  if (current_os != "mac" && current_os != "win") {
-    deps += [ ":version_script" ]
-    inputs = [ "$target_gen_dir/ubsan.vers" ]
-    ldflags =
-        [ "-Wl,--version-script," + rebase_path(inputs[0], root_build_dir) ]
-  }
+  inputs = [ "$target_gen_dir/ubsan.vers" ]
+  ldflags = [ "-Wl,--version-script," + rebase_path(inputs[0], root_build_dir) ]
 }
