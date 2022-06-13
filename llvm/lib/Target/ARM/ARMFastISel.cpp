@@ -188,10 +188,10 @@ class ARMFastISel final : public FastISel {
     bool ARMEmitCmp(const Value *Src1Value, const Value *Src2Value,
                     bool isZExt);
     bool ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
-                     unsigned Alignment = 0, bool isZExt = true,
+                     MaybeAlign Alignment = None, bool isZExt = true,
                      bool allocReg = true);
     bool ARMEmitStore(MVT VT, unsigned SrcReg, Address &Addr,
-                      unsigned Alignment = 0);
+                      MaybeAlign Alignment = None);
     bool ARMComputeAddress(const Value *Obj, Address &Addr);
     void ARMSimplifyAddress(Address &Addr, MVT VT, bool useAM3);
     bool ARMIsMemCpySmall(uint64_t Len);
@@ -897,7 +897,8 @@ void ARMFastISel::AddLoadStoreOperands(MVT VT, Address &Addr,
 }
 
 bool ARMFastISel::ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
-                              unsigned Alignment, bool isZExt, bool allocReg) {
+                              MaybeAlign Alignment, bool isZExt,
+                              bool allocReg) {
   unsigned Opc;
   bool useAM3 = false;
   bool needVMOV = false;
@@ -923,7 +924,8 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
       RC = isThumb2 ? &ARM::rGPRRegClass : &ARM::GPRnopcRegClass;
       break;
     case MVT::i16:
-      if (Alignment && Alignment < 2 && !Subtarget->allowsUnalignedMem())
+      if (Alignment && *Alignment < Align(2) &&
+          !Subtarget->allowsUnalignedMem())
         return false;
 
       if (isThumb2) {
@@ -938,7 +940,8 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
       RC = isThumb2 ? &ARM::rGPRRegClass : &ARM::GPRnopcRegClass;
       break;
     case MVT::i32:
-      if (Alignment && Alignment < 4 && !Subtarget->allowsUnalignedMem())
+      if (Alignment && *Alignment < Align(4) &&
+          !Subtarget->allowsUnalignedMem())
         return false;
 
       if (isThumb2) {
@@ -954,7 +957,7 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
     case MVT::f32:
       if (!Subtarget->hasVFP2Base()) return false;
       // Unaligned loads need special handling. Floats require word-alignment.
-      if (Alignment && Alignment < 4) {
+      if (Alignment && *Alignment < Align(4)) {
         needVMOV = true;
         VT = MVT::i32;
         Opc = isThumb2 ? ARM::t2LDRi12 : ARM::LDRi12;
@@ -969,7 +972,7 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
       if (!Subtarget->hasVFP2Base()) return false;
       // FIXME: Unaligned loads need special handling.  Doublewords require
       // word-alignment.
-      if (Alignment && Alignment < 4)
+      if (Alignment && *Alignment < Align(4))
         return false;
 
       Opc = ARM::VLDRD;
@@ -1029,14 +1032,14 @@ bool ARMFastISel::SelectLoad(const Instruction *I) {
   if (!ARMComputeAddress(I->getOperand(0), Addr)) return false;
 
   Register ResultReg;
-  if (!ARMEmitLoad(VT, ResultReg, Addr, cast<LoadInst>(I)->getAlignment()))
+  if (!ARMEmitLoad(VT, ResultReg, Addr, cast<LoadInst>(I)->getAlign()))
     return false;
   updateValueMap(I, ResultReg);
   return true;
 }
 
 bool ARMFastISel::ARMEmitStore(MVT VT, unsigned SrcReg, Address &Addr,
-                               unsigned Alignment) {
+                               MaybeAlign Alignment) {
   unsigned StrOpc;
   bool useAM3 = false;
   switch (VT.SimpleTy) {
@@ -1064,7 +1067,8 @@ bool ARMFastISel::ARMEmitStore(MVT VT, unsigned SrcReg, Address &Addr,
       }
       break;
     case MVT::i16:
-      if (Alignment && Alignment < 2 && !Subtarget->allowsUnalignedMem())
+      if (Alignment && *Alignment < Align(2) &&
+          !Subtarget->allowsUnalignedMem())
         return false;
 
       if (isThumb2) {
@@ -1078,7 +1082,8 @@ bool ARMFastISel::ARMEmitStore(MVT VT, unsigned SrcReg, Address &Addr,
       }
       break;
     case MVT::i32:
-      if (Alignment && Alignment < 4 && !Subtarget->allowsUnalignedMem())
+      if (Alignment && *Alignment < Align(4) &&
+          !Subtarget->allowsUnalignedMem())
         return false;
 
       if (isThumb2) {
@@ -1093,7 +1098,7 @@ bool ARMFastISel::ARMEmitStore(MVT VT, unsigned SrcReg, Address &Addr,
     case MVT::f32:
       if (!Subtarget->hasVFP2Base()) return false;
       // Unaligned stores need special handling. Floats require word-alignment.
-      if (Alignment && Alignment < 4) {
+      if (Alignment && *Alignment < Align(4)) {
         Register MoveReg = createResultReg(TLI.getRegClassFor(MVT::i32));
         AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                                 TII.get(ARM::VMOVRS), MoveReg)
@@ -1110,8 +1115,8 @@ bool ARMFastISel::ARMEmitStore(MVT VT, unsigned SrcReg, Address &Addr,
       if (!Subtarget->hasVFP2Base()) return false;
       // FIXME: Unaligned stores need special handling.  Doublewords require
       // word-alignment.
-      if (Alignment && Alignment < 4)
-          return false;
+      if (Alignment && *Alignment < Align(4))
+        return false;
 
       StrOpc = ARM::VSTRD;
       break;
@@ -1165,7 +1170,7 @@ bool ARMFastISel::SelectStore(const Instruction *I) {
   if (!ARMComputeAddress(I->getOperand(1), Addr))
     return false;
 
-  if (!ARMEmitStore(VT, SrcReg, Addr, cast<StoreInst>(I)->getAlignment()))
+  if (!ARMEmitStore(VT, SrcReg, Addr, cast<StoreInst>(I)->getAlign()))
     return false;
   return true;
 }
@@ -2938,7 +2943,7 @@ bool ARMFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   if (!ARMComputeAddress(LI->getOperand(0), Addr)) return false;
 
   Register ResultReg = MI->getOperand(0).getReg();
-  if (!ARMEmitLoad(VT, ResultReg, Addr, LI->getAlignment(), isZExt, false))
+  if (!ARMEmitLoad(VT, ResultReg, Addr, LI->getAlign(), isZExt, false))
     return false;
   MachineBasicBlock::iterator I(MI);
   removeDeadCode(I, std::next(I));

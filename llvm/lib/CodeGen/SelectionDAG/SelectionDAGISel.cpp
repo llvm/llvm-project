@@ -367,8 +367,8 @@ static void SplitCriticalSideEffectEdges(Function &Fn, DominatorTree *DT,
     // PHI.
     for (BasicBlock::iterator I = BB.begin(); (PN = dyn_cast<PHINode>(I)); ++I)
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-        ConstantExpr *CE = dyn_cast<ConstantExpr>(PN->getIncomingValue(i));
-        if (!CE || !CE->canTrap()) continue;
+        Constant *C = dyn_cast<Constant>(PN->getIncomingValue(i));
+        if (!C || !C->canTrap()) continue;
 
         // The only case we have to worry about is when the edge is critical.
         // Since this block has a PHI Node, we assume it has multiple input
