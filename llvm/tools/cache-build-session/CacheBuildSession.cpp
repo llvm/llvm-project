@@ -1,4 +1,4 @@
-//===-- ClangCacheBuildSession.cpp - clang-cache-build-session tool -------===//
+//===-- CacheBuildSession.cpp - cache-build-session tool ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Accepts a command that triggers a build and, while the command is running,
-// all the clang invocations that are part of that build will be sharing the
+// all the compiler invocations that are part of that build will be sharing the
 // same dependency scanning daemon.
 //
 //===----------------------------------------------------------------------===//
@@ -65,11 +65,11 @@ static Error inferCMakePathPrefixes(StringRef CMakeBuildPath,
 int main(int Argc, const char **Argv) {
   InitLLVM X(Argc, Argv);
 
-  cl::OptionCategory OptCategory("clang-cache-build-session options");
+  cl::OptionCategory OptCategory("cache-build-session options");
   cl::extrahelp MoreHelp("\n"
                          "Accepts a command that triggers a build and, while "
                          "the command is running,\n"
-                         "all the clang invocations that are part of that "
+                         "all the compiler invocations that are part of that "
                          "build will share the same\n"
                          "dependency scanning daemon.\n"
                          "\n");
@@ -87,7 +87,7 @@ int main(int Argc, const char **Argv) {
     ++CmdArgsI;
 
   cl::HideUnrelatedOptions(OptCategory);
-  cl::ParseCommandLineOptions(CmdArgsI, Argv, "clang-cache-build-session");
+  cl::ParseCommandLineOptions(CmdArgsI, Argv, "cache-build-session");
 
   SmallVector<const char *, 256> CmdArgs(Argv + CmdArgsI, Argv + Argc);
   if (CmdArgs.empty()) {
@@ -119,7 +119,7 @@ int main(int Argc, const char **Argv) {
       return 1;
     }
     if (!PrefixMaps.empty()) {
-      constexpr const char *PrefixMapEnvVar = "CLANG_CACHE_PREFIX_MAPS";
+      constexpr const char *PrefixMapEnvVar = "LLVM_CACHE_PREFIX_MAPS";
       SmallString<128> PrefixMapsConcat;
       const char *PriorPrefixMaps = ::getenv(PrefixMapEnvVar);
       if (PriorPrefixMaps) {
@@ -138,18 +138,18 @@ int main(int Argc, const char **Argv) {
     }
   }
 
-  // Set 'CLANG_CACHE_BUILD_SESSION_ID' to a unique identifier so that clang
+  // Set 'LLVM_CACHE_BUILD_SESSION_ID' to a unique identifier so that compiler
   // invocations under the given command share the same depscan daemon while the
   // command is running.
   // Uses the process id to ensure parallel invocations of
-  // `clang-cache-build-session` will not share the same identifier, and
+  // `cache-build-session` will not share the same identifier, and
   // 'elapsed nanoseconds since epoch' to ensure the same for consecutive
   // invocations.
   SmallString<32> SessionId;
   raw_svector_ostream(SessionId)
       << sys::Process::getProcessId() << '-'
       << std::chrono::system_clock::now().time_since_epoch().count();
-  setEnvVar("CLANG_CACHE_BUILD_SESSION_ID", SessionId.c_str());
+  setEnvVar("LLVM_CACHE_BUILD_SESSION_ID", SessionId.c_str());
 
   ErrorOr<std::string> ExecPathOrErr = sys::findProgramByName(CmdArgs.front());
   if (!ExecPathOrErr) {

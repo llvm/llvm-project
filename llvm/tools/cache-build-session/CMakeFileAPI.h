@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_CLANGCACHEBUILDSESSION_CMAKEFILEAPI_H
-#define LLVM_CLANG_TOOLS_CLANGCACHEBUILDSESSION_CMAKEFILEAPI_H
+#ifndef LLVM_TOOLS_CACHEBUILDSESSION_CMAKEFILEAPI_H
+#define LLVM_TOOLS_CACHEBUILDSESSION_CMAKEFILEAPI_H
 
 #include "llvm/Support/JSON.h"
 
