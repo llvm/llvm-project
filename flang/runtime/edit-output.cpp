@@ -182,8 +182,10 @@ const char *RealOutputEditingBase::FormatExponent(
     *--exponent = '0' + e - 10 * quotient;
     e = quotient;
   }
+  bool overflow{false};
   if (edit.expoDigits) {
     if (int ed{*edit.expoDigits}) { // Ew.dEe with e > 0
+      overflow = exponent + ed < eEnd;
       while (exponent > exponent_ + 2 /*E+*/ && exponent + ed > eEnd) {
         *--exponent = '0';
       }
@@ -200,7 +202,7 @@ const char *RealOutputEditingBase::FormatExponent(
     *--exponent = edit.descriptor == 'D' ? 'D' : 'E'; // not 'G'
   }
   length = eEnd - exponent;
-  return exponent;
+  return overflow ? nullptr : exponent;
 }
 
 bool RealOutputEditingBase::EmitPrefix(
@@ -353,7 +355,7 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
         1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes +
         expoLength};
     int width{editWidth > 0 ? editWidth : totalLength};
-    if (totalLength > width) {
+    if (totalLength > width || !exponent) {
       return io_.EmitRepeated('*', width);
     }
     if (totalLength < width && digitsBeforePoint == 0 &&
