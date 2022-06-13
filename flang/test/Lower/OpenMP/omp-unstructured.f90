@@ -59,8 +59,8 @@ subroutine ss2(n) ! unstructured OpenMP construct; loop exit inside construct
 end
 
 ! CHECK-LABEL: func @_QPss3{{.*}} {
-! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k", {{.*}}}
 ! CHECK:   omp.parallel {
+! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k", pinned}
 ! CHECK:     %[[ALLOCA_1:.*]] = fir.alloca i32 {{{.*}}, pinned}
 ! CHECK:     %[[ALLOCA_2:.*]] = fir.alloca i32 {{{.*}}, pinned}
 ! CHECK:     br ^bb1
