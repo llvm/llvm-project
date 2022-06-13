@@ -22,19 +22,66 @@ using namespace CodeGen;
 
 SanitizerMetadata::SanitizerMetadata(CodeGenModule &CGM) : CGM(CGM) {}
 
+// TODO(hctim): Can be removed when we migrate off of llvm.asan.globals. This
+// prevents llvm.asan.globals from being emitted for
+// __attribute__((disable_sanitizer_instrumentation)) and uses of
+// -fsanitize-ignorelist when a sanitizer isn't enabled.
 static bool isAsanHwasanOrMemTag(const SanitizerSet &SS) {
   return SS.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress |
-                     SanitizerKind::HWAddress | SanitizerKind::KernelHWAddress |
-                     SanitizerKind::MemTag);
+                     SanitizerKind::HWAddress | SanitizerKind::MemTag);
+}
+
+SanitizerMask expandKernelSanitizerMasks(SanitizerMask Mask) {
+  if (Mask & (SanitizerKind::Address | SanitizerKind::KernelAddress))
+    Mask |= SanitizerKind::Address | SanitizerKind::KernelAddress;
+  // Note: KHWASan doesn't support globals.
+  return Mask;
 }
 
 void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
                                      SourceLocation Loc, StringRef Name,
-                                     QualType Ty, bool IsDynInit,
-                                     bool IsExcluded) {
-  IsDynInit &= !CGM.isInNoSanitizeList(GV, Loc, Ty, "init");
-  IsExcluded |= CGM.isInNoSanitizeList(GV, Loc, Ty);
+                                     QualType Ty,
+                                     SanitizerMask NoSanitizeAttrMask,
+                                     bool IsDynInit) {
+  SanitizerSet FsanitizeArgument = CGM.getLangOpts().Sanitize;
+  if (!isAsanHwasanOrMemTag(FsanitizeArgument))
+    return;
 
+  FsanitizeArgument.Mask = expandKernelSanitizerMasks(FsanitizeArgument.Mask);
+  NoSanitizeAttrMask = expandKernelSanitizerMasks(NoSanitizeAttrMask);
+  SanitizerSet NoSanitizeAttrSet = {NoSanitizeAttrMask &
+                                    FsanitizeArgument.Mask};
+
+  llvm::GlobalVariable::SanitizerMetadata Meta;
+  if (GV->hasSanitizerMetadata())
+    Meta = GV->getSanitizerMetadata();
+
+  Meta.NoAddress |= NoSanitizeAttrSet.hasOneOf(SanitizerKind::Address);
+  Meta.NoAddress |= CGM.isInNoSanitizeList(
+      FsanitizeArgument.Mask & SanitizerKind::Address, GV, Loc, Ty);
+
+  Meta.NoHWAddress |= NoSanitizeAttrSet.hasOneOf(SanitizerKind::HWAddress);
+  Meta.NoHWAddress |= CGM.isInNoSanitizeList(
+      FsanitizeArgument.Mask & SanitizerKind::HWAddress, GV, Loc, Ty);
+
+  Meta.NoMemtag |= NoSanitizeAttrSet.hasOneOf(SanitizerKind::MemTag);
+  Meta.NoMemtag |= CGM.isInNoSanitizeList(
+      FsanitizeArgument.Mask & SanitizerKind::MemTag, GV, Loc, Ty);
+
+  if (FsanitizeArgument.has(SanitizerKind::Address)) {
+    // TODO(hctim): Make this conditional when we migrate off llvm.asan.globals.
+    IsDynInit &= !CGM.isInNoSanitizeList(SanitizerKind::Address |
+                                             SanitizerKind::KernelAddress,
+                                         GV, Loc, Ty, "init");
+    Meta.IsDynInit = IsDynInit;
+  }
+
+  bool IsExcluded = Meta.NoAddress || Meta.NoHWAddress || Meta.NoMemtag;
+
+  GV->setSanitizerMetadata(Meta);
+
+  // TODO(hctim): Code below can be removed when we migrate off of
+  // llvm.asan.globals onto the new metadata attributes.
   llvm::Metadata *LocDescr = nullptr;
   llvm::Metadata *GlobalName = nullptr;
   llvm::LLVMContext &VMContext = CGM.getLLVMContext();
@@ -77,23 +124,13 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
 
     return NoSanitizeMask;
   };
-  reportGlobal(GV, D.getLocation(), OS.str(), D.getType(), IsDynInit,
-               SanitizerSet{getNoSanitizeMask(D)}.has(SanitizerKind::Address));
-}
 
-void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
-                                     SourceLocation Loc, StringRef Name,
-                                     QualType Ty, bool IsDynInit) {
-  if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
-    return;
-  reportGlobal(GV, Loc, Name, Ty, IsDynInit, false);
+  reportGlobal(GV, D.getLocation(), OS.str(), D.getType(), getNoSanitizeMask(D),
+               IsDynInit);
 }
 
 void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
-  // For now, just make sure the global is not modified by the ASan
-  // instrumentation.
-  if (isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
-    reportGlobal(GV, SourceLocation(), "", QualType(), false, true);
+  reportGlobal(GV, SourceLocation(), "", QualType(), SanitizerKind::All);
 }
 
 void SanitizerMetadata::disableSanitizerForInstruction(llvm::Instruction *I) {
