@@ -42,3 +42,9 @@ chat](https://discord.gg/xS7Z362),
 
 The LLVM project has adopted a [code of conduct](https://llvm.org/docs/CodeOfConduct.html) for
 participants to all modes of communication within the project.
+
+### License
+
+ClangIR is based off https://github.com/llvm/llvm-project and uses the same
+license. This ClangIR project is under the Apache License v2.0 with LLVM
+Exceptions. Please see the `LICENSE.TXT` for the full details.
