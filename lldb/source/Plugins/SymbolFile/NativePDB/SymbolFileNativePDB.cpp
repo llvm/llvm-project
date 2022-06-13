@@ -1052,7 +1052,7 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
     for (uint32_t cu_idx = 0, num_cus = GetNumCompileUnits(); cu_idx < num_cus;
          ++cu_idx) {
       CompileUnit *cu = ParseCompileUnitAtIndex(cu_idx).get();
-      if (!cu || cu->GetNumFunctions() == 0)
+      if (!cu)
         continue;
 
       bool file_spec_matches_cu_file_spec = FileSpec::Match(
