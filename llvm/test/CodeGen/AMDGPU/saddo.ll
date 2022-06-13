@@ -90,7 +90,7 @@ define amdgpu_kernel void @saddo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b
 ; GFX10-NEXT:    s_xor_b32 s2, s2, s3
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
 ; GFX10-NEXT:    v_add_co_u32 v0, s0, s0, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s0, s1, 0, s0
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, 0, s0
 ; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX10-NEXT:    s_endpgm
   %sadd = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b) nounwind

@@ -2788,9 +2788,9 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; GFX1030-NEXT:    v_add_co_u32 v5, vcc_lo, v2, v3
 ; GFX1030-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, s4, v4, vcc_lo
 ; GFX1030-NEXT:    v_mul_hi_u32 v8, v0, v5
-; GFX1030-NEXT:    v_mad_u64_u32 v[4:5], s4, v1, v5, 0
-; GFX1030-NEXT:    v_mad_u64_u32 v[2:3], s4, v0, v6, 0
-; GFX1030-NEXT:    v_mad_u64_u32 v[6:7], s4, v1, v6, 0
+; GFX1030-NEXT:    v_mad_u64_u32 v[4:5], null, v1, v5, 0
+; GFX1030-NEXT:    v_mad_u64_u32 v[2:3], null, v0, v6, 0
+; GFX1030-NEXT:    v_mad_u64_u32 v[6:7], null, v1, v6, 0
 ; GFX1030-NEXT:    v_add_co_u32 v2, vcc_lo, v8, v2
 ; GFX1030-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
 ; GFX1030-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
@@ -2798,8 +2798,8 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; GFX1030-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v7, vcc_lo
 ; GFX1030-NEXT:    v_add_co_u32 v5, vcc_lo, v2, v6
 ; GFX1030-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, 0, v3, vcc_lo
-; GFX1030-NEXT:    v_mad_u64_u32 v[2:3], s4, 0x186a0, v5, 0
-; GFX1030-NEXT:    v_mad_u64_u32 v[3:4], s4, 0x186a0, v6, v[3:4]
+; GFX1030-NEXT:    v_mad_u64_u32 v[2:3], null, 0x186a0, v5, 0
+; GFX1030-NEXT:    v_mad_u64_u32 v[3:4], null, 0x186a0, v6, v[3:4]
 ; GFX1030-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v2
 ; GFX1030-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
 ; GFX1030-NEXT:    v_subrev_co_u32 v2, vcc_lo, 0x186a0, v0

@@ -48,6 +48,7 @@ public:
   void shrinkMIMG(MachineInstr &MI) const;
   void shrinkMadFma(MachineInstr &MI) const;
   bool shrinkScalarLogicOp(MachineInstr &MI) const;
+  bool tryReplaceDeadSDST(MachineInstr &MI) const;
   bool instAccessReg(iterator_range<MachineInstr::const_mop_iterator> &&R,
                      Register Reg, unsigned SubReg) const;
   bool instReadsReg(const MachineInstr *MI, unsigned Reg,
@@ -689,6 +690,22 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   return nullptr;
 }
 
+// If an instruction has dead sdst replace it with NULL register on gfx10+
+bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
+  if (ST->getGeneration() < AMDGPUSubtarget::GFX10)
+    return false;
+
+  MachineOperand *Op = TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
+  if (!Op)
+    return false;
+  Register SDstReg = Op->getReg();
+  if (SDstReg.isPhysical() || !MRI->use_nodbg_empty(SDstReg))
+    return false;
+
+  Op->setReg(ST->isWave32() ? AMDGPU::SGPR_NULL : AMDGPU::SGPR_NULL64);
+  return true;
+}
+
 bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -822,15 +839,21 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      if (!TII->hasVALU32BitEncoding(MI.getOpcode()))
+      if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
+        // If there is no chance we will shrink it and use VCC as sdst to get
+        // a 32 bit form try to replace dead sdst with NULL.
+        tryReplaceDeadSDST(MI);
         continue;
+      }
 
       if (!TII->canShrink(MI, *MRI)) {
         // Try commuting the instruction and see if that enables us to shrink
         // it.
         if (!MI.isCommutable() || !TII->commuteInstruction(MI) ||
-            !TII->canShrink(MI, *MRI))
+            !TII->canShrink(MI, *MRI)) {
+          tryReplaceDeadSDST(MI);
           continue;
+        }
       }
 
       int Op32 = AMDGPU::getVOPe32(MI.getOpcode());

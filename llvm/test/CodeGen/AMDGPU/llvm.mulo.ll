@@ -58,10 +58,10 @@ define { i64, i1 } @umulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v1
-; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s4, v4, v2, 0
-; GFX10-NEXT:    v_mad_u64_u32 v[6:7], s4, v4, v3, 0
-; GFX10-NEXT:    v_mad_u64_u32 v[9:10], s4, v5, v2, 0
-; GFX10-NEXT:    v_mad_u64_u32 v[11:12], s4, v5, v3, 0
+; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v4, v2, 0
+; GFX10-NEXT:    v_mad_u64_u32 v[6:7], null, v4, v3, 0
+; GFX10-NEXT:    v_mad_u64_u32 v[9:10], null, v5, v2, 0
+; GFX10-NEXT:    v_mad_u64_u32 v[11:12], null, v5, v3, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v8, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v5, v5, v2
 ; GFX10-NEXT:    v_mul_lo_u32 v4, v4, v3
@@ -83,10 +83,10 @@ define { i64, i1 } @umulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v1
-; GFX11-NEXT:    v_mad_u64_u32 v[0:1], s0, v4, v2, 0
-; GFX11-NEXT:    v_mad_u64_u32 v[6:7], s0, v4, v3, 0
-; GFX11-NEXT:    v_mad_u64_u32 v[9:10], s0, v5, v2, 0
-; GFX11-NEXT:    v_mad_u64_u32 v[11:12], s0, v5, v3, 0
+; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v4, v2, 0
+; GFX11-NEXT:    v_mad_u64_u32 v[6:7], null, v4, v3, 0
+; GFX11-NEXT:    v_mad_u64_u32 v[9:10], null, v5, v2, 0
+; GFX11-NEXT:    v_mad_u64_u32 v[11:12], null, v5, v3, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v8, v1
 ; GFX11-NEXT:    v_mul_lo_u32 v5, v5, v2
 ; GFX11-NEXT:    v_mul_lo_u32 v4, v4, v3
@@ -186,10 +186,10 @@ define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v1
-; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s4, v4, v2, 0
-; GFX10-NEXT:    v_mad_u64_u32 v[6:7], s4, v4, v3, 0
-; GFX10-NEXT:    v_mad_u64_u32 v[9:10], s4, v5, v2, 0
-; GFX10-NEXT:    v_mad_i64_i32 v[11:12], s4, v5, v3, 0
+; GFX10-NEXT:    v_mad_u64_u32 v[0:1], null, v4, v2, 0
+; GFX10-NEXT:    v_mad_u64_u32 v[6:7], null, v4, v3, 0
+; GFX10-NEXT:    v_mad_u64_u32 v[9:10], null, v5, v2, 0
+; GFX10-NEXT:    v_mad_i64_i32 v[11:12], null, v5, v3, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v8, v1
 ; GFX10-NEXT:    v_add_co_u32 v6, vcc_lo, v8, v6
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v7, vcc_lo
@@ -223,10 +223,10 @@ define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v1
-; GFX11-NEXT:    v_mad_u64_u32 v[0:1], s0, v4, v2, 0
-; GFX11-NEXT:    v_mad_u64_u32 v[6:7], s0, v4, v3, 0
-; GFX11-NEXT:    v_mad_u64_u32 v[9:10], s0, v5, v2, 0
-; GFX11-NEXT:    v_mad_i64_i32 v[11:12], s0, v5, v3, 0
+; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v4, v2, 0
+; GFX11-NEXT:    v_mad_u64_u32 v[6:7], null, v4, v3, 0
+; GFX11-NEXT:    v_mad_u64_u32 v[9:10], null, v5, v2, 0
+; GFX11-NEXT:    v_mad_i64_i32 v[11:12], null, v5, v3, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v8, v1
 ; GFX11-NEXT:    v_add_co_u32 v6, vcc_lo, v8, v6
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v7, vcc_lo
