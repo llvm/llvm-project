@@ -3,7 +3,9 @@
 //      the floating point range evalution and defaults back to
 //      pre-float evalution.
 //
-// UNSUPPORTED: system-darwin
+// Since this test involves string comparison to the debugger output, it cannot
+// work for both dbgeng and lldb, which output floats differently.
+// UNSUPPORTED: system-darwin, system-windows
 //
 // RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: float_range_no_arg.cpp:
