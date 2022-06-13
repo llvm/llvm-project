@@ -201,23 +201,6 @@ void func(int sel) {
   local_int8 &&init_int8;  // expected-error {{invalid operands to binary expression}}
   local_int8 || init_int8; // expected-error {{invalid operands to binary expression}}
 
-  local_int8 + 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 - 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 * 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 / 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 % 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 & 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 | 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 ^ 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 < 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 <= 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 == 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 != 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 >= 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 > 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 && 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 || 0; // expected-error {{invalid operands to binary expression}}
-
   if (local_int8) { // expected-error {{statement requires expression of scalar type}}
   }
   while (local_int8) { // expected-error {{statement requires expression of scalar type}}

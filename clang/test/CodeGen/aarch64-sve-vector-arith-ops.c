@@ -328,6 +328,132 @@ svfloat64_t add_scalar_f64(svfloat64_t a, double b) {
   return a + b;
 }
 
+// CHECK-LABEL: @add_i8_i_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_i_lit(svint8_t a) {
+  return a + 0;
+}
+
+// CHECK-LABEL: @add_i8_il_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_il_lit(svint8_t a) {
+  return a + 0l;
+}
+
+// CHECK-LABEL: @add_i8_ill_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_ill_lit(svint8_t a) {
+  return a + 0ll;
+}
+
+// CHECK-LABEL: @add_i8_u_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_u_lit(svint8_t a) {
+  return a + 0u;
+}
+
+// CHECK-LABEL: @add_i8_ul_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_ul_lit(svint8_t a) {
+  return a + 0ul;
+}
+
+// CHECK-LABEL: @add_i8_ull_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 16 x i8> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[ADD]]
+//
+svint8_t add_i8_ull_lit(svint8_t a) {
+  return a + 0ull;
+}
+
+// CHECK-LABEL: @add_f64_i_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_i_lit(svfloat64_t a) {
+  return a + 0;
+}
+
+// CHECK-LABEL: @add_f64_il_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_il_lit(svfloat64_t a) {
+  return a + 0l;
+}
+
+// CHECK-LABEL: @add_f64_ill_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_ill_lit(svfloat64_t a) {
+  return a + 0ll;
+}
+
+// CHECK-LABEL: @add_f64_u_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_u_lit(svfloat64_t a) {
+  return a + 0u;
+}
+
+// CHECK-LABEL: @add_f64_ul_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_ul_lit(svfloat64_t a) {
+  return a + 0ul;
+}
+
+// CHECK-LABEL: @add_f64_ull_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_ull_lit(svfloat64_t a) {
+  return a + 0ull;
+}
+
+// CHECK-LABEL: @add_f64_f_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_f_lit(svfloat64_t a) {
+  return a + 0.f;
+}
+
+// CHECK-LABEL: @add_f64_d_lit(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[ADD:%.*]] = fadd <vscale x 2 x double> [[A:%.*]], zeroinitializer
+// CHECK-NEXT:    ret <vscale x 2 x double> [[ADD]]
+//
+svfloat64_t add_f64_d_lit(svfloat64_t a) {
+  return a + 0.;
+}
+
 // SUBTRACTION
 
 // CHECK-LABEL: @sub_i8(
