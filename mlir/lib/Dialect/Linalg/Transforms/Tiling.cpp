@@ -320,8 +320,7 @@ static LogicalResult tilePadOp(RewriterBase &builder, tensor::PadOp op,
         // Compute offsets and sizes of ExtractSliceOp.
         SmallVector<Value> offsets =
             computeTileOffsets(b, loc, localIvs, tileSizes);
-        SmallVector<Value> sizes =
-            computeTileSizes(b, loc, localIvs, tileSizes, allDims);
+        SmallVector<Value> sizes = computeTileSizes(b, loc, tileSizes, allDims);
         // Create ExtractSliceOp: Extract a tile from the tensor::PadOp.
         // Note: The tensor::PadOp is located outside of the loop nest. It is
         // later moved inside by ExtractSliceOfPadTensorSwapPattern.

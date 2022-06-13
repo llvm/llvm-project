@@ -98,6 +98,28 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*defaultImplementation=*/[{
           return {};
         }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Method to return the position of the result tile computed by the tiled operation.
+
+          Specifies what tile of the result of the original tensor is computed
+          by the tiled implementation. Expects the same `offsets` and `sizes` as
+          used to obtain the tiled implementation of the operation.
+        }],
+        /*retType=*/"LogicalResult",
+        /*methodName=*/"getResultTilePosition",
+        /*args=*/(ins
+          "OpBuilder &":$b,
+          "unsigned":$resultNumber,
+          "ArrayRef<OpFoldResult> ":$offsets,
+          "ArrayRef<OpFoldResult> ":$sizes,
+          "SmallVector<OpFoldResult> &":$resultOffsets,
+          "SmallVector<OpFoldResult> &":$resultSizes),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return failure();
+        }]
       >
   ];
 }
