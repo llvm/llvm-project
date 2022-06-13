@@ -134,12 +134,14 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     InterfaceMethod<[{
         Returns the operands of this operation used as the entry arguments when
         entering the region at `index`, which was specified as a successor of
-        this operation by `getSuccessorRegions`. These operands should
-        correspond 1-1 with the successor inputs specified in
+        this operation by `getSuccessorRegions`, or the operands forwarded to
+        the operation's results when it branches back to itself. These operands
+        should correspond 1-1 with the successor inputs specified in
         `getSuccessorRegions`.
       }],
       "::mlir::OperandRange", "getSuccessorEntryOperands",
-      (ins "unsigned":$index), [{}], /*defaultImplementation=*/[{
+      (ins "::llvm::Optional<unsigned>":$index), [{}], 
+      /*defaultImplementation=*/[{
         auto operandEnd = this->getOperation()->operand_end();
         return ::mlir::OperandRange(operandEnd, operandEnd);
       }]

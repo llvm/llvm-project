@@ -191,6 +191,31 @@ func.func @region_loop_control_flow(%arg: memref<2xf32>, %loopI0 : index,
 
 // -----
 
+// CHECK-LABEL: Testing : "region_loop_zero_trip_count"
+// CHECK-DAG: alloca_1#0 <-> alloca_2#0: NoAlias
+// CHECK-DAG: alloca_1#0 <-> for_alloca#0: MustAlias
+// CHECK-DAG: alloca_1#0 <-> for_alloca.region0#0: MayAlias
+// CHECK-DAG: alloca_1#0 <-> for_alloca.region0#1: MayAlias
+
+// CHECK-DAG: alloca_2#0 <-> for_alloca#0: NoAlias
+// CHECK-DAG: alloca_2#0 <-> for_alloca.region0#0: MayAlias
+// CHECK-DAG: alloca_2#0 <-> for_alloca.region0#1: MayAlias
+
+// CHECK-DAG: for_alloca#0 <-> for_alloca.region0#0: MayAlias
+// CHECK-DAG: for_alloca#0 <-> for_alloca.region0#1: MayAlias
+
+// CHECK-DAG: for_alloca.region0#0 <-> for_alloca.region0#1: MayAlias
+func.func @region_loop_zero_trip_count() attributes {test.ptr = "func"} {
+  %0 = memref.alloca() {test.ptr = "alloca_1"} : memref<i32>
+  %1 = memref.alloca() {test.ptr = "alloca_2"} : memref<i32>
+  %result = affine.for %i = 0 to 0 iter_args(%si = %0) -> (memref<i32>) {
+    affine.yield %si : memref<i32>
+  } {test.ptr = "for_alloca"}
+  return
+}
+
+// -----
+
 // CHECK-LABEL: Testing : "view_like"
 // CHECK-DAG: alloc_1#0 <-> view#0: NoAlias
 

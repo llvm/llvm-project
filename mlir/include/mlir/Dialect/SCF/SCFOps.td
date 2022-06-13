@@ -309,7 +309,7 @@ def ForOp : SCF_Op<"for",
     /// correspond to the loop iterator operands, i.e., those exclusing the
     /// induction variable. LoopOp only has one region, so 0 is the only valid
     /// value for `index`.
-    OperandRange getSuccessorEntryOperands(unsigned index);
+    OperandRange getSuccessorEntryOperands(Optional<unsigned> index);
   }];
 
   let hasCanonicalizer = 1;
@@ -955,7 +955,7 @@ def WhileOp : SCF_Op<"while",
   let regions = (region SizedRegion<1>:$before, SizedRegion<1>:$after);
 
   let extraClassDeclaration = [{
-    OperandRange getSuccessorEntryOperands(unsigned index);
+    OperandRange getSuccessorEntryOperands(Optional<unsigned> index);
     ConditionOp getConditionOp();
     YieldOp getYieldOp();
     Block::BlockArgListType getBeforeArguments();

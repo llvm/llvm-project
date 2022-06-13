@@ -1301,8 +1301,8 @@ ParseResult RegionIfOp::parse(OpAsmParser &parser, OperationState &result) {
                                 parser.getCurrentLocation(), result.operands);
 }
 
-OperandRange RegionIfOp::getSuccessorEntryOperands(unsigned index) {
-  assert(index < 2 && "invalid region index");
+OperandRange RegionIfOp::getSuccessorEntryOperands(Optional<unsigned> index) {
+  assert(index && *index < 2 && "invalid region index");
   return getOperands();
 }
 
@@ -1339,7 +1339,7 @@ void AnyCondOp::getSuccessorRegions(Optional<unsigned> index,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The parent op branches into the only region, and the region branches back
   // to the parent op.
-  if (index)
+  if (!index)
     regions.emplace_back(&getRegion());
   else
     regions.emplace_back(getResults());

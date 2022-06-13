@@ -154,7 +154,7 @@ func.func @loop_region_branch_terminator_op(%arg1 : i32) {
 /// interface as well.
 
 // CHECK-LABEL: func @affine_loop_one_iter(
-func.func @affine_loop_one_iter(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
+func.func @affine_loop_one_iter() -> i32 {
   // CHECK: %[[C1:.*]] = arith.constant 1 : i32
   %s0 = arith.constant 0 : i32
   %s1 = arith.constant 1 : i32
@@ -167,17 +167,27 @@ func.func @affine_loop_one_iter(%arg0 : index, %arg1 : index, %arg2 : index) -> 
 }
 
 // CHECK-LABEL: func @affine_loop_zero_iter(
-func.func @affine_loop_zero_iter(%arg0 : index, %arg1 : index, %arg2 : index) -> i32 {
-  // This exposes a crash in sccp/forward data flow analysis: https://github.com/llvm/llvm-project/issues/54928
+func.func @affine_loop_zero_iter() -> i32 {
+  // CHECK: %[[C1:.*]] = arith.constant 1 : i32
+  %s1 = arith.constant 1 : i32
+  %result = affine.for %i = 0 to 0 iter_args(%si = %s1) -> (i32) {
+   %sn = arith.addi %si, %si : i32
+   affine.yield %sn : i32
+  }
+  // CHECK: return %[[C1]] : i32
+  return %result : i32
+}
+
+// CHECK-LABEL: func @affine_loop_unknown_trip_count(
+func.func @affine_loop_unknown_trip_count(%ub: index) -> i32 {
   // CHECK: %[[C0:.*]] = arith.constant 0 : i32
   %s0 = arith.constant 0 : i32
-  // %result = affine.for %i = 0 to 0 iter_args(%si = %s0) -> (i32) {
-  //  %sn = arith.addi %si, %si : i32
-  //  affine.yield %sn : i32
-  // }
-  // return %result : i32
+  %result = affine.for %i = 0 to %ub iter_args(%si = %s0) -> (i32) {
+   %sn = arith.addi %si, %si : i32
+   affine.yield %sn : i32
+  }
   // CHECK: return %[[C0]] : i32
-  return %s0 : i32
+  return %result : i32
 }
 
 // CHECK-LABEL: func @while_loop_different_arg_count
