@@ -294,6 +294,29 @@ def conv_2d_nhwc_hwcf(I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH,
 
 
 @linalg_structured_op
+def conv_2d_nhwc_fhwc(I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH,
+                                  S.OW * S.SW + S.KW * S.DW, S.C),
+                      K=TensorDef(T2, S.F, S.KH, S.KW, S.C),
+                      O=TensorDef(U, S.N, S.OH, S.OW, S.F, output=True),
+                      strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+                      dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1])):
+  """Performs 2-D convolution.
+
+  Layout:
+    * Input: NHWC.
+    * Kernel: FHWC.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.oh, D.ow, D.f, D.kh, D.kw, D.c)
+  O[D.n, D.oh, D.ow, D.f] += TypeFn.cast_signed(
+      U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW,
+           D.c]) * TypeFn.cast_signed(U, K[D.f, D.kh, D.kw, D.c])
+
+
+@linalg_structured_op
 def conv_2d_nhwc_hwcf_q(I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH,
                                     S.OW * S.SW + S.KW * S.DW, S.C),
                         K=TensorDef(T2, S.KH, S.KW, S.C, S.F),
