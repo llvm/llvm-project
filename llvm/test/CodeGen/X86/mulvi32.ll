@@ -137,8 +137,8 @@ define <4 x i64> @_mul4xi32toi64a(<4 x i32>, <4 x i32>) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[0,1,1,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,1,3]
 ; SSE2-NEXT:    pmuludq %xmm3, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,3,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,1,3,3]
 ; SSE2-NEXT:    pmuludq %xmm3, %xmm1
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
