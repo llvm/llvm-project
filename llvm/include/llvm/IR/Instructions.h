@@ -341,11 +341,6 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  /// Return the alignment of the access that is being performed
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getAlign() instead.
-  uint64_t getAlignment() const { return getAlign().value(); }
-
   Align getAlign() const {
     return Align(1ULL << (getSubclassData<AlignmentField>()));
   }
