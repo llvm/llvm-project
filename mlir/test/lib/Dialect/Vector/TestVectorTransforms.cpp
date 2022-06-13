@@ -835,10 +835,6 @@ struct TestVectorDistribution
                             llvm::cl::desc("Test hoist uniform"),
                             llvm::cl::init(false)};
 
-  Option<bool> propagateDistribution{
-      *this, "propagate-distribution",
-      llvm::cl::desc("Test distribution propgation"), llvm::cl::init(false)};
-
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
 
@@ -866,11 +862,7 @@ struct TestVectorDistribution
       populateDistributeTransferWriteOpPatterns(patterns, distributionFn);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     }
-    if (propagateDistribution) {
-      RewritePatternSet patterns(ctx);
-      vector::populatePropagateWarpVectorDistributionPatterns(patterns);
-      (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-    }
+
     WarpExecuteOnLane0LoweringOptions options;
     options.warpAllocationFn = allocateGlobalSharedMemory;
     options.warpSyncronizationFn = [](Location loc, OpBuilder &builder,
