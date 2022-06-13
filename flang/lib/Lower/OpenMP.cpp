@@ -319,7 +319,8 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
     createEmptyRegionBlocks(firOpBuilder, eval.getNestedEvaluations());
 
   // Insert the terminator.
-  if constexpr (std::is_same_v<Op, omp::WsLoopOp>) {
+  if constexpr (std::is_same_v<Op, omp::WsLoopOp> ||
+                std::is_same_v<Op, omp::SimdLoopOp>) {
     mlir::ValueRange results;
     firOpBuilder.create<mlir::omp::YieldOp>(loc, results);
   } else {
@@ -703,7 +704,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   mlir::Value scheduleChunkClauseOperand;
   mlir::Attribute scheduleClauseOperand, collapseClauseOperand,
       noWaitClauseOperand, orderedClauseOperand, orderClauseOperand;
-  const auto &wsLoopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
+  const auto &loopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
       std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t).t);
 
   const auto ompDirective =
@@ -714,7 +715,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     createCombinedParallelOp<Fortran::parser::OmpBeginLoopDirective>(
         converter, eval,
         std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t));
-  } else if (llvm::omp::OMPD_do != ompDirective) {
+  } else if (llvm::omp::OMPD_do != ompDirective &&
+             llvm::omp::OMPD_simd != ompDirective) {
     TODO(converter.getCurrentLocation(), "Construct enclosing do loop");
   }
 
@@ -722,7 +724,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   auto *doConstructEval = &eval.getFirstNestedEvaluation();
 
   std::int64_t collapseValue =
-      Fortran::lower::getCollapseValue(wsLoopOpClauseList);
+      Fortran::lower::getCollapseValue(loopOpClauseList);
   std::size_t loopVarTypeSize = 0;
   SmallVector<const Fortran::semantics::Symbol *> iv;
   do {
@@ -755,7 +757,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         &*std::next(doConstructEval->getNestedEvaluations().begin());
   } while (collapseValue > 0);
 
-  for (const auto &clause : wsLoopOpClauseList.v) {
+  for (const auto &clause : loopOpClauseList.v) {
     if (const auto &scheduleClause =
             std::get_if<Fortran::parser::OmpClause::Schedule>(&clause.u)) {
       if (const auto &chunkExpr =
@@ -782,6 +784,17 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         firOpBuilder.createConvert(currentLocation, loopVarType, step[it]);
   }
 
+  // 2.9.3.1 SIMD construct
+  // TODO: Support all the clauses
+  if (llvm::omp::OMPD_simd == ompDirective) {
+    TypeRange resultType;
+    auto SimdLoopOp = firOpBuilder.create<mlir::omp::SimdLoopOp>(
+        currentLocation, resultType, lowerBound, upperBound, step);
+    createBodyOfOp<omp::SimdLoopOp>(SimdLoopOp, converter, currentLocation,
+                                    eval, &loopOpClauseList, iv);
+    return;
+  }
+
   // FIXME: Add support for following clauses:
   // 1. linear
   // 2. order
@@ -798,7 +811,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       /*inclusive=*/firOpBuilder.getUnitAttr());
 
   // Handle attribute based clauses.
-  for (const Fortran::parser::OmpClause &clause : wsLoopOpClauseList.v) {
+  for (const Fortran::parser::OmpClause &clause : loopOpClauseList.v) {
     if (const auto &orderedClause =
             std::get_if<Fortran::parser::OmpClause::Ordered>(&clause.u)) {
       if (orderedClause->v.has_value()) {
@@ -873,7 +886,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   }
 
   createBodyOfOp<omp::WsLoopOp>(wsLoopOp, converter, currentLocation, eval,
-                                &wsLoopOpClauseList, iv);
+                                &loopOpClauseList, iv);
 }
 
 static void
