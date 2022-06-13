@@ -1,0 +1,3 @@
+module DependencyA {
+  header "DependencyA.h"
+}
