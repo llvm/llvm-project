@@ -19,6 +19,9 @@ group("lib") {
     deps += [ "//compiler-rt/lib/builtins" ]
   }
   if (current_os != "baremetal") {
-    deps += [ "//compiler-rt/lib/profile" ]
+    deps += [
+      "//compiler-rt/lib/profile",
+      "//compiler-rt/lib/ubsan:ubsan_shared",
+    ]
   }
 }
