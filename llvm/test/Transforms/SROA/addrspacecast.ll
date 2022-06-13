@@ -256,10 +256,10 @@ define void @select_addrspacecast(i1 %a, i1 %b) {
 ; CHECK-NEXT:    ret void
 ;
   %c = alloca i64, align 8
-  %p.0.c = select i1 %a, i64* %c, i64* %c
+  %p.0.c = select i1 undef, i64* %c, i64* %c
   %asc = addrspacecast i64* %p.0.c to i64 addrspace(1)*
 
-  %cond.in = select i1 %b, i64 addrspace(1)* %asc, i64 addrspace(1)* %asc
+  %cond.in = select i1 undef, i64 addrspace(1)* %asc, i64 addrspace(1)* %asc
   %cond = load i64, i64 addrspace(1)* %cond.in, align 8
   ret void
 }
@@ -268,15 +268,15 @@ define void @select_addrspacecast_const_op(i1 %a, i1 %b) {
 ; CHECK-LABEL: @select_addrspacecast_const_op(
 ; CHECK-NEXT:    [[C:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[C_0_ASC_SROA_CAST:%.*]] = addrspacecast i64* [[C]] to i64 addrspace(1)*
-; CHECK-NEXT:    [[COND_IN:%.*]] = select i1 [[B:%.*]], i64 addrspace(1)* [[C_0_ASC_SROA_CAST]], i64 addrspace(1)* null
+; CHECK-NEXT:    [[COND_IN:%.*]] = select i1 undef, i64 addrspace(1)* [[C_0_ASC_SROA_CAST]], i64 addrspace(1)* null
 ; CHECK-NEXT:    [[COND:%.*]] = load i64, i64 addrspace(1)* [[COND_IN]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %c = alloca i64, align 8
-  %p.0.c = select i1 %a, i64* %c, i64* %c
+  %p.0.c = select i1 undef, i64* %c, i64* %c
   %asc = addrspacecast i64* %p.0.c to i64 addrspace(1)*
 
-  %cond.in = select i1 %b, i64 addrspace(1)* %asc, i64 addrspace(1)* null
+  %cond.in = select i1 undef, i64 addrspace(1)* %asc, i64 addrspace(1)* null
   %cond = load i64, i64 addrspace(1)* %cond.in, align 8
   ret void
 }
@@ -288,14 +288,14 @@ define void @select_addrspacecast_const_op(i1 %a, i1 %b) {
 define void @select_addrspacecast_gv(i1 %a, i1 %b) {
 ; CHECK-LABEL: @select_addrspacecast_gv(
 ; CHECK-NEXT:    [[COND_SROA_SPECULATE_LOAD_FALSE:%.*]] = load i64, i64 addrspace(1)* @gv, align 8
-; CHECK-NEXT:    [[COND_SROA_SPECULATED:%.*]] = select i1 [[B:%.*]], i64 undef, i64 [[COND_SROA_SPECULATE_LOAD_FALSE]]
+; CHECK-NEXT:    [[COND_SROA_SPECULATED:%.*]] = select i1 undef, i64 undef, i64 [[COND_SROA_SPECULATE_LOAD_FALSE]]
 ; CHECK-NEXT:    ret void
 ;
   %c = alloca i64, align 8
-  %p.0.c = select i1 %a, i64* %c, i64* %c
+  %p.0.c = select i1 undef, i64* %c, i64* %c
   %asc = addrspacecast i64* %p.0.c to i64 addrspace(1)*
 
-  %cond.in = select i1 %b, i64 addrspace(1)* %asc, i64 addrspace(1)* @gv
+  %cond.in = select i1 undef, i64 addrspace(1)* %asc, i64 addrspace(1)* @gv
   %cond = load i64, i64 addrspace(1)* %cond.in, align 8
   ret void
 }
@@ -303,21 +303,21 @@ define void @select_addrspacecast_gv(i1 %a, i1 %b) {
 define void @select_addrspacecast_gv_constexpr(i1 %a, i1 %b) {
 ; CHECK-LABEL: @select_addrspacecast_gv_constexpr(
 ; CHECK-NEXT:    [[COND_SROA_SPECULATE_LOAD_FALSE:%.*]] = load i64, i64 addrspace(2)* addrspacecast (i64 addrspace(1)* @gv to i64 addrspace(2)*), align 8
-; CHECK-NEXT:    [[COND_SROA_SPECULATED:%.*]] = select i1 [[B:%.*]], i64 undef, i64 [[COND_SROA_SPECULATE_LOAD_FALSE]]
+; CHECK-NEXT:    [[COND_SROA_SPECULATED:%.*]] = select i1 undef, i64 undef, i64 [[COND_SROA_SPECULATE_LOAD_FALSE]]
 ; CHECK-NEXT:    ret void
 ;
   %c = alloca i64, align 8
-  %p.0.c = select i1 %a, i64* %c, i64* %c
+  %p.0.c = select i1 undef, i64* %c, i64* %c
   %asc = addrspacecast i64* %p.0.c to i64 addrspace(2)*
 
-  %cond.in = select i1 %b, i64 addrspace(2)* %asc, i64 addrspace(2)* addrspacecast (i64 addrspace(1)* @gv to i64 addrspace(2)*)
+  %cond.in = select i1 undef, i64 addrspace(2)* %asc, i64 addrspace(2)* addrspacecast (i64 addrspace(1)* @gv to i64 addrspace(2)*)
   %cond = load i64, i64 addrspace(2)* %cond.in, align 8
   ret void
 }
 
-define i8 @select_addrspacecast_i8(i1 %c) {
+define i8 @select_addrspacecast_i8() {
 ; CHECK-LABEL: @select_addrspacecast_i8(
-; CHECK-NEXT:    [[RET_SROA_SPECULATED:%.*]] = select i1 [[C:%.*]], i8 undef, i8 undef
+; CHECK-NEXT:    [[RET_SROA_SPECULATED:%.*]] = select i1 undef, i8 undef, i8 undef
 ; CHECK-NEXT:    ret i8 [[RET_SROA_SPECULATED]]
 ;
   %a = alloca i8
@@ -326,7 +326,7 @@ define i8 @select_addrspacecast_i8(i1 %c) {
   %a.ptr = addrspacecast i8* %a to i8 addrspace(1)*
   %b.ptr = addrspacecast i8* %b to i8 addrspace(1)*
 
-  %ptr = select i1 %c, i8 addrspace(1)* %a.ptr, i8 addrspace(1)* %b.ptr
+  %ptr = select i1 undef, i8 addrspace(1)* %a.ptr, i8 addrspace(1)* %b.ptr
   %ret = load i8, i8 addrspace(1)* %ptr
   ret i8 %ret
 }
