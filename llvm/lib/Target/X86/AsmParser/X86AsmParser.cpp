@@ -422,18 +422,18 @@ private:
   };
 
   class IntelExprStateMachine {
-    IntelExprState State, PrevState;
-    unsigned BaseReg, IndexReg, TmpReg, Scale;
-    int64_t Imm;
-    const MCExpr *Sym;
+    IntelExprState State = IES_INIT, PrevState = IES_ERROR;
+    unsigned BaseReg = 0, IndexReg = 0, TmpReg = 0, Scale = 0;
+    int64_t Imm = 0;
+    const MCExpr *Sym = nullptr;
     StringRef SymName;
     InfixCalculator IC;
     InlineAsmIdentifierInfo Info;
-    short BracCount;
-    bool MemExpr;
-    bool OffsetOperator;
-    bool AttachToOperandIdx;
-    bool IsPIC;
+    short BracCount = 0;
+    bool MemExpr = false;
+    bool OffsetOperator = false;
+    bool AttachToOperandIdx = false;
+    bool IsPIC = false;
     SMLoc OffsetOperatorLoc;
     AsmTypeInfo CurType;
 
@@ -448,11 +448,7 @@ private:
     }
 
   public:
-    IntelExprStateMachine()
-        : State(IES_INIT), PrevState(IES_ERROR), BaseReg(0), IndexReg(0),
-          TmpReg(0), Scale(0), Imm(0), Sym(nullptr), BracCount(0),
-          MemExpr(false), OffsetOperator(false), AttachToOperandIdx(false),
-          IsPIC(false) {}
+    IntelExprStateMachine() = default;
 
     void addImm(int64_t imm) { Imm += imm; }
     short getBracCount() const { return BracCount; }
