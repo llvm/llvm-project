@@ -510,13 +510,14 @@ genNullPointerComparison(fir::FirOpBuilder &builder, mlir::Location loc,
   return builder.create<mlir::arith::CmpIOp>(loc, condition, ptrToInt, c0);
 }
 
-mlir::Value fir::FirOpBuilder::genIsNotNull(mlir::Location loc,
-                                            mlir::Value addr) {
+mlir::Value fir::FirOpBuilder::genIsNotNullAddr(mlir::Location loc,
+                                                mlir::Value addr) {
   return genNullPointerComparison(*this, loc, addr,
                                   mlir::arith::CmpIPredicate::ne);
 }
 
-mlir::Value fir::FirOpBuilder::genIsNull(mlir::Location loc, mlir::Value addr) {
+mlir::Value fir::FirOpBuilder::genIsNullAddr(mlir::Location loc,
+                                             mlir::Value addr) {
   return genNullPointerComparison(*this, loc, addr,
                                   mlir::arith::CmpIPredicate::eq);
 }
