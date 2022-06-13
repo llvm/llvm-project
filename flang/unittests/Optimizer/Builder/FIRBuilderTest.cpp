@@ -102,23 +102,23 @@ TEST_F(FIRBuilderTest, genIfWithThenAndElse) {
 // Helper functions tests
 //===----------------------------------------------------------------------===//
 
-TEST_F(FIRBuilderTest, genIsNotNull) {
+TEST_F(FIRBuilderTest, genIsNotNullAddr) {
   auto builder = getBuilder();
   auto loc = builder.getUnknownLoc();
   auto dummyValue =
       builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-  auto res = builder.genIsNotNull(loc, dummyValue);
+  auto res = builder.genIsNotNullAddr(loc, dummyValue);
   EXPECT_TRUE(mlir::isa<arith::CmpIOp>(res.getDefiningOp()));
   auto cmpOp = dyn_cast<arith::CmpIOp>(res.getDefiningOp());
   EXPECT_EQ(arith::CmpIPredicate::ne, cmpOp.getPredicate());
 }
 
-TEST_F(FIRBuilderTest, genIsNull) {
+TEST_F(FIRBuilderTest, genIsNullAddr) {
   auto builder = getBuilder();
   auto loc = builder.getUnknownLoc();
   auto dummyValue =
       builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-  auto res = builder.genIsNull(loc, dummyValue);
+  auto res = builder.genIsNullAddr(loc, dummyValue);
   EXPECT_TRUE(mlir::isa<arith::CmpIOp>(res.getDefiningOp()));
   auto cmpOp = dyn_cast<arith::CmpIOp>(res.getDefiningOp());
   EXPECT_EQ(arith::CmpIPredicate::eq, cmpOp.getPredicate());

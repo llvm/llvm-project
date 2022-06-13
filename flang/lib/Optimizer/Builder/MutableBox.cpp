@@ -427,7 +427,7 @@ fir::factory::genIsAllocatedOrAssociatedTest(fir::FirOpBuilder &builder,
                                              mlir::Location loc,
                                              const fir::MutableBoxValue &box) {
   auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
-  return builder.genIsNotNull(loc, addr);
+  return builder.genIsNotNullAddr(loc, addr);
 }
 
 /// Generate finalizer call and inlined free. This does not check that the
@@ -447,7 +447,7 @@ void fir::factory::genFinalization(fir::FirOpBuilder &builder,
                                    mlir::Location loc,
                                    const fir::MutableBoxValue &box) {
   auto addr = MutablePropertyReader(builder, loc, box).readBaseAddress();
-  auto isAllocated = builder.genIsNotNull(loc, addr);
+  auto isAllocated = builder.genIsNotNullAddr(loc, addr);
   auto ifOp = builder.create<fir::IfOp>(loc, isAllocated,
                                         /*withElseRegion=*/false);
   auto insPt = builder.saveInsertionPoint();
@@ -714,7 +714,7 @@ fir::factory::genReallocIfNeeded(fir::FirOpBuilder &builder, mlir::Location loc,
   auto addr = reader.readBaseAddress();
   auto i1Type = builder.getI1Type();
   auto addrType = addr.getType();
-  auto isAllocated = builder.genIsNotNull(loc, addr);
+  auto isAllocated = builder.genIsNotNullAddr(loc, addr);
   auto ifOp =
       builder
           .genIfOp(loc, {i1Type, addrType}, isAllocated,

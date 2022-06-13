@@ -402,7 +402,7 @@ public:
         if (!fir::isa_ref_type(eleTy))
           eleTy = builder.getRefType(eleTy);
         auto addr = builder.create<fir::BoxAddrOp>(loc, eleTy, box);
-        mlir::Value isPresent = builder.genIsNotNull(loc, addr);
+        mlir::Value isPresent = builder.genIsNotNullAddr(loc, addr);
         auto absentBox = builder.create<fir::AbsentOp>(loc, boxTy);
         box = builder.create<mlir::arith::SelectOp>(loc, isPresent, box,
                                                     absentBox);

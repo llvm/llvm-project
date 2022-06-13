@@ -52,14 +52,14 @@ static bool isIshftcWithDynamicallyOptionalArg(
          Fortran::evaluate::MayBePassedAsAbsentOptional(*expr, foldingContex);
 }
 
-/// Is this a call to SYSTEM_CLOCK or RANDOM_SEED intrinsic with arguments that
-/// may be absent at runtime? This are special cases because that aspect cannot
+/// Is this a call to the RANDOM_SEED intrinsic with arguments that may be
+/// absent at runtime? This is a special case because that aspect cannot
 /// be delegated to the runtime via a null fir.box or address given the current
 /// runtime entry point.
-static bool isSystemClockOrRandomSeedWithOptionalArg(
+static bool isRandomSeedWithDynamicallyOptionalArg(
     llvm::StringRef name, const Fortran::evaluate::ProcedureRef &procRef,
     Fortran::evaluate::FoldingContext &foldingContex) {
-  if (name != "system_clock" && name != "random_seed")
+  if (name != "random_seed")
     return false;
   for (const auto &arg : procRef.arguments()) {
     auto *expr = Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg);
@@ -78,7 +78,7 @@ bool Fortran::lower::intrinsicRequiresCustomOptionalHandling(
   Fortran::evaluate::FoldingContext &fldCtx = converter.getFoldingContext();
   return isMinOrMaxWithDynamicallyOptionalArg(name, procRef, fldCtx) ||
          isIshftcWithDynamicallyOptionalArg(name, procRef, fldCtx) ||
-         isSystemClockOrRandomSeedWithOptionalArg(name, procRef, fldCtx);
+         isRandomSeedWithDynamicallyOptionalArg(name, procRef, fldCtx);
 }
 
 static void prepareMinOrMaxArguments(

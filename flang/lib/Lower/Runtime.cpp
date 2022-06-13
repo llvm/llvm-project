@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/misc-intrinsic.h"
 #include "flang/Runtime/pointer.h"
@@ -332,18 +333,35 @@ void Fortran::lower::genSystemClock(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value count,
                                     mlir::Value rate, mlir::Value max) {
   auto makeCall = [&](mlir::func::FuncOp func, mlir::Value arg) {
+    mlir::Type type = arg.getType();
+    fir::IfOp ifOp{};
+    const bool isOptionalArg =
+        fir::valueHasFirAttribute(arg, fir::getOptionalAttrName());
+    if (type.dyn_cast<fir::PointerType>() || type.dyn_cast<fir::HeapType>()) {
+      // Check for a disassociated pointer or an unallocated allocatable.
+      assert(!isOptionalArg && "invalid optional argument");
+      ifOp = builder.create<fir::IfOp>(loc, builder.genIsNotNullAddr(loc, arg),
+                                       /*withElseRegion=*/false);
+    } else if (isOptionalArg) {
+      ifOp = builder.create<fir::IfOp>(
+          loc, builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), arg),
+          /*withElseRegion=*/false);
+    }
+    if (ifOp)
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     mlir::Type kindTy = func.getFunctionType().getInput(0);
     int integerKind = 8;
-    if (auto intType =
-            fir::unwrapRefType(arg.getType()).dyn_cast<mlir::IntegerType>())
+    if (auto intType = fir::unwrapRefType(type).dyn_cast<mlir::IntegerType>())
       integerKind = intType.getWidth() / 8;
     mlir::Value kind = builder.createIntegerConstant(loc, kindTy, integerKind);
     mlir::Value res =
         builder.create<fir::CallOp>(loc, func, mlir::ValueRange{kind})
             .getResult(0);
     mlir::Value castRes =
-        builder.createConvert(loc, fir::dyn_cast_ptrEleTy(arg.getType()), res);
+        builder.createConvert(loc, fir::dyn_cast_ptrEleTy(type), res);
     builder.create<fir::StoreOp>(loc, castRes, arg);
+    if (ifOp)
+      builder.setInsertionPointAfter(ifOp);
   };
   using fir::runtime::getRuntimeFunc;
   if (count)
