@@ -138,8 +138,8 @@ protected:
       LLVMJITSymbolFlags Flags = {LLVMJITSymbolGenericFlagsWeak, 0};
       LLVMJITEvaluatedSymbol Sym = {Addr, Flags};
       LLVMOrcRetainSymbolStringPoolEntry(Element.Name);
-      LLVMJITCSymbolMapPair Pair = {Element.Name, Sym};
-      LLVMJITCSymbolMapPair Pairs[] = {Pair};
+      LLVMOrcCSymbolMapPair Pair = {Element.Name, Sym};
+      LLVMOrcCSymbolMapPair Pairs[] = {Pair};
       LLVMOrcMaterializationUnitRef MU = LLVMOrcAbsoluteSymbols(Pairs, 1);
       LLVMErrorRef Err = LLVMOrcJITDylibDefine(JD, MU);
       if (Err)
@@ -252,8 +252,8 @@ TEST_F(OrcCAPITestBase, MaterializationUnitCreation) {
   LLVMOrcJITTargetAddress Addr =
       (LLVMOrcJITTargetAddress)(&materializationUnitFn);
   LLVMJITEvaluatedSymbol Sym = {Addr, Flags};
-  LLVMJITCSymbolMapPair Pair = {Name, Sym};
-  LLVMJITCSymbolMapPair Pairs[] = {Pair};
+  LLVMOrcCSymbolMapPair Pair = {Name, Sym};
+  LLVMOrcCSymbolMapPair Pairs[] = {Pair};
   LLVMOrcMaterializationUnitRef MU = LLVMOrcAbsoluteSymbols(Pairs, 1);
   LLVMOrcJITDylibDefine(MainDylib, MU);
   LLVMOrcJITTargetAddress OutAddr;
@@ -433,7 +433,7 @@ void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
   }
   assert(OtherMR);
 
-  LLVMJITCSymbolMapPair OtherPair = {OtherSymbol, Sym};
+  LLVMOrcCSymbolMapPair OtherPair = {OtherSymbol, Sym};
   LLVMOrcMaterializationUnitRef OtherMU = LLVMOrcAbsoluteSymbols(&OtherPair, 1);
   // OtherSymbol is no longer owned by us
   {
@@ -474,7 +474,7 @@ void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
   LLVMOrcMaterializationResponsibilityAddDependenciesForAll(MR, &Dependency, 1);
 
   // See FIXME above
-  LLVMJITCSymbolMapPair Pair = {DependencySymbol, Sym};
+  LLVMOrcCSymbolMapPair Pair = {DependencySymbol, Sym};
   LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
   // DependencySymbol no longer owned by us
 
