@@ -752,4 +752,12 @@
 // RUN: %clang_cl /JMC /Z7 /c -### -- %s 2>&1 | FileCheck %s --check-prefix JMC
 // JMC: -fjmc
 
+// RUN: %clang_cl /external:W0 /c -### -- %s 2>&1 | FileCheck -check-prefix=EXTERNAL_W0 %s
+// RUN: %clang_cl /external:W1 /c -### -- %s 2>&1 | FileCheck -check-prefix=EXTERNAL_Wn %s
+// RUN: %clang_cl /external:W2 /c -### -- %s 2>&1 | FileCheck -check-prefix=EXTERNAL_Wn %s
+// RUN: %clang_cl /external:W3 /c -### -- %s 2>&1 | FileCheck -check-prefix=EXTERNAL_Wn %s
+// RUN: %clang_cl /external:W4 /c -### -- %s 2>&1 | FileCheck -check-prefix=EXTERNAL_Wn %s
+// EXTERNAL_W0: "-Wno-system-headers"
+// EXTERNAL_Wn: "-Wsystem-headers"
+
 void f(void) { }
