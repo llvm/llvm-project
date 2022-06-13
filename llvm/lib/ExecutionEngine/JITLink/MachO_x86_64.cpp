@@ -15,7 +15,6 @@
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 
 #include "MachOLinkGraphBuilder.h"
-#include "PerGraphGOTAndPLTStubsBuilder.h"
 
 #define DEBUG_TYPE "jitlink"
 
