@@ -16,8 +16,8 @@ add_mlir_conversion_library(MLIRFuncToLLVM
   MLIRArithmeticToLLVM
   MLIRControlFlowToLLVM
   MLIRDataLayoutInterfaces
-  MLIRFunc
+  MLIRFuncDialect
   MLIRLLVMCommonConversion
-  MLIRLLVMIR
+  MLIRLLVMDialect
   MLIRTransformUtils
   )

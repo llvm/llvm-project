@@ -5,7 +5,7 @@ add_mlir_dialect_library(MLIRArithmeticUtils
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Arithmetic/Utils
 
   LINK_LIBS PUBLIC
-  MLIRArithmetic
+  MLIRArithmeticDialect
   MLIRDialect
   MLIRIR
   )

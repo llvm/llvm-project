@@ -18,19 +18,19 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRVectorTransformsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
   MLIRAffineAnalysis
   MLIRAffineUtils
-  MLIRArithmetic
-  MLIRBufferization
+  MLIRArithmeticDialect
+  MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRDialectUtils
   MLIRIR
-  MLIRLinalg
-  MLIRMemRef
-  MLIRSCF
+  MLIRLinalgDialect
+  MLIRMemRefDialect
+  MLIRSCFDialect
   MLIRTransforms
-  MLIRVector
+  MLIRVectorDialect
   MLIRVectorInterfaces
   MLIRVectorUtils
   )

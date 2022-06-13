@@ -12,7 +12,7 @@ add_mlir_conversion_library(MLIRGPUToSPIRV
   MLIRIR
   MLIRPass
   MLIRSCFToSPIRV
-  MLIRSPIRV
+  MLIRSPIRVDialect
   MLIRSPIRVConversion
   MLIRSupport
   MLIRTransforms

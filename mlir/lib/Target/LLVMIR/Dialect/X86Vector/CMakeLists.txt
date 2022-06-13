@@ -9,8 +9,8 @@ add_mlir_translation_library(MLIRX86VectorToLLVMIRTranslation
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRX86Vector
-  MLIRLLVMIR
+  MLIRX86VectorDialect
+  MLIRLLVMDialect
   MLIRSupport
   MLIRTargetLLVMIRExport
   )

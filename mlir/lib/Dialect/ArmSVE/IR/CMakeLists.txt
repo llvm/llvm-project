@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRArmSVE
+add_mlir_dialect_library(MLIRArmSVEDialect
   ArmSVEDialect.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -9,6 +9,6 @@ add_mlir_dialect_library(MLIRArmSVE
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRLLVMIR
+  MLIRLLVMDialect
   MLIRSideEffectInterfaces
   )

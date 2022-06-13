@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRVector
+add_mlir_dialect_library(MLIRVectorDialect
   VectorOps.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -9,13 +9,13 @@ add_mlir_dialect_library(MLIRVector
   MLIRVectorOpsEnumsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithmetic
+  MLIRArithmeticDialect
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRDialectUtils
   MLIRIR
-  MLIRMemRef
+  MLIRMemRefDialect
   MLIRSideEffectInterfaces
-  MLIRTensor
+  MLIRTensorDialect
   MLIRVectorInterfaces
   )

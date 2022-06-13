@@ -58,18 +58,18 @@ add_mlir_library(MLIRTestDialect
   MLIRDataLayoutInterfaces
   MLIRDerivedAttributeOpInterface
   MLIRDialect
-  MLIRDLTI
-  MLIRFunc
+  MLIRDLTIDialect
+  MLIRFuncDialect
   MLIRFuncTransforms
   MLIRIR
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
-  MLIRLinalg
+  MLIRLinalgDialect
   MLIRLinalgTransforms
-  MLIRLLVMIR
+  MLIRLLVMDialect
   MLIRPass
   MLIRReduce
-  MLIRTensor
+  MLIRTensorDialect
   MLIRTransformUtils
   MLIRTransforms
 )

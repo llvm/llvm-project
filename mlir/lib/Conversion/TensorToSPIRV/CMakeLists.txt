@@ -14,9 +14,9 @@ add_mlir_conversion_library(MLIRTensorToSPIRV
   MLIRFuncToSPIRV
   MLIRIR
   MLIRPass
-  MLIRSPIRV
+  MLIRSPIRVDialect
   MLIRSPIRVConversion
   MLIRSupport
   MLIRTransformUtils
-  MLIRTensor
+  MLIRTensorDialect
   )

@@ -8,6 +8,6 @@ add_mlir_dialect_library(MLIRQuantUtils
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRQuant
+  MLIRQuantDialect
   MLIRSupport
   )

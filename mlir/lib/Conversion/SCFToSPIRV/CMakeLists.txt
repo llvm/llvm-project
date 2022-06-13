@@ -12,11 +12,11 @@ add_mlir_conversion_library(MLIRSCFToSPIRV
   MLIRArithmeticToSPIRV
   MLIRFuncToSPIRV
   MLIRMemRefToSPIRV
-  MLIRSPIRV
+  MLIRSPIRVDialect
   MLIRSPIRVConversion
   MLIRIR
   MLIRPass
-  MLIRSCF
+  MLIRSCFDialect
   MLIRSupport
   MLIRTransforms
   )

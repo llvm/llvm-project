@@ -13,9 +13,9 @@ add_mlir_conversion_library(MLIRNVGPUToNVVM
   LINK_LIBS PUBLIC
   MLIRGPUOps
   MLIRLLVMCommonConversion
-  MLIRLLVMIR
-  MLIRNVVMIR
-  MLIRNVGPU
+  MLIRLLVMDialect
+  MLIRNVVMDialect
+  MLIRNVGPUDialect
   MLIRPass
   MLIRTransforms
   )

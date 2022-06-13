@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRLinalg
+add_mlir_dialect_library(MLIRLinalgDialect
   LinalgInterfaces.cpp
   LinalgOps.cpp
   LinalgDialect.cpp
@@ -14,19 +14,19 @@ add_mlir_dialect_library(MLIRLinalg
   MLIRLinalgStructuredOpsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffine
-  MLIRArithmetic
-  MLIRBufferization
+  MLIRAffineDialect
+  MLIRArithmeticDialect
+  MLIRBufferizationDialect
   MLIRDialectUtils
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRParser
   MLIRSideEffectInterfaces
-  MLIRSparseTensor
-  MLIRSCF
-  MLIRMath
-  MLIRMemRef
-  MLIRTensor
+  MLIRSparseTensorDialect
+  MLIRSCFDialect
+  MLIRMathDialect
+  MLIRMemRefDialect
+  MLIRTensorDialect
   MLIRTilingInterface
   MLIRViewLikeInterface
   )

@@ -9,12 +9,12 @@ add_mlir_conversion_library(MLIRVectorToGPU
   Core
 
   LINK_LIBS PUBLIC
-  MLIRArithmetic
+  MLIRArithmeticDialect
   MLIRGPUOps
-  MLIRLLVMIR
-  MLIRMemRef
-  MLIRNVGPU
+  MLIRLLVMDialect
+  MLIRMemRefDialect
+  MLIRNVGPUDialect
   MLIRTransforms
-  MLIRVector
+  MLIRVectorDialect
   MLIRVectorUtils
   )

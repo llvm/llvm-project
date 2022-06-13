@@ -6,14 +6,14 @@ add_mlir_dialect_library(MLIRSCFUtils
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SCF
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
   MLIRAffineAnalysis
   MLIRAnalysis
-  MLIRArithmetic
+  MLIRArithmeticDialect
   MLIRDialectUtils
-  MLIRFunc
+  MLIRFuncDialect
   MLIRIR
-  MLIRSCF
+  MLIRSCFDialect
   MLIRSupport
   MLIRTransforms
   )

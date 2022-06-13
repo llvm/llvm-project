@@ -10,13 +10,13 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRTensorTransformsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithmetic
-  MLIRBufferization
+  MLIRArithmeticDialect
+  MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRIR
-  MLIRMemRef
+  MLIRMemRefDialect
   MLIRPass
-  MLIRSCF
-  MLIRTensor
+  MLIRSCFDialect
+  MLIRTensorDialect
   MLIRTransforms
   )

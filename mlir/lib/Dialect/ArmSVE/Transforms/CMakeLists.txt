@@ -5,9 +5,9 @@ add_mlir_dialect_library(MLIRArmSVETransforms
   MLIRArmSVEConversionsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArmSVE
-  MLIRFunc
+  MLIRArmSVEDialect
+  MLIRFuncDialect
   MLIRIR
   MLIRLLVMCommonConversion
-  MLIRLLVMIR
+  MLIRLLVMDialect
   )

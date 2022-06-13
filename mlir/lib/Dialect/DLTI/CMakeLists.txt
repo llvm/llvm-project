@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRDLTI
+add_mlir_dialect_library(MLIRDLTIDialect
   DLTI.cpp
   Traits.cpp
 

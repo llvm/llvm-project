@@ -12,8 +12,8 @@ add_mlir_conversion_library(MLIRMathToLLVM
 
   LINK_LIBS PUBLIC
   MLIRLLVMCommonConversion
-  MLIRLLVMIR
-  MLIRMath
+  MLIRLLVMDialect
+  MLIRMathDialect
   MLIRPass
   MLIRTransforms
   )

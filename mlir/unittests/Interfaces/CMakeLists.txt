@@ -9,8 +9,8 @@ target_link_libraries(MLIRInterfacesTests
   PRIVATE
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
-  MLIRDLTI
-  MLIRFunc
+  MLIRDLTIDialect
+  MLIRFuncDialect
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRParser

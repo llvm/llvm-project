@@ -12,9 +12,9 @@ add_mlir_conversion_library(MLIRAMDGPUToROCDL
 
   LINK_LIBS PUBLIC
   MLIRLLVMCommonConversion
-  MLIRLLVMIR
-  MLIRROCDLIR
-  MLIRAMDGPU
+  MLIRLLVMDialect
+  MLIRROCDLDialect
+  MLIRAMDGPUDialect
   MLIRPass
   MLIRTransforms
   )

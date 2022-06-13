@@ -14,7 +14,7 @@ add_mlir_library(MLIRSPIRVTestPasses
   MLIRGPUOps
   MLIRIR
   MLIRPass
-  MLIRSPIRV
+  MLIRSPIRVDialect
   MLIRSPIRVConversion
   MLIRSPIRVModuleCombiner
   MLIRSupport

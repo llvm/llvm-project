@@ -7,8 +7,8 @@ add_mlir_dialect_library(MLIRLLVMIRTransforms
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRLLVMIR
+  MLIRLLVMDialect
   MLIRPass
   MLIRTransforms
-  MLIRNVVMIR
+  MLIRNVVMDialect
   )
