@@ -23,9 +23,6 @@ void func() {
   const char *literal = "Hello, world!";
 }
 
-// ASAN: @dyn_init_global = global {{.*}}, sanitize_address_dyninit
-// KASAN: @dyn_init_global = global {{.*}}, sanitize_address_dyninit
-
 // ASAN: sectioned_global{{.*}} global { i32, [28 x i8] }{{.*}}, align 32
 // KASAN: sectioned_global{{.*}} global i32
 // ASAN: @__special_global{{.*}} global { i32, [28 x i8] }{{.*}}, align 32
