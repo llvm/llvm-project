@@ -449,7 +449,8 @@ SymbolFileNativePDB::CreateCompileUnit(const CompilandIndexItem &cci) {
 
   llvm::SmallString<64> source_file_name =
       m_index->compilands().GetMainSourceFile(cci);
-  FileSpec fs(source_file_name);
+  FileSpec fs(llvm::sys::path::convert_to_slash(
+      source_file_name, llvm::sys::path::Style::windows_backslash));
 
   CompUnitSP cu_sp =
       std::make_shared<CompileUnit>(m_objfile_sp->GetModule(), nullptr, fs,
@@ -1051,7 +1052,7 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
     for (uint32_t cu_idx = 0, num_cus = GetNumCompileUnits(); cu_idx < num_cus;
          ++cu_idx) {
       CompileUnit *cu = ParseCompileUnitAtIndex(cu_idx).get();
-      if (!cu)
+      if (!cu && cu->GetNumFunctions() != 0)
         continue;
 
       bool file_spec_matches_cu_file_spec = FileSpec::Match(
