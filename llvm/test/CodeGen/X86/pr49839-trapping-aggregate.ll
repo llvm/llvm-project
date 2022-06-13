@@ -9,12 +9,12 @@ define <1 x i64> @trapping_const_agg(i1 %c, i1 %c2) {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %if
+; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    je .LBB0_4
+; CHECK-NEXT:  # %bb.2: # %if.end_crit_edge
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    idivq g@GOTPCREL(%rip)
-; CHECK-NEXT:    testb $1, %sil
-; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_4: # %end2
