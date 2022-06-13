@@ -203,57 +203,6 @@ private:
   static const char *const StageName[];
 #endif
 
-  /// EvictionTrack - Keeps track of past evictions in order to optimize region
-  /// split decision.
-  class EvictionTrack {
-
-  public:
-    using EvictorInfo =
-        std::pair<Register /* evictor */, MCRegister /* physreg */>;
-    using EvicteeInfo = llvm::DenseMap<Register /* evictee */, EvictorInfo>;
-
-  private:
-    /// Each Vreg that has been evicted in the last stage of selectOrSplit will
-    /// be mapped to the evictor Vreg and the PhysReg it was evicted from.
-    EvicteeInfo Evictees;
-
-  public:
-    /// Clear all eviction information.
-    void clear() { Evictees.clear(); }
-
-    ///  Clear eviction information for the given evictee Vreg.
-    /// E.g. when Vreg get's a new allocation, the old eviction info is no
-    /// longer relevant.
-    /// \param Evictee The evictee Vreg for whom we want to clear collected
-    /// eviction info.
-    void clearEvicteeInfo(Register Evictee) { Evictees.erase(Evictee); }
-
-    /// Track new eviction.
-    /// The Evictor vreg has evicted the Evictee vreg from Physreg.
-    /// \param PhysReg The physical register Evictee was evicted from.
-    /// \param Evictor The evictor Vreg that evicted Evictee.
-    /// \param Evictee The evictee Vreg.
-    void addEviction(MCRegister PhysReg, Register Evictor, Register Evictee) {
-      Evictees[Evictee].first = Evictor;
-      Evictees[Evictee].second = PhysReg;
-    }
-
-    /// Return the Evictor Vreg which evicted Evictee Vreg from PhysReg.
-    /// \param Evictee The evictee vreg.
-    /// \return The Evictor vreg which evicted Evictee vreg from PhysReg. 0 if
-    /// nobody has evicted Evictee from PhysReg.
-    EvictorInfo getEvictor(Register Evictee) {
-      if (Evictees.count(Evictee)) {
-        return Evictees[Evictee];
-      }
-
-      return EvictorInfo(0, 0);
-    }
-  };
-
-  // Keeps track of past evictions in order to optimize region split decision.
-  EvictionTrack LastEvicted;
-
   // splitting state.
   std::unique_ptr<SplitAnalysis> SA;
   std::unique_ptr<SplitEditor> SE;
