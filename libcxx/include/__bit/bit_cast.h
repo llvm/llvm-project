@@ -21,14 +21,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 17
 
-template<class _ToType, class _FromType, class = enable_if_t<
-  sizeof(_ToType) == sizeof(_FromType) &&
-  is_trivially_copyable_v<_ToType> &&
-  is_trivially_copyable_v<_FromType>
->>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI
-constexpr _ToType bit_cast(_FromType const& __from) noexcept {
-    return __builtin_bit_cast(_ToType, __from);
+template <class _ToType, class _FromType>
+  requires(sizeof(_ToType) == sizeof(_FromType) &&
+           is_trivially_copyable_v<_ToType> &&
+           is_trivially_copyable_v<_FromType>)
+_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _ToType bit_cast(const _FromType& __from) noexcept {
+  return __builtin_bit_cast(_ToType, __from);
 }
 
 #endif // _LIBCPP_STD_VER > 17

@@ -65,6 +65,7 @@ namespace std {
 #include <__bit/bit_cast.h>
 #include <__bit/byteswap.h>
 #include <__bits> // __libcpp_clz
+#include <__concepts/arithmetic.h>
 #include <__config>
 #include <limits>
 #include <type_traits>
@@ -87,7 +88,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 _Tp __rotl(_Tp __t, unsigned int __cnt) _NOEXCEPT
 {
     static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__rotl requires an unsigned integer type");
@@ -98,7 +99,7 @@ _Tp __rotl(_Tp __t, unsigned int __cnt) _NOEXCEPT
 }
 
 template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 _Tp __rotr(_Tp __t, unsigned int __cnt) _NOEXCEPT
 {
     static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__rotr requires an unsigned integer type");
@@ -109,7 +110,7 @@ _Tp __rotr(_Tp __t, unsigned int __cnt) _NOEXCEPT
 }
 
 template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 int __countr_zero(_Tp __t) _NOEXCEPT
 {
     static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__countr_zero requires an unsigned integer type");
@@ -136,7 +137,7 @@ int __countr_zero(_Tp __t) _NOEXCEPT
 }
 
 template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 int __countl_zero(_Tp __t) _NOEXCEPT
 {
     static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__countl_zero requires an unsigned integer type");
@@ -168,7 +169,7 @@ int __countl_zero(_Tp __t) _NOEXCEPT
 }
 
 template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 int __countl_one(_Tp __t) _NOEXCEPT
 {
     static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__countl_one requires an unsigned integer type");
@@ -178,7 +179,7 @@ int __countl_one(_Tp __t) _NOEXCEPT
 }
 
 template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 int __countr_one(_Tp __t) _NOEXCEPT
 {
     static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__countr_one requires an unsigned integer type");
@@ -188,7 +189,7 @@ int __countr_one(_Tp __t) _NOEXCEPT
 }
 
 template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 int __popcount(_Tp __t) _NOEXCEPT
 {
     static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__popcount requires an unsigned integer type");
@@ -212,7 +213,7 @@ int __popcount(_Tp __t) _NOEXCEPT
 
 // integral log base 2
 template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
 unsigned __bit_log2(_Tp __t) _NOEXCEPT
 {
     static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__bit_log2 requires an unsigned integer type");
@@ -220,7 +221,7 @@ unsigned __bit_log2(_Tp __t) _NOEXCEPT
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
 bool __has_single_bit(_Tp __t) _NOEXCEPT
 {
     static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__has_single_bit requires an unsigned integer type");
@@ -229,103 +230,70 @@ bool __has_single_bit(_Tp __t) _NOEXCEPT
 
 #if _LIBCPP_STD_VER > 17
 
-template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
-rotl(_Tp __t, unsigned int __cnt) noexcept
-{
-    return __rotl(__t, __cnt);
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp rotl(_Tp __t, unsigned int __cnt) noexcept {
+  return __rotl(__t, __cnt);
 }
 
-template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
-rotr(_Tp __t, unsigned int __cnt) noexcept
-{
-    return __rotr(__t, __cnt);
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp rotr(_Tp __t, unsigned int __cnt) noexcept {
+  return __rotr(__t, __cnt);
 }
 
-template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
-countl_zero(_Tp __t) noexcept
-{
-    return __countl_zero(__t);
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr int countl_zero(_Tp __t) noexcept {
+  return __countl_zero(__t);
 }
 
-template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
-countl_one(_Tp __t) noexcept
-{
-    return __countl_one(__t);
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr int countl_one(_Tp __t) noexcept {
+  return __countl_one(__t);
 }
 
-template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
-countr_zero(_Tp __t) noexcept
-{
-    return __countr_zero(__t);
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr int countr_zero(_Tp __t) noexcept {
+  return __countr_zero(__t);
 }
 
-template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
-countr_one(_Tp __t) noexcept
-{
-    return __countr_one(__t);
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr int countr_one(_Tp __t) noexcept {
+  return __countr_one(__t);
 }
 
-template<class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
-popcount(_Tp __t) noexcept
-{
-    return __popcount(__t);
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr int popcount(_Tp __t) noexcept {
+  return __popcount(__t);
 }
 
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, bool>
-has_single_bit(_Tp __t) noexcept
-{
-    return __has_single_bit(__t);
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr bool has_single_bit(_Tp __t) noexcept {
+  return __has_single_bit(__t);
 }
 
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
-bit_floor(_Tp __t) noexcept
-{
-    return __t == 0 ? 0 : _Tp{1} << __bit_log2(__t);
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp bit_floor(_Tp __t) noexcept {
+  return __t == 0 ? 0 : _Tp{1} << __bit_log2(__t);
 }
 
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, _Tp>
-bit_ceil(_Tp __t) noexcept
-{
-    if (__t < 2) return 1;
-    const unsigned __n = numeric_limits<_Tp>::digits - countl_zero((_Tp)(__t - 1u));
-    _LIBCPP_ASSERT(__n != numeric_limits<_Tp>::digits, "Bad input to bit_ceil");
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp bit_ceil(_Tp __t) noexcept {
+  if (__t < 2)
+    return 1;
+  const unsigned __n = numeric_limits<_Tp>::digits - countl_zero((_Tp)(__t - 1u));
+  _LIBCPP_ASSERT(__n != numeric_limits<_Tp>::digits, "Bad input to bit_ceil");
 
-    if constexpr (sizeof(_Tp) >= sizeof(unsigned))
-        return _Tp{1} << __n;
-    else
-    {
-        const unsigned __extra = numeric_limits<unsigned>::digits  - numeric_limits<_Tp>::digits;
-        const unsigned __retVal = 1u << (__n + __extra);
-        return (_Tp) (__retVal >> __extra);
-    }
+  if constexpr (sizeof(_Tp) >= sizeof(unsigned))
+    return _Tp{1} << __n;
+  else {
+    const unsigned __extra = numeric_limits<unsigned>::digits - numeric_limits<_Tp>::digits;
+    const unsigned __retVal = 1u << (__n + __extra);
+    return (_Tp)(__retVal >> __extra);
+  }
 }
 
-template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
-enable_if_t<__libcpp_is_unsigned_integer<_Tp>::value, int>
-bit_width(_Tp __t) noexcept
-{
-    return __t == 0 ? 0 : __bit_log2(__t) + 1;
+template <__libcpp_unsigned_integer _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr int bit_width(_Tp __t) noexcept {
+  return __t == 0 ? 0 : __bit_log2(__t) + 1;
 }
 
 enum class endian
