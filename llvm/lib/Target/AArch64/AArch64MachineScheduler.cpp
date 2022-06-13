@@ -7,9 +7,56 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64MachineScheduler.h"
+#include "AArch64InstrInfo.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 
 using namespace llvm;
+
+static bool needReorderStoreMI(const MachineInstr *MI) {
+  if (!MI)
+    return false;
+
+  switch (MI->getOpcode()) {
+  default:
+    return false;
+  case AArch64::STURQi:
+  case AArch64::STRQui:
+    if (MI->getMF()->getSubtarget<AArch64Subtarget>().isStoreAddressAscend())
+       return false;
+    LLVM_FALLTHROUGH;
+  case AArch64::STPQi:
+    return AArch64InstrInfo::getLdStOffsetOp(*MI).getType() == MachineOperand::MO_Immediate;
+  }
+
+  return false;
+}
+
+// Return true if two stores with same base address may overlap writes
+static bool mayOverlapWrite(const MachineInstr &MI0, const MachineInstr &MI1,
+                            int64_t &Off0, int64_t &Off1) {
+  const MachineOperand &Base0 = AArch64InstrInfo::getLdStBaseOp(MI0);
+  const MachineOperand &Base1 = AArch64InstrInfo::getLdStBaseOp(MI1);
+
+  // May overlapping writes if two store instructions without same base
+  if (!Base0.isIdenticalTo(Base1))
+    return true;
+
+  int StoreSize0 = AArch64InstrInfo::getMemScale(MI0);
+  int StoreSize1 = AArch64InstrInfo::getMemScale(MI1);
+  Off0 = AArch64InstrInfo::hasUnscaledLdStOffset(MI0.getOpcode())
+             ? AArch64InstrInfo::getLdStOffsetOp(MI0).getImm()
+             : AArch64InstrInfo::getLdStOffsetOp(MI0).getImm() * StoreSize0;
+  Off1 = AArch64InstrInfo::hasUnscaledLdStOffset(MI1.getOpcode())
+             ? AArch64InstrInfo::getLdStOffsetOp(MI1).getImm()
+             : AArch64InstrInfo::getLdStOffsetOp(MI1).getImm() * StoreSize1;
+
+  const MachineInstr &MI = (Off0 < Off1) ? MI0 : MI1;
+  int Multiples = AArch64InstrInfo::isPairedLdSt(MI) ? 2 : 1;
+  int StoreSize = AArch64InstrInfo::getMemScale(MI) * Multiples;
+
+  return llabs(Off0 - Off1) < StoreSize;
+}
 
 bool AArch64PostRASchedStrategy::tryCandidate(SchedCandidate &Cand,
                                               SchedCandidate &TryCand) {
@@ -18,20 +65,16 @@ bool AArch64PostRASchedStrategy::tryCandidate(SchedCandidate &Cand,
   if (Cand.isValid()) {
     MachineInstr *Instr0 = TryCand.SU->getInstr();
     MachineInstr *Instr1 = Cand.SU->getInstr();
-    // When dealing with two STPqi's.
-    if (Instr0 && Instr1 && Instr0->getOpcode() == Instr1->getOpcode () &&
-        Instr0->getOpcode() == AArch64::STPQi)
-    {
-      MachineOperand &Base0 = Instr0->getOperand(2);
-      MachineOperand &Base1 = Instr1->getOperand(2);
-      int64_t Off0 = Instr0->getOperand(3).getImm();
-      int64_t Off1 = Instr1->getOperand(3).getImm();
-      // With the same base address and non-overlapping writes.
-      if (Base0.isIdenticalTo(Base1) && llabs (Off0 - Off1) >= 2) {
-        TryCand.Reason = NodeOrder;
-        // Order them by ascending offsets.
-        return Off0 < Off1;
-      }
+
+    if (!needReorderStoreMI(Instr0) || !needReorderStoreMI(Instr1))
+      return OriginalResult;
+
+    int64_t Off0, Off1;
+    // With the same base address and non-overlapping writes.
+    if (!mayOverlapWrite(*Instr0, *Instr1, Off0, Off1)) {
+      TryCand.Reason = NodeOrder;
+      // Order them by ascending offsets.
+      return Off0 < Off1;
     }
   }
 
