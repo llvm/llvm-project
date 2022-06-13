@@ -129,7 +129,7 @@ public:
           none.getContext(), llvm::None, /*isPacked=*/false);
     });
     // FIXME: https://reviews.llvm.org/D82831 introduced an automatic
-    // materliazation of conversion around function calls that is not working
+    // materialization of conversion around function calls that is not working
     // well with fir lowering to llvm (incorrect llvm.mlir.cast are inserted).
     // Workaround until better analysis: register a handler that does not insert
     // any conversions.
