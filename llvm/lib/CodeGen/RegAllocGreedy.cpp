@@ -479,8 +479,6 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
     if (!VRM->hasPhys(Intf->reg()))
       continue;
 
-    LastEvicted.addEviction(PhysReg, VirtReg.reg(), Intf->reg());
-
     Matrix->unassign(*Intf);
     assert((ExtraInfo->getCascade(Intf->reg()) < Cascade ||
             VirtReg.isSpillable() < Intf->isSpillable()) &&
@@ -2235,8 +2233,6 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
       AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
   if (MCRegister PhysReg =
           tryAssign(VirtReg, Order, NewVRegs, FixedRegisters)) {
-    // If VirtReg got an assignment, the eviction info is no longer relevant.
-    LastEvicted.clearEvicteeInfo(VirtReg.reg());
     // When NewVRegs is not empty, we may have made decisions such as evicting
     // a virtual register, go with the earlier decisions and use the physical
     // register.
@@ -2271,9 +2267,6 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
       // copy-related live-ranges.
       if (Hint && Hint != PhysReg)
         SetOfBrokenHints.insert(&VirtReg);
-      // If VirtReg eviction someone, the eviction info for it as an evictee is
-      // no longer relevant.
-      LastEvicted.clearEvicteeInfo(VirtReg.reg());
       return PhysReg;
     }
 
@@ -2293,11 +2286,8 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     // Try splitting VirtReg or interferences.
     unsigned NewVRegSizeBefore = NewVRegs.size();
     Register PhysReg = trySplit(VirtReg, Order, NewVRegs, FixedRegisters);
-    if (PhysReg || (NewVRegs.size() - NewVRegSizeBefore)) {
-      // If VirtReg got split, the eviction info is no longer relevant.
-      LastEvicted.clearEvicteeInfo(VirtReg.reg());
+    if (PhysReg || (NewVRegs.size() - NewVRegSizeBefore))
       return PhysReg;
-    }
   }
 
   // If we couldn't allocate a register from spilling, there is probably some
@@ -2545,7 +2535,6 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
   GlobalCand.resize(32);  // This will grow as needed.
   SetOfBrokenHints.clear();
-  LastEvicted.clear();
 
   allocatePhysRegs();
   tryHintsRecoloring();
