@@ -1172,16 +1172,37 @@ static CIE parseCIE(const InputSection *isec, const EhReader &reader,
 //
 // Concretely, we expect our relocations to write the value of `PC -
 // target_addr` to `PC`. `PC` itself is denoted by a minuend relocation that
-// points to a symbol or section plus an addend.
+// points to a symbol plus an addend.
+//
+// It is important that the minuend relocation point to a symbol within the
+// same section as the fixup value, since sections may get moved around.
+//
+// For example, for arm64, llvm-mc emits relocations for the target function
+// address like so:
+//
+//   ltmp:
+//     <CIE start>
+//     ...
+//     <CIE end>
+//     ... multiple FDEs ...
+//     <FDE start>
+//     <target function address - (ltmp + pcrel offset)>
+//     ...
+//
+// If any of the FDEs in `multiple FDEs` get dead-stripped, then `FDE start`
+// will move to an earlier address, and `ltmp + pcrel offset` will no longer
+// reflect an accurate pcrel value. To avoid this problem, we "canonicalize"
+// our relocation by adding an `EH_Frame` symbol at `FDE start`, and updating
+// the reloc to be `target function address - (EH_Frame + new pcrel offset)`.
 //
 // If `Invert` is set, then we instead expect `target_addr - PC` to be written
 // to `PC`.
 template <bool Invert = false>
 Defined *
-getTargetSymbolFromSubtraction(const InputSection *isec,
-                               std::vector<macho::Reloc>::iterator relocIt) {
-  const macho::Reloc &subtrahend = *relocIt;
-  const macho::Reloc &minuend = *std::next(relocIt);
+targetSymFromCanonicalSubtractor(const InputSection *isec,
+                                 std::vector<macho::Reloc>::iterator relocIt) {
+  macho::Reloc &subtrahend = *relocIt;
+  macho::Reloc &minuend = *std::next(relocIt);
   assert(target->hasAttr(subtrahend.type, RelocAttrBits::SUBTRAHEND));
   assert(target->hasAttr(minuend.type, RelocAttrBits::UNSIGNED));
   // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
@@ -1196,9 +1217,21 @@ getTargetSymbolFromSubtraction(const InputSection *isec,
   }
   if (Invert)
     std::swap(pcSym, target);
-  if (pcSym->isec != isec ||
-      pcSym->value - (Invert ? -1 : 1) * minuend.addend != subtrahend.offset)
-    fatal("invalid FDE relocation in __eh_frame");
+  if (pcSym->isec == isec) {
+    if (pcSym->value - (Invert ? -1 : 1) * minuend.addend != subtrahend.offset)
+      fatal("invalid FDE relocation in __eh_frame");
+  } else {
+    // Ensure the pcReloc points to a symbol within the current EH frame.
+    // HACK: we should really verify that the original relocation's semantics
+    // are preserved. In particular, we should have
+    // `oldSym->value + oldOffset == newSym + newOffset`. However, we don't
+    // have an easy way to access the offsets from this point in the code; some
+    // refactoring is needed for that.
+    macho::Reloc &pcReloc = Invert ? minuend : subtrahend;
+    pcReloc.referent = isec->symbols[0];
+    assert(isec->symbols[0]->value == 0);
+    minuend.addend = pcReloc.offset * (Invert ? 1LL : -1LL);
+  }
   return target;
 }
 
@@ -1255,7 +1288,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
     if (cieOffRelocIt != isec->relocs.end()) {
       // We already have an explicit relocation for the CIE offset.
       cieIsec =
-          getTargetSymbolFromSubtraction</*Invert=*/true>(isec, cieOffRelocIt)
+          targetSymFromCanonicalSubtractor</*Invert=*/true>(isec, cieOffRelocIt)
               ->isec;
       dataOff += sizeof(uint32_t);
     } else {
@@ -1310,7 +1343,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
 
     Defined *funcSym;
     if (funcAddrRelocIt != isec->relocs.end()) {
-      funcSym = getTargetSymbolFromSubtraction(isec, funcAddrRelocIt);
+      funcSym = targetSymFromCanonicalSubtractor(isec, funcAddrRelocIt);
     } else {
       funcSym = findSymbolAtAddress(sections, funcAddr);
       ehRelocator.makePcRel(funcAddrOff, funcSym, target->p2WordSize);
@@ -1325,7 +1358,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
 
     InputSection *lsdaIsec = nullptr;
     if (lsdaAddrRelocIt != isec->relocs.end()) {
-      lsdaIsec = getTargetSymbolFromSubtraction(isec, lsdaAddrRelocIt)->isec;
+      lsdaIsec = targetSymFromCanonicalSubtractor(isec, lsdaAddrRelocIt)->isec;
     } else if (lsdaAddrOpt) {
       uint64_t lsdaAddr = *lsdaAddrOpt;
       Section *sec = findContainingSection(sections, &lsdaAddr);
