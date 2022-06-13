@@ -669,8 +669,10 @@ def AArch64NvCast : SDNode<"AArch64ISD::NVCAST", SDTUnaryOp>;
 
 def SDT_AArch64mull : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
                                     SDTCisSameAs<1, 2>]>;
-def AArch64smull    : SDNode<"AArch64ISD::SMULL", SDT_AArch64mull>;
-def AArch64umull    : SDNode<"AArch64ISD::UMULL", SDT_AArch64mull>;
+def AArch64smull    : SDNode<"AArch64ISD::SMULL", SDT_AArch64mull,
+                             [SDNPCommutative]>;
+def AArch64umull    : SDNode<"AArch64ISD::UMULL", SDT_AArch64mull,
+                             [SDNPCommutative]>;
 
 def AArch64frecpe   : SDNode<"AArch64ISD::FRECPE", SDTFPUnaryOp>;
 def AArch64frecps   : SDNode<"AArch64ISD::FRECPS", SDTFPBinOp>;

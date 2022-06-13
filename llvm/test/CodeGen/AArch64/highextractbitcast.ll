@@ -256,18 +256,16 @@ entry:
 define <4 x i32> @test_smull_high_s16_splata1(<2 x i64> %aa, <8 x i16> %b) #0 {
 ; CHECK-LE-LABEL: test_smull_high_s16_splata1:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    dup v0.8h, v0.h[3]
-; CHECK-LE-NEXT:    smull2 v0.4s, v0.8h, v1.8h
+; CHECK-LE-NEXT:    smull2 v0.4s, v1.8h, v0.h[3]
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_smull_high_s16_splata1:
 ; CHECK-BE:       // %bb.0: // %entry
-; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    dup v0.8h, v0.h[3]
-; CHECK-BE-NEXT:    smull2 v0.4s, v0.8h, v1.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    smull2 v0.4s, v1.8h, v0.h[3]
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -570,18 +568,16 @@ define <2 x i64> @hadd32_zext_asr(<16 x i8> %src1a) {
 define <2 x i64> @test_umull_high_s16_splata1(<2 x i64> %aa, <4 x i32> %b) #0 {
 ; CHECK-LE-LABEL: test_umull_high_s16_splata1:
 ; CHECK-LE:       // %bb.0: // %entry
-; CHECK-LE-NEXT:    dup v0.4s, v0.s[1]
-; CHECK-LE-NEXT:    umull2 v0.2d, v0.4s, v1.4s
+; CHECK-LE-NEXT:    umull2 v0.2d, v1.4s, v0.s[1]
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_umull_high_s16_splata1:
 ; CHECK-BE:       // %bb.0: // %entry
-; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    dup v0.4s, v0.s[1]
-; CHECK-BE-NEXT:    umull2 v0.2d, v0.4s, v1.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    umull2 v0.2d, v1.4s, v0.s[1]
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
 entry:
