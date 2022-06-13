@@ -20,6 +20,7 @@
 #include "io-stmt.h"
 #include "lock.h"
 #include "terminator.h"
+#include "flang/Common/constexpr-bitset.h"
 #include "flang/Runtime/memory.h"
 #include <cstdlib>
 #include <cstring>
@@ -37,6 +38,7 @@ class ExternalFileUnit : public ConnectionState,
 public:
   explicit ExternalFileUnit(int unitNumber) : unitNumber_{unitNumber} {
     isUTF8 = executionEnvironment.defaultUTF8;
+    asyncIdAvailable_.set();
   }
   ~ExternalFileUnit() {}
 
@@ -102,6 +104,9 @@ public:
   ChildIo &PushChildIo(IoStatementState &);
   void PopChildIo(ChildIo &);
 
+  int GetAsynchronousId(IoErrorHandler &);
+  bool Wait(int);
+
 private:
   static UnitMap &GetUnitMap();
   const char *FrameNextInput(IoErrorHandler &, std::size_t);
@@ -117,13 +122,22 @@ private:
   bool CheckDirectAccess(IoErrorHandler &);
   void HitEndOnRead(IoErrorHandler &);
 
+  Lock lock_;
+
   int unitNumber_{-1};
   Direction direction_{Direction::Output};
   bool impliedEndfile_{false}; // sequential/stream output has taken place
   bool beganReadingRecord_{false};
   bool directAccessRecWasSet_{false}; // REC= appeared
-
-  Lock lock_;
+  // Subtle: The beginning of the frame can't be allowed to advance
+  // during a single list-directed READ due to the possibility of a
+  // multi-record CHARACTER value with a "r*" repeat count.  So we
+  // manage the frame and the current record therein separately.
+  std::int64_t frameOffsetInFile_{0};
+  std::size_t recordOffsetInFrame_{0}; // of currentRecordNumber
+  bool swapEndianness_{false};
+  bool createdForInternalChildIo_{false};
+  common::BitSet<64> asyncIdAvailable_;
 
   // When a synchronous I/O statement is in progress on this unit, holds its
   // state.
@@ -139,17 +153,6 @@ private:
 
   // Points to the active alternative (if any) in u_ for use as a Cookie
   std::optional<IoStatementState> io_;
-
-  // Subtle: The beginning of the frame can't be allowed to advance
-  // during a single list-directed READ due to the possibility of a
-  // multi-record CHARACTER value with a "r*" repeat count.  So we
-  // manage the frame and the current record therein separately.
-  std::int64_t frameOffsetInFile_{0};
-  std::size_t recordOffsetInFrame_{0}; // of currentRecordNumber
-
-  bool swapEndianness_{false};
-
-  bool createdForInternalChildIo_{false};
 
   // A stack of child I/O pseudo-units for user-defined derived type
   // I/O that have this unit number.

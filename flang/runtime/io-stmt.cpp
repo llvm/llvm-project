@@ -206,6 +206,10 @@ int ExternalIoStatementBase::EndIoStatement() {
   return result;
 }
 
+void ExternalIoStatementBase::SetAsynchronous() {
+  asynchronousID_ = unit().GetAsynchronousId(*this);
+}
+
 void OpenStatementState::set_path(const char *path, std::size_t length) {
   pathLength_ = TrimTrailingSpaces(path, length);
   path_ = SaveDefaultCharacter(path, pathLength_, *this);
@@ -1023,6 +1027,8 @@ void ExternalMiscIoStatementState::CompleteOperation() {
   case Rewind:
     ext.Rewind(*this);
     break;
+  case Wait:
+    break; // handled in io-api.cpp BeginWait
   }
   return IoStatementBase::CompleteOperation();
 }

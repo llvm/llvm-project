@@ -911,6 +911,32 @@ void ExternalFileUnit::PopChildIo(ChildIo &child) {
   child_.reset(child.AcquirePrevious().release()); // deletes top child
 }
 
+int ExternalFileUnit::GetAsynchronousId(IoErrorHandler &handler) {
+  if (!mayAsynchronous()) {
+    handler.SignalError(IostatBadAsynchronous);
+    return -1;
+  } else if (auto least{asyncIdAvailable_.LeastElement()}) {
+    asyncIdAvailable_.reset(*least);
+    return static_cast<int>(*least);
+  } else {
+    handler.SignalError(IostatTooManyAsyncOps);
+    return -1;
+  }
+}
+
+bool ExternalFileUnit::Wait(int id) {
+  if (id < 0 || asyncIdAvailable_.test(id)) {
+    return false;
+  } else {
+    if (id == 0) {
+      asyncIdAvailable_.set();
+    } else {
+      asyncIdAvailable_.set(id);
+    }
+    return true;
+  }
+}
+
 void ChildIo::EndIoStatement() {
   io_.reset();
   u_.emplace<std::monostate>();

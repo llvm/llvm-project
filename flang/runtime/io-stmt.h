@@ -407,11 +407,14 @@ public:
   ExternalFileUnit &unit() { return unit_; }
   MutableModes &mutableModes();
   ConnectionState &GetConnectionState();
+  int asynchronousID() const { return asynchronousID_; }
   int EndIoStatement();
   ExternalFileUnit *GetExternalFileUnit() const { return &unit_; }
+  void SetAsynchronous();
 
 private:
   ExternalFileUnit &unit_;
+  int asynchronousID_{-1};
 };
 
 template <Direction DIR>
@@ -698,7 +701,7 @@ private:
 
 class ExternalMiscIoStatementState : public ExternalIoStatementBase {
 public:
-  enum Which { Flush, Backspace, Endfile, Rewind };
+  enum Which { Flush, Backspace, Endfile, Rewind, Wait };
   ExternalMiscIoStatementState(ExternalFileUnit &unit, Which which,
       const char *sourceFile = nullptr, int sourceLine = 0)
       : ExternalIoStatementBase{unit, sourceFile, sourceLine}, which_{which} {}
