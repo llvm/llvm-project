@@ -1314,9 +1314,8 @@ public:
   bool isInNoSanitizeList(SanitizerMask Kind, llvm::Function *Fn,
                           SourceLocation Loc) const;
 
-  bool isInNoSanitizeList(SanitizerMask Kind, llvm::GlobalVariable *GV,
-                          SourceLocation Loc, QualType Ty,
-                          StringRef Category = StringRef()) const;
+  bool isInNoSanitizeList(llvm::GlobalVariable *GV, SourceLocation Loc,
+                          QualType Ty, StringRef Category = StringRef()) const;
 
   /// Imbue XRay attributes to a function, applying the always/never attribute
   /// lists in the process. Returns true if we did imbue attributes this way,

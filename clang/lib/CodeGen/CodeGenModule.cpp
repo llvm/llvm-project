@@ -2760,14 +2760,21 @@ bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind, llvm::Function *Fn,
   return false;
 }
 
-bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind,
-                                       llvm::GlobalVariable *GV,
+bool CodeGenModule::isInNoSanitizeList(llvm::GlobalVariable *GV,
                                        SourceLocation Loc, QualType Ty,
                                        StringRef Category) const {
+  // For now globals can be ignored only in ASan and KASan.
+  const SanitizerMask EnabledAsanMask =
+      LangOpts.Sanitize.Mask &
+      (SanitizerKind::Address | SanitizerKind::KernelAddress |
+       SanitizerKind::HWAddress | SanitizerKind::KernelHWAddress |
+       SanitizerKind::MemTag);
+  if (!EnabledAsanMask)
+    return false;
   const auto &NoSanitizeL = getContext().getNoSanitizeList();
-  if (NoSanitizeL.containsGlobal(Kind, GV->getName(), Category))
+  if (NoSanitizeL.containsGlobal(EnabledAsanMask, GV->getName(), Category))
     return true;
-  if (NoSanitizeL.containsLocation(Kind, Loc, Category))
+  if (NoSanitizeL.containsLocation(EnabledAsanMask, Loc, Category))
     return true;
   // Check global type.
   if (!Ty.isNull()) {
@@ -2779,7 +2786,7 @@ bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind,
     // Only record types (classes, structs etc.) are ignored.
     if (Ty->isRecordType()) {
       std::string TypeStr = Ty.getAsString(getContext().getPrintingPolicy());
-      if (NoSanitizeL.containsType(Kind, TypeStr, Category))
+      if (NoSanitizeL.containsType(EnabledAsanMask, TypeStr, Category))
         return true;
     }
   }
