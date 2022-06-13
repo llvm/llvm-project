@@ -919,6 +919,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     return IC.replaceOperand(II, 0, UndefValue::get(VDstIn->getType()));
   }
+  case Intrinsic::amdgcn_permlane64:
+    // A constant value is trivially uniform.
+    if (Constant *C = dyn_cast<Constant>(II.getArgOperand(0))) {
+      return IC.replaceInstUsesWith(II, C);
+    }
+    break;
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
     // A constant value is trivially uniform.
