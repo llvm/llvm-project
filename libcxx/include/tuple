@@ -184,11 +184,6 @@ template <class... Types>
 #include <type_traits>
 #include <version>
 
-// TODO: remove these headers
-#include <exception>
-#include <new>
-#include <typeinfo>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif

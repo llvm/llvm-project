@@ -97,7 +97,10 @@ API Changes
 - Some libc++ headers no longer transitively include all of:
     - ``<algorithm>``
     - ``<chrono>``
+    - ``<exception>``
     - ``<functional>``
+    - ``<new>``
+    - ``<typeinfo>``
     - ``<utility>``
 
   If, after updating libc++, you see compiler errors related to missing declarations
