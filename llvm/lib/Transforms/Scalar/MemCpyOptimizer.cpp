@@ -95,7 +95,7 @@ struct MemsetRange {
   Value *StartPtr;
 
   /// Alignment - The known alignment of the first store.
-  unsigned Alignment;
+  MaybeAlign Alignment;
 
   /// TheStores - The actual stores that make up this range.
   SmallVector<Instruction*, 16> TheStores;
@@ -177,16 +177,16 @@ public:
     TypeSize StoreSize = DL.getTypeStoreSize(SI->getOperand(0)->getType());
     assert(!StoreSize.isScalable() && "Can't track scalable-typed stores");
     addRange(OffsetFromFirst, StoreSize.getFixedSize(), SI->getPointerOperand(),
-             SI->getAlign().value(), SI);
+             SI->getAlign(), SI);
   }
 
   void addMemSet(int64_t OffsetFromFirst, MemSetInst *MSI) {
     int64_t Size = cast<ConstantInt>(MSI->getLength())->getZExtValue();
-    addRange(OffsetFromFirst, Size, MSI->getDest(), MSI->getDestAlignment(), MSI);
+    addRange(OffsetFromFirst, Size, MSI->getDest(), MSI->getDestAlign(), MSI);
   }
 
-  void addRange(int64_t Start, int64_t Size, Value *Ptr,
-                unsigned Alignment, Instruction *Inst);
+  void addRange(int64_t Start, int64_t Size, Value *Ptr, MaybeAlign Alignment,
+                Instruction *Inst);
 };
 
 } // end anonymous namespace
@@ -195,7 +195,7 @@ public:
 /// new range for the specified store at the specified offset, merging into
 /// existing ranges as appropriate.
 void MemsetRanges::addRange(int64_t Start, int64_t Size, Value *Ptr,
-                            unsigned Alignment, Instruction *Inst) {
+                            MaybeAlign Alignment, Instruction *Inst) {
   int64_t End = Start+Size;
 
   range_iterator I = partition_point(
@@ -503,7 +503,7 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
     StartPtr = Range.StartPtr;
 
     AMemSet = Builder.CreateMemSet(StartPtr, ByteVal, Range.End - Range.Start,
-                                   MaybeAlign(Range.Alignment));
+                                   Range.Alignment);
     LLVM_DEBUG(dbgs() << "Replace stores:\n"; for (Instruction *SI
                                                    : Range.TheStores) dbgs()
                                               << *SI << '\n';
@@ -1239,14 +1239,14 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   }
 
   // By default, create an unaligned memset.
-  unsigned Align = 1;
+  Align Alignment = Align(1);
   // If Dest is aligned, and SrcSize is constant, use the minimum alignment
   // of the sum.
-  const unsigned DestAlign =
-      std::max(MemSet->getDestAlignment(), MemCpy->getDestAlignment());
+  const Align DestAlign = std::max(MemSet->getDestAlign().valueOrOne(),
+                                   MemCpy->getDestAlign().valueOrOne());
   if (DestAlign > 1)
     if (auto *SrcSizeC = dyn_cast<ConstantInt>(SrcSize))
-      Align = MinAlign(SrcSizeC->getZExtValue(), DestAlign);
+      Alignment = commonAlignment(DestAlign, SrcSizeC->getZExtValue());
 
   IRBuilder<> Builder(MemCpy);
 
@@ -1265,11 +1265,11 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
       Ule, ConstantInt::getNullValue(DestSize->getType()), SizeDiff);
   unsigned DestAS = Dest->getType()->getPointerAddressSpace();
   Instruction *NewMemSet = Builder.CreateMemSet(
-      Builder.CreateGEP(Builder.getInt8Ty(),
-                        Builder.CreatePointerCast(Dest,
-                                                  Builder.getInt8PtrTy(DestAS)),
-                        SrcSize),
-      MemSet->getOperand(1), MemsetLen, MaybeAlign(Align));
+      Builder.CreateGEP(
+          Builder.getInt8Ty(),
+          Builder.CreatePointerCast(Dest, Builder.getInt8PtrTy(DestAS)),
+          SrcSize),
+      MemSet->getOperand(1), MemsetLen, Alignment);
 
   assert(isa<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(MemCpy)) &&
          "MemCpy must be a MemoryDef");
