@@ -2075,13 +2075,13 @@ LLVMTypeRef LLVMGlobalGetValueType(LLVMValueRef Global) {
 unsigned LLVMGetAlignment(LLVMValueRef V) {
   Value *P = unwrap<Value>(V);
   if (GlobalObject *GV = dyn_cast<GlobalObject>(P))
-    return GV->getAlignment();
+    return GV->getAlign() ? GV->getAlign()->value() : 0;
   if (AllocaInst *AI = dyn_cast<AllocaInst>(P))
-    return AI->getAlignment();
+    return AI->getAlign().value();
   if (LoadInst *LI = dyn_cast<LoadInst>(P))
-    return LI->getAlignment();
+    return LI->getAlign().value();
   if (StoreInst *SI = dyn_cast<StoreInst>(P))
-    return SI->getAlignment();
+    return SI->getAlign().value();
   if (AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(P))
     return RMWI->getAlign().value();
   if (AtomicCmpXchgInst *CXI = dyn_cast<AtomicCmpXchgInst>(P))
