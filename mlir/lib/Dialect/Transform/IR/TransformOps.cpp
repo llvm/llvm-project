@@ -312,8 +312,9 @@ void transform::SequenceOp::getEffects(
   }
 }
 
-OperandRange transform::SequenceOp::getSuccessorEntryOperands(unsigned index) {
-  assert(index == 0 && "unexpected region index");
+OperandRange
+transform::SequenceOp::getSuccessorEntryOperands(Optional<unsigned> index) {
+  assert(index && *index == 0 && "unexpected region index");
   if (getOperation()->getNumOperands() == 1)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),

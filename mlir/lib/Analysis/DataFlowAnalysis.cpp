@@ -470,11 +470,10 @@ void ForwardDataFlowSolver::visitRegionBranchOperation(
   // also allow for the parent operation to have itself as a region successor.
   if (successors.empty())
     return markAllPessimisticFixpoint(branch, branch->getResults());
-  return visitRegionSuccessors(
-      branch, successors, operandLattices, [&](Optional<unsigned> index) {
-        assert(index && "expected valid region index");
-        return branch.getSuccessorEntryOperands(*index);
-      });
+  return visitRegionSuccessors(branch, successors, operandLattices,
+                               [&](Optional<unsigned> index) {
+                                 return branch.getSuccessorEntryOperands(index);
+                               });
 }
 
 void ForwardDataFlowSolver::visitRegionSuccessors(
