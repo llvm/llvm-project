@@ -194,15 +194,6 @@ inline namespace __cpo {
 
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
-template <class _Iter, class _Sent>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 void __ranges_advance(_Iter& __first, _Sent& __last) {
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
-  return ranges::advance(__first, __last);
-#else
-  return std::advance(__first, __last);
-#endif
-}
-
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___ITERATOR_ADVANCE_H
