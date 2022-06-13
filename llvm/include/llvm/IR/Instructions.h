@@ -216,11 +216,6 @@ public:
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
 
   /// Return the alignment of the access that is being performed.
-  /// FIXME: Remove this function once transition to Align is over.
-  /// Use getAlign() instead.
-  uint64_t getAlignment() const { return getAlign().value(); }
-
-  /// Return the alignment of the access that is being performed.
   Align getAlign() const {
     return Align(1ULL << (getSubclassData<AlignmentField>()));
   }
