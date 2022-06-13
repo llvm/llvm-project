@@ -4543,16 +4543,16 @@ struct AAAlignImpl : AAAlign {
     for (const Use &U : AssociatedValue.uses()) {
       if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
         if (SI->getPointerOperand() == &AssociatedValue)
-          if (SI->getAlignment() < getAssumedAlign()) {
+          if (SI->getAlign() < getAssumedAlign()) {
             STATS_DECLTRACK(AAAlign, Store,
                             "Number of times alignment added to a store");
-            SI->setAlignment(Align(getAssumedAlign()));
+            SI->setAlignment(getAssumedAlign());
             LoadStoreChanged = ChangeStatus::CHANGED;
           }
       } else if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
         if (LI->getPointerOperand() == &AssociatedValue)
-          if (LI->getAlignment() < getAssumedAlign()) {
-            LI->setAlignment(Align(getAssumedAlign()));
+          if (LI->getAlign() < getAssumedAlign()) {
+            LI->setAlignment(getAssumedAlign());
             STATS_DECLTRACK(AAAlign, Load,
                             "Number of times alignment added to a load");
             LoadStoreChanged = ChangeStatus::CHANGED;
@@ -4596,9 +4596,8 @@ struct AAAlignImpl : AAAlign {
 
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
-    return getAssumedAlign() ? ("align<" + std::to_string(getKnownAlign()) +
-                                "-" + std::to_string(getAssumedAlign()) + ">")
-                             : "unknown-align";
+    return "align<" + std::to_string(getKnownAlign().value()) + "-" +
+           std::to_string(getAssumedAlign().value()) + ">";
   }
 };
 
@@ -4726,7 +4725,7 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
       // so we do not need to track a dependence.
       const auto &ArgAlignAA = A.getAAFor<AAAlign>(
           *this, IRPosition::argument(*Arg), DepClassTy::NONE);
-      takeKnownMaximum(ArgAlignAA.getKnownAlign());
+      takeKnownMaximum(ArgAlignAA.getKnownAlign().value());
     }
     return Changed;
   }
@@ -7061,8 +7060,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
           // When no alignment is specified for the load instruction,
           // natural alignment is assumed.
           createReplacementValues(
-              assumeAligned(AlignAA.getAssumedAlign()),
-              PrivatizableType.getValue(), ACS,
+              AlignAA.getAssumedAlign(), PrivatizableType.getValue(), ACS,
               ACS.getCallArgOperand(ARI.getReplacedArg().getArgNo()),
               NewArgOperands);
         };
