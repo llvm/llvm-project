@@ -2698,15 +2698,23 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
 
 // symbol must be either a Use or a Generic formed by merging two uses.
 // Convert it to a UseError with this additional location.
-static void ConvertToUseError(
+static bool ConvertToUseError(
     Symbol &symbol, const SourceName &location, const Scope &module) {
   const auto *useDetails{symbol.detailsIf<UseDetails>()};
   if (!useDetails) {
-    auto &genericDetails{symbol.get<GenericDetails>()};
-    useDetails = &genericDetails.uses().at(0)->get<UseDetails>();
+    if (auto *genericDetails{symbol.detailsIf<GenericDetails>()}) {
+      if (!genericDetails->uses().empty()) {
+        useDetails = &genericDetails->uses().at(0)->get<UseDetails>();
+      }
+    }
   }
-  symbol.set_details(
-      UseErrorDetails{*useDetails}.add_occurrence(location, module));
+  if (useDetails) {
+    symbol.set_details(
+        UseErrorDetails{*useDetails}.add_occurrence(location, module));
+    return true;
+  } else {
+    return false;
+  }
 }
 
 // If a symbol has previously been USE-associated and did not appear in a USE
@@ -2807,9 +2815,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     }
   }
   if (!combine) {
-    if (localSymbol.has<UseDetails>() || localSymbol.has<GenericDetails>()) {
-      ConvertToUseError(localSymbol, location, *useModuleScope_);
-    } else {
+    if (!ConvertToUseError(localSymbol, location, *useModuleScope_)) {
       Say(location,
           "Cannot use-associate '%s'; it is already declared in this scope"_err_en_US,
           localName)
