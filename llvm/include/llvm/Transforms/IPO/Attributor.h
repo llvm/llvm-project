@@ -119,6 +119,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
@@ -3708,10 +3709,10 @@ struct AAAlign : public IRAttribute<
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return assumed alignment.
-  uint64_t getAssumedAlign() const { return getAssumed(); }
+  Align getAssumedAlign() const { return Align(getAssumed()); }
 
   /// Return known alignment.
-  uint64_t getKnownAlign() const { return getKnown(); }
+  Align getKnownAlign() const { return Align(getKnown()); }
 
   /// See AbstractAttribute::getName()
   const std::string getName() const override { return "AAAlign"; }
