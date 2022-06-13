@@ -587,9 +587,9 @@ TEST(ToolChainTest, Toolsets) {
                                 llvm::MemoryBuffer::getMemBuffer("\n"));
 
     // File needed for GCC installation detection.
-    InMemoryFileSystem->addFile(
-        "/opt/rh/gcc-toolset-12/lib/gcc/x86_64-redhat-linux/11/crtbegin.o", 0,
-        llvm::MemoryBuffer::getMemBuffer("\n"));
+    InMemoryFileSystem->addFile("/opt/rh/gcc-toolset-12/root/usr/lib/gcc/"
+                                "x86_64-redhat-linux/11/crtbegin.o",
+                                0, llvm::MemoryBuffer::getMemBuffer("\n"));
 
     DiagnosticsEngine Diags(DiagID, &*DiagOpts, new SimpleDiagnosticConsumer);
     Driver TheDriver("/bin/clang", "x86_64-redhat-linux", Diags,
@@ -603,9 +603,9 @@ TEST(ToolChainTest, Toolsets) {
       C->getDefaultToolChain().printVerboseInfo(OS);
     }
     EXPECT_EQ("Found candidate GCC installation: "
-              "/opt/rh/gcc-toolset-12/lib/gcc/x86_64-redhat-linux/11\n"
+              "/opt/rh/gcc-toolset-12/root/usr/lib/gcc/x86_64-redhat-linux/11\n"
               "Selected GCC installation: "
-              "/opt/rh/gcc-toolset-12/lib/gcc/x86_64-redhat-linux/11\n"
+              "/opt/rh/gcc-toolset-12/root/usr/lib/gcc/x86_64-redhat-linux/11\n"
               "Candidate multilib: .;@m64\n"
               "Selected multilib: .;@m64\n",
               S);
@@ -627,9 +627,9 @@ TEST(ToolChainTest, Toolsets) {
                                 llvm::MemoryBuffer::getMemBuffer("\n"));
 
     // File needed for GCC installation detection.
-    InMemoryFileSystem->addFile(
-        "/opt/rh/devtoolset-12/lib/gcc/x86_64-redhat-linux/11/crtbegin.o", 0,
-        llvm::MemoryBuffer::getMemBuffer("\n"));
+    InMemoryFileSystem->addFile("/opt/rh/devtoolset-12/root/usr/lib/gcc/"
+                                "x86_64-redhat-linux/11/crtbegin.o",
+                                0, llvm::MemoryBuffer::getMemBuffer("\n"));
 
     DiagnosticsEngine Diags(DiagID, &*DiagOpts, new SimpleDiagnosticConsumer);
     Driver TheDriver("/bin/clang", "x86_64-redhat-linux", Diags,
@@ -643,9 +643,9 @@ TEST(ToolChainTest, Toolsets) {
       C->getDefaultToolChain().printVerboseInfo(OS);
     }
     EXPECT_EQ("Found candidate GCC installation: "
-              "/opt/rh/devtoolset-12/lib/gcc/x86_64-redhat-linux/11\n"
+              "/opt/rh/devtoolset-12/root/usr/lib/gcc/x86_64-redhat-linux/11\n"
               "Selected GCC installation: "
-              "/opt/rh/devtoolset-12/lib/gcc/x86_64-redhat-linux/11\n"
+              "/opt/rh/devtoolset-12/root/usr/lib/gcc/x86_64-redhat-linux/11\n"
               "Candidate multilib: .;@m64\n"
               "Selected multilib: .;@m64\n",
               S);

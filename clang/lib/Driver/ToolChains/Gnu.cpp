@@ -2154,7 +2154,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     }
 
     if (ChosenToolsetVersion > 0)
-      Prefixes.push_back(ChosenToolsetDir);
+      Prefixes.push_back(ChosenToolsetDir + "/root/usr");
   }
 
   // Fall back to /usr which is used by most non-Solaris systems.
