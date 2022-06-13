@@ -464,8 +464,13 @@ bool AMDGPUInstructionSelector::selectG_AMDGPU_MAD_64_32(
   MachineFunction *MF = BB->getParent();
   const bool IsUnsigned = I.getOpcode() == AMDGPU::G_AMDGPU_MAD_U64_U32;
 
-  I.setDesc(TII.get(IsUnsigned ? AMDGPU::V_MAD_U64_U32_e64
-                               : AMDGPU::V_MAD_I64_I32_e64));
+  unsigned Opc;
+  if (Subtarget->getGeneration() == AMDGPUSubtarget::GFX11)
+    Opc = IsUnsigned ? AMDGPU::V_MAD_U64_U32_gfx11_e64
+                     : AMDGPU::V_MAD_I64_I32_gfx11_e64;
+  else
+    Opc = IsUnsigned ? AMDGPU::V_MAD_U64_U32_e64 : AMDGPU::V_MAD_I64_I32_e64;
+  I.setDesc(TII.get(Opc));
   I.addOperand(*MF, MachineOperand::CreateImm(0));
   I.addImplicitDefUseOperands(*MF);
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
