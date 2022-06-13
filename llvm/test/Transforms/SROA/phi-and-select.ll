@@ -265,10 +265,10 @@ entry:
   ret i32 %result
 }
 
-define i32 @test7(i1 %c1) {
+define i32 @test7() {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[GOOD:%.*]], label [[BAD:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[GOOD:%.*]], label [[BAD:%.*]]
 ; CHECK:       good:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       bad:
@@ -281,7 +281,7 @@ define i32 @test7(i1 %c1) {
 
 entry:
   %X = alloca i32
-  br i1 %c1, label %good, label %bad
+  br i1 undef, label %good, label %bad
 
 good:
   %Y1 = getelementptr i32, i32* %X, i64 0
@@ -422,7 +422,7 @@ entry:
   ret float %loaded
 }
 
-define i32 @test12(i32 %x, i32* %p, i1 %c1) {
+define i32 @test12(i32 %x, i32* %p) {
 ; Ensure we don't crash or fail to nuke dead selects of allocas if no load is
 ; never found.
 ; CHECK-LABEL: @test12(
@@ -433,19 +433,19 @@ define i32 @test12(i32 %x, i32* %p, i1 %c1) {
 entry:
   %a = alloca i32
   store i32 %x, i32* %a
-  %dead = select i1 %c1, i32* %a, i32* %p
+  %dead = select i1 undef, i32* %a, i32* %p
   %load = load i32, i32* %a
   ret i32 %load
 }
 
-define i32 @test13(i32 %x, i32* %p, i1 %c1) {
+define i32 @test13(i32 %x, i32* %p) {
 ; Ensure we don't crash or fail to nuke dead phis of allocas if no load is ever
 ; found.
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
@@ -457,7 +457,7 @@ entry:
 
 loop:
   %phi = phi i32* [ %p, %entry ], [ %a, %loop ]
-  br i1 %c1, label %loop, label %exit
+  br i1 undef, label %loop, label %exit
 
 exit:
   %load = load i32, i32* %a
@@ -514,39 +514,39 @@ exit:
   ret i32 %result
 }
 
-define void @PR13905(i1 %c1, i1 %c2, i1 %c3) {
+define i32 @PR13905() {
 ; Check a pattern where we have a chain of dead phi nodes to ensure they are
 ; deleted and promotion can proceed.
 ; CHECK-LABEL: @PR13905(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOOP1:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[LOOP1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop1:
-; CHECK-NEXT:    br i1 [[C2:%.*]], label [[LOOP1]], label [[LOOP2:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[LOOP1]], label [[LOOP2:%.*]]
 ; CHECK:       loop2:
-; CHECK-NEXT:    br i1 [[C3:%.*]], label [[LOOP1]], label [[EXIT]]
+; CHECK-NEXT:    br i1 undef, label [[LOOP1]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[PHI2:%.*]] = phi i32* [ poison, [[LOOP2]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    ret i32 undef
 ;
 
 entry:
   %h = alloca i32
   store i32 0, i32* %h
-  br i1 %c1, label %loop1, label %exit
+  br i1 undef, label %loop1, label %exit
 
 loop1:
   %phi1 = phi i32* [ null, %entry ], [ %h, %loop1 ], [ %h, %loop2 ]
-  br i1 %c2, label %loop1, label %loop2
+  br i1 undef, label %loop1, label %loop2
 
 loop2:
-  br i1 %c3, label %loop1, label %exit
+  br i1 undef, label %loop1, label %exit
 
 exit:
   %phi2 = phi i32* [ %phi1, %loop2 ], [ null, %entry ]
-  ret void
+  ret i32 undef
 }
 
-define i32 @PR13906(i1 %c1, i1 %c2) {
+define i32 @PR13906() {
 ; Another pattern which can lead to crashes due to failing to clear out dead
 ; PHI nodes or select nodes. This triggers subtly differently from the above
 ; cases because the PHI node is (recursively) alive, but the select is dead.
@@ -554,7 +554,7 @@ define i32 @PR13906(i1 %c1, i1 %c2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_THEN:%.*]], label [[FOR_COND]]
+; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[FOR_COND]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ;
@@ -565,11 +565,11 @@ entry:
   br label %for.cond
 
 for.cond:
-  %d.0 = phi i32* [ poison, %entry ], [ %c, %if.then ], [ %d.0, %for.cond ]
-  br i1 %c1, label %if.then, label %for.cond
+  %d.0 = phi i32* [ undef, %entry ], [ %c, %if.then ], [ %d.0, %for.cond ]
+  br i1 undef, label %if.then, label %for.cond
 
 if.then:
-  %tmpcast.d.0 = select i1 %c2, i32* %c, i32* %d.0
+  %tmpcast.d.0 = select i1 undef, i32* %c, i32* %d.0
   br label %for.cond
 }
 
@@ -749,43 +749,43 @@ merge:
 ; when the incoming pointer is itself from a PHI node. We would previously
 ; insert a bitcast instruction *before* a PHI, producing an invalid module;
 ; make sure we insert *after* the first non-PHI instruction.
-define void @PR20822(i1 %c1, i1 %c2, %struct.S* %ptr) {
+define void @PR20822() {
 ; CHECK-LABEL: @PR20822(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF_END:%.*]], label [[FOR_COND:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[IF_END:%.*]], label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ poison, [[FOR_COND]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ undef, [[FOR_COND]] ]
 ; CHECK-NEXT:    [[F_SROA_0_0_F2_SROA_CAST1:%.*]] = bitcast i32* [[F_SROA_0]] to %struct.S*
-; CHECK-NEXT:    br i1 [[C2:%.*]], label [[IF_THEN5:%.*]], label [[IF_THEN2:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[IF_THEN5:%.*]], label [[IF_THEN2:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    br label [[IF_THEN5]]
 ; CHECK:       if.then5:
-; CHECK-NEXT:    [[F1:%.*]] = phi %struct.S* [ [[PTR:%.*]], [[IF_THEN2]] ], [ [[F_SROA_0_0_F2_SROA_CAST1]], [[IF_END]] ]
+; CHECK-NEXT:    [[F1:%.*]] = phi %struct.S* [ undef, [[IF_THEN2]] ], [ [[F_SROA_0_0_F2_SROA_CAST1]], [[IF_END]] ]
 ; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], %struct.S* [[F1]], i32 0, i32 0
-; CHECK-NEXT:    store i32 0, i32* [[DOTFCA_0_GEP]], align 4
+; CHECK-NEXT:    store i32 undef, i32* [[DOTFCA_0_GEP]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %f = alloca %struct.S, align 4
-  br i1 %c1, label %if.end, label %for.cond
+  br i1 undef, label %if.end, label %for.cond
 
 for.cond:                                         ; preds = %for.cond, %entry
   br label %if.end
 
 if.end:                                           ; preds = %for.cond, %entry
   %f2 = phi %struct.S* [ %f, %entry ], [ %f, %for.cond ]
-  phi i32 [ poison, %entry ], [ poison, %for.cond ]
-  br i1 %c2, label %if.then5, label %if.then2
+  phi i32 [ undef, %entry ], [ undef, %for.cond ]
+  br i1 undef, label %if.then5, label %if.then2
 
 if.then2:                                         ; preds = %if.end
   br label %if.then5
 
 if.then5:                                         ; preds = %if.then2, %if.end
-  %f1 = phi %struct.S* [ %ptr, %if.then2 ], [ %f2, %if.end ]
-  store %struct.S zeroinitializer, %struct.S* %f1, align 4
+  %f1 = phi %struct.S* [ undef, %if.then2 ], [ %f2, %if.end ]
+  store %struct.S undef, %struct.S* %f1, align 4
   ret void
 }
 

@@ -52,7 +52,8 @@ define void @test_address_space_0_1(<2 x i64>* %a, i16 addrspace(1)* %b) {
 
 %struct.struct_test_27.0.13 = type { i32, float, i64, i8, [4 x i32] }
 
-define void @copy_struct([5 x i64] %in.coerce, i8 addrspace(1)* align 4 %ptr) {
+; Function Attrs: nounwind
+define void @copy_struct([5 x i64] %in.coerce) {
 ; CHECK-LABEL: @copy_struct(
 ; CHECK-NOT: memcpy
 for.end:
@@ -61,7 +62,7 @@ for.end:
   store [5 x i64] %in.coerce, [5 x i64]* %0, align 8
   %scevgep9 = getelementptr %struct.struct_test_27.0.13, %struct.struct_test_27.0.13* %in, i32 0, i32 4, i32 0
   %scevgep910 = bitcast i32* %scevgep9 to i8*
-  call void @llvm.memcpy.p1i8.p0i8.i32(i8 addrspace(1)* align 4 %ptr, i8* align 4 %scevgep910, i32 16, i1 false)
+  call void @llvm.memcpy.p1i8.p0i8.i32(i8 addrspace(1)* align 4 undef, i8* align 4 %scevgep910, i32 16, i1 false)
   ret void
 }
  

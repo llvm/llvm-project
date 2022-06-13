@@ -407,10 +407,10 @@ entry:
   ret <4 x float> %ret
 }
 
-define i32 @PR14212(<3 x i8> %val) {
+define i32 @PR14212() {
 ; CHECK-LABEL: @PR14212(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <3 x i8> [[VAL:%.*]] to i24
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <3 x i8> undef to i24
 ; CHECK-NEXT:    [[RETVAL_SROA_2_0_INSERT_EXT:%.*]] = zext i8 undef to i32
 ; CHECK-NEXT:    [[RETVAL_SROA_2_0_INSERT_SHIFT:%.*]] = shl i32 [[RETVAL_SROA_2_0_INSERT_EXT]], 24
 ; CHECK-NEXT:    [[RETVAL_SROA_2_0_INSERT_MASK:%.*]] = and i32 undef, 16777215
@@ -425,7 +425,7 @@ define i32 @PR14212(<3 x i8> %val) {
 entry:
   %retval = alloca <3 x i8>, align 4
 
-  store <3 x i8> %val, <3 x i8>* %retval, align 4
+  store <3 x i8> undef, <3 x i8>* %retval, align 4
   %cast = bitcast <3 x i8>* %retval to i32*
   %load = load i32, i32* %cast, align 4
   ret i32 %load
@@ -612,15 +612,15 @@ entry:
   ret <2 x float> %result
 }
 
-define <4 x float> @test12(<4 x i32> %val) {
+define <4 x float> @test12() {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[VAL:%.*]] to <4 x float>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> undef to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %a = alloca <3 x i32>, align 16
 
   %cast1 = bitcast <3 x i32>* %a to <4 x i32>*
-  store <4 x i32> %val, <4 x i32>* %cast1, align 16
+  store <4 x i32> undef, <4 x i32>* %cast1, align 16
 
   %cast2 = bitcast <3 x i32>* %a to <3 x float>*
   %cast3 = bitcast <3 x float>* %cast2 to <4 x float>*
