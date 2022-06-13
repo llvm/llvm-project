@@ -1341,7 +1341,7 @@ def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1),
                          PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
 
 def : Pat<(riscv_tail (iPTR tglobaladdr:$dst)),
-          (PseudoTAIL texternalsym:$dst)>;
+          (PseudoTAIL tglobaladdr:$dst)>;
 def : Pat<(riscv_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 
