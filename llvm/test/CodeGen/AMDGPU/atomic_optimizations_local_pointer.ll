@@ -969,23 +969,22 @@ define amdgpu_kernel void @add_i32_varying_nouse() {
 ; GFX1164-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1164-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
 ; GFX1164-NEXT:    v_add_nc_u32_e32 v1, v1, v2
+; GFX1164-NEXT:    v_permlane64_b32 v2, v1
 ; GFX1164-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX1164-NEXT:    v_readlane_b32 s2, v1, 0
-; GFX1164-NEXT:    v_readlane_b32 s3, v1, 32
+; GFX1164-NEXT:    v_add_nc_u32_e32 v1, v1, v2
 ; GFX1164-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
-; GFX1164-NEXT:    s_add_i32 s0, s2, s3
-; GFX1164-NEXT:    s_mov_b64 s[2:3], exec
-; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v3, exec_hi, v0
+; GFX1164-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1164-NEXT:    s_mov_b64 s[0:1], exec
+; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v3
 ; GFX1164-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX1164-NEXT:  ; %bb.1:
-; GFX1164-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1164-NEXT:    v_mov_b32_e32 v3, s0
+; GFX1164-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1164-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1164-NEXT:    ds_add_u32 v0, v3
+; GFX1164-NEXT:    ds_add_u32 v3, v0
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:  .LBB3_2:
@@ -2578,23 +2577,22 @@ define amdgpu_kernel void @sub_i32_varying_nouse() {
 ; GFX1164-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1164-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
 ; GFX1164-NEXT:    v_add_nc_u32_e32 v1, v1, v2
+; GFX1164-NEXT:    v_permlane64_b32 v2, v1
 ; GFX1164-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[0:1], -1
-; GFX1164-NEXT:    v_readlane_b32 s2, v1, 0
-; GFX1164-NEXT:    v_readlane_b32 s3, v1, 32
+; GFX1164-NEXT:    v_add_nc_u32_e32 v1, v1, v2
 ; GFX1164-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v0, exec_hi, v0
-; GFX1164-NEXT:    s_add_i32 s0, s2, s3
-; GFX1164-NEXT:    s_mov_b64 s[2:3], exec
-; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX1164-NEXT:    v_mbcnt_hi_u32_b32 v3, exec_hi, v0
+; GFX1164-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1164-NEXT:    s_mov_b64 s[0:1], exec
+; GFX1164-NEXT:    v_cmpx_eq_u32_e32 0, v3
 ; GFX1164-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX1164-NEXT:  ; %bb.1:
-; GFX1164-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1164-NEXT:    v_mov_b32_e32 v3, s0
+; GFX1164-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX1164-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1164-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1164-NEXT:    ds_sub_u32 v0, v3
+; GFX1164-NEXT:    ds_sub_u32 v3, v0
 ; GFX1164-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1164-NEXT:    buffer_gl0_inv
 ; GFX1164-NEXT:  .LBB10_2:

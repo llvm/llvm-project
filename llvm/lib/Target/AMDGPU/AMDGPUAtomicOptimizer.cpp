@@ -311,6 +311,12 @@ Value *AMDGPUAtomicOptimizer::buildReduction(IRBuilder<> &B,
   if (ST->isWave32())
     return V;
 
+  if (ST->hasPermLane64()) {
+    // Reduce across the upper and lower 32 lanes.
+    return buildNonAtomicBinOp(
+        B, Op, V, B.CreateIntrinsic(Intrinsic::amdgcn_permlane64, {}, V));
+  }
+
   // Pick an arbitrary lane from 0..31 and an arbitrary lane from 32..63 and
   // combine them with a scalar operation.
   Function *ReadLane =
