@@ -2591,9 +2591,22 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
     // operator&.
     return;
   }
-  if (isa<BindingDecl>(D)) {
-    // FIXME: proper support for bound declarations.
-    // For now, let's just prevent crashing.
+  if (const auto *BD = dyn_cast<BindingDecl>(D)) {
+    const auto *DD = cast<DecompositionDecl>(BD->getDecomposedDecl());
+
+    if (const auto *ME = dyn_cast<MemberExpr>(BD->getBinding())) {
+      const auto *Field = cast<FieldDecl>(ME->getMemberDecl());
+
+      SVal Base = state->getLValue(DD, LCtx);
+      if (DD->getType()->isReferenceType()) {
+        Base = state->getSVal(Base.getAsRegion());
+      }
+
+      SVal V = state->getLValue(Field, Base);
+
+      Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, V));
+    }
+
     return;
   }
 
