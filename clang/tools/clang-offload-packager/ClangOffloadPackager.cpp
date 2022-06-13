@@ -22,6 +22,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
 
 using namespace llvm;
@@ -71,9 +72,18 @@ int main(int argc, const char **argv) {
   SmallVector<char, 1024> BinaryData;
   raw_svector_ostream OS(BinaryData);
   for (StringRef Image : DeviceImages) {
+    BumpPtrAllocator Alloc;
+    StringSaver Saver(Alloc);
+
     StringMap<StringRef> Args;
-    for (StringRef Arg : llvm::split(Image, ","))
-      Args.insert(Arg.split("="));
+    for (StringRef Arg : llvm::split(Image, ",")) {
+      auto KeyAndValue = Arg.split("=");
+      if (Args.count(KeyAndValue.first))
+        Args[KeyAndValue.first] =
+            Saver.save(Args[KeyAndValue.first] + "," + KeyAndValue.second);
+      else
+        Args[KeyAndValue.first] = KeyAndValue.second;
+    }
 
     if (!Args.count("triple") || !Args.count("file"))
       return reportError(createStringError(

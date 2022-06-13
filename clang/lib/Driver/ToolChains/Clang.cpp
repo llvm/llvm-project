@@ -8303,11 +8303,27 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef Arch = (OffloadAction->getOffloadingArch())
                          ? OffloadAction->getOffloadingArch()
                          : TCArgs.getLastArgValue(options::OPT_march_EQ);
+    StringRef Kind =
+      Action::GetOffloadKindName(OffloadAction->getOffloadingDeviceKind());
 
-    CmdArgs.push_back(Args.MakeArgString(
-        "--image=file=" + File + "," + "triple=" + TC->getTripleString() + "," +
-        "arch=" + Arch + "," + "kind=" +
-        Action::GetOffloadKindName(OffloadAction->getOffloadingDeviceKind())));
+    ArgStringList Features;
+    SmallVector<StringRef> FeatureArgs;
+    getTargetFeatures(TC->getDriver(), TC->getTriple(), Args, Features, false);
+    llvm::copy_if(Features, std::back_inserter(FeatureArgs),
+                  [](StringRef Arg) { return !Arg.startswith("-target"); });
+
+    SmallVector<std::string> Parts{
+        "file=" + File.str(),
+        "triple=" + TC->getTripleString(),
+        "arch=" + Arch.str(),
+        "kind=" + Kind.str(),
+    };
+
+    if (TC->getDriver().isUsingLTO(/* IsOffload */ true))
+      for (StringRef Feature : FeatureArgs)
+        Parts.emplace_back("feature=" + Feature.str());
+
+    CmdArgs.push_back(Args.MakeArgString("--image=" + llvm::join(Parts, ",")));
   }
 
   C.addCommand(std::make_unique<Command>(
@@ -8365,20 +8381,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (D.isUsingLTO(/* IsOffload */ true)) {
-    // Pass in target features for each toolchain.
-    for (auto &I :
-         llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
-      const ToolChain *TC = I.second;
-      const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
-      ArgStringList FeatureArgs;
-      TC->addClangTargetOptions(TCArgs, FeatureArgs, Action::OFK_OpenMP);
-      auto FeatureIt = llvm::find(FeatureArgs, "-target-feature");
-      if (FeatureIt != FeatureArgs.end())
-        CmdArgs.push_back(
-            Args.MakeArgString("-target-feature=" + TC->getTripleString() +
-                               "=" + *(FeatureIt + 1)));
-    }
-
     // Pass in the optimization level to use for LTO.
     if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
       StringRef OOpt;
