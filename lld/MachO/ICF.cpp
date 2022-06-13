@@ -212,9 +212,9 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
   // info matches. For simplicity, we only handle the case where there are only
   // symbols at offset zero within the section (which is typically the case with
   // .subsections_via_symbols.)
-  auto hasCU = [](Defined *d) { return d->unwindEntry != nullptr; };
-  auto itA = std::find_if(ia->symbols.begin(), ia->symbols.end(), hasCU);
-  auto itB = std::find_if(ib->symbols.begin(), ib->symbols.end(), hasCU);
+  auto hasUnwind = [](Defined *d) { return d->unwindEntry != nullptr; };
+  auto itA = std::find_if(ia->symbols.begin(), ia->symbols.end(), hasUnwind);
+  auto itB = std::find_if(ib->symbols.begin(), ib->symbols.end(), hasUnwind);
   if (itA == ia->symbols.end())
     return itB == ib->symbols.end();
   if (itB == ib->symbols.end())
@@ -443,7 +443,9 @@ void macho::foldIdenticalSections() {
                               /*relocVA=*/0);
         isec->data = copy;
       }
-    } else {
+    } else if (!isEhFrameSection(isec)) {
+      // EH frames are gathered as hashables from unwindEntry above; give a
+      // unique ID to everything else.
       isec->icfEqClass[0] = ++icfUniqueID;
     }
   }
