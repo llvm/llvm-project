@@ -58,8 +58,10 @@ func.func @index_scalar(%lhs: index, %rhs: index) {
 }
 
 // CHECK-LABEL: @index_scalar_srem
-// CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
+// CHECK-SAME: (%[[A:.+]]: index, %[[B:.+]]: index)
 func.func @index_scalar_srem(%lhs: index, %rhs: index) {
+  // CHECK: %[[LHS:.+]] = builtin.unrealized_conversion_cast %[[A]] : index to i32
+  // CHECK: %[[RHS:.+]] = builtin.unrealized_conversion_cast %[[B]] : index to i32
   // CHECK: %[[LABS:.+]] = spv.GLSL.SAbs %[[LHS]] : i32
   // CHECK: %[[RABS:.+]] = spv.GLSL.SAbs %[[RHS]] : i32
   // CHECK:  %[[ABS:.+]] = spv.UMod %[[LABS]], %[[RABS]] : i32
@@ -185,10 +187,8 @@ module attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
-// expected-error @+1 {{failed to materialize conversion for block argument #0 that remained live after conversion, type was 'vector<4xi64>', with target type 'vector<4xi32>'}}
 func.func @int_vector4_invalid(%arg0: vector<4xi64>) {
-  // expected-error @+2 {{bitwidth emulation is not implemented yet on unsigned op}}
-  // expected-note @+1 {{see existing live user here}}
+  // expected-error @+1 {{bitwidth emulation is not implemented yet on unsigned op}}
   %0 = arith.divui %arg0, %arg0: vector<4xi64>
   return
 }
@@ -837,8 +837,9 @@ module attributes {
 } {
 
 // CHECK-LABEL: @fpext1
-// CHECK-SAME: %[[ARG:.*]]: f32
+// CHECK-SAME: %[[A:.*]]: f16
 func.func @fpext1(%arg0: f16) -> f64 {
+  // CHECK: %[[ARG:.+]] = builtin.unrealized_conversion_cast %[[A]] : f16 to f32
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f64
   %0 = arith.extf %arg0 : f16 to f64
   return %0: f64
@@ -863,8 +864,9 @@ module attributes {
 } {
 
 // CHECK-LABEL: @fptrunc1
-// CHECK-SAME: %[[ARG:.*]]: f32
+// CHECK-SAME: %[[A:.*]]: f64
 func.func @fptrunc1(%arg0 : f64) -> f16 {
+  // CHECK: %[[ARG:.+]] = builtin.unrealized_conversion_cast %[[A]] : f64 to f32
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f16
   %0 = arith.truncf %arg0 : f64 to f16
   return %0: f16
@@ -1110,10 +1112,8 @@ module attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, #spv.resource_limits<>>
 } {
 
-// expected-error@below {{failed to materialize conversion for block argument #0 that remained live after conversion}}
 func.func @int_vector4_invalid(%arg0: vector<4xi64>) {
-  // expected-error@below {{bitwidth emulation is not implemented yet on unsigned op}}
-  // expected-note@below {{see existing live user here}}
+  // expected-error@+1 {{bitwidth emulation is not implemented yet on unsigned op}}
   %0 = arith.divui %arg0, %arg0: vector<4xi64>
   return
 }
@@ -1733,8 +1733,9 @@ module attributes {
 } {
 
 // CHECK-LABEL: @fpext1
-// CHECK-SAME: %[[ARG:.*]]: f32
+// CHECK-SAME: %[[A:.*]]: f16
 func.func @fpext1(%arg0: f16) -> f64 {
+  // CHECK: %[[ARG:.+]] = builtin.unrealized_conversion_cast %[[A]] : f16 to f32
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f64
   %0 = arith.extf %arg0 : f16 to f64
   return %0: f64
@@ -1759,8 +1760,9 @@ module attributes {
 } {
 
 // CHECK-LABEL: @fptrunc1
-// CHECK-SAME: %[[ARG:.*]]: f32
+// CHECK-SAME: %[[A:.*]]: f64
 func.func @fptrunc1(%arg0 : f64) -> f16 {
+  // CHECK: %[[ARG:.+]] = builtin.unrealized_conversion_cast %[[A]] : f64 to f32
   // CHECK-NEXT: spv.FConvert %[[ARG]] : f32 to f16
   %0 = arith.truncf %arg0 : f64 to f16
   return %0: f16
