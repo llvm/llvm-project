@@ -799,7 +799,9 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     if (remaining_ > 0) {
       repeatPosition_.emplace(io);
     }
-    return edit;
+    if (!imaginaryPart_) {
+      return edit;
+    }
   }
   // Skip separators, handle a "r*c" repeat count; see 13.10.2 in Fortran 2018
   if (imaginaryPart_) {
