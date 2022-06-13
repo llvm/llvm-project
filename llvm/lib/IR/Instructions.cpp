@@ -3088,16 +3088,18 @@ unsigned CastInst::isEliminableCastPair(
       return 0;
     }
     case 8: {
-      // ext, trunc -> bitcast,    if the SrcTy and DstTy are same size
+      // ext, trunc -> bitcast,    if the SrcTy and DstTy are the same
       // ext, trunc -> ext,        if sizeof(SrcTy) < sizeof(DstTy)
       // ext, trunc -> trunc,      if sizeof(SrcTy) > sizeof(DstTy)
       unsigned SrcSize = SrcTy->getScalarSizeInBits();
       unsigned DstSize = DstTy->getScalarSizeInBits();
-      if (SrcSize == DstSize)
+      if (SrcTy == DstTy)
         return Instruction::BitCast;
-      else if (SrcSize < DstSize)
+      if (SrcSize < DstSize)
         return firstOp;
-      return secondOp;
+      if (SrcSize > DstSize)
+        return secondOp;
+      return 0;
     }
     case 9:
       // zext, sext -> zext, because sext can't sign extend after zext

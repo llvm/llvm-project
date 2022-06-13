@@ -429,3 +429,14 @@ define double @FtoItoFtoF_f32_su32_f32_f64(float %f) {
   %r = fpext float %x to double
   ret double %r
 }
+
+define half @bf16_to_f32_to_f16(bfloat %a) nounwind {
+; CHECK-LABEL: @bf16_to_f32_to_f16(
+; CHECK-NEXT:    [[Y:%.*]] = fpext bfloat [[A:%.*]] to float
+; CHECK-NEXT:    [[Z:%.*]] = fptrunc float [[Y]] to half
+; CHECK-NEXT:    ret half [[Z]]
+;
+  %y = fpext bfloat %a to float
+  %z = fptrunc float %y to half
+  ret half %z
+}
