@@ -299,7 +299,7 @@ cc_library(
     includes = ["lib/Dialect/Test"],
     deps = [
         "//llvm:Support",
-        "//mlir:Affine",
+        "//mlir:AffineDialect",
         "//mlir:ArithmeticDialect",
         "//mlir:FuncDialect",
         "//mlir:IR",
