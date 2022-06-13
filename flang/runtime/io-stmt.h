@@ -194,11 +194,16 @@ public:
     return ch;
   }
 
-  template <Direction D> void CheckFormattedStmtType(const char *name) {
-    if (!get_if<FormattedIoStatementState<D>>()) {
-      GetIoErrorHandler().Crash(
-          "%s called for I/O statement that is not formatted %s", name,
-          D == Direction::Output ? "output" : "input");
+  template <Direction D> bool CheckFormattedStmtType(const char *name) {
+    if (get_if<FormattedIoStatementState<D>>()) {
+      return true;
+    } else {
+      if (!get_if<ErroneousIoStatementState>()) {
+        GetIoErrorHandler().Crash(
+            "%s called for I/O statement that is not formatted %s", name,
+            D == Direction::Output ? "output" : "input");
+      }
+      return false;
     }
   }
 
