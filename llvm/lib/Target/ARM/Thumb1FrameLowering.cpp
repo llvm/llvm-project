@@ -453,21 +453,6 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
   MF.getProperties().reset(MachineFunctionProperties::Property::NoVRegs);
 }
 
-static bool isCSRestore(MachineInstr &MI, const MCPhysReg *CSRegs) {
-  if (MI.getOpcode() == ARM::tLDRspi && MI.getOperand(1).isFI() &&
-      isCalleeSavedRegister(MI.getOperand(0).getReg(), CSRegs))
-    return true;
-  else if (MI.getOpcode() == ARM::tPOP) {
-    return true;
-  } else if (MI.getOpcode() == ARM::tMOVr) {
-    Register Dst = MI.getOperand(0).getReg();
-    Register Src = MI.getOperand(1).getReg();
-    return ((ARM::tGPRRegClass.contains(Src) || Src == ARM::LR) &&
-            ARM::hGPRRegClass.contains(Dst));
-  }
-  return false;
-}
-
 void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
@@ -490,14 +475,14 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
     if (NumBytes - ArgRegsSaveSize != 0)
       emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo,
                                    NumBytes - ArgRegsSaveSize, ARM::NoRegister,
-                                   MachineInstr::NoFlags);
+                                   MachineInstr::FrameDestroy);
   } else {
     // Unwind MBBI to point to first LDR / VLDRD.
     if (MBBI != MBB.begin()) {
       do
         --MBBI;
-      while (MBBI != MBB.begin() && isCSRestore(*MBBI, CSRegs));
-      if (!isCSRestore(*MBBI, CSRegs))
+      while (MBBI != MBB.begin() && MBBI->getFlag(MachineInstr::FrameDestroy));
+      if (!MBBI->getFlag(MachineInstr::FrameDestroy))
         ++MBBI;
     }
 
@@ -516,14 +501,16 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
         assert(!MFI.getPristineRegs(MF).test(ARM::R4) &&
                "No scratch register to restore SP from FP!");
         emitThumbRegPlusImmediate(MBB, MBBI, dl, ARM::R4, FramePtr, -NumBytes,
-                                  TII, *RegInfo);
+                                  TII, *RegInfo, MachineInstr::FrameDestroy);
         BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
             .addReg(ARM::R4)
-            .add(predOps(ARMCC::AL));
+            .add(predOps(ARMCC::AL))
+            .setMIFlag(MachineInstr::FrameDestroy);
       } else
         BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr), ARM::SP)
             .addReg(FramePtr)
-            .add(predOps(ARMCC::AL));
+            .add(predOps(ARMCC::AL))
+            .setMIFlag(MachineInstr::FrameDestroy);
     } else {
       // For a large stack frame, we might need a scratch register to store
       // the size of the frame.  We know all callee-save registers are free
@@ -542,10 +529,10 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
         MachineBasicBlock::iterator PMBBI = std::prev(MBBI);
         if (!tryFoldSPUpdateIntoPushPop(STI, MF, &*PMBBI, NumBytes))
           emitPrologueEpilogueSPUpdate(MBB, PMBBI, TII, dl, *RegInfo, NumBytes,
-                                       ScratchRegister, MachineInstr::NoFlags);
+                                       ScratchRegister, MachineInstr::FrameDestroy);
       } else if (!tryFoldSPUpdateIntoPushPop(STI, MF, &*MBBI, NumBytes))
         emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo, NumBytes,
-                                     ScratchRegister, MachineInstr::NoFlags);
+                                     ScratchRegister, MachineInstr::FrameDestroy);
     }
   }
 
@@ -637,7 +624,8 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
       return true;
     MachineInstrBuilder MIB =
         BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII.get(ARM::tPOP_RET))
-            .add(predOps(ARMCC::AL));
+            .add(predOps(ARMCC::AL))
+            .setMIFlag(MachineInstr::FrameDestroy);
     // Copy implicit ops and popped registers, if any.
     for (auto MO: MBBI->operands())
       if (MO.isReg() && (MO.isImplicit() || MO.isDef()))
@@ -725,18 +713,20 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
       .addReg(PopReg, RegState::Define)
       .addReg(ARM::SP)
       .addImm(MBBI->getNumExplicitOperands() - 2)
-      .add(predOps(ARMCC::AL));
+      .add(predOps(ARMCC::AL))
+      .setMIFlag(MachineInstr::FrameDestroy);
     // Move from the temporary register to the LR.
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr))
       .addReg(ARM::LR, RegState::Define)
       .addReg(PopReg, RegState::Kill)
-      .add(predOps(ARMCC::AL));
+      .add(predOps(ARMCC::AL))
+      .setMIFlag(MachineInstr::FrameDestroy);
     // Advance past the pop instruction.
     MBBI++;
     // Increment the SP.
     emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo,
                                  ArgRegsSaveSize + 4, ARM::NoRegister,
-                                 MachineInstr::NoFlags);
+                                 MachineInstr::FrameDestroy);
     return true;
   }
 
@@ -746,7 +736,8 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr))
         .addReg(TemporaryReg, RegState::Define)
         .addReg(PopReg, RegState::Kill)
-        .add(predOps(ARMCC::AL));
+        .add(predOps(ARMCC::AL))
+        .setMIFlag(MachineInstr::FrameDestroy);
   }
 
   if (MBBI != MBB.end() && MBBI->getOpcode() == ARM::tPOP_RET) {
@@ -754,7 +745,8 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
     // perform the opposite conversion: tPOP_RET to tPOP.
     MachineInstrBuilder MIB =
         BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII.get(ARM::tPOP))
-            .add(predOps(ARMCC::AL));
+            .add(predOps(ARMCC::AL))
+            .setMIFlag(MachineInstr::FrameDestroy);
     bool Popped = false;
     for (auto MO: MBBI->operands())
       if (MO.isReg() && (MO.isImplicit() || MO.isDef()) &&
@@ -769,27 +761,31 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
     // Erase the old instruction.
     MBB.erase(MBBI);
     MBBI = BuildMI(MBB, MBB.end(), dl, TII.get(ARM::tBX_RET))
-               .add(predOps(ARMCC::AL));
+               .add(predOps(ARMCC::AL))
+               .setMIFlag(MachineInstr::FrameDestroy);
   }
 
   assert(PopReg && "Do not know how to get LR");
   BuildMI(MBB, MBBI, dl, TII.get(ARM::tPOP))
       .add(predOps(ARMCC::AL))
-      .addReg(PopReg, RegState::Define);
+      .addReg(PopReg, RegState::Define)
+      .setMIFlag(MachineInstr::FrameDestroy);
 
   emitPrologueEpilogueSPUpdate(MBB, MBBI, TII, dl, *RegInfo, ArgRegsSaveSize,
-                               ARM::NoRegister, MachineInstr::NoFlags);
+                               ARM::NoRegister, MachineInstr::FrameDestroy);
 
   BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr))
       .addReg(ARM::LR, RegState::Define)
       .addReg(PopReg, RegState::Kill)
-      .add(predOps(ARMCC::AL));
+      .add(predOps(ARMCC::AL))
+      .setMIFlag(MachineInstr::FrameDestroy);
 
   if (TemporaryReg)
     BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVr))
         .addReg(PopReg, RegState::Define)
         .addReg(TemporaryReg, RegState::Kill)
-        .add(predOps(ARMCC::AL));
+        .add(predOps(ARMCC::AL))
+        .setMIFlag(MachineInstr::FrameDestroy);
 
   return true;
 }
@@ -998,8 +994,9 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
         findNextOrderedReg(std::begin(AllCopyRegs), CopyRegs, AllCopyRegsEnd);
 
     // Create the POP instruction.
-    MachineInstrBuilder PopMIB =
-        BuildMI(MBB, MI, DL, TII.get(ARM::tPOP)).add(predOps(ARMCC::AL));
+    MachineInstrBuilder PopMIB = BuildMI(MBB, MI, DL, TII.get(ARM::tPOP))
+                                     .add(predOps(ARMCC::AL))
+                                     .setMIFlag(MachineInstr::FrameDestroy);
 
     while (HiRegToRestore != AllHighRegsEnd && CopyReg != AllCopyRegsEnd) {
       // Add the low register to the POP.
@@ -1009,7 +1006,8 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
       BuildMI(MBB, MI, DL, TII.get(ARM::tMOVr))
           .addReg(*HiRegToRestore, RegState::Define)
           .addReg(*CopyReg, RegState::Kill)
-          .add(predOps(ARMCC::AL));
+          .add(predOps(ARMCC::AL))
+          .setMIFlag(MachineInstr::FrameDestroy);
 
       CopyReg = findNextOrderedReg(++CopyReg, CopyRegs, AllCopyRegsEnd);
       HiRegToRestore =
@@ -1017,8 +1015,9 @@ bool Thumb1FrameLowering::restoreCalleeSavedRegisters(
     }
   }
 
-  MachineInstrBuilder MIB =
-      BuildMI(MF, DL, TII.get(ARM::tPOP)).add(predOps(ARMCC::AL));
+  MachineInstrBuilder MIB = BuildMI(MF, DL, TII.get(ARM::tPOP))
+                                .add(predOps(ARMCC::AL))
+                                .setMIFlag(MachineInstr::FrameDestroy);
 
   bool NeedsPop = false;
   for (CalleeSavedInfo &Info : llvm::reverse(CSI)) {
