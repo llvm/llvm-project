@@ -47,7 +47,8 @@
 // |                                   |
 // |-----------------------------------|
 // |                                   |
-// | prev_fp, prev_lr                  |
+// | prev_lr                           |
+// | prev_fp                           |
 // | (a.k.a. "frame record")           |
 // |                                   |
 // |- - - - - - - - - - - - - - - - - -| <- fp (r7 or r11)
@@ -209,6 +210,12 @@ bool ARMFrameLowering::hasFP(const MachineFunction &MF) const {
   // Frame pointer required for use within this function.
   return (RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
           MFI.isFrameAddressTaken());
+}
+
+/// isFPReserved - Return true if the frame pointer register should be
+/// considered a reserved register on the scope of the specified function.
+bool ARMFrameLowering::isFPReserved(const MachineFunction &MF) const {
+  return hasFP(MF) || MF.getSubtarget<ARMSubtarget>().createAAPCSFrameChain();
 }
 
 /// hasReservedCallFrame - Under normal circumstances, when a frame pointer is
@@ -1033,6 +1040,9 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // into spill area 1, including the FP in R11.  In either case, it
   // is in area one and the adjustment needs to take place just after
   // that push.
+  // FIXME: The above is not necessary true when PACBTI is enabled.
+  // AAPCS requires use of R11, and PACBTI gets in the way of regular pushes,
+  // so FP ends up on area two.
   MachineBasicBlock::iterator AfterPush;
   if (HasFP) {
     AfterPush = std::next(GPRCS1Push);
@@ -2196,6 +2206,34 @@ bool ARMFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   return true;
 }
 
+static bool requiresAAPCSFrameRecord(const MachineFunction &MF) {
+  const auto &Subtarget = MF.getSubtarget<ARMSubtarget>();
+  return Subtarget.createAAPCSFrameChainLeaf() ||
+         (Subtarget.createAAPCSFrameChain() && MF.getFrameInfo().hasCalls());
+}
+
+// Thumb1 may require a spill when storing to a frame index through FP, for
+// cases where FP is a high register (R11). This scans the function for cases
+// where this may happen.
+static bool canSpillOnFrameIndexAccess(const MachineFunction &MF,
+                                       const TargetFrameLowering &TFI) {
+  const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
+  if (!AFI->isThumb1OnlyFunction())
+    return false;
+
+  for (const auto &MBB : MF)
+    for (const auto &MI : MBB)
+      if (MI.getOpcode() == ARM::tSTRspi || MI.getOpcode() == ARM::tSTRi)
+        for (const auto &Op : MI.operands())
+          if (Op.isFI()) {
+            Register Reg;
+            TFI.getFrameIndexReference(MF, Op.getIndex(), Reg);
+            if (ARM::hGPRRegClass.contains(Reg) && Reg != ARM::SP)
+              return true;
+          }
+  return false;
+}
+
 void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                             BitVector &SavedRegs,
                                             RegScavenger *RS) const {
@@ -2204,7 +2242,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // to take advantage the eliminateFrameIndex machinery. This also ensures it
   // is spilled in the order specified by getCalleeSavedRegs() to make it easier
   // to combine multiple loads / stores.
-  bool CanEliminateFrame = true;
+  bool CanEliminateFrame = !(requiresAAPCSFrameRecord(MF) && hasFP(MF));
   bool CS1Spilled = false;
   bool LRSpilled = false;
   unsigned NumGPRSpills = 0;
@@ -2399,6 +2437,11 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // Functions with VLAs or extremely large call frames are rare, and
     // if a function is allocating more than 1KB of stack, an extra 4-byte
     // slot probably isn't relevant.
+    //
+    // A special case is the scenario where r11 is used as FP, where accesses
+    // to a frame index will require its value to be moved into a low reg.
+    // This is handled later on, once we are able to determine if we have any
+    // fp-relative accesses.
     if (RegInfo->hasBasePointer(MF))
       EstimatedRSStackSizeLimit = (1U << 5) * 4;
     else
@@ -2445,7 +2488,9 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       SavedRegs.set(FramePtr);
       // If the frame pointer is required by the ABI, also spill LR so that we
       // emit a complete frame record.
-      if (MF.getTarget().Options.DisableFramePointerElim(MF) && !LRSpilled) {
+      if ((requiresAAPCSFrameRecord(MF) ||
+           MF.getTarget().Options.DisableFramePointerElim(MF)) &&
+          !LRSpilled) {
         SavedRegs.set(ARM::LR);
         LRSpilled = true;
         NumGPRSpills++;
@@ -2527,7 +2572,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       }
 
       // r7 can be used if it is not being used as the frame pointer.
-      if (!HasFP) {
+      if (!HasFP || FramePtr != ARM::R7) {
         if (SavedRegs.test(ARM::R7)) {
           --RegDeficit;
           LLVM_DEBUG(dbgs() << "%r7 is saved low register, RegDeficit = "
@@ -2648,8 +2693,10 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // to materialize a stack offset. If so, either spill one additional
     // callee-saved register or reserve a special spill slot to facilitate
     // register scavenging. Thumb1 needs a spill slot for stack pointer
-    // adjustments also, even when the frame itself is small.
-    if (BigFrameOffsets && !ExtraCSSpill) {
+    // adjustments and for frame index accesses when FP is high register,
+    // even when the frame itself is small.
+    if (!ExtraCSSpill &&
+        (BigFrameOffsets || canSpillOnFrameIndexAccess(MF, *this))) {
       // If any non-reserved CS register isn't spilled, just spill one or two
       // extra. That should take care of it!
       unsigned NumExtras = TargetAlign.value() / 4;

@@ -546,6 +546,16 @@ def FeatureFixCortexA57AES1742098 : SubtargetFeature<"fix-cortex-a57-aes-1742098
   "FixCortexA57AES1742098", "true",
   "Work around Cortex-A57 Erratum 1742098 / Cortex-A72 Erratum 1655431 (AES)">;
 
+def FeatureAAPCSFrameChain : SubtargetFeature<"aapcs-frame-chain",
+                                              "CreateAAPCSFrameChain", "true",
+                                              "Create an AAPCS compliant frame chain">;
+
+def FeatureAAPCSFrameChainLeaf : SubtargetFeature<"aapcs-frame-chain-leaf",
+                                                  "CreateAAPCSFrameChainLeaf", "true",
+                                                  "Create an AAPCS compliant frame chain "
+                                                  "for leaf functions",
+                                                  [FeatureAAPCSFrameChain]>;
+
 //===----------------------------------------------------------------------===//
 // ARM architecture class
 //
