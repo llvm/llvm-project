@@ -636,8 +636,8 @@ bool ThreadSanitizer::instrumentLoadOrStore(const InstructionInfo &II,
     return true;
   }
 
-  const unsigned Alignment = IsWrite ? cast<StoreInst>(II.Inst)->getAlignment()
-                                     : cast<LoadInst>(II.Inst)->getAlignment();
+  const Align Alignment = IsWrite ? cast<StoreInst>(II.Inst)->getAlign()
+                                  : cast<LoadInst>(II.Inst)->getAlign();
   const bool IsCompoundRW =
       ClCompoundReadBeforeWrite && (II.Flags & InstructionInfo::kCompoundRW);
   const bool IsVolatile = ClDistinguishVolatile &&
@@ -647,7 +647,7 @@ bool ThreadSanitizer::instrumentLoadOrStore(const InstructionInfo &II,
 
   const uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
   FunctionCallee OnAccessFunc = nullptr;
-  if (Alignment == 0 || Alignment >= 8 || (Alignment % (TypeSize / 8)) == 0) {
+  if (Alignment >= Align(8) || (Alignment.value() % (TypeSize / 8)) == 0) {
     if (IsCompoundRW)
       OnAccessFunc = TsanCompoundRW[Idx];
     else if (IsVolatile)
