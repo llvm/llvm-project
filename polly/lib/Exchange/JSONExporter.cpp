@@ -451,14 +451,12 @@ importAccesses(Scop &S, const json::Object &JScop, const DataLayout &DL,
         bool SpecialAlignment = true;
         if (LoadInst *LoadI = dyn_cast<LoadInst>(MA->getAccessInstruction())) {
           SpecialAlignment =
-              LoadI->getAlignment() &&
-              DL.getABITypeAlignment(LoadI->getType()) != LoadI->getAlignment();
+              DL.getABITypeAlign(LoadI->getType()) != LoadI->getAlign();
         } else if (StoreInst *StoreI =
                        dyn_cast<StoreInst>(MA->getAccessInstruction())) {
           SpecialAlignment =
-              StoreI->getAlignment() &&
-              DL.getABITypeAlignment(StoreI->getValueOperand()->getType()) !=
-                  StoreI->getAlignment();
+              DL.getABITypeAlign(StoreI->getValueOperand()->getType()) !=
+              StoreI->getAlign();
         }
 
         if (SpecialAlignment) {
