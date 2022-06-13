@@ -640,14 +640,17 @@ getNewLengths(fir::FirOpBuilder &builder, mlir::Location loc,
   auto idxTy = builder.getIndexType();
   if (auto charTy = box.getEleTy().dyn_cast<fir::CharacterType>()) {
     if (charTy.getLen() == fir::CharacterType::unknownLen()) {
-      if (box.hasNonDeferredLenParams())
+      if (box.hasNonDeferredLenParams()) {
         lengths.emplace_back(
             builder.createConvert(loc, idxTy, box.nonDeferredLenParams()[0]));
-      else if (!lenParams.empty())
-        lengths.emplace_back(builder.createConvert(loc, idxTy, lenParams[0]));
-      else
+      } else if (!lenParams.empty()) {
+        mlir::Value len =
+            fir::factory::genMaxWithZero(builder, loc, lenParams[0]);
+        lengths.emplace_back(builder.createConvert(loc, idxTy, len));
+      } else {
         fir::emitFatalError(
             loc, "could not deduce character lengths in character allocation");
+      }
     }
   }
   return lengths;
@@ -682,10 +685,13 @@ void fir::factory::genInlinedAllocation(fir::FirOpBuilder &builder,
                                         mlir::ValueRange lenParams,
                                         llvm::StringRef allocName) {
   auto lengths = getNewLengths(builder, loc, box, lenParams);
+  llvm::SmallVector<mlir::Value> safeExtents;
+  for (mlir::Value extent : extents)
+    safeExtents.push_back(fir::factory::genMaxWithZero(builder, loc, extent));
   auto heap = builder.create<fir::AllocMemOp>(loc, box.getBaseTy(), allocName,
-                                              lengths, extents);
-  MutablePropertyWriter{builder, loc, box}.updateMutableBox(heap, lbounds,
-                                                            extents, lengths);
+                                              lengths, safeExtents);
+  MutablePropertyWriter{builder, loc, box}.updateMutableBox(
+      heap, lbounds, safeExtents, lengths);
   if (box.getEleTy().isa<fir::RecordType>()) {
     // TODO: skip runtime initialization if this is not required. Currently,
     // there is no way to know here if a derived type needs it or not. But the
