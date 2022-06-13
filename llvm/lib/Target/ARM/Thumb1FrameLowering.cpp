@@ -468,7 +468,6 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
   int NumBytes = (int)MFI.getStackSize();
   assert((unsigned)NumBytes >= ArgRegsSaveSize &&
          "ArgRegsSaveSize is included in NumBytes");
-  const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(&MF);
   Register FramePtr = RegInfo->getFrameRegister(MF);
 
   if (!AFI->hasStackFrame()) {
