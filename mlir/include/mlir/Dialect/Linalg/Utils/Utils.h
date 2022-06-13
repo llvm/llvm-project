@@ -164,11 +164,11 @@ bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
 SmallVector<Value> computeTileOffsets(OpBuilder &b, Location loc,
                                       ValueRange ivs, ValueRange tileSizes);
 
-/// Compute tile sizes, given a list of loop `ivs`, `tileSizes` and dimension
+/// Compute tile sizes, given a list of `tileSizes` and dimension
 /// sizes (`sizeBounds`). In case a tile size is zero (i.e., no tiling), the
 /// corresponding result size is the corresponding value from `sizeBounds`.
 /// Note: The returned tile sizes are closed intervals.
-SmallVector<Value> computeTileSizes(OpBuilder &b, Location loc, ValueRange ivs,
+SmallVector<Value> computeTileSizes(OpBuilder &b, Location loc,
                                     ValueRange tileSizes,
                                     ArrayRef<Value> sizeBounds);
 

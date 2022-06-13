@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
 
@@ -99,6 +100,31 @@ mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
   builder.create<scf::YieldOp>(loop->getLoc(), loop.getRegionIterArgs());
 
   return newLoop;
+}
+
+SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
+    OpBuilder &builder, ArrayRef<scf::ForOp> loopNest,
+    ValueRange newIterOperands, NewYieldValueFn newYieldValueFn) {
+  if (loopNest.empty())
+    return {};
+  SmallVector<scf::ForOp> newLoopNest(loopNest.size());
+
+  newLoopNest.back() = replaceLoopWithNewYields(
+      builder, loopNest.back(), newIterOperands, newYieldValueFn);
+
+  for (unsigned loopDepth :
+       llvm::reverse(llvm::seq<unsigned>(0, loopNest.size() - 1))) {
+    NewYieldValueFn fn = [&](OpBuilder &innerBuilder, Location loc,
+                             ArrayRef<BlockArgument> innerNewBBArgs) {
+      SmallVector<Value> newYields(
+          newLoopNest[loopDepth + 1]->getResults().take_back(
+              newIterOperands.size()));
+      return newYields;
+    };
+    newLoopNest[loopDepth] = replaceLoopWithNewYields(
+        builder, loopNest[loopDepth], newIterOperands, fn);
+  }
+  return newLoopNest;
 }
 
 /// Outline a region with a single block into a new FuncOp.

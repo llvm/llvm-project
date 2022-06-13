@@ -24,6 +24,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   SparseTensorRewriting.cpp
   SplitReduction.cpp
   Tiling.cpp
+  TilingInterfaceImpl.cpp
   Transforms.cpp
   Vectorization.cpp
 

@@ -33,6 +33,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestRewrite
     MLIRTestTransformDialect
     MLIRTestTransforms
+    MLIRTilingInterfaceTestPasses
     MLIRVectorTestPasses
     )
 endif()
