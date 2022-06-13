@@ -62,12 +62,12 @@ public:
       return false;
     }
     if (auto recTy = ty.dyn_cast<RecordType>()) {
+      if (llvm::any_of(visitedTypes,
+                       [&](mlir::Type rt) { return rt == recTy; }))
+        return false;
       bool result = false;
       visitedTypes.push_back(recTy);
       for (auto t : recTy.getTypeList()) {
-        if (llvm::any_of(visitedTypes,
-                         [&](mlir::Type rt) { return rt == recTy; }))
-          continue;
         if (needsConversion(t.second)) {
           result = true;
           break;
@@ -85,9 +85,10 @@ public:
     return false;
   }
 
-  BoxprocTypeRewriter() {
+  BoxprocTypeRewriter(mlir::Location location) : loc{location} {
     addConversion([](mlir::Type ty) { return ty; });
-    addConversion([](BoxProcType boxproc) { return boxproc.getEleTy(); });
+    addConversion(
+        [&](BoxProcType boxproc) { return convertType(boxproc.getEleTy()); });
     addConversion([&](mlir::TupleType tupTy) {
       llvm::SmallVector<mlir::Type> memTys;
       for (auto ty : tupTy.getTypes())
@@ -117,14 +118,21 @@ public:
       // TODO: add ty.getLayoutMap() as needed.
       return SequenceType::get(ty.getShape(), convertType(ty.getEleTy()));
     });
-    addConversion([&](RecordType ty) {
+    addConversion([&](RecordType ty) -> mlir::Type {
+      if (!needsConversion(ty))
+        return ty;
       // FIR record types can have recursive references, so conversion is a bit
       // more complex than the other types. This conversion is not needed
       // presently, so just emit a TODO message. Need to consider the uniqued
-      // name of the record, etc.
+      // name of the record, etc. Also, fir::RecordType::get returns the
+      // existing type being translated. So finalize() will not change it, and
+      // the translation would not do anything. So the type needs to be mutated,
+      // and this might require special care to comply with MLIR infrastructure.
+
+      // TODO: this will be needed to support derived type containing procedure
+      // pointer components.
       fir::emitFatalError(
-          mlir::UnknownLoc::get(ty.getContext()),
-          "not yet implemented: record type with a boxproc type");
+          loc, "not yet implemented: record type with a boxproc type");
       return RecordType::get(ty.getContext(), "*fixme*");
     });
     addArgumentMaterialization(materializeProcedure);
@@ -141,8 +149,11 @@ public:
                                      inputs[0]);
   }
 
+  void setLocation(mlir::Location location) { loc = location; }
+
 private:
   llvm::SmallVector<mlir::Type> visitedTypes;
+  mlir::Location loc;
 };
 
 /// A `boxproc` is an abstraction for a Fortran procedure reference. Typically,
@@ -170,9 +181,10 @@ public:
     if (options.useThunks) {
       auto *context = &getContext();
       mlir::IRRewriter rewriter(context);
-      BoxprocTypeRewriter typeConverter;
+      BoxprocTypeRewriter typeConverter(mlir::UnknownLoc::get(context));
       mlir::Dialect *firDialect = context->getLoadedDialect("fir");
       getModule().walk([&](mlir::Operation *op) {
+        typeConverter.setLocation(op->getLoc());
         if (auto addr = mlir::dyn_cast<BoxAddrOp>(op)) {
           auto ty = addr.getVal().getType();
           if (typeConverter.needsConversion(ty) ||
