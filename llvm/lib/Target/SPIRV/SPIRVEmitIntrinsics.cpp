@@ -288,7 +288,7 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
   auto *NewI =
       IRB->CreateIntrinsic(Intrinsic::spv_load, {I.getOperand(0)->getType()},
                            {I.getPointerOperand(), IRB->getInt16(Flags),
-                            IRB->getInt8(I.getAlignment())});
+                            IRB->getInt8(I.getAlign().value())});
   replaceMemInstrUses(&I, NewI);
   return NewI;
 }
@@ -304,7 +304,7 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
   auto *NewI =
       IRB->CreateIntrinsic(Intrinsic::spv_store, {PtrOp->getType()},
                            {I.getValueOperand(), PtrOp, IRB->getInt16(Flags),
-                            IRB->getInt8(I.getAlignment())});
+                            IRB->getInt8(I.getAlign().value())});
   I.eraseFromParent();
   return NewI;
 }
