@@ -166,7 +166,7 @@ public:
   // This collects the different subcommands that have been registered.
   SmallPtrSet<SubCommand *, 4> RegisteredSubCommands;
 
-  CommandLineParser() : ActiveSubCommand(nullptr) {
+  CommandLineParser() {
     registerSubCommand(&*TopLevelSubCommand);
     registerSubCommand(&*AllSubCommands);
   }
@@ -418,7 +418,7 @@ public:
   }
 
 private:
-  SubCommand *ActiveSubCommand;
+  SubCommand *ActiveSubCommand = nullptr;
 
   Option *LookupOption(SubCommand &Sub, StringRef &Arg, StringRef &Value);
   Option *LookupLongOption(SubCommand &Sub, StringRef &Arg, StringRef &Value,
