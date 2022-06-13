@@ -13,7 +13,7 @@
 ; CHECK: Legally typed node: [[VTWOA]]: v2f64 = BUILD_VECTOR
 ; CHECK: Legalizing node: [[VTWOB:t.*]]: v2f64 = BUILD_VECTOR
 ; CHECK: Legally typed node: [[VTWOB]]: v2f64 = BUILD_VECTOR
-; CHECK: Legalizing node: t34: v2f64 = fmaxnum nnan reassoc [[VTWOB]], [[VTWOA]]
+; CHECK: Legalizing node: t30: v2f64 = fmaxnum nnan reassoc [[VTWOB]], [[VTWOA]]
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"

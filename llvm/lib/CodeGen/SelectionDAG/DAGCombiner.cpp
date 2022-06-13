@@ -19426,6 +19426,41 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       Ops.append(NumElts, DAG.getUNDEF(InVal.getValueType()));
       return UpdateBuildVector(Ops);
     }
+
+    // If we're inserting into the end of a vector as part of an sequence, see
+    // if we can create a BUILD_VECTOR by following the sequence back up the
+    // chain.
+    if (Elt == (NumElts - 1)) {
+      SmallVector<SDValue> ReverseInsertions;
+      ReverseInsertions.push_back(InVal);
+
+      EVT MaxEltVT = InVal.getValueType();
+      SDValue CurVec = InVec;
+      for (unsigned I = 1; I != NumElts; ++I) {
+        if (CurVec.getOpcode() != ISD::INSERT_VECTOR_ELT || !CurVec.hasOneUse())
+          break;
+
+        auto *CurIdx = dyn_cast<ConstantSDNode>(CurVec.getOperand(2));
+        if (!CurIdx || CurIdx->getAPIntValue() != ((NumElts - 1) - I))
+          break;
+        SDValue CurVal = CurVec.getOperand(1);
+        ReverseInsertions.push_back(CurVal);
+        if (VT.isInteger()) {
+          EVT CurValVT = CurVal.getValueType();
+          MaxEltVT = MaxEltVT.bitsGE(CurValVT) ? MaxEltVT : CurValVT;
+        }
+        CurVec = CurVec.getOperand(0);
+      }
+
+      if (ReverseInsertions.size() == NumElts) {
+        for (unsigned I = 0; I != NumElts; ++I) {
+          SDValue Val = ReverseInsertions[(NumElts - 1) - I];
+          Val = VT.isInteger() ? DAG.getAnyExtOrTrunc(Val, DL, MaxEltVT) : Val;
+          Ops.push_back(Val);
+        }
+        return DAG.getBuildVector(VT, DL, Ops);
+      }
+    }
   }
 
   return SDValue();

@@ -593,8 +593,9 @@ define <4 x i64> @insert_v4i64(<4 x i64> %x, i64 %y , i64* %ptr) {
 define <2 x i64> @insert_v2i64(<2 x i64> %x, i64 %y , i64* %ptr) {
 ; CHECK-LABEL: insert_v2i64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrq $1, (%rsi), %xmm0, %xmm0
+; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovq %rdi, %xmm1
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    retq
   %val = load i64, i64* %ptr
   %r1 = insertelement <2 x i64> %x, i64 %val, i32 1
