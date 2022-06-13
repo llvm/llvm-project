@@ -203,7 +203,8 @@ define <1 x i64> @pr49839_vector(i1 %c) {
 ; CHECK:       if:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    ret <1 x i64> <i64 srem (i64 1, i64 ptrtoint (ptr @g to i64))>
+; CHECK-NEXT:    [[PHI:%.*]] = phi <1 x i64> [ poison, [[IF]] ], [ <i64 srem (i64 1, i64 ptrtoint (ptr @g to i64))>, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret <1 x i64> [[PHI]]
 ;
 entry:
   br i1 %c, label %if, label %join
