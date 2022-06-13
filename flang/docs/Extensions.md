@@ -233,6 +233,8 @@ end
 * Legacy names `AND`, `OR`, and `XOR` are accepted as aliases for
   the standard intrinsic functions `IAND`, `IOR`, and `IEOR`
   respectively.
+* A digit count of d=0 is accepted in Ew.0, Dw.0, and Gw.0 output
+  editing if no nonzero scale factor (kP) is in effect.
 
 ### Extensions supported when enabled by options
 
