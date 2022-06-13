@@ -903,12 +903,12 @@ bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
 }
 
 /// Return true if a VSETVLI is required to transition from CurInfo to Require
-/// before MI.  Require corresponds to the result of computeInfoForInstr(MI...)
-/// *before* we clear VLOp in phase3.  We can't recompute and assert it here due
-/// to that muation.
+/// before MI.
 bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
                                      const VSETVLIInfo &Require,
                                      const VSETVLIInfo &CurInfo) const {
+  assert(Require == computeInfoForInstr(MI, MI.getDesc().TSFlags, MRI));
+
   if (CurInfo.isCompatible(MI, Require))
     return false;
 
@@ -1091,19 +1091,6 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
     uint64_t TSFlags = MI.getDesc().TSFlags;
     if (RISCVII::hasSEWOp(TSFlags)) {
       VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
-      if (RISCVII::hasVLOp(TSFlags)) {
-        MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
-        if (VLOp.isReg()) {
-          // Erase the AVL operand from the instruction.
-          VLOp.setReg(RISCV::NoRegister);
-          VLOp.setIsKill(false);
-        }
-        MI.addOperand(MachineOperand::CreateReg(RISCV::VL, /*isDef*/ false,
-                                                /*isImp*/ true));
-      }
-      MI.addOperand(MachineOperand::CreateReg(RISCV::VTYPE, /*isDef*/ false,
-                                              /*isImp*/ true));
-
       if (!CurInfo.isValid()) {
         // We haven't found any vector instructions or VL/VTYPE changes yet,
         // use the predecessor information.
@@ -1132,6 +1119,19 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
           CurInfo = NewInfo;
         }
       }
+
+      if (RISCVII::hasVLOp(TSFlags)) {
+        MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+        if (VLOp.isReg()) {
+          // Erase the AVL operand from the instruction.
+          VLOp.setReg(RISCV::NoRegister);
+          VLOp.setIsKill(false);
+        }
+        MI.addOperand(MachineOperand::CreateReg(RISCV::VL, /*isDef*/ false,
+                                                /*isImp*/ true));
+      }
+      MI.addOperand(MachineOperand::CreateReg(RISCV::VTYPE, /*isDef*/ false,
+                                              /*isImp*/ true));
     }
 
     // If this is something that updates VL/VTYPE that we don't know about, set
