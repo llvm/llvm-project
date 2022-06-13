@@ -21,7 +21,4 @@ group("lib") {
   if (current_os != "baremetal") {
     deps += [ "//compiler-rt/lib/profile" ]
   }
-  if (current_os != "win" && current_os != "mac" && current_os != "baremetal") {
-    deps += [ "//compiler-rt/lib/ubsan:ubsan_shared" ]
-  }
 }
