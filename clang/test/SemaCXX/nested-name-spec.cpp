@@ -473,3 +473,10 @@ namespace DependentTemplateInTrivialNNSLoc {
     x: goto x;
   }
 }
+
+template <typename T>
+struct x; // expected-note {{template is declared here}}
+
+template <typename T>
+int issue55962 = x::a; // expected-error {{use of class template 'x' requires template arguments}} \
+                       // expected-warning {{variable templates are a C++14 extension}}
