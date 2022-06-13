@@ -155,7 +155,8 @@ public:
 private:
   std::vector<std::string> Dependencies;
   std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
-  std::unordered_map<std::string, ModuleDeps> ClangModuleDeps;
+  llvm::MapVector<std::string, ModuleDeps, llvm::StringMap<unsigned>>
+      ClangModuleDeps;
   std::string ContextHash;
   std::vector<std::string> OutputPaths;
   const llvm::StringSet<> &AlreadySeen;
