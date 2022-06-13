@@ -255,7 +255,9 @@ TEST_F(OrcCAPITestBase, MaterializationUnitCreation) {
   LLVMOrcCSymbolMapPair Pair = {Name, Sym};
   LLVMOrcCSymbolMapPair Pairs[] = {Pair};
   LLVMOrcMaterializationUnitRef MU = LLVMOrcAbsoluteSymbols(Pairs, 1);
-  LLVMOrcJITDylibDefine(MainDylib, MU);
+  if (LLVMErrorRef E = LLVMOrcJITDylibDefine(MainDylib, MU))
+    FAIL() << "Unexpected error while adding \"test\" symbol (triple = "
+           << TargetTriple << "): " << toString(E);
   LLVMOrcJITTargetAddress OutAddr;
   if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &OutAddr, "test"))
     FAIL() << "Failed to look up \"test\" symbol (triple = " << TargetTriple
