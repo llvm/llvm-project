@@ -79,6 +79,19 @@ void RewriteMutator::Post(parser::Name &name) {
   }
 }
 
+static bool ReturnsDataPointer(const Symbol &symbol) {
+  if (const Symbol * funcRes{FindFunctionResult(symbol)}) {
+    return IsPointer(*funcRes) && !IsProcedure(*funcRes);
+  } else if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
+    for (auto ref : generic->specificProcs()) {
+      if (ReturnsDataPointer(*ref)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 // Find mis-parsed statement functions and move to stmtFuncsToConvert_ list.
 void RewriteMutator::Post(parser::SpecificationPart &x) {
   auto &list{std::get<std::list<parser::DeclarationConstruct>>(x.t)};
@@ -87,9 +100,9 @@ void RewriteMutator::Post(parser::SpecificationPart &x) {
     if (auto *stmt{std::get_if<stmtFuncType>(&it->u)}) {
       if (const Symbol *
           symbol{std::get<parser::Name>(stmt->statement.value().t).symbol}) {
-        const Symbol *funcRes{FindFunctionResult(*symbol)};
-        isAssignment = symbol->has<ObjectEntityDetails>() ||
-            (funcRes && IsPointer(*funcRes) && !IsProcedure(*funcRes));
+        const Symbol &ultimate{symbol->GetUltimate()};
+        isAssignment =
+            ultimate.has<ObjectEntityDetails>() || ReturnsDataPointer(ultimate);
         if (isAssignment) {
           stmtFuncsToConvert_.emplace_back(std::move(*stmt));
         }
