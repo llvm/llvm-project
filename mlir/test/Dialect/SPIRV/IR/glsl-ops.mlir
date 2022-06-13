@@ -494,10 +494,34 @@ func.func @fmix(%arg0 : f32, %arg1 : f32, %arg2 : f32) -> () {
   return
 }
 
-// -----
 func.func @fmix_vector(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>, %arg2 : vector<3xf32>) -> () {
   // CHECK: {{%.*}} = spv.GLSL.FMix {{%.*}} : vector<3xf32>, {{%.*}} : vector<3xf32>, {{%.*}} : vector<3xf32> -> vector<3xf32>
   %0 = spv.GLSL.FMix %arg0 : vector<3xf32>, %arg1 : vector<3xf32>, %arg2 : vector<3xf32> -> vector<3xf32>
   return
 }
 
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.GLSL.Exp
+//===----------------------------------------------------------------------===//
+
+func.func @findumsb(%arg0 : i32) -> () {
+  // CHECK: spv.GLSL.FindUMsb {{%.*}} : i32
+  %2 = spv.GLSL.FindUMsb %arg0 : i32
+  return
+}
+
+func.func @findumsb_vector(%arg0 : vector<3xi32>) -> () {
+  // CHECK: spv.GLSL.FindUMsb {{%.*}} : vector<3xi32>
+  %2 = spv.GLSL.FindUMsb %arg0 : vector<3xi32>
+  return
+}
+
+// -----
+
+func.func @findumsb(%arg0 : i64) -> () {
+  // expected-error @+1 {{operand #0 must be Int32 or vector of Int32}}
+  %2 = spv.GLSL.FindUMsb %arg0 : i64
+  return
+}
