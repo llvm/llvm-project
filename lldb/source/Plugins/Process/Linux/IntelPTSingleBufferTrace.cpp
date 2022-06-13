@@ -213,8 +213,7 @@ Error IntelPTSingleBufferTrace::Resume() {
   return m_perf_event.EnableWithIoctl();
 }
 
-Expected<std::vector<uint8_t>>
-IntelPTSingleBufferTrace::GetTraceBuffer(size_t offset, size_t size) {
+Expected<std::vector<uint8_t>> IntelPTSingleBufferTrace::GetTraceBuffer() {
   // Disable the perf event to force a flush out of the CPU's internal buffer.
   // Besides, we can guarantee that the CPU won't override any data as we are
   // reading the buffer.
@@ -229,7 +228,7 @@ IntelPTSingleBufferTrace::GetTraceBuffer(size_t offset, size_t size) {
   //
   // This is achieved by the PERF_EVENT_IOC_DISABLE ioctl request, as
   // mentioned in the man page of perf_event_open.
-  return m_perf_event.ReadFlushedOutAuxCyclicBuffer(offset, size);
+  return m_perf_event.GetReadOnlyAuxBuffer();
 }
 
 Expected<IntelPTSingleBufferTrace>

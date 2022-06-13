@@ -327,6 +327,12 @@ protected:
   ///     If it's not a live process session, return an empty list.
   llvm::ArrayRef<Process *> GetPostMortemProcesses();
 
+  /// Dispatcher for live trace data requests with some additional error
+  /// checking.
+  llvm::Expected<std::vector<uint8_t>>
+  GetLiveTraceBinaryData(const TraceGetBinaryDataRequest &request,
+                         uint64_t expected_size);
+
   /// Implementation of \a OnThreadBinaryDataRead() for live threads.
   llvm::Error OnLiveThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
                                          OnBinaryDataReadCallback callback);
@@ -532,19 +538,19 @@ private:
     /// \{
 
     /// tid -> data kind -> size
-    llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, uint64_t>>
+    llvm::DenseMap<lldb::tid_t, llvm::DenseMap<ConstString, uint64_t>>
         live_thread_data;
 
     /// core id -> data kind -> size
-    llvm::DenseMap<lldb::core_id_t, std::unordered_map<std::string, uint64_t>>
+    llvm::DenseMap<lldb::core_id_t, llvm::DenseMap<ConstString, uint64_t>>
         live_core_data_sizes;
     /// core id -> data kind -> bytes
     llvm::DenseMap<lldb::core_id_t,
-                   std::unordered_map<std::string, std::vector<uint8_t>>>
+                   llvm::DenseMap<ConstString, std::vector<uint8_t>>>
         live_core_data;
 
     /// data kind -> size
-    std::unordered_map<std::string, uint64_t> live_process_data;
+    llvm::DenseMap<ConstString, uint64_t> live_process_data;
     /// \}
 
     /// The list of cores being traced. Might be \b None depending on the
@@ -556,11 +562,11 @@ private:
     /// \{
 
     /// tid -> data kind -> file
-    llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, FileSpec>>
+    llvm::DenseMap<lldb::tid_t, llvm::DenseMap<ConstString, FileSpec>>
         postmortem_thread_data;
 
     /// core id -> data kind -> file
-    llvm::DenseMap<lldb::core_id_t, std::unordered_map<std::string, FileSpec>>
+    llvm::DenseMap<lldb::core_id_t, llvm::DenseMap<ConstString, FileSpec>>
         postmortem_core_data;
 
     /// \}
