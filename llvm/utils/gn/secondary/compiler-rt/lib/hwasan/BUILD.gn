@@ -1,4 +1,3 @@
-import("//compiler-rt/gen_version_script.gni")
 import("//compiler-rt/target.gni")
 
 if (current_cpu == "x64") {
@@ -7,16 +6,28 @@ if (current_cpu == "x64") {
   hwasan_name = "hwasan"
 }
 
-gen_version_script("version_script") {
-  extra = "hwasan.syms.extra"
-  output = "$target_gen_dir/hwasan.vers"
-  libs = [
+action("version_script") {
+  script = "//compiler-rt/lib/sanitizer_common/scripts/gen_dynamic_list.py"
+  sources = [ "hwasan.syms.extra" ]
+  deps = [
     ":hwasan",
     ":hwasan_cxx",
   ]
-  lib_names = [
-    "$hwasan_name",
-    "${hwasan_name}_cxx",
+  outputs = [ "$target_gen_dir/hwasan.vers" ]
+  args = [
+    "--version-list",
+    "--extra",
+    rebase_path(sources[0], root_build_dir),
+    rebase_path(
+        "$crt_current_out_dir/libclang_rt.$hwasan_name$crt_current_target_suffix.a",
+        root_build_dir),
+    rebase_path(
+        "$crt_current_out_dir/libclang_rt.${hwasan_name}_cxx$crt_current_target_suffix.a",
+        root_build_dir),
+    "--nm-executable",
+    "nm",
+    "-o",
+    rebase_path(outputs[0], root_build_dir),
   ]
 }
 
