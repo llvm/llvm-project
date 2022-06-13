@@ -13,4 +13,4 @@ int main() {
   return a;  //DexLabel('check')
 }
 
-// DexExpectWatchValue('a', '1.00000', on_line=ref('check'))
+// DexExpectWatchValue('a', '1', on_line=ref('check'))
