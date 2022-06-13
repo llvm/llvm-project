@@ -493,16 +493,15 @@ static int readPrefixes(struct InternalInstruction *insn) {
     insn->displacementSize = (insn->hasAdSize ? 2 : 4);
     insn->immediateSize = (insn->hasOpSize ? 2 : 4);
   } else if (insn->mode == MODE_64BIT) {
+    insn->displacementSize = 4;
     if (insn->rexPrefix && wFromREX(insn->rexPrefix)) {
       insn->registerSize = 8;
       insn->addressSize = (insn->hasAdSize ? 4 : 8);
-      insn->displacementSize = 4;
       insn->immediateSize = 4;
       insn->hasOpSize = false;
     } else {
       insn->registerSize = (insn->hasOpSize ? 2 : 4);
       insn->addressSize = (insn->hasAdSize ? 4 : 8);
-      insn->displacementSize = (insn->hasOpSize ? 2 : 4);
       insn->immediateSize = (insn->hasOpSize ? 2 : 4);
     }
   }

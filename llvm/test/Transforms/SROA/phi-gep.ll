@@ -61,15 +61,15 @@ end:
   ret i32 %load
 }
 
-define i32 @test_sroa_phi_gep_undef(i1 %cond) {
-; CHECK-LABEL: @test_sroa_phi_gep_undef(
+define i32 @test_sroa_phi_gep_poison(i1 %cond) {
+; CHECK-LABEL: @test_sroa_phi_gep_poison(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[PAIR:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI:%.*]] = phi %pair* [ [[A]], [[ENTRY:%.*]] ], [ undef, [[IF_THEN]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi %pair* [ [[A]], [[ENTRY:%.*]] ], [ poison, [[IF_THEN]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[PAIR]], %pair* [[PHI]], i32 0, i32 1
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
@@ -82,7 +82,7 @@ if.then:
   br label %end
 
 end:
-  %phi = phi %pair* [ %a, %entry], [ undef, %if.then ]
+  %phi = phi %pair* [ %a, %entry], [ poison, %if.then ]
   %gep = getelementptr inbounds %pair, %pair* %phi, i32 0, i32 1
   %load = load i32, i32* %gep, align 4
   ret i32 %load
@@ -312,15 +312,15 @@ end:
   ret i32 %load
 }
 
-define void @test_sroa_gep_phi_select_other_block() {
+define void @test_sroa_gep_phi_select_other_block(i1 %c1, i1 %c2, %pair* %ptr) {
 ; CHECK-LABEL: @test_sroa_gep_phi_select_other_block(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [[PAIR:%.*]], align 8
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi %pair* [ [[ALLOCA]], [[ENTRY:%.*]] ], [ [[SELECT:%.*]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    [[SELECT]] = select i1 undef, %pair* [[PHI]], %pair* undef
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[WHILE_BODY]]
+; CHECK-NEXT:    [[SELECT]] = select i1 [[C1:%.*]], %pair* [[PHI]], %pair* [[PTR:%.*]]
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[WHILE_BODY]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [[PAIR]], %pair* [[PHI]], i64 1
 ; CHECK-NEXT:    unreachable
@@ -331,27 +331,28 @@ entry:
 
 while.body:
   %phi = phi %pair* [ %alloca, %entry ], [ %select, %while.body ]
-  %select = select i1 undef, %pair* %phi, %pair* undef
-  br i1 undef, label %exit, label %while.body
+  %select = select i1 %c1, %pair* %phi, %pair* %ptr
+  br i1 %c2, label %exit, label %while.body
 
 exit:
   %gep = getelementptr inbounds %pair, %pair* %phi, i64 1
   unreachable
 }
 
-define void @test_sroa_gep_phi_select_same_block() {
+define void @test_sroa_gep_phi_select_same_block(i1 %c1, i1 %c2, %pair* %ptr) {
 ; CHECK-LABEL: @test_sroa_gep_phi_select_same_block(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [[PAIR:%.*]], align 8
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi %pair* [ [[ALLOCA]], [[ENTRY:%.*]] ], [ [[SELECT:%.*]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    [[SELECT]] = select i1 undef, %pair* [[PHI]], %pair* undef
+; CHECK-NEXT:    [[SELECT]] = select i1 [[C1:%.*]], %pair* [[PHI]], %pair* [[PTR:%.*]]
 ; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr inbounds [[PAIR]], %pair* [[PHI]], i64 1
-; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 undef, %pair* [[PHI_SROA_GEP]], %pair* poison
-; CHECK-NEXT:    br i1 undef, label [[EXIT:%.*]], label [[WHILE_BODY]]
+; CHECK-NEXT:    [[PTR_SROA_GEP:%.*]] = getelementptr inbounds [[PAIR]], %pair* [[PTR]], i64 1
+; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 [[C1]], %pair* [[PHI_SROA_GEP]], %pair* [[PTR_SROA_GEP]]
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[WHILE_BODY]]
 ; CHECK:       exit:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    ret void
 ;
 entry:
   %alloca = alloca %pair, align 8
@@ -359,12 +360,12 @@ entry:
 
 while.body:
   %phi = phi %pair* [ %alloca, %entry ], [ %select, %while.body ]
-  %select = select i1 undef, %pair* %phi, %pair* undef
+  %select = select i1 %c1, %pair* %phi, %pair* %ptr
   %gep = getelementptr inbounds %pair, %pair* %select, i64 1
-  br i1 undef, label %exit, label %while.body
+  br i1 %c2, label %exit, label %while.body
 
 exit:
-  unreachable
+  ret void
 }
 
 define i32 @test_sroa_gep_cast_phi_gep(i1 %cond) {
@@ -416,7 +417,7 @@ end:
   ret i32 %load
 }
 
-define void @unreachable_term() {
+define void @unreachable_term(i1 %c1) {
 ; CHECK-LABEL: @unreachable_term(
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_CAST1:%.*]] = bitcast i32* [[A_SROA_0]] to [3 x i32]*
@@ -427,7 +428,7 @@ define void @unreachable_term() {
 ; CHECK-NEXT:    [[PHI:%.*]] = phi [3 x i32]* [ [[A_SROA_0_0_A_SROA_CAST1]], [[BB1:%.*]] ], [ null, [[BB1_I]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [3 x i32], [3 x i32]* [[PHI]], i64 0, i64 0
 ; CHECK-NEXT:    store i32 0, i32* [[GEP]], align 1
-; CHECK-NEXT:    br i1 undef, label [[BB1_I]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[BB1_I]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
@@ -443,7 +444,7 @@ bb1.i:
   %phi = phi [3 x i32]* [ %a, %bb1 ], [ null, %bb1.i ]
   %gep = getelementptr [3 x i32], [3 x i32]* %phi, i64 0, i64 0
   store i32 0, i32* %gep, align 1
-  br i1 undef, label %bb1.i, label %exit
+  br i1 %c1, label %bb1.i, label %exit
 
 exit:
   br label %bb2
@@ -452,12 +453,12 @@ bb2:
   ret void
 }
 
-define void @constant_value_phi() {
+define void @constant_value_phi(i1 %c1) {
 ; CHECK-LABEL: @constant_value_phi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LAND_LHS_TRUE_I:%.*]]
 ; CHECK:       land.lhs.true.i:
-; CHECK-NEXT:    br i1 undef, label [[COND_END_I:%.*]], label [[COND_END_I]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[COND_END_I:%.*]], label [[COND_END_I]]
 ; CHECK:       cond.end.i:
 ; CHECK-NEXT:    unreachable
 ;
@@ -468,7 +469,7 @@ entry:
   br label %land.lhs.true.i
 
 land.lhs.true.i:                                  ; preds = %entry
-  br i1 undef, label %cond.end.i, label %cond.end.i
+  br i1 %c1, label %cond.end.i, label %cond.end.i
 
 cond.end.i:                                       ; preds = %land.lhs.true.i, %land.lhs.true.i
   %.pre-phi1 = phi i16* [ %cast, %land.lhs.true.i ], [ %cast, %land.lhs.true.i ]

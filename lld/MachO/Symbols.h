@@ -183,6 +183,7 @@ public:
   uint64_t value;
   // size is only calculated for regular (non-bitcode) symbols.
   uint64_t size;
+  // This can be a subsection of either __compact_unwind or __eh_frame.
   ConcatInputSection *unwindEntry = nullptr;
 };
 

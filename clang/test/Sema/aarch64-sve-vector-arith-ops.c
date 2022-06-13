@@ -701,3 +701,11 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(s % f16); // expected-error{{invalid operands to binary expression}}
   (void)(s % f32); // expected-error{{invalid operands to binary expression}}
 }
+
+svint8_t svi8(svint8_t a) {
+  return a + 256; // expected-error{{cannot convert between scalar type 'int' and vector type 'svint8_t' (aka '__SVInt8_t') as implicit conversion would cause truncation}}
+}
+
+svint8_t svi8_128(svint8_t a) {
+  return a + 128; // expected-warning{{implicit conversion from 'int' to 'svint8_t' (aka '__SVInt8_t') changes value from 128 to -128}}
+}
