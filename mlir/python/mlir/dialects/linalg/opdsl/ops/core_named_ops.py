@@ -415,6 +415,26 @@ def depthwise_conv_1d_nwc_wc(I=TensorDef(T1, S.N, S.OW * S.SW + S.KW * S.DW,
 
 
 @linalg_structured_op
+def depthwise_conv_1d_nwc_wcm(I=TensorDef(T1, S.N, S.OW * S.SW + S.KW * S.DW,
+                                          S.IC),
+                              K=TensorDef(T2, S.KW, S.IC, S.CM),
+                              O=TensorDef(U, S.N, S.OW, S.IC, S.CM,
+                                          output=True),
+                              strides=IndexAttrDef(S.SW, default=[1]),
+                              dilations=IndexAttrDef(S.DW, default=[1])):
+  """Performs depth-wise 1-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.ow, D.ic, D.cm, D.kw)
+  O[D.n, D.ow, D.ic, D.cm] += \
+      TypeFn.cast_signed(U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.ic]) * \
+      TypeFn.cast_signed(U, K[D.kw, D.ic, D.cm])
+
+
+@linalg_structured_op
 def depthwise_conv_2d_nhwc_hwc(I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH,
                                            S.OW * S.SW + S.KW * S.DW, S.IC),
                                K=TensorDef(T2, S.KH, S.KW, S.IC),
@@ -534,6 +554,64 @@ def depthwise_conv_2d_nhwc_hwcm_q(I=TensorDef(T1, S.N,
                TypeFn.cast_signed(U, IZp)) *
               (TypeFn.cast_signed(U, K[D.kh, D.kw, D.ic, D.cm]) -
                TypeFn.cast_signed(U, KZp)))
+
+
+@linalg_structured_op
+def depthwise_conv_3d_ndhwc_dhwc(I=TensorDef(T1, S.N, S.OD * S.SD + S.KD * S.DD,
+                                             S.OH * S.SH + S.KH * S.DH,
+                                             S.OW * S.SW + S.KW * S.DW, S.IC),
+                                 K=TensorDef(T2, S.KD, S.KH, S.KW, S.IC),
+                                 O=TensorDef(U, S.N, S.OD, S.OH, S.OW,
+                                             output=True),
+                                 strides=IndexAttrDef(S.SD,
+                                                      S.SH,
+                                                      S.SW,
+                                                      default=[1, 1, 1]),
+                                 dilations=IndexAttrDef(S.DD,
+                                                        S.DH,
+                                                        S.DW,
+                                                        default=[1, 1, 1])):
+  """Performs depth-wise 3-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output. Multiplier is set to 1
+  which is a special case for most depthwise convolutions.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.od, D.oh, D.ow, D.kd, D.kh, D.kw, D.ic)
+  O[D.n, D.od, D.oh, D.ow, D.ic] += TypeFn.cast_signed(
+      U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
+           D.ow * S.SW + D.kw * S.DW, D.ic]) * TypeFn.cast_signed(
+               U, K[D.kd, D.kh, D.kw, D.ic])
+
+
+@linalg_structured_op
+def depthwise_conv_3d_ndhwc_dhwcm(I=TensorDef(T1,
+                                              S.N, S.OD * S.SD + S.KD * S.DD,
+                                              S.OH * S.SH + S.KH * S.DH,
+                                              S.OW * S.SW + S.KW * S.DW, S.IC),
+                                  K=TensorDef(T2, S.KD, S.KH, S.KW, S.IC, S.CM),
+                                  O=TensorDef(U, S.N, S.OD, S.OH, S.OW, S.CM,
+                                              output=True),
+                                  strides=IndexAttrDef(S.SD,
+                                                       S.SH,
+                                                       S.SW,
+                                                       default=[1, 1, 1]),
+                                  dilations=IndexAttrDef(S.DD,
+                                                         S.DH,
+                                                         S.DW,
+                                                         default=[1, 1, 1])):
+  """Performs depth-wise 3-D convolution.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.od, D.oh, D.ow, D.cm, D.kd, D.kh, D.kw, D.ic)
+  O[D.n, D.od, D.oh, D.ow, D.ic, D.cm] += TypeFn.cast_signed(
+      U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
+           D.ow * S.SW + D.kw * S.DW, D.ic]) * TypeFn.cast_signed(
+               U, K[D.kd, D.kh, D.kw, D.ic, D.cm])
 
 
 @linalg_structured_op
