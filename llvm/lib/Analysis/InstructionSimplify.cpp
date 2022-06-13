@@ -4846,8 +4846,8 @@ static Value *simplifyPHINode(PHINode *PN, ArrayRef<Value *> IncomingValues,
   if (HasUndefInput) {
     // We cannot start executing a trapping constant expression on more control
     // flow paths.
-    auto *CE = dyn_cast<ConstantExpr>(CommonValue);
-    if (CE && CE->canTrap())
+    auto *C = dyn_cast<Constant>(CommonValue);
+    if (C && C->canTrap())
       return nullptr;
 
     // If we have a PHI node like phi(X, undef, X), where X is defined by some
