@@ -125,7 +125,7 @@ struct AssumingOpInterface
 /// ops, so this is for analysis only.
 struct AssumingYieldOpInterface
     : public BufferizableOpInterface::ExternalModel<AssumingYieldOpInterface,
-                                                    shape::AssumingOp> {
+                                                    shape::AssumingYieldOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
     return true;
