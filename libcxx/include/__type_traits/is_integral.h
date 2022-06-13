@@ -30,10 +30,8 @@ template <>          struct __libcpp_is_integral<wchar_t>            { enum { va
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
 template <>          struct __libcpp_is_integral<char8_t>            { enum { value = 1 }; };
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 template <>          struct __libcpp_is_integral<char16_t>           { enum { value = 1 }; };
 template <>          struct __libcpp_is_integral<char32_t>           { enum { value = 1 }; };
-#endif
 template <>          struct __libcpp_is_integral<short>              { enum { value = 1 }; };
 template <>          struct __libcpp_is_integral<unsigned short>     { enum { value = 1 }; };
 template <>          struct __libcpp_is_integral<int>                { enum { value = 1 }; };

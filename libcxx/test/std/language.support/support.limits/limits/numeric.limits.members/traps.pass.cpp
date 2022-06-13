@@ -41,10 +41,8 @@ int main(int, char**)
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
     test<char8_t, integral_types_trap>();
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     test<char16_t, integral_types_trap>();
     test<char32_t, integral_types_trap>();
-#endif
     test<short, integral_types_trap>();
     test<unsigned short, integral_types_trap>();
     test<int, integral_types_trap>();

@@ -63,10 +63,8 @@ int main(int, char**)
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     test<std::u8string_view>();
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     test<std::u16string_view>();
     test<std::u32string_view>();
-#endif
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::wstring_view>();
 #endif

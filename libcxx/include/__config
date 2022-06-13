@@ -206,8 +206,6 @@
 #    define _LIBCPP_COMPILER_GCC
 #  elif defined(_MSC_VER)
 #    define _LIBCPP_COMPILER_MSVC
-#  elif defined(__IBMCPP__)
-#    define _LIBCPP_COMPILER_IBM
 #  endif
 
 #  if defined(_LIBCPP_COMPILER_GCC) && __cplusplus < 201103L
@@ -510,28 +508,7 @@ typedef __char32_t char32_t;
 
 #    define _LIBCPP_DISABLE_EXTENSION_WARNING
 
-#  elif defined(_LIBCPP_COMPILER_IBM)
-
-#    define _ALIGNAS(x) __attribute__((__aligned__(x)))
-#    define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
-#    define _ATTRIBUTE(x) __attribute__((x))
-#    define _LIBCPP_NORETURN __attribute__((noreturn))
-
-#    define _LIBCPP_HAS_NO_UNICODE_CHARS
-
-#    if defined(_AIX)
-#      define __MULTILOCALE_API
-#    endif
-
-#    define _LIBCPP_HAS_NO_ASAN
-
-#    define _LIBCPP_ALWAYS_INLINE __attribute__((__always_inline__))
-
-#    define _LIBCPP_HAS_NO_VECTOR_EXTENSION
-
-#    define _LIBCPP_DISABLE_EXTENSION_WARNING
-
-#  endif // _LIBCPP_COMPILER_[CLANG|GCC|MSVC|IBM]
+#  endif // _LIBCPP_COMPILER_[CLANG|GCC|MSVC]
 
 #  if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
@@ -745,11 +722,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  else
 #    define _NOEXCEPT throw()
 #    define _NOEXCEPT_(x)
-#  endif
-
-#  ifdef _LIBCPP_HAS_NO_UNICODE_CHARS
-    typedef unsigned short char16_t;
-typedef unsigned int char32_t;
 #  endif
 
 #  ifndef __SIZEOF_INT128__

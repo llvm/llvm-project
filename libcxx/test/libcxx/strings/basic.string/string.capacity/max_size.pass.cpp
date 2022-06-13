@@ -34,12 +34,10 @@ void full_size() {
   assert(wstr.max_size() == std::numeric_limits<size_t>::max() / sizeof(wchar_t) - alignment);
 #endif
 
-#ifndef TEST_HAS_NO_UNICODE_CHARS
   std::u16string u16str;
   std::u32string u32str;
   assert(u16str.max_size() == std::numeric_limits<size_t>::max() / 2 - alignment);
   assert(u32str.max_size() == std::numeric_limits<size_t>::max() / 4 - alignment);
-#endif
 }
 
 void half_size() {
@@ -56,12 +54,10 @@ void half_size() {
   assert(wstr.max_size() == std::numeric_limits<size_t>::max() / std::max<size_t>(2ul, sizeof(wchar_t)) - alignment);
 #endif
 
-#ifndef TEST_HAS_NO_UNICODE_CHARS
   std::u16string u16str;
   std::u32string u32str;
   assert(u16str.max_size() == std::numeric_limits<size_t>::max() / 2 - alignment);
   assert(u32str.max_size() == std::numeric_limits<size_t>::max() / 4 - alignment);
-#endif
 }
 
 bool test() {

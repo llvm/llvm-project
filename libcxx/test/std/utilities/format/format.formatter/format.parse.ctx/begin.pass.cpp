@@ -40,10 +40,8 @@ constexpr bool test() {
 #ifndef TEST_HAS_NO_CHAR8_T
   test(u8"abc");
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
   test(u"abc");
   test(U"abc");
-#endif
 
   return true;
 }

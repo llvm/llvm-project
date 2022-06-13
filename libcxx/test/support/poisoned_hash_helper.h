@@ -60,10 +60,8 @@ using LibraryHashTypes = TypeList<
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
       wchar_t,
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
       char16_t,
       char32_t,
-#endif
       short,
       unsigned short,
       int,

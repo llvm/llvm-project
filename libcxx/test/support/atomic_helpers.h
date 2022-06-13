@@ -81,10 +81,8 @@ struct TestEachIntegralType {
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
     TestFunctor<char8_t>()();
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     TestFunctor<char16_t>()();
     TestFunctor<char32_t>()();
-#endif
     TestFunctor<int8_t>()();
     TestFunctor<uint8_t>()();
     TestFunctor<int16_t>()();
