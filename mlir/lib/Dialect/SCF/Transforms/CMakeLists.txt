@@ -32,6 +32,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRSCFUtils
   MLIRSupport
   MLIRTensorDialect
+  MLIRTilingInterface
   MLIRTransforms
   MLIRTransformUtils
 )

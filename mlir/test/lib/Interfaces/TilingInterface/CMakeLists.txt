@@ -4,12 +4,12 @@ add_mlir_library(MLIRTilingInterfaceTestPasses
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  MLIRAffine
-  MLIRArithmetic
-  MLIRLinalg
+  MLIRAffineDialect
+  MLIRArithmeticDialect
+  MLIRLinalgDialect
   MLIRLinalgTransforms
-  MLIRMemRef
-  MLIRSCF
+  MLIRMemRefDialect
+  MLIRSCFDialect
   MLIRSCFTransforms
-  MLIRTensor
+  MLIRTensorDialect
   )
