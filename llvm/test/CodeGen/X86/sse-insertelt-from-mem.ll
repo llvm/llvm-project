@@ -379,26 +379,15 @@ define <4 x i32> @insert_i32_two_elts(<4 x i32> %x, i32* %s.addr) {
 }
 
 define <2 x i64> @insert_i64_two_elts(<2 x i64> %x, i64* %s.addr) {
-; SSE2-LABEL: insert_i64_two_elts:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq (%rdi), %rax
-; SSE2-NEXT:    movq %rax, %xmm0
-; SSE2-NEXT:    movq %rax, %xmm1
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: insert_i64_two_elts:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq (%rdi), %rax
-; SSE41-NEXT:    pinsrq $0, %rax, %xmm0
-; SSE41-NEXT:    pinsrq $1, %rax, %xmm0
-; SSE41-NEXT:    retq
+; SSE-LABEL: insert_i64_two_elts:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: insert_i64_two_elts:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movq (%rdi), %rax
-; AVX-NEXT:    vpinsrq $0, %rax, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm0
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; AVX-NEXT:    retq
   %s = load i64, i64* %s.addr
   %i0 = insertelement <2 x i64> %x, i64 %s, i32 0

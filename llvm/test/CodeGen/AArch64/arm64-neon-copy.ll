@@ -258,9 +258,7 @@ define <2 x i32> @ins4s2(<4 x i32> %tmp1, <2 x i32> %tmp2) {
 define <1 x i64> @ins2d1(<2 x i64> %tmp1, <1 x i64> %tmp2) {
 ; CHECK-LABEL: ins2d1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    mov v1.d[0], v0.d[0]
-; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <2 x i64> %tmp1, i32 0
   %tmp4 = insertelement <1 x i64> %tmp2, i64 %tmp3, i32 0
@@ -282,7 +280,7 @@ define <2 x float> @ins4f2(<4 x float> %tmp1, <2 x float> %tmp2) {
 define <1 x double> @ins2f1(<2 x double> %tmp1, <1 x double> %tmp2) {
 ; CHECK-LABEL: ins2f1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v0.2d, v0.d[1]
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %tmp3 = extractelement <2 x double> %tmp1, i32 1

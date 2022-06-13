@@ -257,10 +257,7 @@ define <2 x i32> @ins4s2(<4 x i32> %tmp1, <2 x i32> %tmp2) {
 define <1 x i64> @ins2d1(<2 x i64> %tmp1, <1 x i64> %tmp2) {
 ; CHECK-LABEL: ins2d1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    vmov.32 d2[0], r0
-; CHECK-NEXT:    vmov.32 d2[1], r1
-; CHECK-NEXT:    vorr d0, d2, d2
+; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bx lr
   %tmp3 = extractelement <2 x i64> %tmp1, i32 0
   %tmp4 = insertelement <1 x i64> %tmp2, i64 %tmp3, i32 0

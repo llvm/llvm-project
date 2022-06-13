@@ -7,13 +7,9 @@
 define <1 x i1> @insertelt_v1i1(<1 x i1> %x, i1 %elt) nounwind {
 ; CHECK-LABEL: insertelt_v1i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, mu
-; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
-; CHECK-NEXT:    vand.vi v8, v8, 1
+; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %y = insertelement <1 x i1> %x, i1 %elt, i64 0

@@ -8,7 +8,8 @@
 define x86_mmx @mmx_movzl(x86_mmx %x) nounwind {
 ; X86-LABEL: mmx_movzl:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}, %mm0
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    movd %eax, %mm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mmx_movzl:
