@@ -563,7 +563,7 @@ void BinaryBasicBlock::dump() const {
   if (Label)
     outs() << Label->getName() << ":\n";
   BC.printInstructions(outs(), Instructions.begin(), Instructions.end(),
-                       getOffset());
+                       getOffset(), Function);
   outs() << "preds:";
   for (auto itr = pred_begin(); itr != pred_end(); ++itr) {
     outs() << " " << (*itr)->getName();
