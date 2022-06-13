@@ -214,7 +214,6 @@ namespace std {
 #include <__string/char_traits.h>
 #include <compare>
 #include <iosfwd>
-#include <iterator> // TODO: Remove this include
 #include <limits>
 #include <stdexcept>
 #include <type_traits>

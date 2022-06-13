@@ -473,7 +473,6 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <__node_handle>
 #include <__utility/forward.h>
 #include <compare>
-#include <iterator> // TODO: Remove this include
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
