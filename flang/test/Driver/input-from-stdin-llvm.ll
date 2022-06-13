@@ -1,5 +1,7 @@
 ; Verify that reading from stdin works as expected - LLVM input
 
+; REQUIRES: aarch64-registered-target
+
 ;----------
 ; RUN LINES
 ;----------
@@ -9,8 +11,8 @@
 ; RUN: cat %s | not %flang_fc1 -S - -o -
 
 ; Input type is explicit
-; RUN: cat %s | %flang -x ir -S - -o - | FileCheck %s
-; RUN: cat %s | %flang_fc1 -x ir -S - -o - | FileCheck %s
+; RUN: cat %s | %flang -x ir -S -target aarch64-unknown-linux-gnu - -o - | FileCheck %s
+; RUN: cat %s | %flang_fc1 -x ir -S -triple aarch64-unknown-linux-gnu - -o - | FileCheck %s
 
 ;----------------
 ; EXPECTED OUTPUT
