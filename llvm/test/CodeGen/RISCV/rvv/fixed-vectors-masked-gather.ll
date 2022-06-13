@@ -41,9 +41,8 @@ define <1 x i8> @mgather_v1i8(<1 x i8*> %ptrs, <1 x i1> %m, <1 x i8> %passthru) 
 ; RV64ZVE32F-NEXT:    andi a1, a1, 1
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB0_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.load
-; RV64ZVE32F-NEXT:    lb a0, 0(a0)
-; RV64ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, tu, mu
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
+; RV64ZVE32F-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
+; RV64ZVE32F-NEXT:    vlse8.v v8, (a0), zero
 ; RV64ZVE32F-NEXT:  .LBB0_2: # %else
 ; RV64ZVE32F-NEXT:    ret
   %v = call <1 x i8> @llvm.masked.gather.v1i8.v1p0i8(<1 x i8*> %ptrs, i32 1, <1 x i1> %m, <1 x i8> %passthru)
@@ -1012,9 +1011,8 @@ define <1 x i16> @mgather_v1i16(<1 x i16*> %ptrs, <1 x i1> %m, <1 x i16> %passth
 ; RV64ZVE32F-NEXT:    andi a1, a1, 1
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB13_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.load
-; RV64ZVE32F-NEXT:    lh a0, 0(a0)
-; RV64ZVE32F-NEXT:    vsetivli zero, 1, e16, mf2, tu, mu
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
+; RV64ZVE32F-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
+; RV64ZVE32F-NEXT:    vlse16.v v8, (a0), zero
 ; RV64ZVE32F-NEXT:  .LBB13_2: # %else
 ; RV64ZVE32F-NEXT:    ret
   %v = call <1 x i16> @llvm.masked.gather.v1i16.v1p0i16(<1 x i16*> %ptrs, i32 2, <1 x i1> %m, <1 x i16> %passthru)
@@ -2325,9 +2323,8 @@ define <1 x i32> @mgather_v1i32(<1 x i32*> %ptrs, <1 x i1> %m, <1 x i32> %passth
 ; RV64ZVE32F-NEXT:    andi a1, a1, 1
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB27_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.load
-; RV64ZVE32F-NEXT:    lw a0, 0(a0)
-; RV64ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, tu, mu
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
+; RV64ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV64ZVE32F-NEXT:    vlse32.v v8, (a0), zero
 ; RV64ZVE32F-NEXT:  .LBB27_2: # %else
 ; RV64ZVE32F-NEXT:    ret
   %v = call <1 x i32> @llvm.masked.gather.v1i32.v1p0i32(<1 x i32*> %ptrs, i32 4, <1 x i1> %m, <1 x i32> %passthru)
@@ -7574,9 +7571,8 @@ define <1 x half> @mgather_v1f16(<1 x half*> %ptrs, <1 x i1> %m, <1 x half> %pas
 ; RV64ZVE32F-NEXT:    andi a1, a1, 1
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB58_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.load
-; RV64ZVE32F-NEXT:    flh ft0, 0(a0)
-; RV64ZVE32F-NEXT:    vsetivli zero, 1, e16, mf2, tu, mu
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, ft0
+; RV64ZVE32F-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
+; RV64ZVE32F-NEXT:    vlse16.v v8, (a0), zero
 ; RV64ZVE32F-NEXT:  .LBB58_2: # %else
 ; RV64ZVE32F-NEXT:    ret
   %v = call <1 x half> @llvm.masked.gather.v1f16.v1p0f16(<1 x half*> %ptrs, i32 2, <1 x i1> %m, <1 x half> %passthru)
@@ -8594,9 +8590,8 @@ define <1 x float> @mgather_v1f32(<1 x float*> %ptrs, <1 x i1> %m, <1 x float> %
 ; RV64ZVE32F-NEXT:    andi a1, a1, 1
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB68_2
 ; RV64ZVE32F-NEXT:  # %bb.1: # %cond.load
-; RV64ZVE32F-NEXT:    flw ft0, 0(a0)
-; RV64ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, tu, mu
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, ft0
+; RV64ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV64ZVE32F-NEXT:    vlse32.v v8, (a0), zero
 ; RV64ZVE32F-NEXT:  .LBB68_2: # %else
 ; RV64ZVE32F-NEXT:    ret
   %v = call <1 x float> @llvm.masked.gather.v1f32.v1p0f32(<1 x float*> %ptrs, i32 4, <1 x i1> %m, <1 x float> %passthru)

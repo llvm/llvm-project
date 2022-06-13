@@ -862,14 +862,12 @@ define i32 @lowmask_mul_zext(i8 %x, i32 %y) {
   ret i32 %r
 }
 
-; TODO: we could have narrowed the xor
-
 define i32 @lowmask_xor_zext_commute(i8 %x, i32 %p) {
 ; CHECK-LABEL: @lowmask_xor_zext_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul i32 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[ZX:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[Y_MASKED:%.*]] = and i32 [[Y]], 255
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Y_MASKED]], [[ZX]]
+; CHECK-NEXT:    [[Y_TR:%.*]] = trunc i32 [[Y]] to i8
+; CHECK-NEXT:    [[BO_NARROW:%.*]] = xor i8 [[Y_TR]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i8 [[BO_NARROW]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %y = mul i32 %p, %p ; thwart complexity-based canonicalization
@@ -879,13 +877,11 @@ define i32 @lowmask_xor_zext_commute(i8 %x, i32 %p) {
   ret i32 %r
 }
 
-; TODO: we could have narrowed the or
-
 define i24 @lowmask_or_zext_commute(i16 %x, i24 %y) {
 ; CHECK-LABEL: @lowmask_or_zext_commute(
-; CHECK-NEXT:    [[ZX:%.*]] = zext i16 [[X:%.*]] to i24
-; CHECK-NEXT:    [[Y_MASKED:%.*]] = and i24 [[Y:%.*]], 65535
-; CHECK-NEXT:    [[R:%.*]] = or i24 [[Y_MASKED]], [[ZX]]
+; CHECK-NEXT:    [[Y_TR:%.*]] = trunc i24 [[Y:%.*]] to i16
+; CHECK-NEXT:    [[BO_NARROW:%.*]] = or i16 [[Y_TR]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i16 [[BO_NARROW]] to i24
 ; CHECK-NEXT:    ret i24 [[R]]
 ;
   %zx = zext i16 %x to i24

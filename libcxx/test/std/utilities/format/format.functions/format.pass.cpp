@@ -19,9 +19,9 @@
 // <format>
 
 // template<class... Args>
-//   string format(string_view fmt, const Args&... args);
+//   string format(format-string<Args...> fmt, const Args&... args);
 // template<class... Args>
-//   wstring format(wstring_view fmt, const Args&... args);
+//   wstring format(wformat-string<Args...> fmt, const Args&... args);
 
 #include <format>
 #include <cassert>
@@ -48,31 +48,11 @@ auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string
   assert(out == expected);
 };
 
-auto test_exception = []<class CharT, class... Args>(std::string_view what, std::basic_string_view<CharT> fmt,
-                                                     const Args&... args) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  try {
-    std::format(fmt, args...);
-#  ifndef TEST_HAS_NO_LOCALIZATION
-    if constexpr (std::same_as<CharT, char>)
-      std::cerr << "\nFormat string   " << fmt << "\nDidn't throw an exception.\n";
-#  endif
-    assert(false);
-  } catch (const std::format_error& e) {
-    if constexpr (std::same_as<CharT, char>)
-#  if defined(_LIBCPP_VERSION) && !defined(TEST_HAS_NO_LOCALIZATION)
-      if (e.what() != what)
-        std::cerr << "\nFormat string   " << fmt << "\nExpected exception " << what << "\nActual exception   "
-                  << e.what() << '\n';
-#  endif
-    LIBCPP_ASSERT(e.what() == what);
-    return;
-  }
-  assert(false);
-#endif
-  (void)what;
-  (void)fmt;
-  (void)sizeof...(args);
+auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, const Args&...) {
+  // After P2216 most exceptions thrown by std::format become ill-formed.
+  // Therefore this tests does nothing.
+  // A basic ill-formed test is done in format.verify.cpp
+  // The exceptions are tested by other functions that don't use the basic-format-string as fmt argument.
 };
 
 int main(int, char**) {

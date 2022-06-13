@@ -67,6 +67,7 @@ template <typename T> class SmallVectorImpl;
 class SMDiagnostic;
 class SMLoc;
 class SourceMgr;
+enum class EmitDwarfUnwindType;
 
 /// Context object for machine code objects.  This class owns all of the
 /// sections that it creates.
@@ -772,6 +773,7 @@ public:
   bool getGenDwarfForAssembly() { return GenDwarfForAssembly; }
   void setGenDwarfForAssembly(bool Value) { GenDwarfForAssembly = Value; }
   unsigned getGenDwarfFileNumber() { return GenDwarfFileNumber; }
+  EmitDwarfUnwindType emitDwarfUnwindInfo() const;
 
   void setGenDwarfFileNumber(unsigned FileNumber) {
     GenDwarfFileNumber = FileNumber;

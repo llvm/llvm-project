@@ -15,10 +15,10 @@
 ; In this case doing the speculation would create an invalid GEP(@var, 0, 1) and
 ; crash.
 
-define i1 @test_constant_speculation() {
+define i1 @test_constant_speculation(i1 %c) {
 ; CHECK-LABEL: @test_constant_speculation(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[END:%.*]], label [[SELECT:%.*]]
+; CHECK-NEXT:    br i1 %c, label [[END:%.*]], label [[SELECT:%.*]]
 ; CHECK:       select:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
@@ -27,7 +27,7 @@ define i1 @test_constant_speculation() {
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
-  br i1 undef, label %end, label %select
+  br i1 %c, label %end, label %select
 
 select:
 

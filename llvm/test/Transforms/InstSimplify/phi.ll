@@ -195,3 +195,24 @@ join:
   %phi = phi i64 [ srem (i64 1, i64 ptrtoint (ptr @g to i64)), %if ], [ srem (i64 1, i64 ptrtoint (ptr @g to i64)) , %entry ]
   ret i64 %phi
 }
+
+define <1 x i64> @pr49839_vector(i1 %c) {
+; CHECK-LABEL: @pr49839_vector(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi <1 x i64> [ poison, [[IF]] ], [ <i64 srem (i64 1, i64 ptrtoint (ptr @g to i64))>, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret <1 x i64> [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi <1 x i64> [ poison, %if ], [ <i64 srem (i64 1, i64 ptrtoint (ptr @g to i64))>, %entry ]
+  ret <1 x i64> %phi
+}
