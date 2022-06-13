@@ -1926,9 +1926,9 @@ def NonNull : InheritableParamAttr {
     bool isNonNull(unsigned IdxAST) const {
       if (!args_size())
         return true;
-      return args_end() != std::find_if(
-          args_begin(), args_end(),
-          [=](const ParamIdx &Idx) { return Idx.getASTIndex() == IdxAST; });
+      return llvm::any_of(args(), [=](const ParamIdx &Idx) {
+        return Idx.getASTIndex() == IdxAST;
+      });
     }
   }];
   // FIXME: We should merge duplicates into a single nonnull attribute.

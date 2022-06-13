@@ -228,7 +228,8 @@ define <64 x float> @insertelement_v64f32(<64 x float>* %a) #0 {
 define <1 x double> @insertelement_v1f64(<1 x double> %op1) #0 {
 ; VBITS_GE_256-LABEL: insertelement_v1f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    fmov d0, #5.00000000
+; VBITS_GE_256-NEXT:    mov x8, #4617315517961601024
+; VBITS_GE_256-NEXT:    fmov d0, x8
 ; VBITS_GE_256-NEXT:    ret
     %r = insertelement <1 x double> %op1, double 5.0, i64 0
     ret <1 x double> %r

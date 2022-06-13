@@ -1973,7 +1973,7 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   }
 
   // Try resolving resulting filename via reverse search in header maps,
-  // key from header name is user prefered name for the include file.
+  // key from header name is user preferred name for the include file.
   StringRef Filename = File.drop_front(BestPrefixLength);
   for (const DirectoryLookup &DL : search_dir_range()) {
     if (!DL.isHeaderMap())
