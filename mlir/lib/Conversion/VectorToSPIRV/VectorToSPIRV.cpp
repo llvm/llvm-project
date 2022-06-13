@@ -145,11 +145,11 @@ struct VectorFmaOpConvert final : public OpConversionPattern<vector::FMAOp> {
   LogicalResult
   matchAndRewrite(vector::FMAOp fmaOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!spirv::CompositeType::isValid(fmaOp.getVectorType()))
+    Type dstType = getTypeConverter()->convertType(fmaOp.getType());
+    if (!dstType)
       return failure();
     rewriter.replaceOpWithNewOp<spirv::GLSLFmaOp>(
-        fmaOp, fmaOp.getType(), adaptor.getLhs(), adaptor.getRhs(),
-        adaptor.getAcc());
+        fmaOp, dstType, adaptor.getLhs(), adaptor.getRhs(), adaptor.getAcc());
     return success();
   }
 };
@@ -321,13 +321,18 @@ public:
   LogicalResult
   matchAndRewrite(vector::SplatOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType dstVecType = op.getType();
-    if (!spirv::CompositeType::isValid(dstVecType))
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
       return failure();
-    SmallVector<Value, 4> source(dstVecType.getNumElements(),
-                                 adaptor.getInput());
-    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, dstVecType,
-                                                             source);
+    if (dstType.isa<spirv::ScalarType>()) {
+      rewriter.replaceOp(op, adaptor.getInput());
+    } else {
+      auto dstVecType = dstType.cast<VectorType>();
+      SmallVector<Value, 4> source(dstVecType.getNumElements(),
+                                   adaptor.getInput());
+      rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, dstType,
+                                                               source);
+    }
     return success();
   }
 };

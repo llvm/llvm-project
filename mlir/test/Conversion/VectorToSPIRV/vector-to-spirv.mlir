@@ -171,6 +171,15 @@ func.func @fma(%a: vector<4xf32>, %b: vector<4xf32>, %c: vector<4xf32>) -> vecto
 
 // -----
 
+// CHECK-LABEL: @fma_size1_vector
+//       CHECK:   spv.GLSL.Fma %{{.+}} : f32
+func.func @fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<1xf32>) -> vector<1xf32> {
+  %0 = vector.fma %a, %b, %c: vector<1xf32>
+  return %0 : vector<1xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @splat
 //  CHECK-SAME: (%[[A:.+]]: f32)
 //       CHECK:   %[[VAL:.+]] = spv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]] : vector<4xf32>
@@ -178,6 +187,17 @@ func.func @fma(%a: vector<4xf32>, %b: vector<4xf32>, %c: vector<4xf32>) -> vecto
 func.func @splat(%f : f32) -> vector<4xf32> {
   %splat = vector.splat %f : vector<4xf32>
   return %splat : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @splat_size1_vector
+//  CHECK-SAME: (%[[A:.+]]: f32)
+//       CHECK:   %[[VAL:.+]] = builtin.unrealized_conversion_cast %[[A]]
+//       CHECK:   return %[[VAL]]
+func.func @splat_size1_vector(%f : f32) -> vector<1xf32> {
+  %splat = vector.splat %f : vector<1xf32>
+  return %splat : vector<1xf32>
 }
 
 // -----
