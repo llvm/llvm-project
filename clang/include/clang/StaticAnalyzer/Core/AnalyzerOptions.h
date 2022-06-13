@@ -33,13 +33,6 @@ class CheckerBase;
 
 } // namespace ento
 
-/// Analysis - Set of available source code analyses.
-enum Analyses {
-#define ANALYSIS(NAME, CMDFLAG, DESC, SCOPE) NAME,
-#include "clang/StaticAnalyzer/Core/Analyses.def"
-NumAnalyses
-};
-
 /// AnalysisStores - Set of available analysis store models.
 enum AnalysisStores {
 #define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATFN) NAME##Model,
