@@ -238,6 +238,28 @@
 // FaMULTIPLESOURCEOK: "-o" "cl-outputs.asm"
 // FaMULTIPLESOURCEOK: "-o" "cl-outputs.asm"
 
+// Copy of the same tests above, but with /FAcsu
+// RUN: %clang_cl /FAcsu -### -- %s 2>&1 | FileCheck -check-prefix=FA_CSU %s
+// FA_CSU: "-o" "cl-outputs.asm"
+// RUN: %clang_cl /FAcsu /Fa -### -- %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaEMPTY %s
+// FA_CSU_FaEMPTY: "-o" "cl-outputs.asm"
+// RUN: %clang_cl /FAcsu /Fafoo -### -- %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaNAME %s
+// RUN: %clang_cl /Fafoo -### -- %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaNAME %s
+// FA_CSU_FaNAME:  "-o" "foo.asm"
+// RUN: %clang_cl /FAcsu /Faa.ext /Fab.ext -### -- %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaNAMEEXT %s
+// FA_CSU_FaNAMEEXT:  "-o" "b.ext"
+// RUN: %clang_cl /FAcsu /Fafoo.dir/ -### -- %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaDIR %s
+// FA_CSU_FaDIR:  "-o" "foo.dir{{[/\\]+}}cl-outputs.asm"
+// RUN: %clang_cl /FAcsu /Fafoo.dir/a -### -- %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaDIRNAME %s
+// FA_CSU_FaDIRNAME:  "-o" "foo.dir{{[/\\]+}}a.asm"
+// RUN: %clang_cl /FAcsu /Fafoo.dir/a.ext -### -- %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaDIRNAMEEXT %s
+// FA_CSU_FaDIRNAMEEXT:  "-o" "foo.dir{{[/\\]+}}a.ext"
+// RUN: %clang_cl /Faa.asm -### -- %s %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaMULTIPLESOURCE %s
+// FA_CSU_FaMULTIPLESOURCE: error: cannot specify '/Faa.asm' when compiling multiple source files
+// RUN: %clang_cl /Fa -### -- %s %s 2>&1 | FileCheck -check-prefix=FA_CSU_FaMULTIPLESOURCEOK %s
+// FA_CSU_FaMULTIPLESOURCEOK: "-o" "cl-outputs.asm"
+// FA_CSU_FaMULTIPLESOURCEOK: "-o" "cl-outputs.asm"
+
 // RUN: %clang_cl /P -### -- %s 2>&1 | FileCheck -check-prefix=P %s
 // P: "-E"
 // P: "-o" "cl-outputs.i"
