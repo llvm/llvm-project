@@ -459,9 +459,9 @@ define void @buildvec_seq_v16i8_v2i64(<16 x i8>* %x) {
 ; RV64-LABEL: buildvec_seq_v16i8_v2i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a1, %hi(.LCPI24_0)
-; RV64-NEXT:    ld a1, %lo(.LCPI24_0)(a1)
+; RV64-NEXT:    addi a1, a1, %lo(.LCPI24_0)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; RV64-NEXT:    vmv.v.x v8, a1
+; RV64-NEXT:    vlse64.v v8, (a1), zero
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; RV64-NEXT:    vse8.v v8, (a0)
 ; RV64-NEXT:    ret
