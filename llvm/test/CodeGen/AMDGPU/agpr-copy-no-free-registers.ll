@@ -533,16 +533,16 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    s_lshl_b64 s[10:11], s[2:3], 5
 ; GFX908-NEXT:    s_or_b32 s10, s10, 28
 ; GFX908-NEXT:    v_rcp_iflag_f32_e32 v1, v1
-; GFX908-NEXT:    v_mov_b32_e32 v11, s10
+; GFX908-NEXT:    v_mov_b32_e32 v35, s10
 ; GFX908-NEXT:    s_lshr_b32 s12, s7, 16
-; GFX908-NEXT:    v_mov_b32_e32 v35, s11
+; GFX908-NEXT:    v_mov_b32_e32 v10, s11
 ; GFX908-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GFX908-NEXT:    v_cvt_u32_f32_e32 v2, v1
 ; GFX908-NEXT:    v_cvt_f32_f16_e32 v26, s7
 ; GFX908-NEXT:    v_cvt_f32_f16_e32 v27, s12
-; GFX908-NEXT:    v_accvgpr_write_b32 a0, v11
+; GFX908-NEXT:    v_accvgpr_write_b32 a0, v35
 ; GFX908-NEXT:    v_mul_lo_u32 v1, s4, v2
-; GFX908-NEXT:    v_accvgpr_write_b32 a1, v35
+; GFX908-NEXT:    v_accvgpr_write_b32 a1, v10
 ; GFX908-NEXT:    s_lshl_b64 s[4:5], s[8:9], 5
 ; GFX908-NEXT:    v_mul_hi_u32 v3, v2, v1
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 0
