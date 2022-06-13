@@ -221,10 +221,6 @@ public:
   // track of the list's exact size.
   unsigned size() { return SetSize; }
 
-  /// If this alias set is known to contain a single instruction and *only* a
-  /// single unique instruction, return it.  Otherwise, return nullptr.
-  Instruction* getUniqueInstruction();
-
   void print(raw_ostream &OS) const;
   void dump() const;
 

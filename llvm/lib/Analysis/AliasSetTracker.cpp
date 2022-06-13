@@ -254,31 +254,6 @@ bool AliasSet::aliasesUnknownInst(const Instruction *Inst,
   return false;
 }
 
-Instruction* AliasSet::getUniqueInstruction() {
-  if (AliasAny)
-    // May have collapses alias set
-    return nullptr;
-  if (begin() != end()) {
-    if (!UnknownInsts.empty())
-      // Another instruction found
-      return nullptr;
-    if (std::next(begin()) != end())
-      // Another instruction found
-      return nullptr;
-    Value *Addr = begin()->getValue();
-    assert(!Addr->user_empty() &&
-           "where's the instruction which added this pointer?");
-    if (std::next(Addr->user_begin()) != Addr->user_end())
-      // Another instruction found -- this is really restrictive
-      // TODO: generalize!
-      return nullptr;
-    return cast<Instruction>(*(Addr->user_begin()));
-  }
-  if (1 != UnknownInsts.size())
-    return nullptr;
-  return cast<Instruction>(UnknownInsts[0]);
-}
-
 void AliasSetTracker::clear() {
   // Delete all the PointerRec entries.
   for (auto &I : PointerMap)
