@@ -727,8 +727,7 @@ private:
   /// frameworks.
   ///
   /// \returns The module, if found; otherwise, null.
-  Module *loadFrameworkModule(StringRef Name,
-                              const DirectoryEntry *Dir,
+  Module *loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
                               bool IsSystem);
 
   /// Load all of the module maps within the immediate subdirectories
@@ -884,7 +883,7 @@ private:
 
   LoadModuleMapResult loadModuleMapFileImpl(const FileEntry *File,
                                             bool IsSystem,
-                                            const DirectoryEntry *Dir,
+                                            DirectoryEntryRef Dir,
                                             FileID ID = FileID(),
                                             unsigned *Offset = nullptr);
 
@@ -908,8 +907,8 @@ private:
   ///
   /// \returns The result of attempting to load the module map file from the
   /// named directory.
-  LoadModuleMapResult loadModuleMapFile(const DirectoryEntry *Dir,
-                                        bool IsSystem, bool IsFramework);
+  LoadModuleMapResult loadModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
+                                        bool IsFramework);
 };
 
 /// Apply the header search options to get given HeaderSearch object.
