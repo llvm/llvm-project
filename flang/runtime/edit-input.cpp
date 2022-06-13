@@ -21,14 +21,16 @@ static bool EditBOZInput(
     IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
   std::optional<int> remaining;
   std::optional<char32_t> next{io.PrepareInput(edit, remaining)};
-  if (*next == '0') {
+  if (next.value_or('?') == '0') {
     do {
       next = io.NextInField(remaining, edit);
     } while (next && *next == '0');
   }
   // Count significant digits after any leading white space & zeroes
   int digits{0};
+  int chars{0};
   for (; next; next = io.NextInField(remaining, edit)) {
+    ++chars;
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
       continue;
@@ -52,7 +54,7 @@ static bool EditBOZInput(
     return false;
   }
   // Reset to start of significant digits
-  io.HandleRelativePosition(-digits);
+  io.HandleRelativePosition(-chars);
   remaining.reset();
   // Make a second pass now that the digit count is known
   std::memset(n, 0, bytes);
