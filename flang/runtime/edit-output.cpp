@@ -258,6 +258,7 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
   if (edit.modes.editingFlags & signPlus) {
     flags |= decimal::AlwaysSign;
   }
+  bool noLeadingSpaces{editWidth == 0};
   if (editWidth == 0) { // "the processor selects the field width"
     if (edit.digits.has_value()) { // E0.d
       if (editDigits == 0) { // E0.0
@@ -359,6 +360,9 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
         zeroesBeforePoint == 0) {
       zeroesBeforePoint = 1;
       ++totalLength;
+    }
+    if (totalLength < width && noLeadingSpaces) {
+      width = totalLength;
     }
     return EmitPrefix(edit, totalLength, width) &&
         io_.Emit(converted.str, signLength + digitsBeforePoint) &&
@@ -475,9 +479,10 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
 template <int binaryPrecision>
 DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
   edit.descriptor = 'E';
+  int editWidth{edit.width.value_or(0)};
   int significantDigits{
       edit.digits.value_or(BinaryFloatingPoint::decimalPrecision)}; // 'd'
-  if (!edit.width.has_value() || (*edit.width > 0 && significantDigits == 0)) {
+  if (editWidth > 0 && significantDigits == 0) {
     return edit; // Gw.0 -> Ew.0 for w > 0
   }
   int flags{0};
@@ -487,7 +492,7 @@ DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
   decimal::ConversionToDecimalResult converted{
       Convert(significantDigits, edit.modes.round, flags)};
   if (IsInfOrNaN(converted)) {
-    return edit;
+    return edit; // Inf/Nan -> Ew.d (same as Fw.d)
   }
   int expo{IsZero() ? 1 : converted.decimalExponent}; // 's'
   if (expo < 0 || expo > significantDigits) {
@@ -496,7 +501,6 @@ DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
   edit.descriptor = 'F';
   edit.modes.scale = 0; // kP is ignored for G when no exponent field
   trailingBlanks_ = 0;
-  int editWidth{edit.width.value_or(0)};
   if (editWidth > 0) {
     int expoDigits{edit.expoDigits.value_or(0)};
     trailingBlanks_ = expoDigits > 0 ? expoDigits + 2 : 4; // 'n'
