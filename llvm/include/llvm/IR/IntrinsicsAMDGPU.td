@@ -1337,7 +1337,21 @@ def int_amdgcn_exp : Intrinsic <[], [
    IntrWillReturn]
 >;
 
-// exp with compr bit set.
+// exp with row_en bit set. Only supported on GFX11+.
+def int_amdgcn_exp_row : Intrinsic <[], [
+  llvm_i32_ty,       // tgt,
+  llvm_i32_ty,       // en
+  llvm_any_ty,       // src0 (f32 or i32)
+  LLVMMatchType<0>,  // src1
+  LLVMMatchType<0>,  // src2
+  LLVMMatchType<0>,  // src3
+  llvm_i1_ty,        // done
+  llvm_i32_ty],      // row number
+  [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<6>>,
+   IntrWriteMem, IntrInaccessibleMemOnly, IntrWillReturn]
+>;
+
+// exp with compr bit set. Not supported on GFX11+.
 def int_amdgcn_exp_compr : Intrinsic <[], [
   llvm_i32_ty,       // tgt,
   llvm_i32_ty,       // en
