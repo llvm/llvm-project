@@ -15,4 +15,4 @@ int main() {
   return a;  //DexLabel('check2')
 }
 
-// DexExpectWatchValue('a', '1.0', '100.0', from_line=ref('check1'), to_line=ref('check2'), float_range=0.5)
+// DexExpectWatchValue('a', '1.0', '101.0', from_line=ref('check1'), to_line=ref('check2'), float_range=0.5)
