@@ -392,12 +392,30 @@ func.func @cmpi(%arg0 : i32, %arg1 : i32) {
   return
 }
 
+// CHECK-LABEL: @vec1cmpi
+func.func @vec1cmpi(%arg0 : vector<1xi32>, %arg1 : vector<1xi32>) {
+  // CHECK: spv.ULessThan
+  %0 = arith.cmpi ult, %arg0, %arg1 : vector<1xi32>
+  // CHECK: spv.SGreaterThan
+  %1 = arith.cmpi sgt, %arg0, %arg1 : vector<1xi32>
+  return
+}
+
 // CHECK-LABEL: @boolcmpi
 func.func @boolcmpi(%arg0 : i1, %arg1 : i1) {
   // CHECK: spv.LogicalEqual
   %0 = arith.cmpi eq, %arg0, %arg1 : i1
   // CHECK: spv.LogicalNotEqual
   %1 = arith.cmpi ne, %arg0, %arg1 : i1
+  return
+}
+
+// CHECK-LABEL: @vec1boolcmpi
+func.func @vec1boolcmpi(%arg0 : vector<1xi1>, %arg1 : vector<1xi1>) {
+  // CHECK: spv.LogicalEqual
+  %0 = arith.cmpi eq, %arg0, %arg1 : vector<1xi1>
+  // CHECK: spv.LogicalNotEqual
+  %1 = arith.cmpi ne, %arg0, %arg1 : vector<1xi1>
   return
 }
 
@@ -1234,6 +1252,15 @@ func.func @cmpf(%arg0 : f32, %arg1 : f32) {
   %11 = arith.cmpf ule, %arg0, %arg1 : f32
   // CHECK: spv.FUnordNotEqual
   %12 = arith.cmpf une, %arg0, %arg1 : f32
+  return
+}
+
+// CHECK-LABEL: @vec1cmpf
+func.func @vec1cmpf(%arg0 : vector<1xf32>, %arg1 : vector<1xf32>) {
+  // CHECK: spv.FOrdGreaterThan
+  %0 = arith.cmpf ogt, %arg0, %arg1 : vector<1xf32>
+  // CHECK: spv.FUnordLessThan
+  %1 = arith.cmpf ult, %arg0, %arg1 : vector<1xf32>
   return
 }
 
