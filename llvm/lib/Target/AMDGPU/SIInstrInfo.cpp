@@ -3897,7 +3897,7 @@ bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,
     return RI.isSGPRClass(MRI.getRegClass(MO.getReg()));
 
   // Null is free
-  if (MO.getReg() == AMDGPU::SGPR_NULL)
+  if (MO.getReg() == AMDGPU::SGPR_NULL || MO.getReg() == AMDGPU::SGPR_NULL64)
     return false;
 
   // SGPRs use the constant bus
