@@ -273,6 +273,7 @@ inline bool isWordLiteralSection(uint32_t flags) {
 bool isCodeSection(const InputSection *);
 bool isCfStringSection(const InputSection *);
 bool isClassRefsSection(const InputSection *);
+bool isEhFrameSection(const InputSection *);
 
 extern std::vector<ConcatInputSection *> inputSections;
 

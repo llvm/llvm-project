@@ -178,12 +178,8 @@ private:
 
   // Emit helper routines.
   bool emitCmp(unsigned DestReg, const CmpInst *CI);
-  bool emitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
-                unsigned Alignment = 0);
-  bool emitStore(MVT VT, unsigned SrcReg, Address Addr,
-                 MachineMemOperand *MMO = nullptr);
-  bool emitStore(MVT VT, unsigned SrcReg, Address &Addr,
-                 unsigned Alignment = 0);
+  bool emitLoad(MVT VT, unsigned &ResultReg, Address &Addr);
+  bool emitStore(MVT VT, unsigned SrcReg, Address &Addr);
   unsigned emitIntExt(MVT SrcVT, unsigned SrcReg, MVT DestVT, bool isZExt);
   bool emitIntExt(MVT SrcVT, unsigned SrcReg, MVT DestVT, unsigned DestReg,
 
@@ -753,8 +749,7 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
   return true;
 }
 
-bool MipsFastISel::emitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
-                            unsigned Alignment) {
+bool MipsFastISel::emitLoad(MVT VT, unsigned &ResultReg, Address &Addr) {
   //
   // more cases will be handled here in following patches.
   //
@@ -808,8 +803,7 @@ bool MipsFastISel::emitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
   return false;
 }
 
-bool MipsFastISel::emitStore(MVT VT, unsigned SrcReg, Address &Addr,
-                             unsigned Alignment) {
+bool MipsFastISel::emitStore(MVT VT, unsigned SrcReg, Address &Addr) {
   //
   // more cases will be handled here in following patches.
   //
@@ -902,7 +896,7 @@ bool MipsFastISel::selectLoad(const Instruction *I) {
     return false;
 
   unsigned ResultReg;
-  if (!emitLoad(VT, ResultReg, Addr, cast<LoadInst>(I)->getAlignment()))
+  if (!emitLoad(VT, ResultReg, Addr))
     return false;
   updateValueMap(I, ResultReg);
   return true;
@@ -931,7 +925,7 @@ bool MipsFastISel::selectStore(const Instruction *I) {
   if (!computeAddress(I->getOperand(1), Addr))
     return false;
 
-  if (!emitStore(VT, SrcReg, Addr, cast<StoreInst>(I)->getAlignment()))
+  if (!emitStore(VT, SrcReg, Addr))
     return false;
   return true;
 }

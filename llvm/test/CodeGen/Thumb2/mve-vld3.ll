@@ -1025,9 +1025,8 @@ define void @vld3_v2f16(<6 x half> *%src, <2 x half> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrd r2, r3, [r0]
 ; CHECK-NEXT:    ldr r0, [r0, #8]
-; CHECK-NEXT:    vmov.32 q0[0], r2
 ; CHECK-NEXT:    vmov.32 q0[1], r3
-; CHECK-NEXT:    vmov.32 q0[2], r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
 ; CHECK-NEXT:    vmovx.f16 s8, s0
 ; CHECK-NEXT:    vmovx.f16 s4, s2
 ; CHECK-NEXT:    vins.f16 s8, s2

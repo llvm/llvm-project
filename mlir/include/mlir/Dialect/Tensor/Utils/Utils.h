@@ -28,6 +28,11 @@ PadOp createPadScalarOp(Type type, Value source, Value pad,
                         ArrayRef<OpFoldResult> low, ArrayRef<OpFoldResult> high,
                         bool nofold, Location loc, OpBuilder &builder);
 
+// Creates dim ops for each dynamic dimension of the raked tensor argument and
+// returns these as values.
+SmallVector<Value> createDynamicDimValues(OpBuilder &b, Location loc,
+                                          Value rankedTensor);
+
 } // namespace tensor
 } // namespace mlir
 

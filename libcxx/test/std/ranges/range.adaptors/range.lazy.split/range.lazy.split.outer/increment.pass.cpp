@@ -17,11 +17,12 @@
 #include <ranges>
 
 #include <algorithm>
-#include <string_view>
-#include "../small_string.h"
+#include <cassert>
+#include <string>
 #include "../types.h"
 
 constexpr bool test() {
+  using namespace std::string_literals;
   // Can call `outer-iterator::operator++`; `View` is a forward range.
   {
     SplitViewForward v("abc def ghi", " ");
@@ -29,23 +30,23 @@ constexpr bool test() {
     // ++i
     {
       auto i = v.begin();
-      assert(*i == "abc"_str);
+      assert(std::ranges::equal(*i, "abc"s));
 
       decltype(auto) i2 = ++i;
       static_assert(std::is_lvalue_reference_v<decltype(i2)>);
       assert(&i2 == &i);
-      assert(*i2 == "def"_str);
+      assert(std::ranges::equal(*i2, "def"s));
     }
 
     // i++
     {
       auto i = v.begin();
-      assert(*i == "abc"_str);
+      assert(std::ranges::equal(*i, "abc"s));
 
       decltype(auto) i2 = i++;
       static_assert(!std::is_reference_v<decltype(i2)>);
-      assert(*i2 == "abc"_str);
-      assert(*i == "def"_str);
+      assert(std::ranges::equal(*i2, "abc"s));
+      assert(std::ranges::equal(*i, "def"s));
     }
   }
 
@@ -56,22 +57,22 @@ constexpr bool test() {
     // ++i
     {
       auto i = v.begin();
-      assert(*i == "abc"_str);
+      assert(std::ranges::equal(*i, "abc"s));
 
       decltype(auto) i2 = ++i;
       static_assert(std::is_lvalue_reference_v<decltype(i2)>);
       assert(&i2 == &i);
-      assert(*i2 == "def"_str);
+      assert(std::ranges::equal(*i2, "def"s));
     }
 
     // i++
     {
       auto i = v.begin();
-      assert(*i == "abc"_str);
+      assert(std::ranges::equal(*i, "abc"s));
 
       static_assert(std::is_void_v<decltype(i++)>);
       i++;
-      assert(*i == "def"_str);
+      assert(std::ranges::equal(*i, "def"s));
     }
   }
 
