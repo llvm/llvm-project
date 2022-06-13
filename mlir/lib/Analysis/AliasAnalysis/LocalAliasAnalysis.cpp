@@ -78,12 +78,12 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   if (region) {
     // Determine the actual region number from the passed region.
     regionIndex = region->getRegionNumber();
-    if (Optional<unsigned> operandIndex =
-            getOperandIndexIfPred(/*predIndex=*/llvm::None)) {
-      collectUnderlyingAddressValues(
-          branch.getSuccessorEntryOperands(*regionIndex)[*operandIndex],
-          maxDepth, visited, output);
-    }
+  }
+  if (Optional<unsigned> operandIndex =
+          getOperandIndexIfPred(/*predIndex=*/llvm::None)) {
+    collectUnderlyingAddressValues(
+        branch.getSuccessorEntryOperands(regionIndex)[*operandIndex], maxDepth,
+        visited, output);
   }
   // Check branches from each child region.
   Operation *op = branch.getOperation();
