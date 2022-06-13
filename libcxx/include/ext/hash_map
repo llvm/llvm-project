@@ -207,7 +207,6 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <algorithm>
 #include <ext/__hash>
 #include <functional>
-#include <iterator> // TODO: Remove this include
 #include <stdexcept>
 #include <type_traits>
 

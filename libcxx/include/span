@@ -132,7 +132,9 @@ template<class R>
 #include <__debug>
 #include <__fwd/span.h>
 #include <__iterator/concepts.h>
+#include <__iterator/data.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/size.h>
 #include <__iterator/wrap_iter.h>
 #include <__memory/pointer_traits.h>
 #include <__ranges/concepts.h>
@@ -143,7 +145,6 @@ template<class R>
 #include <__utility/forward.h>
 #include <array>        // for array
 #include <cstddef>      // for byte
-#include <iterator> // TODO: Remove this include
 #include <limits>
 #include <type_traits>  // for remove_cv, etc
 #include <version>

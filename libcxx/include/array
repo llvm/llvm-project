@@ -120,7 +120,6 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <compare>
-#include <iterator> // TODO: Remove this include
 #include <stdexcept>
 #include <type_traits>
 #include <version>
