@@ -114,14 +114,14 @@ public:
 
   template <typename A, typename B, typename C>
   std::function<mlir::Value(mlir::Operation *)>
-  rewriteCallComplexResultType(A ty, B &newResTys, B &newInTys, C &newOpers) {
-    auto m = specifics->complexReturnType(ty.getElementType());
+  rewriteCallComplexResultType(mlir::Location loc, A ty, B &newResTys,
+                               B &newInTys, C &newOpers) {
+    auto m = specifics->complexReturnType(loc, ty.getElementType());
     // Currently targets mandate COMPLEX is a single aggregate or packed
     // scalar, including the sret case.
     assert(m.size() == 1 && "target lowering of complex return not supported");
     auto resTy = std::get<mlir::Type>(m[0]);
     auto attr = std::get<fir::CodeGenSpecifics::Attributes>(m[0]);
-    auto loc = mlir::UnknownLoc::get(resTy.getContext());
     if (attr.isSRet()) {
       assert(fir::isa_ref_type(resTy) && "must be a memory reference type");
       mlir::Value stack =
@@ -147,9 +147,11 @@ public:
   template <typename A, typename B, typename C>
   void rewriteCallComplexInputType(A ty, mlir::Value oper, B &newInTys,
                                    C &newOpers) {
-    auto m = specifics->complexArgumentType(ty.getElementType());
     auto *ctx = ty.getContext();
-    auto loc = mlir::UnknownLoc::get(ctx);
+    mlir::Location loc = mlir::UnknownLoc::get(ctx);
+    if (auto *op = oper.getDefiningOp())
+      loc = op->getLoc();
+    auto m = specifics->complexArgumentType(loc, ty.getElementType());
     if (m.size() == 1) {
       // COMPLEX is a single aggregate
       auto resTy = std::get<mlir::Type>(m[0]);
@@ -210,11 +212,11 @@ public:
       mlir::Type ty = fnTy.getResult(0);
       llvm::TypeSwitch<mlir::Type>(ty)
           .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
-            wrap = rewriteCallComplexResultType(cmplx, newResTys, newInTys,
+            wrap = rewriteCallComplexResultType(loc, cmplx, newResTys, newInTys,
                                                 newOpers);
           })
           .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
-            wrap = rewriteCallComplexResultType(cmplx, newResTys, newInTys,
+            wrap = rewriteCallComplexResultType(loc, cmplx, newResTys, newInTys,
                                                 newOpers);
           })
           .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
@@ -337,11 +339,13 @@ public:
 
   // Result type fixup for fir::ComplexType and mlir::ComplexType
   template <typename A, typename B>
-  void lowerComplexSignatureRes(A cmplx, B &newResTys, B &newInTys) {
+  void lowerComplexSignatureRes(mlir::Location loc, A cmplx, B &newResTys,
+                                B &newInTys) {
     if (noComplexConversion) {
       newResTys.push_back(cmplx);
     } else {
-      for (auto &tup : specifics->complexReturnType(cmplx.getElementType())) {
+      for (auto &tup :
+           specifics->complexReturnType(loc, cmplx.getElementType())) {
         auto argTy = std::get<mlir::Type>(tup);
         if (std::get<fir::CodeGenSpecifics::Attributes>(tup).isSRet())
           newInTys.push_back(argTy);
@@ -353,11 +357,12 @@ public:
 
   // Argument type fixup for fir::ComplexType and mlir::ComplexType
   template <typename A, typename B>
-  void lowerComplexSignatureArg(A cmplx, B &newInTys) {
+  void lowerComplexSignatureArg(mlir::Location loc, A cmplx, B &newInTys) {
     if (noComplexConversion)
       newInTys.push_back(cmplx);
     else
-      for (auto &tup : specifics->complexArgumentType(cmplx.getElementType()))
+      for (auto &tup :
+           specifics->complexArgumentType(loc, cmplx.getElementType()))
         newInTys.push_back(std::get<mlir::Type>(tup));
   }
 
@@ -367,13 +372,14 @@ public:
     auto addrTy = addrOp.getType().cast<mlir::FunctionType>();
     llvm::SmallVector<mlir::Type> newResTys;
     llvm::SmallVector<mlir::Type> newInTys;
+    auto loc = addrOp.getLoc();
     for (mlir::Type ty : addrTy.getResults()) {
       llvm::TypeSwitch<mlir::Type>(ty)
           .Case<fir::ComplexType>([&](fir::ComplexType ty) {
-            lowerComplexSignatureRes(ty, newResTys, newInTys);
+            lowerComplexSignatureRes(loc, ty, newResTys, newInTys);
           })
           .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {
-            lowerComplexSignatureRes(ty, newResTys, newInTys);
+            lowerComplexSignatureRes(loc, ty, newResTys, newInTys);
           })
           .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
     }
@@ -394,10 +400,10 @@ public:
             }
           })
           .Case<fir::ComplexType>([&](fir::ComplexType ty) {
-            lowerComplexSignatureArg(ty, newInTys);
+            lowerComplexSignatureArg(loc, ty, newInTys);
           })
           .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {
-            lowerComplexSignatureArg(ty, newInTys);
+            lowerComplexSignatureArg(loc, ty, newInTys);
           })
           .Case<mlir::TupleType>([&](mlir::TupleType tuple) {
             if (fir::isCharacterProcedureTuple(tuple)) {
@@ -730,7 +736,8 @@ public:
       newResTys.push_back(cmplx);
       return;
     }
-    auto m = specifics->complexReturnType(cmplx.getElementType());
+    auto m =
+        specifics->complexReturnType(func.getLoc(), cmplx.getElementType());
     assert(m.size() == 1);
     auto &tup = m[0];
     auto attr = std::get<fir::CodeGenSpecifics::Attributes>(tup);
@@ -757,7 +764,8 @@ public:
       newInTys.push_back(cmplx);
       return;
     }
-    auto m = specifics->complexArgumentType(cmplx.getElementType());
+    auto m =
+        specifics->complexArgumentType(func.getLoc(), cmplx.getElementType());
     const auto fixupCode =
         m.size() > 1 ? FixupTy::Codes::Split : FixupTy::Codes::ArgumentType;
     for (auto e : llvm::enumerate(m)) {
