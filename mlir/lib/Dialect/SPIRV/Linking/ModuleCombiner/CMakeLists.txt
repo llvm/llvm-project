@@ -6,6 +6,6 @@ add_mlir_dialect_library(MLIRSPIRVModuleCombiner
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRSPIRV
+  MLIRSPIRVDialect
   MLIRSupport
   )

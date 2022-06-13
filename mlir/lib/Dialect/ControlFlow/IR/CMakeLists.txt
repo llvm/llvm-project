@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRControlFlow
+add_mlir_dialect_library(MLIRControlFlowDialect
   ControlFlowOps.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -8,7 +8,7 @@ add_mlir_dialect_library(MLIRControlFlow
   MLIRControlFlowOpsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithmetic
+  MLIRArithmeticDialect
   MLIRControlFlowInterfaces
   MLIRIR
   MLIRSideEffectInterfaces

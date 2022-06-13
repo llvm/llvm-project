@@ -34,34 +34,34 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRLinalgPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
   MLIRAffineUtils
   MLIRAnalysis
-  MLIRArithmetic
+  MLIRArithmeticDialect
   MLIRArithmeticTransforms
-  MLIRBufferization
+  MLIRBufferizationDialect
   MLIRBufferizationTransforms
-  MLIRComplex
-  MLIRFunc
+  MLIRComplexDialect
+  MLIRFuncDialect
   MLIRFuncToLLVM
   MLIRFuncTransforms
   MLIRInferTypeOpInterface
   MLIRIR
-  MLIRMemRef
-  MLIRLinalg
+  MLIRMemRefDialect
+  MLIRLinalgDialect
   MLIRLinalgAnalysis
   MLIRLinalgUtils
-  MLIRSCF
+  MLIRSCFDialect
   MLIRSCFTransforms
   MLIRSCFUtils
   MLIRPass
-  MLIRSparseTensor
-  MLIRTensor
+  MLIRSparseTensorDialect
+  MLIRTensorDialect
   MLIRTensorTilingInterfaceImpl
   MLIRTensorTransforms
   MLIRTransforms
   MLIRTransformUtils
-  MLIRVector
+  MLIRVectorDialect
   MLIRVectorTransforms
   MLIRVectorUtils
   MLIRX86VectorTransforms

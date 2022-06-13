@@ -10,24 +10,24 @@ add_mlir_library(MLIRLinalgTestPasses
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  MLIRAffine
-  MLIRArithmetic
+  MLIRAffineDialect
+  MLIRArithmeticDialect
   MLIRArithmeticTransforms
-  MLIRBufferization
+  MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRGPUTransforms
-  MLIRLinalg
+  MLIRLinalgDialect
   MLIRLinalgTransforms
   MLIRLLVMToLLVMIRTranslation
-  MLIRMemRef
+  MLIRMemRefDialect
   MLIRParser
   MLIRPass
-  MLIRSCF
+  MLIRSCFDialect
   MLIRSCFTransforms
-  MLIRTensor
+  MLIRTensorDialect
   MLIRTensorTransforms
   MLIRTransformUtils
-  MLIRVector
+  MLIRVectorDialect
   MLIRVectorToSCF
   MLIRVectorTransforms
   )

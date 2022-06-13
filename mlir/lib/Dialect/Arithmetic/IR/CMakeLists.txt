@@ -2,7 +2,7 @@ set(LLVM_TARGET_DEFINITIONS ArithmeticCanonicalization.td)
 mlir_tablegen(ArithmeticCanonicalization.inc -gen-rewriters)
 add_public_tablegen_target(MLIRArithmeticCanonicalizationIncGen)
 
-add_mlir_dialect_library(MLIRArithmetic
+add_mlir_dialect_library(MLIRArithmeticDialect
   ArithmeticOps.cpp
   ArithmeticDialect.cpp
 

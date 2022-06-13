@@ -10,6 +10,6 @@ add_mlir_library(MLIRMathTestPasses
   MLIRMathTransforms
   MLIRPass
   MLIRTransformUtils
-  MLIRVector
-  MLIRX86Vector
+  MLIRVectorDialect
+  MLIRX86VectorDialect
   )

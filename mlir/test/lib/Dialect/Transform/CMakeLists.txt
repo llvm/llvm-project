@@ -15,6 +15,6 @@ add_mlir_library(MLIRTestTransformDialect
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRPass
-  MLIRPDL
+  MLIRPDLDialect
   MLIRTransformDialect
 )

@@ -5,18 +5,18 @@ add_mlir_library(MLIRVectorTestPasses
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
   MLIRAnalysis
-  MLIRFunc
+  MLIRFuncDialect
   MLIRGPUOps
-  MLIRLinalg
+  MLIRLinalgDialect
   MLIRLinalgTransforms
-  MLIRLLVMIR
-  MLIRMemRef
+  MLIRLLVMDialect
+  MLIRMemRefDialect
   MLIRPass
-  MLIRSCF
+  MLIRSCFDialect
   MLIRTransformUtils
-  MLIRVector
+  MLIRVectorDialect
   MLIRVectorToSCF
-  MLIRX86Vector
+  MLIRX86VectorDialect
   )

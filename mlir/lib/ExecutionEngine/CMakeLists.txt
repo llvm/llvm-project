@@ -87,7 +87,7 @@ add_mlir_library(MLIRExecutionEngine
 
   LINK_LIBS PUBLIC
   MLIRExecutionEngineUtils
-  MLIRLLVMIR
+  MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
   )
@@ -109,7 +109,7 @@ add_mlir_library(MLIRJitRunner
   LINK_LIBS PUBLIC
   ${dialect_libs}
   MLIRExecutionEngine
-  MLIRFunc
+  MLIRFuncDialect
   MLIRFuncToLLVM
   MLIRIR
   MLIRParser

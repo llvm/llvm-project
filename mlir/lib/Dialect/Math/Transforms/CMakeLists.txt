@@ -7,13 +7,13 @@ add_mlir_dialect_library(MLIRMathTransforms
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Math/Transforms
 
   LINK_LIBS PUBLIC
-  MLIRArithmetic
+  MLIRArithmeticDialect
   MLIRDialectUtils  
   MLIRIR
-  MLIRMath
+  MLIRMathDialect
   MLIRPass
   MLIRTransforms
-  MLIRX86Vector
-  MLIRVector
+  MLIRX86VectorDialect
+  MLIRVectorDialect
   MLIRVectorUtils
   )

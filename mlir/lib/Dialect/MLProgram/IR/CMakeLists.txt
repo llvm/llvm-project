@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRMLProgram
+add_mlir_dialect_library(MLIRMLProgramDialect
   MLProgramOps.cpp
   MLProgramDialect.cpp
 
