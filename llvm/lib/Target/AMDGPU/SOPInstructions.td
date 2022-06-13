@@ -964,12 +964,14 @@ let SubtargetPredicate = isGFX10Plus in {
 
   def S_SUBVECTOR_LOOP_BEGIN : SOPK_32_BR<"s_subvector_loop_begin">;
   def S_SUBVECTOR_LOOP_END   : SOPK_32_BR<"s_subvector_loop_end">;
+} // End SubtargetPredicate = isGFX10Plus
 
+let SubtargetPredicate = isGFX10GFX11 in {
   def S_WAITCNT_VSCNT   : SOPK_WAITCNT<"s_waitcnt_vscnt">;
   def S_WAITCNT_VMCNT   : SOPK_WAITCNT<"s_waitcnt_vmcnt">;
   def S_WAITCNT_EXPCNT  : SOPK_WAITCNT<"s_waitcnt_expcnt">;
   def S_WAITCNT_LGKMCNT : SOPK_WAITCNT<"s_waitcnt_lgkmcnt">;
-} // End SubtargetPredicate = isGFX10Plus
+} // End SubtargetPredicate = isGFX10GFX11
 
 //===----------------------------------------------------------------------===//
 // SOPC Instructions
@@ -1361,8 +1363,6 @@ let SubtargetPredicate = isGFX10Plus in {
       let simm16 = 0;
       let fixed_imm = 1;
     }
-  def S_WAITCNT_DEPCTR :
-    SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtrImm:$simm16), "$simm16">;
 
   let hasSideEffects = 0, Uses = [MODE], Defs = [MODE] in {
     def S_ROUND_MODE :
@@ -1376,12 +1376,36 @@ let SubtargetPredicate = isGFX10Plus in {
     SOPP_Pseudo<"s_ttracedata_imm", (ins s16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = isGFX10Plus
 
+let SubtargetPredicate = isGFX10GFX11 in {
+  def S_WAITCNT_DEPCTR :
+    SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtrImm:$simm16), "$simm16">;
+} // End SubtargetPredicate = isGFX10GFX11
+
 let SubtargetPredicate = isGFX11Plus in {
   def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins s16imm:$simm16),
                                  "$simm16">;
   def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins DELAY_FLAG:$simm16),
                                 "$simm16">;
 } // End SubtargetPredicate = isGFX11Plus
+
+let SubtargetPredicate = isGFX12Plus in {
+  def S_WAIT_ALU :
+    SOPP_Pseudo <"s_wait_alu" , (ins DepCtrImm:$simm16), "$simm16">;
+  def S_WAIT_LOADCNT :
+    SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_STORECNT :
+    SOPP_Pseudo<"s_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_SAMPLECNT :
+    SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_BVHCNT :
+    SOPP_Pseudo<"s_wait_bvhcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_EXPCNT :
+    SOPP_Pseudo<"s_wait_expcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_DSCNT :
+    SOPP_Pseudo<"s_wait_dscnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_KMCNT :
+    SOPP_Pseudo<"s_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
+} // End SubtargetPredicate = isGFX12Plus
 
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
@@ -1977,7 +2001,7 @@ defm S_SETREG_B32       : SOPK_Real32_gfx6_gfx7_gfx10<0x013>;
 defm S_SETREG_IMM32_B32 : SOPK_Real64_gfx6_gfx7_gfx10<0x015>;
 
 //===----------------------------------------------------------------------===//
-// SOPP - GFX11, GFX12.
+// SOPP - GFX12 only.
 //===----------------------------------------------------------------------===//
 
 multiclass SOPP_Real_32_gfx12<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> {
@@ -1985,6 +2009,26 @@ multiclass SOPP_Real_32_gfx12<bits<7> op, string real_name = !cast<SOPP_Pseudo>(
                Select_gfx12<!cast<SOPP_Pseudo>(NAME).Mnemonic>,
                SOPPRelaxTable<0, !cast<SOPP_Pseudo>(NAME).KeyName, "_gfx12">;
 }
+
+multiclass SOPP_Real_32_Renamed_gfx12<bits<7> op, SOPP_Pseudo backing_pseudo, string real_name> {
+  def _gfx12 : SOPP_Real_32<op, backing_pseudo, real_name # " ">,
+               Select_gfx12<backing_pseudo.Mnemonic>,
+               MnemonicAlias<backing_pseudo.Mnemonic, real_name>, Requires<[isGFX12Plus]>;
+}
+
+defm S_WAIT_ALU             : SOPP_Real_32_Renamed_gfx12<0x008, S_WAITCNT_DEPCTR, "s_wait_alu">;
+defm S_WAIT_LOADCNT         : SOPP_Real_32_gfx12<0x040>;
+defm S_WAIT_STORECNT        : SOPP_Real_32_gfx12<0x041>;
+defm S_WAIT_SAMPLECNT       : SOPP_Real_32_gfx12<0x042>;
+defm S_WAIT_BVHCNT          : SOPP_Real_32_gfx12<0x043>;
+defm S_WAIT_EXPCNT          : SOPP_Real_32_gfx12<0x044>;
+defm S_WAIT_DSCNT           : SOPP_Real_32_gfx12<0x046>;
+defm S_WAIT_KMCNT           : SOPP_Real_32_gfx12<0x047>;
+
+//===----------------------------------------------------------------------===//
+// SOPP - GFX11, GFX12.
+//===----------------------------------------------------------------------===//
+
 
 multiclass SOPP_Real_32_gfx11<bits<7> op, string real_name = !cast<SOPP_Pseudo>(NAME).Mnemonic # " "> {
   def _gfx11 : SOPP_Real_32<op, !cast<SOPP_Pseudo>(NAME), real_name>,
@@ -2002,12 +2046,6 @@ multiclass SOPP_Real_64_gfx11<bits<7> op, string real_name = !cast<SOPP_Pseudo>(
   def _gfx11 : SOPP_Real_64<op, !cast<SOPP_Pseudo>(NAME), real_name>,
                Select_gfx11<!cast<SOPP_Pseudo>(NAME).Mnemonic>,
                SOPPRelaxTable<1, !cast<SOPP_Pseudo>(NAME).KeyName, "_gfx11">;
-}
-
-multiclass SOPP_Real_32_Renamed_gfx12<bits<7> op, SOPP_Pseudo backing_pseudo, string real_name> {
-  def _gfx12 : SOPP_Real_32<op, backing_pseudo, real_name # " ">,
-               Select_gfx12<backing_pseudo.Mnemonic>,
-               MnemonicAlias<backing_pseudo.Mnemonic, real_name>, Requires<[isGFX12Plus]>;
 }
 
 multiclass SOPP_Real_32_Renamed_gfx11<bits<7> op, SOPP_Pseudo backing_pseudo, string real_name> {
@@ -2045,7 +2083,7 @@ defm S_SLEEP                      : SOPP_Real_32_gfx11_gfx12<0x003>;
 defm S_SET_INST_PREFETCH_DISTANCE : SOPP_Real_32_Renamed_gfx11_gfx12<0x004, S_INST_PREFETCH, "s_set_inst_prefetch_distance">;
 defm S_CLAUSE                     : SOPP_Real_32_gfx11_gfx12<0x005>;
 defm S_DELAY_ALU                  : SOPP_Real_32_gfx11_gfx12<0x007>;
-defm S_WAITCNT_DEPCTR             : SOPP_Real_32_gfx11_gfx12<0x008>;
+defm S_WAITCNT_DEPCTR             : SOPP_Real_32_gfx11<0x008>;
 defm S_WAITCNT                    : SOPP_Real_32_gfx11_gfx12<0x009>;
 defm S_WAIT_IDLE                  : SOPP_Real_32_gfx11_gfx12<0x00a>;
 defm S_WAIT_EVENT                 : SOPP_Real_32_gfx11_gfx12<0x00b>;
