@@ -170,7 +170,7 @@ private:
   /// \param[in] session
   ///     The definition file for the postmortem session.
   ///
-  /// \param[in] traces_proceses
+  /// \param[in] traced_processes
   ///     The processes traced in the live session.
   ///
   /// \param[in] trace_threads
@@ -202,7 +202,7 @@ private:
   struct Storage {
     llvm::Optional<TraceIntelPTMultiCoreDecoder> multicore_decoder;
     /// These decoders are used for the non-per-core case
-    std::map<lldb::tid_t, std::unique_ptr<ThreadDecoder>> thread_decoders;
+    llvm::DenseMap<lldb::tid_t, std::unique_ptr<ThreadDecoder>> thread_decoders;
     /// Helper variable used to track long running operations for telemetry.
     TaskTimer task_timer;
     /// It is provided by either a session file or a live process to convert TSC

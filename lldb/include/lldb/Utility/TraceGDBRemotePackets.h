@@ -155,10 +155,6 @@ struct TraceGetBinaryDataRequest {
   llvm::Optional<lldb::tid_t> tid;
   /// Optional core id if the data is related to a cpu core.
   llvm::Optional<lldb::core_id_t> core_id;
-  /// Offset in bytes from where to start reading the data.
-  uint64_t offset;
-  /// Number of bytes to read.
-  uint64_t size;
 };
 
 bool fromJSON(const llvm::json::Value &value,

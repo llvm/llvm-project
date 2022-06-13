@@ -102,7 +102,7 @@ TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
     m_storage.multicore_decoder.emplace(*this);
   } else {
     for (const ThreadPostMortemTraceSP &thread : traced_threads) {
-      m_storage.thread_decoders.emplace(
+      m_storage.thread_decoders.try_emplace(
           thread->GetID(), std::make_unique<ThreadDecoder>(thread, *this));
       if (const Optional<FileSpec> &trace_file = thread->GetTraceFile()) {
         SetPostMortemThreadDataFile(
@@ -323,7 +323,7 @@ TraceIntelPT::Storage &TraceIntelPT::GetUpdatedStorage() {
 
 Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
                                               StringRef json_response) {
-  m_storage = {};
+  m_storage = Storage();
 
   Expected<TraceIntelPTGetStateResponse> intelpt_state =
       json::parse<TraceIntelPTGetStateResponse>(json_response,
@@ -337,7 +337,7 @@ Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
     for (const TraceThreadState &thread_state : state.traced_threads) {
       ThreadSP thread_sp =
           GetLiveProcess()->GetThreadList().FindThreadByID(thread_state.tid);
-      m_storage.thread_decoders.emplace(
+      m_storage.thread_decoders.try_emplace(
           thread_state.tid, std::make_unique<ThreadDecoder>(thread_sp, *this));
     }
   } else {

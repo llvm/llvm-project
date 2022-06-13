@@ -52,16 +52,20 @@ public:
   ///   errors, return a null pointer.
   llvm::Expected<lldb::TraceSP> Parse();
 
-  llvm::Expected<lldb::TraceSP>
-  CreateTraceIntelPTInstance(JSONTraceSession &session,
-                             std::vector<ParsedProcess> &parsed_processes);
-
 private:
   /// Resolve non-absolute paths relative to the session file folder.
   FileSpec NormalizePath(const std::string &path);
 
-  lldb::ThreadPostMortemTraceSP ParseThread(lldb::ProcessSP &process_sp,
+  /// Create a post-mortem thread associated with the given \p process
+  /// using the definition from \p thread.
+  lldb::ThreadPostMortemTraceSP ParseThread(Process &process,
                                             const JSONThread &thread);
+
+  /// Given a session description and a list of fully parsed processes,
+  /// create an actual Trace instance that "traces" these processes.
+  llvm::Expected<lldb::TraceSP>
+  CreateTraceIntelPTInstance(JSONTraceSession &session,
+                             std::vector<ParsedProcess> &parsed_processes);
 
   /// Create the corresponding Threads and Process objects given the JSON
   /// process definition.
@@ -70,7 +74,9 @@ private:
   ///   The JSON process definition
   llvm::Expected<ParsedProcess> ParseProcess(const JSONProcess &process);
 
-  llvm::Error ParseModule(lldb::TargetSP &target_sp, const JSONModule &module);
+  /// Create a moddule associated with the given \p target
+  /// using the definition from \p module.
+  llvm::Error ParseModule(Target &target, const JSONModule &module);
 
   /// Create a user-friendly error message upon a JSON-parsing failure using the
   /// \a json::ObjectMapper functionality.
@@ -106,7 +112,7 @@ private:
 
   Debugger &m_debugger;
   const llvm::json::Value &m_trace_session_file;
-  std::string m_session_file_dir;
+  const std::string m_session_file_dir;
 };
 
 } // namespace trace_intel_pt
