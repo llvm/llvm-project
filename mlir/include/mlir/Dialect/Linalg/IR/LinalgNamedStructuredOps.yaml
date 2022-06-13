@@ -1337,8 +1337,8 @@ structured_op: !LinalgStructuredOpConfig
     name: K
     kind: input_tensor
     type_var: T2
-    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s10, s3,
-      s7, s9)>
+    shape_map: affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] -> (s10,
+      s3, s7, s9)>
   - !LinalgOperandDefConfig
     name: O
     kind: output_tensor

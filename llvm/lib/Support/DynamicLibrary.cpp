@@ -26,14 +26,14 @@ using namespace llvm::sys;
 class DynamicLibrary::HandleSet {
   typedef std::vector<void *> HandleList;
   HandleList Handles;
-  void *Process;
+  void *Process = nullptr;
 
 public:
   static void *DLOpen(const char *Filename, std::string *Err);
   static void DLClose(void *Handle);
   static void *DLSym(void *Handle, const char *Symbol);
 
-  HandleSet() : Process(nullptr) {}
+  HandleSet() = default;
   ~HandleSet();
 
   HandleList::iterator Find(void *Handle) { return find(Handles, Handle); }

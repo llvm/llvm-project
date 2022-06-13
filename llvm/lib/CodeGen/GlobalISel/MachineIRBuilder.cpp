@@ -566,47 +566,6 @@ MachineInstrBuilder MachineIRBuilder::buildExtract(const DstOp &Dst,
   return Extract;
 }
 
-void MachineIRBuilder::buildSequence(Register Res, ArrayRef<Register> Ops,
-                                     ArrayRef<uint64_t> Indices) {
-#ifndef NDEBUG
-  assert(Ops.size() == Indices.size() && "incompatible args");
-  assert(!Ops.empty() && "invalid trivial sequence");
-  assert(llvm::is_sorted(Indices) &&
-         "sequence offsets must be in ascending order");
-
-  assert(getMRI()->getType(Res).isValid() && "invalid operand type");
-  for (auto Op : Ops)
-    assert(getMRI()->getType(Op).isValid() && "invalid operand type");
-#endif
-
-  LLT ResTy = getMRI()->getType(Res);
-  LLT OpTy = getMRI()->getType(Ops[0]);
-  unsigned OpSize = OpTy.getSizeInBits();
-  bool MaybeMerge = true;
-  for (unsigned i = 0; i < Ops.size(); ++i) {
-    if (getMRI()->getType(Ops[i]) != OpTy || Indices[i] != i * OpSize) {
-      MaybeMerge = false;
-      break;
-    }
-  }
-
-  if (MaybeMerge && Ops.size() * OpSize == ResTy.getSizeInBits()) {
-    buildMerge(Res, Ops);
-    return;
-  }
-
-  Register ResIn = getMRI()->createGenericVirtualRegister(ResTy);
-  buildUndef(ResIn);
-
-  for (unsigned i = 0; i < Ops.size(); ++i) {
-    Register ResOut = i + 1 == Ops.size()
-                          ? Res
-                          : getMRI()->createGenericVirtualRegister(ResTy);
-    buildInsert(ResOut, ResIn, Ops[i], Indices[i]);
-    ResIn = ResOut;
-  }
-}
-
 MachineInstrBuilder MachineIRBuilder::buildUndef(const DstOp &Res) {
   return buildInstr(TargetOpcode::G_IMPLICIT_DEF, {Res}, {});
 }

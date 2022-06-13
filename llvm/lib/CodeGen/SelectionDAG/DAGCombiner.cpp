@@ -9332,6 +9332,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     return V;
 
   EVT VT = N0.getValueType();
+  EVT ShiftVT = N1.getValueType();
   unsigned OpSizeInBits = VT.getScalarSizeInBits();
 
   // fold (srl c1, c2) -> c1 >>u c2
@@ -9373,7 +9374,6 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     };
     if (ISD::matchBinaryPredicate(N1, N0.getOperand(1), MatchInRange)) {
       SDLoc DL(N);
-      EVT ShiftVT = N1.getValueType();
       SDValue Sum = DAG.getNode(ISD::ADD, DL, ShiftVT, N1, N0.getOperand(1));
       return DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), Sum);
     }
@@ -19426,6 +19426,41 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       Ops.append(NumElts, DAG.getUNDEF(InVal.getValueType()));
       return UpdateBuildVector(Ops);
     }
+
+    // If we're inserting into the end of a vector as part of an sequence, see
+    // if we can create a BUILD_VECTOR by following the sequence back up the
+    // chain.
+    if (Elt == (NumElts - 1)) {
+      SmallVector<SDValue> ReverseInsertions;
+      ReverseInsertions.push_back(InVal);
+
+      EVT MaxEltVT = InVal.getValueType();
+      SDValue CurVec = InVec;
+      for (unsigned I = 1; I != NumElts; ++I) {
+        if (CurVec.getOpcode() != ISD::INSERT_VECTOR_ELT || !CurVec.hasOneUse())
+          break;
+
+        auto *CurIdx = dyn_cast<ConstantSDNode>(CurVec.getOperand(2));
+        if (!CurIdx || CurIdx->getAPIntValue() != ((NumElts - 1) - I))
+          break;
+        SDValue CurVal = CurVec.getOperand(1);
+        ReverseInsertions.push_back(CurVal);
+        if (VT.isInteger()) {
+          EVT CurValVT = CurVal.getValueType();
+          MaxEltVT = MaxEltVT.bitsGE(CurValVT) ? MaxEltVT : CurValVT;
+        }
+        CurVec = CurVec.getOperand(0);
+      }
+
+      if (ReverseInsertions.size() == NumElts) {
+        for (unsigned I = 0; I != NumElts; ++I) {
+          SDValue Val = ReverseInsertions[(NumElts - 1) - I];
+          Val = VT.isInteger() ? DAG.getAnyExtOrTrunc(Val, DL, MaxEltVT) : Val;
+          Ops.push_back(Val);
+        }
+        return DAG.getBuildVector(VT, DL, Ops);
+      }
+    }
   }
 
   return SDValue();
@@ -22311,6 +22346,19 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       SDValue Insert = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, NewBO);
       SmallVector<int, 16> ZeroMask(VT.getVectorNumElements(), 0);
       return DAG.getVectorShuffle(VT, DL, Insert, DAG.getUNDEF(VT), ZeroMask);
+    }
+
+    // splat(scalar_to_vector(x), 0) -> build_vector(x,...,x)
+    // splat(insert_vector_elt(v, x, c), c) -> build_vector(x,...,x)
+    if ((!LegalOperations || TLI.isOperationLegal(ISD::BUILD_VECTOR, VT)) &&
+        N0.hasOneUse()) {
+      if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && SplatIndex == 0)
+        return DAG.getSplatBuildVector(VT, SDLoc(N), N0.getOperand(0));
+
+      if (N0.getOpcode() == ISD::INSERT_VECTOR_ELT)
+        if (auto *Idx = dyn_cast<ConstantSDNode>(N0.getOperand(2)))
+          if (Idx->getAPIntValue() == SplatIndex)
+            return DAG.getSplatBuildVector(VT, SDLoc(N), N0.getOperand(1));
     }
 
     // If this is a bit convert that changes the element type of the vector but

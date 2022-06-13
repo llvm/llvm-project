@@ -2447,7 +2447,8 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
   if (!CompilationDatabase) {
     std::error_code EC;
     auto File = std::make_unique<llvm::raw_fd_ostream>(
-        Filename, EC, llvm::sys::fs::OF_TextWithCRLF);
+        Filename, EC,
+        llvm::sys::fs::OF_TextWithCRLF | llvm::sys::fs::OF_Append);
     if (EC) {
       D.Diag(clang::diag::err_drv_compilationdatabase) << Filename
                                                        << EC.message();
@@ -2473,6 +2474,7 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
     CDB << ", \"" << escape(Buf) << "\"";
   }
   CDB << ", \"" << escape(Input.getFilename()) << "\"";
+  CDB << ", \"-o\", \"" << escape(Output.getFilename()) << "\"";
   for (auto &A: Args) {
     auto &O = A->getOption();
     // Skip language selection, which is positional.
@@ -2485,6 +2487,9 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
       continue;
     // Skip inputs.
     if (O.getKind() == Option::InputClass)
+      continue;
+    // Skip output.
+    if (O.getID() == options::OPT_o)
       continue;
     // All other arguments are quoted and appended.
     ArgStringList ASL;
@@ -2558,6 +2563,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                    options::OPT_mno_incremental_linker_compatible,
                    DefaultIncrementalLinkerCompatible))
     CmdArgs.push_back("-mincremental-linker-compatible");
+
+  Args.AddLastArg(CmdArgs, options::OPT_femit_dwarf_unwind_EQ);
 
   // If you add more args here, also add them to the block below that
   // starts with "// If CollectArgsForIntegratedAssembler() isn't called below".
@@ -4675,6 +4682,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
     Args.ClaimAllArgs(options::OPT_Wa_COMMA);
     Args.ClaimAllArgs(options::OPT_Xassembler);
+    Args.ClaimAllArgs(options::OPT_femit_dwarf_unwind_EQ);
   }
 
   if (isa<AnalyzeJobAction>(JA)) {
@@ -6032,6 +6040,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           << A->getAsString(Args) << TripleStr;
   }
 
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mdefault_visibility_export_mapping_EQ)) {
+    if (Triple.isOSAIX())
+      A->render(Args, CmdArgs);
+    else
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+  }
 
   if (Args.hasFlag(options::OPT_fvisibility_inlines_hidden,
                     options::OPT_fno_visibility_inlines_hidden, false))

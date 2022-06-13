@@ -166,7 +166,8 @@ bool Compilation::CleanupFileMap(const ArgStringMap &Files,
 }
 
 int Compilation::ExecuteCommand(const Command &C,
-                                const Command *&FailingCommand) const {
+                                const Command *&FailingCommand,
+                                bool LogOnly) const {
   if ((getDriver().CCPrintOptions ||
        getArgs().hasArg(options::OPT_v)) && !getDriver().CCGenDiagnostics) {
     raw_ostream *OS = &llvm::errs();
@@ -194,6 +195,9 @@ int Compilation::ExecuteCommand(const Command &C,
 
     C.Print(*OS, "\n", /*Quote=*/getDriver().CCPrintOptions);
   }
+
+  if (LogOnly)
+    return 0;
 
   std::string Error;
   bool ExecutionFailed;
@@ -335,7 +339,8 @@ private:
 };
 } // namespace
 void Compilation::ExecuteJobs(const JobList &Jobs,
-                              FailingCommandList &FailingCommands) const {
+                              FailingCommandList &FailingCommands,
+                              bool LogOnly) const {
   // According to UNIX standard, driver need to continue compiling all the
   // inputs on the command line even one of them failed.
   // In all but CLMode, execute all the jobs unless the necessary inputs for the
@@ -360,7 +365,7 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
     JS.setJobState(Next, JobScheduler::JS_RUN);
     auto Work = [&, Next]() {
       const Command *FailingCommand = nullptr;
-      if (int Res = ExecuteCommand(*Next, FailingCommand)) {
+      if (int Res = ExecuteCommand(*Next, FailingCommand, LogOnly)) {
         FailingCommands.push_back(std::make_pair(Res, FailingCommand));
         JS.setJobState(Next, JobScheduler::JS_FAIL);
       } else {

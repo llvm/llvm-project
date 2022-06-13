@@ -163,10 +163,10 @@ struct CHRStats {
 
 // RegInfo - some properties of a Region.
 struct RegInfo {
-  RegInfo() : R(nullptr), HasBranch(false) {}
-  RegInfo(Region *RegionIn) : R(RegionIn), HasBranch(false) {}
-  Region *R;
-  bool HasBranch;
+  RegInfo() = default;
+  RegInfo(Region *RegionIn) : R(RegionIn) {}
+  Region *R = nullptr;
+  bool HasBranch = false;
   SmallVector<SelectInst *, 8> Selects;
 };
 

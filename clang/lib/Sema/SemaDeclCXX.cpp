@@ -8617,10 +8617,10 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
                             int(1)))
       return true;
 
-    if (llvm::find_if(RD->friends(), [&](const FriendDecl *F) {
+    if (llvm::none_of(RD->friends(), [&](const FriendDecl *F) {
           return FD->getCanonicalDecl() ==
                  F->getFriendDecl()->getCanonicalDecl();
-        }) == RD->friends().end()) {
+        })) {
       Diag(FD->getLocation(), diag::err_defaulted_comparison_not_friend)
           << int(DCK) << int(0) << RD;
       Diag(RD->getCanonicalDecl()->getLocation(), diag::note_declared_at);

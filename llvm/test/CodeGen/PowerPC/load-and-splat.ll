@@ -546,11 +546,8 @@ define <16 x i8> @unadjusted_lxvwsx(i32* %s, i32* %t) {
 ;
 ; P7-LABEL: unadjusted_lxvwsx:
 ; P7:       # %bb.0: # %entry
-; P7-NEXT:    lwz r3, 0(r3)
-; P7-NEXT:    addi r4, r1, -16
-; P7-NEXT:    stw r3, -16(r1)
-; P7-NEXT:    lxvw4x vs0, 0, r4
-; P7-NEXT:    xxspltw v2, vs0, 0
+; P7-NEXT:    lfiwzx f0, 0, r3
+; P7-NEXT:    xxspltw v2, vs0, 1
 ; P7-NEXT:    blr
 ;
 ; P9-AIX32-LABEL: unadjusted_lxvwsx:
@@ -566,11 +563,8 @@ define <16 x i8> @unadjusted_lxvwsx(i32* %s, i32* %t) {
 ;
 ; P7-AIX32-LABEL: unadjusted_lxvwsx:
 ; P7-AIX32:       # %bb.0: # %entry
-; P7-AIX32-NEXT:    lwz r3, 0(r3)
-; P7-AIX32-NEXT:    addi r4, r1, -16
-; P7-AIX32-NEXT:    stw r3, -16(r1)
-; P7-AIX32-NEXT:    lxvw4x vs0, 0, r4
-; P7-AIX32-NEXT:    xxspltw v2, vs0, 0
+; P7-AIX32-NEXT:    lfiwzx f0, 0, r3
+; P7-AIX32-NEXT:    xxspltw v2, vs0, 1
 ; P7-AIX32-NEXT:    blr
   entry:
     %0 = bitcast i32* %s to <4 x i8>*

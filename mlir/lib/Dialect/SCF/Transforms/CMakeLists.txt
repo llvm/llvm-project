@@ -18,19 +18,19 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRSCFPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
   MLIRAffineAnalysis
-  MLIRArithmetic
-  MLIRBufferization
+  MLIRArithmeticDialect
+  MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRDialectUtils
   MLIRIR
-  MLIRMemRef
+  MLIRMemRefDialect
   MLIRPass
-  MLIRSCF
+  MLIRSCFDialect
   MLIRSCFUtils
   MLIRSupport
-  MLIRTensor
+  MLIRTensorDialect
   MLIRTransforms
   MLIRTransformUtils
 )

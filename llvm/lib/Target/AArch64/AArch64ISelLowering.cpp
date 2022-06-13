@@ -19688,11 +19688,11 @@ bool AArch64TargetLowering::isOpSuitableForLDPSTP(const Instruction *I) const {
 
   if (auto LI = dyn_cast<LoadInst>(I))
     return LI->getType()->getPrimitiveSizeInBits() == 128 &&
-           LI->getAlignment() >= 16;
+           LI->getAlign() >= Align(16);
 
   if (auto SI = dyn_cast<StoreInst>(I))
     return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
-           SI->getAlignment() >= 16;
+           SI->getAlign() >= Align(16);
 
   return false;
 }

@@ -6,6 +6,12 @@
 # RUN: not %no-fatal-warnings-lld %t1.o -fatal_warnings -o /dev/null \
 # RUN:     -single_module 2>&1 | FileCheck -check-prefix=ERROR %s
 
+# RUN: %no-fatal-warnings-lld %t1.o -w -o /dev/null -single_module 2>&1 \
+# RUN:     | count 0
+# RUN: not %no-fatal-warnings-lld %t1.o -fatal_warnings -w -o /dev/null \
+# RUN:     -single_module 2>&1 \
+# RUN:     | FileCheck --check-prefix=ERROR %s
+
 # ERROR: error: Option `-single_module' is deprecated
 # WARNING: warning: Option `-single_module' is deprecated
 
