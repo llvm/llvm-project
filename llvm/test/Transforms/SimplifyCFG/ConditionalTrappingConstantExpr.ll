@@ -72,8 +72,12 @@ bb10:
 define <1 x i64> @trapping_const_agg(i1 %c) {
 ; CHECK-LABEL: @trapping_const_agg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], <1 x i64> <i64 srem (i64 1, i64 ptrtoint (i32* @g to i64))>, <1 x i64> zeroinitializer
-; CHECK-NEXT:    ret <1 x i64> [[SPEC_SELECT]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi <1 x i64> [ zeroinitializer, [[ENTRY:%.*]] ], [ <i64 srem (i64 1, i64 ptrtoint (i32* @g to i64))>, [[IF]] ]
+; CHECK-NEXT:    ret <1 x i64> [[PHI]]
 ;
 entry:
   br i1 %c, label %if, label %end
