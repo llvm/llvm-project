@@ -275,6 +275,22 @@ static bool isBoolScalarOrVector(Type type) {
   return false;
 }
 
+/// Returns true if scalar/vector type `a` and `b` have the same number of
+/// bitwidth.
+static bool hasSameBitwidth(Type a, Type b) {
+  auto getNumBitwidth = [](Type type) {
+    unsigned bw = 0;
+    if (type.isIntOrFloat())
+      bw = type.getIntOrFloatBitWidth();
+    else if (auto vecType = type.dyn_cast<VectorType>())
+      bw = vecType.getElementTypeBitWidth() * vecType.getNumElements();
+    return bw;
+  };
+  unsigned aBW = getNumBitwidth(a);
+  unsigned bBW = getNumBitwidth(b);
+  return aBW != 0 && bBW != 0 && aBW == bBW;
+}
+
 //===----------------------------------------------------------------------===//
 // ConstantOp with composite type
 //===----------------------------------------------------------------------===//
@@ -655,10 +671,11 @@ LogicalResult CmpIOpBooleanPattern::matchAndRewrite(
 
   switch (op.getPredicate()) {
 #define DISPATCH(cmpPredicate, spirvOp)                                        \
-  case cmpPredicate:                                                           \
-    rewriter.replaceOpWithNewOp<spirvOp>(op, op.getResult().getType(),         \
-                                         adaptor.getLhs(), adaptor.getRhs());  \
-    return success();
+  case cmpPredicate: {                                                         \
+    rewriter.replaceOpWithNewOp<spirvOp>(op, adaptor.getLhs(),                 \
+                                         adaptor.getRhs());                    \
+    return success();                                                          \
+  }
 
     DISPATCH(arith::CmpIPredicate::eq, spirv::LogicalEqualOp);
     DISPATCH(arith::CmpIPredicate::ne, spirv::LogicalNotEqualOp);
@@ -676,20 +693,23 @@ LogicalResult CmpIOpBooleanPattern::matchAndRewrite(
 LogicalResult
 CmpIOpPattern::matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
                                ConversionPatternRewriter &rewriter) const {
-  Type operandType = op.getLhs().getType();
-  if (isBoolScalarOrVector(operandType))
+  Type srcType = op.getLhs().getType();
+  if (isBoolScalarOrVector(srcType))
+    return failure();
+  Type dstType = getTypeConverter()->convertType(srcType);
+  if (!dstType)
     return failure();
 
   switch (op.getPredicate()) {
 #define DISPATCH(cmpPredicate, spirvOp)                                        \
   case cmpPredicate:                                                           \
     if (spirvOp::template hasTrait<OpTrait::spirv::UnsignedOp>() &&            \
-        operandType != this->getTypeConverter()->convertType(operandType)) {   \
+        srcType != dstType && !hasSameBitwidth(srcType, dstType)) {            \
       return op.emitError(                                                     \
           "bitwidth emulation is not implemented yet on unsigned op");         \
     }                                                                          \
-    rewriter.replaceOpWithNewOp<spirvOp>(op, op.getResult().getType(),         \
-                                         adaptor.getLhs(), adaptor.getRhs());  \
+    rewriter.replaceOpWithNewOp<spirvOp>(op, adaptor.getLhs(),                 \
+                                         adaptor.getRhs());                    \
     return success();
 
     DISPATCH(arith::CmpIPredicate::eq, spirv::IEqualOp);
@@ -718,8 +738,8 @@ CmpFOpPattern::matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
   switch (op.getPredicate()) {
 #define DISPATCH(cmpPredicate, spirvOp)                                        \
   case cmpPredicate:                                                           \
-    rewriter.replaceOpWithNewOp<spirvOp>(op, op.getResult().getType(),         \
-                                         adaptor.getLhs(), adaptor.getRhs());  \
+    rewriter.replaceOpWithNewOp<spirvOp>(op, adaptor.getLhs(),                 \
+                                         adaptor.getRhs());                    \
     return success();
 
     // Ordered.
