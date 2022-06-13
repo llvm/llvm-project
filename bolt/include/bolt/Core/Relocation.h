@@ -55,7 +55,10 @@ struct Relocation {
   /// Return size of this relocation.
   size_t getSize() const { return getSizeForType(Type); }
 
-  /// Handle special cases when relocation should not be processed by bolt
+  /// Skip relocations that we don't want to handle in BOLT
+  static bool skipRelocationType(uint64_t Type);
+
+  /// Handle special cases when relocation should not be processed by BOLT
   static bool skipRelocationProcess(uint64_t Type, uint64_t Contents);
 
   // Adjust value depending on relocation type (make it PC relative or not)

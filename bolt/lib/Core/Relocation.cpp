@@ -165,6 +165,12 @@ size_t getSizeForTypeAArch64(uint64_t Type) {
   }
 }
 
+bool skipRelocationTypeX86(uint64_t Type) { return Type == ELF::R_X86_64_NONE; }
+
+bool skipRelocationTypeAArch64(uint64_t Type) {
+  return Type == ELF::R_AARCH64_NONE || Type == ELF::R_AARCH64_LD_PREL_LO19;
+}
+
 bool skipRelocationProcessX86(uint64_t Type, uint64_t Contents) {
   return false;
 }
@@ -534,6 +540,12 @@ size_t Relocation::getSizeForType(uint64_t Type) {
   if (Arch == Triple::aarch64)
     return getSizeForTypeAArch64(Type);
   return getSizeForTypeX86(Type);
+}
+
+bool Relocation::skipRelocationType(uint64_t Type) {
+  if (Arch == Triple::aarch64)
+    return skipRelocationTypeAArch64(Type);
+  return skipRelocationTypeX86(Type);
 }
 
 bool Relocation::skipRelocationProcess(uint64_t Type, uint64_t Contents) {
