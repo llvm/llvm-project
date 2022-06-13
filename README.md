@@ -48,3 +48,14 @@ participants to all modes of communication within the project.
 ClangIR is based off https://github.com/llvm/llvm-project and uses the same
 license. This ClangIR project is under the Apache License v2.0 with LLVM
 Exceptions. Please see the `LICENSE.TXT` for the full details.
+
+## Contributing
+
+Check our [contributing guide](CONTRIBUTING.md) to learn about how to
+contribute to the project.
+
+## Code Of Confuct
+
+Check our [Code Of Conduct](CODE_OF_CONDUCT.md) to learn more about our
+contributor standards and expectations.
+
