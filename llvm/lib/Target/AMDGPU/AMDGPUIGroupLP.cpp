@@ -21,6 +21,7 @@
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
@@ -60,132 +61,109 @@ static cl::opt<Optional<unsigned>>
                     cl::desc("The maximum number of instructions to include "
                              "in lds/gds write group."));
 
-typedef function_ref<bool(const MachineInstr &, const SIInstrInfo *)>
-    CanAddMIFn;
+// Components of the mask that determines which instruction types may be may be
+// classified into a SchedGroup.
+enum class SchedGroupMask {
+  NONE = 0u,
+  ALU = 1u << 0,
+  VALU = 1u << 1,
+  SALU = 1u << 2,
+  MFMA = 1u << 3,
+  VMEM = 1u << 4,
+  VMEM_READ = 1u << 5,
+  VMEM_WRITE = 1u << 6,
+  DS = 1u << 7,
+  DS_READ = 1u << 8,
+  DS_WRITE = 1u << 9,
+  ALL = ALU | VALU | SALU | MFMA | VMEM | VMEM_READ | VMEM_WRITE | DS |
+        DS_READ | DS_WRITE,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
+};
 
 // Classify instructions into groups to enable fine tuned control over the
 // scheduler. These groups may be more specific than current SchedModel
 // instruction classes.
 class SchedGroup {
 private:
-  // Function that returns true if a non-bundle MI may be inserted into this
-  // group.
-  const CanAddMIFn canAddMI;
+  // Mask that defines which instruction types can be classified into this
+  // SchedGroup. The instruction types correspond to the mask from SCHED_BARRIER
+  // and SCHED_GROUP_BARRIER.
+  SchedGroupMask SGMask;
 
   // Maximum number of SUnits that can be added to this group.
   Optional<unsigned> MaxSize;
+
+  // SchedGroups will only synchronize with other SchedGroups that have the same
+  // SyncID.
+  int SyncID = 0;
 
   // Collection of SUnits that are classified as members of this group.
   SmallVector<SUnit *, 32> Collection;
 
   ScheduleDAGInstrs *DAG;
 
-  void tryAddEdge(SUnit *A, SUnit *B) {
-    if (A != B && DAG->canAddEdge(B, A)) {
-      DAG->addEdge(B, SDep(A, SDep::Artificial));
-      LLVM_DEBUG(dbgs() << "Adding edge...\n"
-                        << "from: SU(" << A->NodeNum << ") " << *A->getInstr()
-                        << "to: SU(" << B->NodeNum << ") " << *B->getInstr());
-    }
+  const SIInstrInfo *TII;
+
+  // Try to add and edge from SU A to SU B.
+  bool tryAddEdge(SUnit *A, SUnit *B);
+
+  // Use SGMask to determine whether we can classify MI as a member of this
+  // SchedGroup object.
+  bool canAddMI(const MachineInstr &MI) const;
+
+  // Returns true if SU can be added to this SchedGroup.
+  bool canAddSU(SUnit &SU) const;
+
+  // Returns true if no more instructions may be added to this group.
+  bool isFull() const;
+
+  // Add SU to the SchedGroup.
+  void add(SUnit &SU) {
+    LLVM_DEBUG(dbgs() << "For SchedGroup with mask "
+                      << format_hex((int)SGMask, 10, true) << " adding "
+                      << *SU.getInstr());
+    Collection.push_back(&SU);
   }
 
 public:
   // Add DAG dependencies from all SUnits in this SchedGroup and this SU. If
   // MakePred is true, SU will be a predecessor of the SUnits in this
   // SchedGroup, otherwise SU will be a successor.
-  void link(SUnit &SU, bool MakePred = false) {
-    for (auto A : Collection) {
-      SUnit *B = &SU;
-      if (MakePred)
-        std::swap(A, B);
-
-      tryAddEdge(A, B);
-    }
-  }
+  void link(SUnit &SU, bool MakePred = false);
 
   // Add DAG dependencies from all SUnits in this SchedGroup and this SU. Use
   // the predicate to determine whether SU should be a predecessor (P = true)
   // or a successor (P = false) of this SchedGroup.
-  void link(SUnit &SU, function_ref<bool(const SUnit *A, const SUnit *B)> P) {
-    for (auto A : Collection) {
-      SUnit *B = &SU;
-      if (P(A, B))
-        std::swap(A, B);
-
-      tryAddEdge(A, B);
-    }
-  }
+  void link(SUnit &SU, function_ref<bool(const SUnit *A, const SUnit *B)> P);
 
   // Add DAG dependencies such that SUnits in this group shall be ordered
   // before SUnits in OtherGroup.
-  void link(SchedGroup &OtherGroup) {
-    for (auto B : OtherGroup.Collection)
-      link(*B);
-  }
+  void link(SchedGroup &OtherGroup);
 
   // Returns true if no more instructions may be added to this group.
   bool isFull() { return MaxSize && Collection.size() >= *MaxSize; }
 
-  // Returns true if SU can be added to this SchedGroup.
-  bool canAddSU(SUnit &SU, const SIInstrInfo *TII) {
-    if (isFull())
-      return false;
+  // Identify and add all relevant SUs from the DAG to this SchedGroup.
+  void initSchedGroup();
 
-    MachineInstr &MI = *SU.getInstr();
-    if (MI.getOpcode() != TargetOpcode::BUNDLE)
-      return canAddMI(MI, TII);
+  // Add instructions to the SchedGroup bottom up starting from RIter.
+  // ConflictedInstrs is a set of instructions that should not be added to the
+  // SchedGroup even when the other conditions for adding it are satisfied.
+  // RIter will be added to the SchedGroup as well, and dependencies will be
+  // added so that RIter will always be scheduled at the end of the group.
+  void initSchedGroup(std::vector<SUnit>::reverse_iterator RIter,
+                      DenseSet<SUnit *> &ConflictedInstrs);
 
-    // Special case for bundled MIs.
-    const MachineBasicBlock *MBB = MI.getParent();
-    MachineBasicBlock::instr_iterator B = MI.getIterator(), E = ++B;
-    while (E != MBB->end() && E->isBundledWithPred())
-      ++E;
+  int getSyncID() { return SyncID; }
 
-    // Return true if all of the bundled MIs can be added to this group.
-    return std::all_of(
-        B, E, [this, TII](MachineInstr &MI) { return canAddMI(MI, TII); });
-  }
+  SchedGroup(SchedGroupMask SGMask, Optional<unsigned> MaxSize,
+             ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : SGMask(SGMask), MaxSize(MaxSize), DAG(DAG), TII(TII) {}
 
-  void add(SUnit &SU) { Collection.push_back(&SU); }
-
-  SchedGroup(CanAddMIFn canAddMI, Optional<unsigned> MaxSize,
-             ScheduleDAGInstrs *DAG)
-      : canAddMI(canAddMI), MaxSize(MaxSize), DAG(DAG) {}
+  SchedGroup(SchedGroupMask SGMask, Optional<unsigned> MaxSize, int SyncID,
+             ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : SGMask(SGMask), MaxSize(MaxSize), SyncID(SyncID), DAG(DAG), TII(TII) {}
 };
-
-bool isMFMASGMember(const MachineInstr &MI, const SIInstrInfo *TII) {
-  return TII->isMFMA(MI);
-}
-
-bool isVALUSGMember(const MachineInstr &MI, const SIInstrInfo *TII) {
-  return TII->isVALU(MI) && !TII->isMFMA(MI);
-}
-
-bool isSALUSGMember(const MachineInstr &MI, const SIInstrInfo *TII) {
-  return TII->isSALU(MI);
-}
-
-bool isVMEMSGMember(const MachineInstr &MI, const SIInstrInfo *TII) {
-  return TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI));
-}
-
-bool isVMEMReadSGMember(const MachineInstr &MI, const SIInstrInfo *TII) {
-  return MI.mayLoad() &&
-         (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI)));
-}
-
-bool isVMEMWriteSGMember(const MachineInstr &MI, const SIInstrInfo *TII) {
-  return MI.mayStore() &&
-         (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI)));
-}
-
-bool isDSWriteSGMember(const MachineInstr &MI, const SIInstrInfo *TII) {
-  return MI.mayStore() && TII->isDS(MI);
-}
-
-bool isDSReadSGMember(const MachineInstr &MI, const SIInstrInfo *TII) {
-  return MI.mayLoad() && TII->isDS(MI);
-}
 
 class IGroupLPDAGMutation : public ScheduleDAGMutation {
 public:
@@ -199,60 +177,224 @@ public:
 // DAG mutation that coordinates with the SCHED_BARRIER instruction and
 // corresponding builtin. The mutation adds edges from specific instruction
 // classes determined by the SCHED_BARRIER mask so that they cannot be
-// scheduled around the SCHED_BARRIER.
 class SchedBarrierDAGMutation : public ScheduleDAGMutation {
 private:
   const SIInstrInfo *TII;
 
   ScheduleDAGMI *DAG;
 
-  // Components of the mask that determines which instructions may not be
-  // scheduled across the SCHED_BARRIER.
-  enum class SchedBarrierMasks {
-    NONE = 0u,
-    ALU = 1u << 0,
-    VALU = 1u << 1,
-    SALU = 1u << 2,
-    MFMA = 1u << 3,
-    VMEM = 1u << 4,
-    VMEM_READ = 1u << 5,
-    VMEM_WRITE = 1u << 6,
-    DS = 1u << 7,
-    DS_READ = 1u << 8,
-    DS_WRITE = 1u << 9,
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ DS_WRITE)
-  };
+  // Organize lists of SchedGroups by their SyncID. SchedGroups /
+  // SCHED_GROUP_BARRIERs with different SyncIDs will have no edges added
+  // between then.
+  DenseMap<int, SmallVector<SchedGroup, 4>> SyncedSchedGroupsMap;
 
-  // Cache SchedGroups of each type if we have multiple SCHED_BARRIERs in a
-  // region.
-  //
-  std::unique_ptr<SchedGroup> MFMASchedGroup = nullptr;
-  std::unique_ptr<SchedGroup> VALUSchedGroup = nullptr;
-  std::unique_ptr<SchedGroup> SALUSchedGroup = nullptr;
-  std::unique_ptr<SchedGroup> VMEMReadSchedGroup = nullptr;
-  std::unique_ptr<SchedGroup> VMEMWriteSchedGroup = nullptr;
-  std::unique_ptr<SchedGroup> DSWriteSchedGroup = nullptr;
-  std::unique_ptr<SchedGroup> DSReadSchedGroup = nullptr;
-
-  // Use a SCHED_BARRIER's mask to identify instruction SchedGroups that should
-  // not be reordered accross the SCHED_BARRIER.
-  void getSchedGroupsFromMask(int32_t Mask,
-                              SmallVectorImpl<SchedGroup *> &SchedGroups);
+  // Used to track instructions that are already to added to a different
+  // SchedGroup with the same SyncID.
+  DenseMap<int, DenseSet<SUnit *>> SyncedInstrsMap;
 
   // Add DAG edges that enforce SCHED_BARRIER ordering.
   void addSchedBarrierEdges(SUnit &SU);
 
-  // Classify instructions and add them to the SchedGroup.
-  void initSchedGroup(SchedGroup *SG);
+  // Use a SCHED_BARRIER's mask to identify instruction SchedGroups that should
+  // not be reordered accross the SCHED_BARRIER. This is used for the base
+  // SCHED_BARRIER, and not SCHED_GROUP_BARRIER. The difference is that
+  // SCHED_BARRIER will always block all instructions that can be classified
+  // into a particular SchedClass, whereas SCHED_GROUP_BARRIER has a fixed size
+  // and may only synchronize with some SchedGroups. Returns the inverse of
+  // Mask. SCHED_BARRIER's mask describes which instruction types should be
+  // allowed to be scheduled across it. Invert the mask to get the
+  // SchedGroupMask of instructions that should be barred.
+  SchedGroupMask invertSchedBarrierMask(SchedGroupMask Mask) const;
 
-  // Remove all existing edges from a SCHED_BARRIER.
-  void resetSchedBarrierEdges(SUnit &SU);
+  // Create SchedGroups for a SCHED_GROUP_BARRIER.
+  void initSchedGroupBarrier(std::vector<SUnit>::reverse_iterator RIter);
+
+  // Add DAG edges that try to enforce ordering defined by SCHED_GROUP_BARRIER
+  // instructions.
+  void addSchedGroupBarrierEdges();
 
 public:
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
   SchedBarrierDAGMutation() = default;
 };
+
+bool SchedGroup::tryAddEdge(SUnit *A, SUnit *B) {
+  if (A != B && DAG->canAddEdge(B, A)) {
+    DAG->addEdge(B, SDep(A, SDep::Artificial));
+    LLVM_DEBUG(dbgs() << "Adding edge...\n"
+                      << "from: SU(" << A->NodeNum << ") " << *A->getInstr()
+                      << "to: SU(" << B->NodeNum << ") " << *B->getInstr());
+    return true;
+  }
+  return false;
+}
+
+bool SchedGroup::canAddMI(const MachineInstr &MI) const {
+  bool Result = false;
+  if (MI.isMetaInstruction() || MI.getOpcode() == AMDGPU::SCHED_BARRIER ||
+      MI.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
+    Result = false;
+
+  else if (((SGMask & SchedGroupMask::ALU) != SchedGroupMask::NONE) &&
+           (TII->isVALU(MI) || TII->isMFMA(MI) || TII->isSALU(MI)))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
+           TII->isVALU(MI) && !TII->isMFMA(MI))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::SALU) != SchedGroupMask::NONE) &&
+           TII->isSALU(MI))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::MFMA) != SchedGroupMask::NONE) &&
+           TII->isMFMA(MI))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::VMEM) != SchedGroupMask::NONE) &&
+           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::VMEM_READ) != SchedGroupMask::NONE) &&
+           MI.mayLoad() &&
+           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::VMEM_WRITE) != SchedGroupMask::NONE) &&
+           MI.mayStore() &&
+           (TII->isVMEM(MI) || (TII->isFLAT(MI) && !TII->isDS(MI))))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::DS) != SchedGroupMask::NONE) &&
+           TII->isDS(MI))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::DS_READ) != SchedGroupMask::NONE) &&
+           MI.mayLoad() && TII->isDS(MI))
+    Result = true;
+
+  else if (((SGMask & SchedGroupMask::DS_WRITE) != SchedGroupMask::NONE) &&
+           MI.mayStore() && TII->isDS(MI))
+    Result = true;
+
+  LLVM_DEBUG(
+      dbgs() << "For SchedGroup with mask " << format_hex((int)SGMask, 10, true)
+             << (Result ? " could classify " : " unable to classify ") << MI);
+
+  return Result;
+}
+
+void SchedGroup::link(SUnit &SU, bool MakePred) {
+  for (auto A : Collection) {
+    SUnit *B = &SU;
+    if (MakePred)
+      std::swap(A, B);
+
+    tryAddEdge(A, B);
+  }
+}
+
+void SchedGroup::link(SUnit &SU,
+                      function_ref<bool(const SUnit *A, const SUnit *B)> P) {
+  for (auto A : Collection) {
+    SUnit *B = &SU;
+    if (P(A, B))
+      std::swap(A, B);
+
+    tryAddEdge(A, B);
+  }
+}
+
+void SchedGroup::link(SchedGroup &OtherGroup) {
+  for (auto B : OtherGroup.Collection)
+    link(*B);
+}
+
+bool SchedGroup::isFull() const {
+  return MaxSize && Collection.size() >= *MaxSize;
+}
+
+bool SchedGroup::canAddSU(SUnit &SU) const {
+  MachineInstr &MI = *SU.getInstr();
+  if (MI.getOpcode() != TargetOpcode::BUNDLE)
+    return canAddMI(MI);
+
+  // Special case for bundled MIs.
+  const MachineBasicBlock *MBB = MI.getParent();
+  MachineBasicBlock::instr_iterator B = MI.getIterator(), E = ++B;
+  while (E != MBB->end() && E->isBundledWithPred())
+    ++E;
+
+  // Return true if all of the bundled MIs can be added to this group.
+  return std::all_of(B, E, [this](MachineInstr &MI) { return canAddMI(MI); });
+}
+
+void SchedGroup::initSchedGroup() {
+  for (auto &SU : DAG->SUnits) {
+    if (isFull())
+      break;
+
+    if (canAddSU(SU))
+      add(SU);
+  }
+}
+
+static bool canFitIntoPipeline(SUnit &SU, ScheduleDAGInstrs *DAG,
+                               DenseSet<SUnit *> &ConflictedInstrs) {
+  return std::all_of(
+      ConflictedInstrs.begin(), ConflictedInstrs.end(),
+      [DAG, &SU](SUnit *SuccSU) { return DAG->canAddEdge(SuccSU, &SU); });
+}
+
+void SchedGroup::initSchedGroup(std::vector<SUnit>::reverse_iterator RIter,
+                                DenseSet<SUnit *> &ConflictedInstrs) {
+  SUnit &InitSU = *RIter;
+  for (auto E = DAG->SUnits.rend(); RIter != E; ++RIter) {
+    auto &SU = *RIter;
+    if (isFull())
+      break;
+
+    if (canAddSU(SU) && !ConflictedInstrs.count(&SU) &&
+        canFitIntoPipeline(SU, DAG, ConflictedInstrs)) {
+      add(SU);
+      ConflictedInstrs.insert(&SU);
+      tryAddEdge(&SU, &InitSU);
+    }
+  }
+
+  add(InitSU);
+  assert(MaxSize);
+  (*MaxSize)++;
+}
+
+// Create a pipeline from the SchedGroups in PipelineOrderGroups such that we
+// try to enforce the relative ordering of instructions in each group.
+static void makePipeline(SmallVectorImpl<SchedGroup> &PipelineOrderGroups) {
+  auto I = PipelineOrderGroups.begin();
+  auto E = PipelineOrderGroups.end();
+  for (; I != E; ++I) {
+    auto &GroupA = *I;
+    for (auto J = std::next(I); J != E; ++J) {
+      auto &GroupB = *J;
+      GroupA.link(GroupB);
+    }
+  }
+}
+
+// Same as makePipeline but with reverse ordering.
+static void
+makeReversePipeline(SmallVectorImpl<SchedGroup> &PipelineOrderGroups) {
+  auto I = PipelineOrderGroups.rbegin();
+  auto E = PipelineOrderGroups.rend();
+  for (; I != E; ++I) {
+    auto &GroupA = *I;
+    for (auto J = std::next(I); J != E; ++J) {
+      auto &GroupB = *J;
+      GroupA.link(GroupB);
+    }
+  }
+}
 
 void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   const GCNSubtarget &ST = DAGInstrs->MF.getSubtarget<GCNSubtarget>();
@@ -269,25 +411,31 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   // present ordering, we will try to make each VMEMRead instruction
   // a predecessor of each DSRead instruction, and so on.
   SmallVector<SchedGroup, 4> PipelineOrderGroups = {
-      SchedGroup(isVMEMSGMember, VMEMGroupMaxSize, DAG),
-      SchedGroup(isDSReadSGMember, LDRGroupMaxSize, DAG),
-      SchedGroup(isMFMASGMember, MFMAGroupMaxSize, DAG),
-      SchedGroup(isDSWriteSGMember, LDWGroupMaxSize, DAG)};
+      SchedGroup(SchedGroupMask::VMEM, VMEMGroupMaxSize, DAG, TII),
+      SchedGroup(SchedGroupMask::DS_READ, LDRGroupMaxSize, DAG, TII),
+      SchedGroup(SchedGroupMask::MFMA, MFMAGroupMaxSize, DAG, TII),
+      SchedGroup(SchedGroupMask::DS_WRITE, LDWGroupMaxSize, DAG, TII)};
 
-  for (SUnit &SU : DAG->SUnits) {
-    LLVM_DEBUG(dbgs() << "Checking Node"; DAG->dumpNode(SU));
-    for (auto &SG : PipelineOrderGroups)
-      if (SG.canAddSU(SU, TII))
-        SG.add(SU);
-  }
+  for (auto &SG : PipelineOrderGroups)
+    SG.initSchedGroup();
 
-  for (unsigned i = 0; i < PipelineOrderGroups.size() - 1; i++) {
-    auto &GroupA = PipelineOrderGroups[i];
-    for (unsigned j = i + 1; j < PipelineOrderGroups.size(); j++) {
-      auto &GroupB = PipelineOrderGroups[j];
-      GroupA.link(GroupB);
-    }
-  }
+  makePipeline(PipelineOrderGroups);
+}
+
+// Remove all existing edges from a SCHED_BARRIER or SCHED_GROUP_BARRIER.
+static void resetEdges(SUnit &SU, ScheduleDAGInstrs *DAG) {
+  assert(SU.getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER ||
+         SU.getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
+
+  while (!SU.Preds.empty())
+    for (auto &P : SU.Preds)
+      SU.removePred(P);
+
+  while (!SU.Succs.empty())
+    for (auto &S : SU.Succs)
+      for (auto &SP : S.getSUnit()->Preds)
+        if (SP.getSUnit() == &SU)
+          S.getSUnit()->removePred(SP);
 }
 
 void SchedBarrierDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
@@ -296,13 +444,22 @@ void SchedBarrierDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     return;
 
   LLVM_DEBUG(dbgs() << "Applying SchedBarrierDAGMutation...\n");
-
   const GCNSubtarget &ST = DAGInstrs->MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   DAG = static_cast<ScheduleDAGMI *>(DAGInstrs);
-  for (auto &SU : DAG->SUnits)
-    if (SU.getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER)
-      addSchedBarrierEdges(SU);
+  SyncedInstrsMap.clear();
+  SyncedSchedGroupsMap.clear();
+  for (auto R = DAG->SUnits.rbegin(), E = DAG->SUnits.rend(); R != E; ++R) {
+    if (R->getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER)
+      addSchedBarrierEdges(*R);
+
+    else if (R->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
+      initSchedGroupBarrier(R);
+  }
+
+  // SCHED_GROUP_BARRIER edges can only be added after we have found and
+  // initialized all of the SCHED_GROUP_BARRIER SchedGroups.
+  addSchedGroupBarrierEdges();
 }
 
 void SchedBarrierDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
@@ -310,118 +467,80 @@ void SchedBarrierDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
   assert(MI.getOpcode() == AMDGPU::SCHED_BARRIER);
   // Remove all existing edges from the SCHED_BARRIER that were added due to the
   // instruction having side effects.
-  resetSchedBarrierEdges(SchedBarrier);
-  SmallVector<SchedGroup *, 4> SchedGroups;
-  int32_t Mask = MI.getOperand(0).getImm();
-  getSchedGroupsFromMask(Mask, SchedGroups);
-  for (auto SG : SchedGroups)
-    SG->link(
-        SchedBarrier, (function_ref<bool(const SUnit *A, const SUnit *B)>)[](
-                          const SUnit *A, const SUnit *B) {
-          return A->NodeNum > B->NodeNum;
-        });
+  resetEdges(SchedBarrier, DAG);
+  auto InvertedMask =
+      invertSchedBarrierMask((SchedGroupMask)MI.getOperand(0).getImm());
+  SchedGroup SG(InvertedMask, None, DAG, TII);
+  SG.initSchedGroup();
+  // Preserve original instruction ordering relative to the SCHED_BARRIER.
+  SG.link(
+      SchedBarrier,
+      (function_ref<bool(const SUnit *A, const SUnit *B)>)[](
+          const SUnit *A, const SUnit *B) { return A->NodeNum > B->NodeNum; });
 }
 
-void SchedBarrierDAGMutation::getSchedGroupsFromMask(
-    int32_t Mask, SmallVectorImpl<SchedGroup *> &SchedGroups) {
-  SchedBarrierMasks SBMask = (SchedBarrierMasks)Mask;
-  // See IntrinsicsAMDGPU.td for an explanation of these masks and their
-  // mappings.
-  //
-  if ((SBMask & SchedBarrierMasks::VALU) == SchedBarrierMasks::NONE &&
-      (SBMask & SchedBarrierMasks::ALU) == SchedBarrierMasks::NONE) {
-    if (!VALUSchedGroup) {
-      VALUSchedGroup = std::make_unique<SchedGroup>(isVALUSGMember, None, DAG);
-      initSchedGroup(VALUSchedGroup.get());
-    }
+SchedGroupMask
+SchedBarrierDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
+  // Invert mask and erase bits for types of instructions that are implied to be
+  // allowed past the SCHED_BARRIER.
+  SchedGroupMask InvertedMask = ~Mask;
 
-    SchedGroups.push_back(VALUSchedGroup.get());
-  }
+  // ALU implies VALU, SALU, MFMA.
+  if ((InvertedMask & SchedGroupMask::ALU) == SchedGroupMask::NONE)
+    InvertedMask &=
+        ~SchedGroupMask::VALU & ~SchedGroupMask::SALU & ~SchedGroupMask::MFMA;
+  // VALU, SALU, MFMA implies ALU.
+  else if ((InvertedMask & SchedGroupMask::VALU) == SchedGroupMask::NONE ||
+           (InvertedMask & SchedGroupMask::SALU) == SchedGroupMask::NONE ||
+           (InvertedMask & SchedGroupMask::MFMA) == SchedGroupMask::NONE)
+    InvertedMask &= ~SchedGroupMask::ALU;
 
-  if ((SBMask & SchedBarrierMasks::SALU) == SchedBarrierMasks::NONE &&
-      (SBMask & SchedBarrierMasks::ALU) == SchedBarrierMasks::NONE) {
-    if (!SALUSchedGroup) {
-      SALUSchedGroup = std::make_unique<SchedGroup>(isSALUSGMember, None, DAG);
-      initSchedGroup(SALUSchedGroup.get());
-    }
+  // VMEM implies VMEM_READ, VMEM_WRITE.
+  if ((InvertedMask & SchedGroupMask::VMEM) == SchedGroupMask::NONE)
+    InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE;
+  // VMEM_READ, VMEM_WRITE implies VMEM.
+  else if ((InvertedMask & SchedGroupMask::VMEM_READ) == SchedGroupMask::NONE ||
+           (InvertedMask & SchedGroupMask::VMEM_WRITE) == SchedGroupMask::NONE)
+    InvertedMask &= ~SchedGroupMask::VMEM;
 
-    SchedGroups.push_back(SALUSchedGroup.get());
-  }
+  // DS implies DS_READ, DS_WRITE.
+  if ((InvertedMask & SchedGroupMask::DS) == SchedGroupMask::NONE)
+    InvertedMask &= ~SchedGroupMask::DS_READ & ~SchedGroupMask::DS_WRITE;
+  // DS_READ, DS_WRITE implies DS.
+  else if ((InvertedMask & SchedGroupMask::DS_READ) == SchedGroupMask::NONE ||
+           (InvertedMask & SchedGroupMask::DS_WRITE) == SchedGroupMask::NONE)
+    InvertedMask &= ~SchedGroupMask::DS;
 
-  if ((SBMask & SchedBarrierMasks::MFMA) == SchedBarrierMasks::NONE &&
-      (SBMask & SchedBarrierMasks::ALU) == SchedBarrierMasks::NONE) {
-    if (!MFMASchedGroup) {
-      MFMASchedGroup = std::make_unique<SchedGroup>(isMFMASGMember, None, DAG);
-      initSchedGroup(MFMASchedGroup.get());
-    }
-
-    SchedGroups.push_back(MFMASchedGroup.get());
-  }
-
-  if ((SBMask & SchedBarrierMasks::VMEM_READ) == SchedBarrierMasks::NONE &&
-      (SBMask & SchedBarrierMasks::VMEM) == SchedBarrierMasks::NONE) {
-    if (!VMEMReadSchedGroup) {
-      VMEMReadSchedGroup =
-          std::make_unique<SchedGroup>(isVMEMReadSGMember, None, DAG);
-      initSchedGroup(VMEMReadSchedGroup.get());
-    }
-
-    SchedGroups.push_back(VMEMReadSchedGroup.get());
-  }
-
-  if ((SBMask & SchedBarrierMasks::VMEM_WRITE) == SchedBarrierMasks::NONE &&
-      (SBMask & SchedBarrierMasks::VMEM) == SchedBarrierMasks::NONE) {
-    if (!VMEMWriteSchedGroup) {
-      VMEMWriteSchedGroup =
-          std::make_unique<SchedGroup>(isVMEMWriteSGMember, None, DAG);
-      initSchedGroup(VMEMWriteSchedGroup.get());
-    }
-
-    SchedGroups.push_back(VMEMWriteSchedGroup.get());
-  }
-
-  if ((SBMask & SchedBarrierMasks::DS_READ) == SchedBarrierMasks::NONE &&
-      (SBMask & SchedBarrierMasks::DS) == SchedBarrierMasks::NONE) {
-    if (!DSReadSchedGroup) {
-      DSReadSchedGroup =
-          std::make_unique<SchedGroup>(isDSReadSGMember, None, DAG);
-      initSchedGroup(DSReadSchedGroup.get());
-    }
-
-    SchedGroups.push_back(DSReadSchedGroup.get());
-  }
-
-  if ((SBMask & SchedBarrierMasks::DS_WRITE) == SchedBarrierMasks::NONE &&
-      (SBMask & SchedBarrierMasks::DS) == SchedBarrierMasks::NONE) {
-    if (!DSWriteSchedGroup) {
-      DSWriteSchedGroup =
-          std::make_unique<SchedGroup>(isDSWriteSGMember, None, DAG);
-      initSchedGroup(DSWriteSchedGroup.get());
-    }
-
-    SchedGroups.push_back(DSWriteSchedGroup.get());
-  }
+  return InvertedMask;
 }
 
-void SchedBarrierDAGMutation::initSchedGroup(SchedGroup *SG) {
-  assert(SG);
-  for (auto &SU : DAG->SUnits)
-    if (SG->canAddSU(SU, TII))
-      SG->add(SU);
+void SchedBarrierDAGMutation::initSchedGroupBarrier(
+    std::vector<SUnit>::reverse_iterator RIter) {
+  // Remove all existing edges from the SCHED_GROUP_BARRIER that were added due
+  // to the instruction having side effects.
+  resetEdges(*RIter, DAG);
+  MachineInstr &SGB = *RIter->getInstr();
+  assert(SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
+  int32_t SGMask = SGB.getOperand(0).getImm();
+  int32_t Size = SGB.getOperand(1).getImm();
+  int32_t SyncID = SGB.getOperand(2).getImm();
+  // Create a new SchedGroup and add it to a list that is mapped to the SyncID.
+  // SchedGroups only enforce ordering between SchedGroups with the same SyncID.
+  auto &SG = SyncedSchedGroupsMap[SyncID].emplace_back((SchedGroupMask)SGMask,
+                                                       Size, SyncID, DAG, TII);
+
+  // SyncedInstrsMap is used here is used to avoid adding the same SUs in
+  // multiple SchedGroups that have the same SyncID. This only matters for
+  // SCHED_GROUP_BARRIER and not SCHED_BARRIER.
+  SG.initSchedGroup(RIter, SyncedInstrsMap[SG.getSyncID()]);
 }
 
-void SchedBarrierDAGMutation::resetSchedBarrierEdges(SUnit &SU) {
-  assert(SU.getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER);
-  for (auto &P : SU.Preds)
-    SU.removePred(P);
-
-  for (auto &S : SU.Succs) {
-    for (auto &SP : S.getSUnit()->Preds) {
-      if (SP.getSUnit() == &SU) {
-        S.getSUnit()->removePred(SP);
-      }
-    }
-  }
+void SchedBarrierDAGMutation::addSchedGroupBarrierEdges() {
+  // Since we traversed the DAG in reverse order when initializing
+  // SCHED_GROUP_BARRIERs we need to reverse the order in the vector to maintain
+  // user intentions and program order.
+  for (auto &SchedGroups : SyncedSchedGroupsMap)
+    makeReversePipeline(SchedGroups.second);
 }
 
 } // namespace
