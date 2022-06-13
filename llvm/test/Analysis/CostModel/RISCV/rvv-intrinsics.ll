@@ -31,6 +31,28 @@ define void @unsupported_fp_ops(<vscale x 4 x float> %vec) {
   ret void
 }
 
+define void @fshr(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c) {
+; CHECK-LABEL: 'fshr'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call <vscale x 1 x i32> @llvm.fshr.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  call <vscale x 1 x i32> @llvm.fshr.v4i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
+  ret void
+}
+
+define void @fshl(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c) {
+; CHECK-LABEL: 'fshl'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = call <vscale x 1 x i32> @llvm.fshl.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  call <vscale x 1 x i32> @llvm.fshl.v4i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
+  ret void
+}
+
+declare <vscale x 1 x i32> @llvm.fshr.v4i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
+declare <vscale x 1 x i32> @llvm.fshl.v4i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
+
+
 declare <vscale x 4 x float> @llvm.sin.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float>)
 declare <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
