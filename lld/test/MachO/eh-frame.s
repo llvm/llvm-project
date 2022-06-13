@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86, aarch64
 # RUN: rm -rf %t; mkdir %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos10.15 %s -o %t/eh-frame-x86_64.o
