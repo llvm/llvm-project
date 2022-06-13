@@ -215,6 +215,10 @@ def FeatureSlowMisaligned128Store : SubtargetFeature<"slow-misaligned-128store",
 def FeatureSlowPaired128 : SubtargetFeature<"slow-paired-128",
     "IsPaired128Slow", "true", "Paired 128 bit loads and stores are slow">;
 
+def FeatureAscendStoreAddress : SubtargetFeature<"ascend-store-address",
+    "IsStoreAddressAscend", "false",
+    "Schedule scalar stores by ascending address">;
+
 def FeatureSlowSTRQro : SubtargetFeature<"slow-strqro-store", "IsSTRQroSlow",
     "true", "STR of Q register with register offset is slow">;
 

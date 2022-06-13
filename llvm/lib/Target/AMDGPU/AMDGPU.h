@@ -47,7 +47,6 @@ FunctionPass *createSIFormMemoryClausesPass();
 
 FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUSimplifyLibCallsPass(const TargetMachine *);
-FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 FunctionPass *createAMDGPUUseNativeCallsPass();
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPreparePass();
@@ -62,15 +61,6 @@ FunctionPass *createGCNPreRAOptimizationsPass();
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass(TargetMachine &TM) : TM(TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-private:
-  TargetMachine &TM;
-};
-
-struct AMDGPUImageIntrinsicOptimizerPass
-    : PassInfoMixin<AMDGPUImageIntrinsicOptimizerPass> {
-  AMDGPUImageIntrinsicOptimizerPass(TargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
@@ -224,9 +214,6 @@ extern char &SIPreAllocateWWMRegsID;
 
 void initializeAMDGPUSimplifyLibCallsPass(PassRegistry &);
 extern char &AMDGPUSimplifyLibCallsID;
-
-void initializeAMDGPUImageIntrinsicOptimizerPass(PassRegistry &);
-extern char &AMDGPUImageIntrinsicOptimizerID;
 
 void initializeAMDGPUUseNativeCallsPass(PassRegistry &);
 extern char &AMDGPUUseNativeCallsID;
