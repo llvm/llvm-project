@@ -10725,6 +10725,13 @@ public:
   /// constructs.
   VarDecl *isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo = false,
                                 unsigned StopAt = 0);
+
+  /// The member expression(this->fd) needs to be rebuilt in the template
+  /// instantiation to generate private copy for OpenMP when default
+  /// clause is used. The function will return true if default
+  /// cluse is used.
+  bool isOpenMPRebuildMemberExpr(ValueDecl *D);
+
   ExprResult getOpenMPCapturedExpr(VarDecl *Capture, ExprValueKind VK,
                                    ExprObjectKind OK, SourceLocation Loc);
 
