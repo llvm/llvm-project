@@ -55,6 +55,10 @@ private:
     ELFLdSt32Abs12,
     ELFLdSt64Abs12,
     ELFLdSt128Abs12,
+    ELFMovwAbsG0,
+    ELFMovwAbsG1,
+    ELFMovwAbsG2,
+    ELFMovwAbsG3,
     ELFAbs64,
     ELFPrel32,
     ELFPrel64,
@@ -83,6 +87,14 @@ private:
       return ELFLdSt64Abs12;
     case ELF::R_AARCH64_LDST128_ABS_LO12_NC:
       return ELFLdSt128Abs12;
+    case ELF::R_AARCH64_MOVW_UABS_G0_NC:
+      return ELFMovwAbsG0;
+    case ELF::R_AARCH64_MOVW_UABS_G1_NC:
+      return ELFMovwAbsG1;
+    case ELF::R_AARCH64_MOVW_UABS_G2_NC:
+      return ELFMovwAbsG2;
+    case ELF::R_AARCH64_MOVW_UABS_G3:
+      return ELFMovwAbsG3;
     case ELF::R_AARCH64_ABS64:
       return ELFAbs64;
     case ELF::R_AARCH64_PREL32:
@@ -216,6 +228,50 @@ private:
       Kind = aarch64::PageOffset12;
       break;
     }
+    case ELFMovwAbsG0: {
+      uint32_t Instr = *(const ulittle32_t *)FixupContent;
+      if (!aarch64::isMoveWideImm16(Instr) ||
+          aarch64::getMoveWide16Shift(Instr) != 0)
+        return make_error<JITLinkError>(
+            "R_AARCH64_MOVW_UABS_G0_NC target is not a "
+            "MOVK/MOVZ (imm16, LSL #0) instruction");
+
+      Kind = aarch64::MoveWide16;
+      break;
+    }
+    case ELFMovwAbsG1: {
+      uint32_t Instr = *(const ulittle32_t *)FixupContent;
+      if (!aarch64::isMoveWideImm16(Instr) ||
+          aarch64::getMoveWide16Shift(Instr) != 16)
+        return make_error<JITLinkError>(
+            "R_AARCH64_MOVW_UABS_G1_NC target is not a "
+            "MOVK/MOVZ (imm16, LSL #16) instruction");
+
+      Kind = aarch64::MoveWide16;
+      break;
+    }
+    case ELFMovwAbsG2: {
+      uint32_t Instr = *(const ulittle32_t *)FixupContent;
+      if (!aarch64::isMoveWideImm16(Instr) ||
+          aarch64::getMoveWide16Shift(Instr) != 32)
+        return make_error<JITLinkError>(
+            "R_AARCH64_MOVW_UABS_G2_NC target is not a "
+            "MOVK/MOVZ (imm16, LSL #32) instruction");
+
+      Kind = aarch64::MoveWide16;
+      break;
+    }
+    case ELFMovwAbsG3: {
+      uint32_t Instr = *(const ulittle32_t *)FixupContent;
+      if (!aarch64::isMoveWideImm16(Instr) ||
+          aarch64::getMoveWide16Shift(Instr) != 48)
+        return make_error<JITLinkError>(
+            "R_AARCH64_MOVW_UABS_G3 target is not a "
+            "MOVK/MOVZ (imm16, LSL #48) instruction");
+
+      Kind = aarch64::MoveWide16;
+      break;
+    }
     case ELFAbs64: {
       Kind = aarch64::Pointer64;
       break;
@@ -268,6 +324,14 @@ private:
       return "ELFLdSt64Abs12";
     case ELFLdSt128Abs12:
       return "ELFLdSt128Abs12";
+    case ELFMovwAbsG0:
+      return "ELFMovwAbsG0";
+    case ELFMovwAbsG1:
+      return "ELFMovwAbsG1";
+    case ELFMovwAbsG2:
+      return "ELFMovwAbsG2";
+    case ELFMovwAbsG3:
+      return "ELFMovwAbsG3";
     case ELFAbs64:
       return "ELFAbs64";
     case ELFPrel32:

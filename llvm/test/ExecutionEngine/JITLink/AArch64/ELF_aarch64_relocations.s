@@ -141,6 +141,60 @@ test_str_64bit:
         str	x0, [x1, :lo12:named_data]
         .size test_str_64bit, .-test_str_64bit
 
+
+# Check R_AARCH64_MOVW_UABS_G*_NC relocation of a local symbol
+#
+# The immediate value should be the symbol address right shifted according to LSL value
+#
+# jitlink-check: decode_operand(test_movz_g0_nc, 1) = named_data[15:0]
+# jitlink-check: decode_operand(test_movk_g0_nc, 2) = named_data[15:0]
+# jitlink-check: decode_operand(test_movz_g1_nc, 1) = named_data[31:16]
+# jitlink-check: decode_operand(test_movk_g1_nc, 2) = named_data[31:16]
+# jitlink-check: decode_operand(test_movz_g2_nc, 1) = named_data[47:32]
+# jitlink-check: decode_operand(test_movk_g2_nc, 2) = named_data[47:32]
+# jitlink-check: decode_operand(test_movz_g3, 1) = named_data[63:48]
+# jitlink-check: decode_operand(test_movk_g3, 2) = named_data[63:48]
+
+        .globl  test_movz_g0_nc
+test_movz_g0_nc:
+        movz x0, #:abs_g0_nc:named_data
+        .size test_movz_g0_nc, .-test_movz_g0_nc
+
+        .globl  test_movk_g0_nc
+test_movk_g0_nc:
+        movk x0, #:abs_g0_nc:named_data
+        .size test_movk_g0_nc, .-test_movk_g0_nc
+
+        .globl  test_movz_g1_nc
+test_movz_g1_nc:
+        movz x0, #:abs_g1_nc:named_data
+        .size test_movz_g1_nc, .-test_movz_g1_nc
+
+        .globl  test_movk_g1_nc
+test_movk_g1_nc:
+        movk x0, #:abs_g1_nc:named_data
+        .size test_movk_g1_nc, .-test_movk_g1_nc
+
+        .globl  test_movz_g2_nc
+test_movz_g2_nc:
+        movz x0, #:abs_g2_nc:named_data
+        .size test_movz_g2_nc, .-test_movz_g2_nc
+
+        .globl  test_movk_g2_nc
+test_movk_g2_nc:
+        movk x0, #:abs_g2_nc:named_data
+        .size test_movk_g2_nc, .-test_movk_g2_nc
+
+        .globl  test_movk_g3
+test_movk_g3:
+        movk x0, #:abs_g3:named_data
+        .size test_movk_g3, .-test_movk_g3
+
+        .globl  test_movz_g3
+test_movz_g3:
+        movz x0, #:abs_g3:named_data
+        .size test_movz_g3, .-test_movz_g3
+
 # Check R_AARCH64_ABS64 relocation of a function pointer to local symbol
 #
 # jitlink-check: *{8}local_func_addr_quad = named_func
