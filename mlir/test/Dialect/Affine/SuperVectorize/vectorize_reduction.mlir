@@ -191,6 +191,61 @@ func.func @vecdim_reduction_maxui(%in: memref<256x512xi32>, %out: memref<256xi32
 
 // -----
 
+func.func @vecdim_reduction_andi(%in: memref<256x512xi32>, %out: memref<256xi32>) {
+ %cst = arith.constant -1 : i32
+ affine.for %i = 0 to 256 {
+   %final_red = affine.for %j = 0 to 512 iter_args(%red_iter = %cst) -> (i32) {
+     %ld = affine.load %in[%i, %j] : memref<256x512xi32>
+     %or = arith.andi %red_iter, %ld : i32
+     affine.yield %or : i32
+   }
+   affine.store %final_red, %out[%i] : memref<256xi32>
+ }
+ return
+}
+
+// CHECK-LABEL: @vecdim_reduction_andi
+// CHECK:       affine.for %{{.*}} = 0 to 256 {
+// CHECK:         %[[vallone:.*]] = arith.constant dense<-1> : vector<128xi32>
+// CHECK:         %[[vred:.*]] = affine.for %{{.*}} = 0 to 512 step 128 iter_args(%[[red_iter:.*]] = %[[vallone]]) -> (vector<128xi32>) {
+// CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<256x512xi32>, vector<128xi32>
+// CHECK:           %[[and:.*]] = arith.andi %[[red_iter]], %[[ld]] : vector<128xi32>
+// CHECK:           affine.yield %[[and]] : vector<128xi32>
+// CHECK:         }
+// CHECK:         %[[final_red:.*]] = vector.reduction <and>, %[[vred:.*]] : vector<128xi32> into i32
+// CHECK:         affine.store %[[final_red]], %{{.*}} : memref<256xi32>
+// CHECK:       }
+
+// -----
+
+func.func @vecdim_reduction_ori(%in: memref<256x512xi32>, %out: memref<256xi32>) {
+ %cst = arith.constant 0 : i32
+ affine.for %i = 0 to 256 {
+   %final_red = affine.for %j = 0 to 512 iter_args(%red_iter = %cst) -> (i32) {
+     %ld = affine.load %in[%i, %j] : memref<256x512xi32>
+     %or = arith.ori %red_iter, %ld : i32
+     affine.yield %or : i32
+   }
+   affine.store %final_red, %out[%i] : memref<256xi32>
+ }
+ return
+}
+
+// CHECK-LABEL: @vecdim_reduction_ori
+// CHECK:       affine.for %{{.*}} = 0 to 256 {
+// CHECK:         %[[vzero:.*]] = arith.constant dense<0> : vector<128xi32>
+// CHECK:         %[[vred:.*]] = affine.for %{{.*}} = 0 to 512 step 128 iter_args(%[[red_iter:.*]] = %[[vzero]]) -> (vector<128xi32>) {
+// CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<256x512xi32>, vector<128xi32>
+// CHECK:           %[[or:.*]] = arith.ori %[[red_iter]], %[[ld]] : vector<128xi32>
+// CHECK:           affine.yield %[[or]] : vector<128xi32>
+// CHECK:         }
+// CHECK:         %[[final_red:.*]] = vector.reduction <or>, %[[vred:.*]] : vector<128xi32> into i32
+// CHECK:         affine.store %[[final_red]], %{{.*}} : memref<256xi32>
+// CHECK:       }
+
+
+// -----
+
 // The inner reduction loop '%j' is vectorized. (The order of addf's operands is
 // different than in the previous test case).
 
