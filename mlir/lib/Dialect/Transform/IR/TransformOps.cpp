@@ -10,13 +10,16 @@
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "transform-dialect"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
 
 using namespace mlir;
 
@@ -116,33 +119,173 @@ LogicalResult PatternApplicatorExtension::findAllMatches(
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// AlternativesOp
+//===----------------------------------------------------------------------===//
+
+OperandRange
+transform::AlternativesOp::getSuccessorEntryOperands(unsigned index) {
+  if (getOperation()->getNumOperands() == 1)
+    return getOperation()->getOperands();
+  return OperandRange(getOperation()->operand_end(),
+                      getOperation()->operand_end());
+}
+
+void transform::AlternativesOp::getSuccessorRegions(
+    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  for (Region &alternative :
+       llvm::drop_begin(getAlternatives(), index.hasValue() ? *index + 1 : 0)) {
+    regions.emplace_back(&alternative, !getOperands().empty()
+                                           ? alternative.getArguments()
+                                           : Block::BlockArgListType());
+  }
+  if (index.hasValue())
+    regions.emplace_back(getOperation()->getResults());
+}
+
+void transform::AlternativesOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands, SmallVectorImpl<InvocationBounds> &bounds) {
+  (void)operands;
+  // The region corresponding to the first alternative is always executed, the
+  // remaining may or may not be executed.
+  bounds.reserve(getNumRegions());
+  bounds.emplace_back(1, 1);
+  bounds.resize(getNumRegions(), InvocationBounds(0, 1));
+}
+
+static void forwardTerminatorOperands(Block *block,
+                                      transform::TransformState &state,
+                                      transform::TransformResults &results) {
+  for (const auto &pair : llvm::zip(block->getTerminator()->getOperands(),
+                                    block->getParentOp()->getOpResults())) {
+    Value terminatorOperand = std::get<0>(pair);
+    OpResult result = std::get<1>(pair);
+    results.set(result, state.getPayloadOps(terminatorOperand));
+  }
+}
+
+DiagnosedSilencableFailure
+transform::AlternativesOp::apply(transform::TransformResults &results,
+                                 transform::TransformState &state) {
+  SmallVector<Operation *> originals;
+  if (Value scopeHandle = getScope())
+    llvm::append_range(originals, state.getPayloadOps(scopeHandle));
+  else
+    originals.push_back(state.getTopLevel());
+
+  for (Operation *original : originals) {
+    if (original->isAncestor(getOperation())) {
+      InFlightDiagnostic diag =
+          emitError() << "scope must not contain the transforms being applied";
+      diag.attachNote(original->getLoc()) << "scope";
+      return DiagnosedSilencableFailure::definiteFailure();
+    }
+  }
+
+  for (Region &reg : getAlternatives()) {
+    // Clone the scope operations and make the transforms in this alternative
+    // region apply to them by virtue of mapping the block argument (the only
+    // visible handle) to the cloned scope operations. This effectively prevents
+    // the transformation from accessing any IR outside the scope.
+    auto scope = state.make_region_scope(reg);
+    auto clones = llvm::to_vector(
+        llvm::map_range(originals, [](Operation *op) { return op->clone(); }));
+    if (failed(state.mapBlockArguments(reg.front().getArgument(0), clones)))
+      return DiagnosedSilencableFailure::definiteFailure();
+    auto deleteClones = llvm::make_scope_exit([&] {
+      for (Operation *clone : clones)
+        clone->erase();
+    });
+
+    bool failed = false;
+    for (Operation &transform : reg.front().without_terminator()) {
+      DiagnosedSilencableFailure result =
+          state.applyTransform(cast<TransformOpInterface>(transform));
+      if (result.isSilencableFailure()) {
+        LLVM_DEBUG(DBGS() << "alternative failed: " << result.getMessage()
+                          << "\n");
+        failed = true;
+        break;
+      }
+
+      if (::mlir::failed(result.silence()))
+        return DiagnosedSilencableFailure::definiteFailure();
+    }
+
+    // If all operations in the given alternative succeeded, no need to consider
+    // the rest. Replace the original scoping operation with the clone on which
+    // the transformations were performed.
+    if (!failed) {
+      // We will be using the clones, so cancel their scheduled deletion.
+      deleteClones.release();
+      IRRewriter rewriter(getContext());
+      for (const auto &kvp : llvm::zip(originals, clones)) {
+        Operation *original = std::get<0>(kvp);
+        Operation *clone = std::get<1>(kvp);
+        original->getBlock()->getOperations().insert(original->getIterator(),
+                                                     clone);
+        rewriter.replaceOp(original, clone->getResults());
+      }
+      forwardTerminatorOperands(&reg.front(), state, results);
+      return DiagnosedSilencableFailure::success();
+    }
+  }
+  return emitSilencableError() << "all alternatives failed";
+}
+
+LogicalResult transform::AlternativesOp::verify() {
+  for (Region &alternative : getAlternatives()) {
+    Block &block = alternative.front();
+    if (block.getNumArguments() != 1 ||
+        !block.getArgument(0).getType().isa<pdl::OperationType>()) {
+      return emitOpError()
+             << "expects region blocks to have one operand of type "
+             << pdl::OperationType::get(getContext());
+    }
+
+    Operation *terminator = block.getTerminator();
+    if (terminator->getOperands().getTypes() != getResults().getTypes()) {
+      InFlightDiagnostic diag = emitOpError()
+                                << "expects terminator operands to have the "
+                                   "same type as results of the operation";
+      diag.attachNote(terminator->getLoc()) << "terminator";
+      return diag;
+    }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GetClosestIsolatedParentOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult transform::GetClosestIsolatedParentOp::apply(
+DiagnosedSilencableFailure transform::GetClosestIsolatedParentOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   SetVector<Operation *> parents;
   for (Operation *target : state.getPayloadOps(getTarget())) {
     Operation *parent =
         target->getParentWithTrait<OpTrait::IsIsolatedFromAbove>();
     if (!parent) {
-      InFlightDiagnostic diag =
-          emitError() << "could not find an isolated-from-above parent op";
+      DiagnosedSilencableFailure diag =
+          emitSilencableError()
+          << "could not find an isolated-from-above parent op";
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
     }
     parents.insert(parent);
   }
   results.set(getResult().cast<OpResult>(), parents.getArrayRef());
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
 // PDLMatchOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult transform::PDLMatchOp::apply(transform::TransformResults &results,
-                                           transform::TransformState &state) {
+DiagnosedSilencableFailure
+transform::PDLMatchOp::apply(transform::TransformResults &results,
+                             transform::TransformState &state) {
   auto *extension = state.getExtension<PatternApplicatorExtension>();
   assert(extension &&
          "expected PatternApplicatorExtension to be attached by the parent op");
@@ -150,41 +293,38 @@ LogicalResult transform::PDLMatchOp::apply(transform::TransformResults &results,
   for (Operation *root : state.getPayloadOps(getRoot())) {
     if (failed(extension->findAllMatches(
             getPatternName().getLeafReference().getValue(), root, targets))) {
-      return emitOpError() << "could not find pattern '" << getPatternName()
-                           << "'";
+      emitOpError() << "could not find pattern '" << getPatternName() << "'";
+      return DiagnosedSilencableFailure::definiteFailure();
     }
   }
   results.set(getResult().cast<OpResult>(), targets);
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
 // SequenceOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult transform::SequenceOp::apply(transform::TransformResults &results,
-                                           transform::TransformState &state) {
+DiagnosedSilencableFailure
+transform::SequenceOp::apply(transform::TransformResults &results,
+                             transform::TransformState &state) {
   // Map the entry block argument to the list of operations.
   auto scope = state.make_region_scope(*getBodyBlock()->getParent());
   if (failed(mapBlockArguments(state)))
-    return failure();
+    return DiagnosedSilencableFailure::definiteFailure();
 
   // Apply the sequenced ops one by one.
-  for (Operation &transform : getBodyBlock()->without_terminator())
-    if (failed(state.applyTransform(cast<TransformOpInterface>(transform))))
-      return failure();
+  for (Operation &transform : getBodyBlock()->without_terminator()) {
+    DiagnosedSilencableFailure result =
+        state.applyTransform(cast<TransformOpInterface>(transform));
+    if (!result.succeeded())
+      return result;
+  }
 
   // Forward the operation mapping for values yielded from the sequence to the
   // values produced by the sequence op.
-  for (const auto &pair :
-       llvm::zip(getBodyBlock()->getTerminator()->getOperands(),
-                 getOperation()->getOpResults())) {
-    Value terminatorOperand = std::get<0>(pair);
-    OpResult result = std::get<1>(pair);
-    results.set(result, state.getPayloadOps(terminatorOperand));
-  }
-
-  return success();
+  forwardTerminatorOperands(getBodyBlock(), state, results);
+  return DiagnosedSilencableFailure::success();
 }
 
 /// Returns `true` if the given op operand may be consuming the handle value in
@@ -346,7 +486,7 @@ void transform::SequenceOp::getRegionInvocationBounds(
 // WithPDLPatternsOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult
+DiagnosedSilencableFailure
 transform::WithPDLPatternsOp::apply(transform::TransformResults &results,
                                     transform::TransformState &state) {
   OwningOpRef<ModuleOp> pdlModuleOp =
@@ -365,7 +505,7 @@ transform::WithPDLPatternsOp::apply(transform::TransformResults &results,
 
   auto scope = state.make_region_scope(getBody());
   if (failed(mapBlockArguments(state)))
-    return failure();
+    return DiagnosedSilencableFailure::definiteFailure();
   return state.applyTransform(transformOp);
 }
 

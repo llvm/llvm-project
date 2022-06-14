@@ -128,3 +128,223 @@ transform.with_pdl_patterns {
     test_print_remark_at_operand %m, "parent function"
   }
 }
+
+// -----
+
+func.func @foo() {
+  %0 = arith.constant 0 : i32
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @match_func : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "func.func"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+    // This is necessary to run the transformation on something other than the
+    // top-level module, "alternatives" cannot be run on that.
+    %0 = pdl_match @match_func in %arg1
+    transform.alternatives %0 {
+    ^bb2(%arg2: !pdl.operation):
+      %1 = transform.test_produce_param_or_forward_operand 42
+      // This operation fails, which triggers the next alternative without
+      // reporting the error.
+      transform.test_consume_operand_if_matches_param_or_fail %1[43]
+    }, {
+    ^bb2(%arg2: !pdl.operation):
+      %1 = transform.test_produce_param_or_forward_operand 42
+      // expected-remark @below {{succeeded}}
+      transform.test_consume_operand_if_matches_param_or_fail %1[42]
+    }
+  }
+}
+
+// -----
+
+func.func private @bar()
+
+func.func @foo() {
+  call @bar() : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @match_call : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "func.call"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = pdl_match @match_call in %arg1
+    %1 = get_closest_isolated_parent %0
+    // expected-error @below {{all alternatives failed}}
+    transform.alternatives %1 {
+    ^bb2(%arg2: !pdl.operation):
+      %2 = transform.pdl_match @match_call in %arg2
+      // expected-remark @below {{applying}}
+      transform.test_emit_remark_and_erase_operand %2, "applying" {fail_after_erase}
+    }
+  }
+}
+
+// -----
+
+func.func private @bar()
+
+func.func @foo() {
+  // expected-remark @below {{still here}}
+  call @bar() : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @match_call : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "func.call"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = pdl_match @match_call in %arg1
+    %1 = get_closest_isolated_parent %0
+    transform.alternatives %1 {
+    ^bb2(%arg2: !pdl.operation):
+      %2 = transform.pdl_match @match_call in %arg2
+      // expected-remark @below {{applying}}
+      transform.test_emit_remark_and_erase_operand %2, "applying" {fail_after_erase}
+    }, {
+    ^bb2(%arg2: !pdl.operation):
+      %2 = transform.pdl_match @match_call in %arg2
+      transform.test_print_remark_at_operand %2, "still here"
+      // This alternative succeeds.
+    }, {
+    ^bb2(%arg2: !pdl.operation):
+      // This alternative is never run, so we must not have a remark here.
+      %2 = transform.pdl_match @match_call in %arg2
+      transform.test_emit_remark_and_erase_operand %2, "should not happen" {fail_after_erase}
+    }
+  }
+}
+
+// -----
+
+func.func private @bar()
+
+// CHECK-LABEL: @erase_call
+func.func @erase_call() {
+  // CHECK-NOT: call @bar
+  call @bar() : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @match_call : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "func.call"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = pdl_match @match_call in %arg1
+    %1 = get_closest_isolated_parent %0
+    transform.alternatives %1 {
+    ^bb2(%arg2: !pdl.operation):
+      %2 = transform.pdl_match @match_call in %arg2
+      // expected-remark @below {{applying}}
+      transform.test_emit_remark_and_erase_operand %2, "applying" {fail_after_erase}
+    }, {
+    ^bb2(%arg2: !pdl.operation):
+      %2 = transform.pdl_match @match_call in %arg2
+      // expected-remark @below {{applying second time}}
+      transform.test_emit_remark_and_erase_operand %2, "applying second time"
+    }
+  }
+}
+
+// -----
+
+func.func private @bar()
+
+func.func @foo() {
+  call @bar() : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @match_call : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "func.call"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = pdl_match @match_call in %arg1
+    %1 = get_closest_isolated_parent %0
+    %2 = transform.alternatives %1 -> !pdl.operation {
+    ^bb2(%arg2: !pdl.operation):
+      %3 = transform.pdl_match @match_call in %arg2
+      // expected-remark @below {{applying}}
+      transform.test_emit_remark_and_erase_operand %3, "applying" {fail_after_erase}
+      %4 = transform.test_produce_param_or_forward_operand 43
+      transform.yield %4 : !pdl.operation
+    }, {
+    ^bb2(%arg2: !pdl.operation):
+      %4 = transform.test_produce_param_or_forward_operand 42
+      transform.yield %4 : !pdl.operation
+    }
+    // The first alternative failed, so the returned value is taken from the
+    // second alternative.
+    // expected-remark @below {{succeeded}}
+    transform.test_consume_operand_if_matches_param_or_fail %2[42]
+  }
+}
+
+// -----
+
+// expected-note @below {{scope}}
+module {
+  func.func @foo() {
+    %0 = arith.constant 0 : i32
+    return
+  }
+
+  func.func @bar() {
+    %0 = arith.constant 0 : i32
+    %1 = arith.constant 1 : i32
+    return
+  }
+
+  transform.sequence {
+  ^bb1(%arg1: !pdl.operation):
+    // expected-error @below {{scope must not contain the transforms being applied}}
+    transform.alternatives %arg1 {
+    ^bb2(%arg2: !pdl.operation):
+      %0 = transform.test_produce_param_or_forward_operand 42
+      transform.test_consume_operand_if_matches_param_or_fail %0[43]
+    }, {
+    ^bb2(%arg2: !pdl.operation):
+      %0 = transform.test_produce_param_or_forward_operand 42
+      transform.test_consume_operand_if_matches_param_or_fail %0[42]
+    }
+  }
+}
+

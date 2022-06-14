@@ -14,6 +14,129 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
+
+/// The result of a transform IR operation application. This can have one of the
+/// three states:
+///   - success;
+///   - silencable (recoverable) failure with yet-unreported diagnostic;
+///   - definite failure.
+/// Silencable failure is intended to communicate information about
+/// transformations that did not apply but in a way that supports recovery,
+/// for example, they did not modify the payload IR or modified it in some
+/// predictable way. They are associated with a Diagnostic that provides more
+/// details on the failure. Silencable failure can be discarded, turning the
+/// result into success, or "reported", emitting the diagnostic and turning the
+/// result into definite failure. Transform IR operations containing other
+/// operations are allowed to do either with the results of the nested
+/// transformations, but must propagate definite failures as their diagnostics
+/// have been already reported to the user.
+class LLVM_NODISCARD DiagnosedSilencableFailure {
+public:
+  explicit DiagnosedSilencableFailure(LogicalResult result) : result(result) {}
+  DiagnosedSilencableFailure(const DiagnosedSilencableFailure &) = delete;
+  DiagnosedSilencableFailure &
+  operator=(const DiagnosedSilencableFailure &) = delete;
+  DiagnosedSilencableFailure(DiagnosedSilencableFailure &&) = default;
+  DiagnosedSilencableFailure &
+  operator=(DiagnosedSilencableFailure &&) = default;
+
+  /// Constructs a DiagnosedSilencableFailure in the success state.
+  static DiagnosedSilencableFailure success() {
+    return DiagnosedSilencableFailure(::mlir::success());
+  }
+
+  /// Constructs a DiagnosedSilencableFailure in the failure state. Typically,
+  /// a diagnostic has been emitted before this.
+  static DiagnosedSilencableFailure definiteFailure() {
+    return DiagnosedSilencableFailure(::mlir::failure());
+  }
+
+  /// Constructs a DiagnosedSilencableFailure in the silencable failure state,
+  /// ready to emit the given diagnostic. This is considered a failure
+  /// regardless of the diagnostic severity.
+  static DiagnosedSilencableFailure silencableFailure(Diagnostic &&diag) {
+    return DiagnosedSilencableFailure(std::forward<Diagnostic>(diag));
+  }
+
+  /// Converts all kinds of failure into a LogicalResult failure, emitting the
+  /// diagnostic if necessary. Must not be called more than once.
+  LogicalResult checkAndReport() {
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    assert(!reported && "attempting to report a diagnostic more than once");
+    reported = true;
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+    if (diagnostic) {
+      diagnostic->getLocation().getContext()->getDiagEngine().emit(
+          std::move(*diagnostic));
+      diagnostic.reset();
+      result = ::mlir::failure();
+    }
+    return result;
+  }
+
+  /// Returns `true` if this is a silencable failure.
+  bool isSilencableFailure() const { return diagnostic.hasValue(); }
+
+  /// Returns `true` if this is a success.
+  bool succeeded() const {
+    return !diagnostic.hasValue() && ::mlir::succeeded(result);
+  }
+
+  /// Returns the diagnostic message without emitting it. Expects this object
+  /// to be a silencable failure.
+  std::string getMessage() const { return diagnostic->str(); }
+
+  /// Converts silencable failure into LogicalResult success without reporting
+  /// the diagnostic, preserves the other states.
+  LogicalResult silence() {
+    if (diagnostic) {
+      diagnostic.reset();
+      result = ::mlir::success();
+    }
+    return result;
+  }
+
+  /// Streams the given values into the diagnotic. Expects this object to be a
+  /// silencable failure.
+  template <typename T> DiagnosedSilencableFailure &operator<<(T &&value) & {
+    assert(isSilencableFailure() &&
+           "can only append output in silencable failure state");
+    *diagnostic << std::forward<T>(value);
+    return *this;
+  }
+  template <typename T> DiagnosedSilencableFailure &&operator<<(T &&value) && {
+    return std::move(this->operator<<(std::forward<T>(value)));
+  }
+
+  /// Attaches a note to the diagnostic. Expects this object to be a silencable
+  /// failure.
+  Diagnostic &attachNote(Optional<Location> loc = llvm::None) {
+    assert(isSilencableFailure() &&
+           "can only attach notes to silencable failures");
+    return diagnostic->attachNote(loc);
+  }
+
+private:
+  explicit DiagnosedSilencableFailure(Diagnostic &&diagnostic)
+      : diagnostic(std::move(diagnostic)), result(failure()) {}
+
+  /// The diagnostic associated with this object. If present, the object is
+  /// considered to be in the silencable failure state regardless of the
+  /// `result` field.
+  Optional<Diagnostic> diagnostic;
+
+  /// The "definite" logical state, either success or failure. Ignored if the
+  /// diagnostic message is present.
+  LogicalResult result;
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// Whther the associated diagnostic have been reported. Diagnostic reporting
+  /// consumes the diagnostic, so we need a mechanism to differentiate a
+  /// reported diagnostic from a state where it was never created.
+  bool reported = false;
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+};
+
 namespace transform {
 
 class TransformOpInterface;
@@ -103,7 +226,7 @@ public:
 
   /// Applies the transformation specified by the given transform op and updates
   /// the state accordingly.
-  LogicalResult applyTransform(TransformOpInterface transform);
+  DiagnosedSilencableFailure applyTransform(TransformOpInterface transform);
 
   /// Records the mapping between a block argument in the transform IR and a
   /// list of operations in the payload IR. The arguments must be defined in
@@ -401,7 +524,7 @@ namespace detail {
 /// the payload IR, depending on what is available in the context.
 LogicalResult
 mapPossibleTopLevelTransformOpBlockArguments(TransformState &state,
-                                             Operation *op);
+                                             Operation *op, unsigned region);
 
 /// Verification hook for PossibleTopLevelTransformOpTrait.
 LogicalResult verifyPossibleTopLevelTransformOpTrait(Operation *op);
@@ -411,7 +534,7 @@ LogicalResult verifyPossibleTopLevelTransformOpTrait(Operation *op);
 /// can be standalone top-level transforms. Such operations typically contain
 /// other Transform dialect operations that can be executed following some
 /// control flow logic specific to the current operation. The operations with
-/// this trait are expected to have exactly one single-block region with one
+/// this trait are expected to have at least one single-block region with one
 /// argument of PDL Operation type. The operations are also expected to be valid
 /// without operands, in which case they are considered top-level, and with one
 /// or more arguments, in which case they are considered nested. Top-level
@@ -430,16 +553,18 @@ public:
     return detail::verifyPossibleTopLevelTransformOpTrait(op);
   }
 
-  /// Returns the single block of the op's only region.
-  Block *getBodyBlock() { return &this->getOperation()->getRegion(0).front(); }
+  /// Returns the single block of the given region.
+  Block *getBodyBlock(unsigned region = 0) {
+    return &this->getOperation()->getRegion(region).front();
+  }
 
-  /// Sets up the mapping between the entry block of the only region of this op
+  /// Sets up the mapping between the entry block of the given region of this op
   /// and the relevant list of Payload IR operations in the given state. The
   /// state is expected to be already scoped at the region of this operation.
   /// Returns failure if the mapping failed, e.g., the value is already mapped.
-  LogicalResult mapBlockArguments(TransformState &state) {
+  LogicalResult mapBlockArguments(TransformState &state, unsigned region = 0) {
     return detail::mapPossibleTopLevelTransformOpBlockArguments(
-        state, this->getOperation());
+        state, this->getOperation(), region);
   }
 };
 
@@ -461,8 +586,8 @@ public:
   /// Calls `applyToOne` for every payload operation associated with the operand
   /// of this transform IR op. If `applyToOne` returns ops, associates them with
   /// the result of this transform op.
-  LogicalResult apply(TransformResults &transformResults,
-                      TransformState &state);
+  DiagnosedSilencableFailure apply(TransformResults &transformResults,
+                                   TransformState &state);
 
   /// Checks that the op matches the expectations of this trait.
   static LogicalResult verifyTrait(Operation *op);
@@ -497,22 +622,22 @@ struct PayloadIRResource
   StringRef getName() override { return "transform.payload_ir"; }
 };
 
-/// Trait implementing the MemoryEffectOpInterface for single-operand operations
-/// that "consume" their operand and produce a new result.
+/// Trait implementing the MemoryEffectOpInterface for operations that "consume"
+/// their operands and produce new results.
 template <typename OpTy>
 class FunctionalStyleTransformOpTrait
     : public OpTrait::TraitBase<OpTy, FunctionalStyleTransformOpTrait> {
 public:
-  /// This op "consumes" the operand by reading and freeing it, "produces" the
-  /// results by allocating and writing it and reads/writes the payload IR in
-  /// the process.
+  /// This op "consumes" the operands by reading and freeing then, "produces"
+  /// the results by allocating and writing it and reads/writes the payload IR
+  /// in the process.
   void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-    effects.emplace_back(MemoryEffects::Read::get(),
-                         this->getOperation()->getOperand(0),
-                         TransformMappingResource::get());
-    effects.emplace_back(MemoryEffects::Free::get(),
-                         this->getOperation()->getOperand(0),
-                         TransformMappingResource::get());
+    for (Value operand : this->getOperation()->getOperands()) {
+      effects.emplace_back(MemoryEffects::Read::get(), operand,
+                           TransformMappingResource::get());
+      effects.emplace_back(MemoryEffects::Free::get(), operand,
+                           TransformMappingResource::get());
+    }
     for (Value result : this->getOperation()->getResults()) {
       effects.emplace_back(MemoryEffects::Allocate::get(), result,
                            TransformMappingResource::get());
@@ -525,8 +650,6 @@ public:
 
   /// Checks that the op matches the expectations of this trait.
   static LogicalResult verifyTrait(Operation *op) {
-    static_assert(OpTy::template hasTrait<OpTrait::OneOperand>(),
-                  "expected single-operand op");
     if (!op->getName().getInterface<MemoryEffectOpInterface>()) {
       op->emitError()
           << "FunctionalStyleTransformOpTrait should only be attached to ops "
@@ -612,12 +735,12 @@ appendTransformResultToVector(Ty result,
 /// where OpTy is either
 ///   - Operation *, in which case the transform is always applied;
 ///   - a concrete Op class, in which case a check is performed whether
-///   `targets` contains operations of the same class and a failure is reported
-///   if it does not.
+///   `targets` contains operations of the same class and a silencable failure
+///   is reported if it does not.
 template <typename FnTy>
-LogicalResult applyTransformToEach(ArrayRef<Operation *> targets,
-                                   SmallVectorImpl<Operation *> &results,
-                                   FnTy transform) {
+DiagnosedSilencableFailure
+applyTransformToEach(ArrayRef<Operation *> targets,
+                     SmallVectorImpl<Operation *> &results, FnTy transform) {
   using OpTy = typename llvm::function_traits<FnTy>::template arg_t<0>;
   static_assert(std::is_convertible<OpTy, Operation *>::value,
                 "expected transform function to take an operation");
@@ -627,37 +750,43 @@ LogicalResult applyTransformToEach(ArrayRef<Operation *> targets,
                 "FailureOr<convertible-to-Operation*>");
   for (Operation *target : targets) {
     auto specificOp = dyn_cast<OpTy>(target);
-    if (!specificOp)
-      return failure();
+    if (!specificOp) {
+      Diagnostic diag(target->getLoc(), DiagnosticSeverity::Error);
+      diag << "attempted to apply transform to the wrong op kind";
+      return DiagnosedSilencableFailure::silencableFailure(std::move(diag));
+    }
 
     auto result = transform(specificOp);
     if (failed(appendTransformResultToVector(result, results)))
-      return failure();
+      return DiagnosedSilencableFailure::definiteFailure();
   }
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 } // namespace detail
 } // namespace transform
 } // namespace mlir
 
 template <typename OpTy>
-mlir::LogicalResult mlir::transform::TransformEachOpTrait<OpTy>::apply(
+mlir::DiagnosedSilencableFailure
+mlir::transform::TransformEachOpTrait<OpTy>::apply(
     TransformResults &transformResults, TransformState &state) {
   using TransformOpType = typename llvm::function_traits<
       decltype(&OpTy::applyToOne)>::template arg_t<0>;
   ArrayRef<Operation *> targets =
       state.getPayloadOps(this->getOperation()->getOperand(0));
   SmallVector<Operation *> results;
-  if (failed(detail::applyTransformToEach(
-          targets, results, [&](TransformOpType specificOp) {
-            return static_cast<OpTy *>(this)->applyToOne(specificOp);
-          })))
-    return failure();
+  DiagnosedSilencableFailure result = detail::applyTransformToEach(
+      targets, results, [&](TransformOpType specificOp) {
+        return static_cast<OpTy *>(this)->applyToOne(specificOp);
+      });
+  if (!result.succeeded())
+    return result;
+
   if (OpTy::template hasTrait<OpTrait::OneResult>()) {
     transformResults.set(
         this->getOperation()->getResult(0).template cast<OpResult>(), results);
   }
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
 template <typename OpTy>
