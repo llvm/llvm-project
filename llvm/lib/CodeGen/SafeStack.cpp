@@ -127,7 +127,7 @@ class SafeStack {
   ///
   /// 16 seems like a reasonable upper bound on the alignment of objects that we
   /// might expect to appear on the stack on most common targets.
-  static constexpr uint64_t StackAlignment = 16;
+  static constexpr Align StackAlignment = Align::Constant<16>();
 
   /// Return the value of the stack canary.
   Value *getStackGuard(IRBuilder<> &IRB, Function &F);
@@ -201,7 +201,7 @@ public:
   bool run();
 };
 
-constexpr uint64_t SafeStack::StackAlignment;
+constexpr Align SafeStack::StackAlignment;
 
 uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
   uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
@@ -673,13 +673,12 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
     SP = IRB.CreateSub(SP, Size);
 
     // Align the SP value to satisfy the AllocaInst, type and stack alignments.
-    uint64_t Align =
-        std::max(std::max(DL.getPrefTypeAlignment(Ty), AI->getAlignment()),
-                 StackAlignment);
+    auto Align = std::max(std::max(DL.getPrefTypeAlign(Ty), AI->getAlign()),
+                          StackAlignment);
 
-    assert(isPowerOf2_32(Align));
     Value *NewTop = IRB.CreateIntToPtr(
-        IRB.CreateAnd(SP, ConstantInt::get(IntPtrTy, ~uint64_t(Align - 1))),
+        IRB.CreateAnd(SP,
+                      ConstantInt::get(IntPtrTy, ~uint64_t(Align.value() - 1))),
         StackPtrTy);
 
     // Save the stack pointer.

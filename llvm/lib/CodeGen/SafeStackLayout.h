@@ -52,7 +52,7 @@ class StackLayout {
   void layoutObject(StackObject &Obj);
 
 public:
-  StackLayout(uint64_t StackAlignment) : MaxAlignment(StackAlignment) {}
+  StackLayout(Align StackAlignment) : MaxAlignment(StackAlignment) {}
 
   /// Add an object to the stack frame. Value pointer is opaque and used as a
   /// handle to retrieve the object's offset in the frame later.
