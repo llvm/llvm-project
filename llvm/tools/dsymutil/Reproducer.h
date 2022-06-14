@@ -17,7 +17,8 @@ namespace dsymutil {
 
 /// The reproducer mode.
 enum class ReproducerMode {
-  Generate,
+  GenerateOnExit,
+  GenerateOnCrash,
   Use,
   Off,
 };
@@ -33,9 +34,11 @@ public:
 
   IntrusiveRefCntPtr<vfs::FileSystem> getVFS() const { return VFS; }
 
+  virtual void generate(){};
+
   /// Create a Reproducer instance based on the given mode.
   static llvm::Expected<std::unique_ptr<Reproducer>>
-  createReproducer(ReproducerMode Mode, StringRef Root);
+  createReproducer(ReproducerMode Mode, StringRef Root, int Argc, char **Argv);
 
 protected:
   IntrusiveRefCntPtr<vfs::FileSystem> VFS;
@@ -46,8 +49,11 @@ protected:
 /// dsymutil.
 class ReproducerGenerate : public Reproducer {
 public:
-  ReproducerGenerate(std::error_code &EC);
+  ReproducerGenerate(std::error_code &EC, int Argc, char **Argv,
+                     bool GenerateOnExit);
   ~ReproducerGenerate() override;
+
+  virtual void generate() override;
 
 private:
   /// The path to the reproducer.
@@ -55,6 +61,15 @@ private:
 
   /// The FileCollector used by the FileCollectorFileSystem.
   std::shared_ptr<FileCollector> FC;
+
+  /// The input arguments to build the reproducer invocation.
+  llvm::SmallVector<llvm::StringRef, 0> Args;
+
+  /// Whether to generate the reproducer on destruction.
+  bool GenerateOnExit = false;
+
+  /// Whether we already generated the reproducer.
+  bool Generated = false;
 };
 
 /// Reproducer instance used to use an existing reproducer. The VFS returned by
