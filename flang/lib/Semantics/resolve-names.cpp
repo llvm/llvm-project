@@ -1674,7 +1674,19 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
   } else {
     label = parser::ToLowerCaseLetters(symbol.name().ToString());
   }
+  // Check if a symbol has two Bind names.
+  std::string oldBindName;
+  if (symbol.GetBindName()) {
+    oldBindName = *symbol.GetBindName();
+  }
   symbol.SetBindName(std::move(*label));
+  if (!oldBindName.empty()) {
+    if (const std::string * newBindName{symbol.GetBindName()}) {
+      if (oldBindName.compare(*newBindName) != 0) {
+        Say(symbol.name(), "The entity '%s' has multiple BIND names"_err_en_US);
+      }
+    }
+  }
 }
 
 void AttrsVisitor::Post(const parser::LanguageBindingSpec &x) {
