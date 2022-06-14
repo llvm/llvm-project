@@ -570,6 +570,7 @@ aix)
                    -DLIBCXX_TEST_CONFIG="ibm-libc++-shared.cfg.in" \
                    -DLIBCXXABI_TEST_CONFIG="ibm-libc++abi-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="ibm-libunwind-shared.cfg.in"
+    check-abi-list
     check-runtimes
 ;;
 #################################################################
