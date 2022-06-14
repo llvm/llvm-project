@@ -126,9 +126,6 @@ public:
     setSubclassData<AlignmentField>(Log2(Align));
   }
 
-  // FIXME: Remove this one transition to Align is over.
-  uint64_t getAlignment() const { return getAlign().value(); }
-
   /// Return true if this alloca is in the entry block of the function and is a
   /// constant size. If so, the code generator will fold it into the
   /// prolog/epilog code, so it is basically free.
