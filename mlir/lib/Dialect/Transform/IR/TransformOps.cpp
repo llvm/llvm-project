@@ -123,8 +123,8 @@ LogicalResult PatternApplicatorExtension::findAllMatches(
 //===----------------------------------------------------------------------===//
 
 OperandRange
-transform::AlternativesOp::getSuccessorEntryOperands(unsigned index) {
-  if (getOperation()->getNumOperands() == 1)
+transform::AlternativesOp::getSuccessorEntryOperands(Optional<unsigned> index) {
+  if (index.hasValue() && getOperation()->getNumOperands() == 1)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),
                       getOperation()->operand_end());
