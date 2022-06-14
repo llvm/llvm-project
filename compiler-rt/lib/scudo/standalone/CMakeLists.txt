@@ -36,6 +36,7 @@ list(APPEND SCUDO_LINK_FLAGS -ffunction-sections -fdata-sections -Wl,--gc-sectio
 
 # We don't use the C++ standard library, so avoid including it by mistake.
 append_list_if(COMPILER_RT_HAS_NOSTDLIBXX_FLAG -nostdlib++ SCUDO_LINK_FLAGS)
+append_list_if(CXX_SUPPORTS_UNWINDLIB_NONE_FLAG --unwindlib=none SCUDO_LINK_FLAGS)
 
 if(ANDROID)
   list(APPEND SCUDO_CFLAGS -fno-emulated-tls)

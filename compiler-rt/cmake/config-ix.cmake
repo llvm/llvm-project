@@ -4,8 +4,18 @@ include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckIncludeFiles)
 include(CheckLibraryExists)
+include(LLVMCheckCompilerLinkerFlag)
 include(CheckSymbolExists)
 include(TestBigEndian)
+
+# The compiler driver may be implicitly trying to link against libunwind.
+# This is normally ok (libcxx relies on an unwinder), but if libunwind is
+# built in the same cmake invocation as compiler-rt and we're using the
+# in tree version of runtimes, we'd be linking against the just-built
+# libunwind (and the compiler implicit -lunwind wouldn't succeed as the newly
+# built libunwind isn't installed yet). For those cases, it'd be good to
+# link with --uwnindlib=none. Check if that option works.
+llvm_check_compiler_linker_flag(C "--unwindlib=none" CXX_SUPPORTS_UNWINDLIB_NONE_FLAG)
 
 check_library_exists(c fopen "" COMPILER_RT_HAS_LIBC)
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)

@@ -31,6 +31,7 @@ endif()
 include(SetPlatformToolchainTools)
 include(base-config-ix)
 include(CompilerRTUtils)
+include(CMakeDependentOption)
 
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
@@ -210,6 +211,11 @@ set(SANITIZER_TEST_CXX "default" CACHE STRING
 set(CXXLIBS none default libstdc++ libc++)
 set_property(CACHE SANITIZER_TEST_CXX PROPERTY STRINGS ;${CXXLIBS})
 handle_default_cxx_lib(SANITIZER_TEST_CXX)
+
+option(COMPILER_RT_USE_LLVM_UNWINDER "Use the LLVM unwinder." OFF)
+cmake_dependent_option(COMPILER_RT_ENABLE_STATIC_UNWINDER
+  "Statically link the LLVM unwinder." OFF
+  "COMPILER_RT_USE_LLVM_UNWINDER" OFF)
 
 set(DEFAULT_SANITIZER_USE_STATIC_LLVM_UNWINDER OFF)
 if (FUCHSIA)
@@ -503,6 +509,15 @@ string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}
 # ...we need it to build some runtimes and tests so readd it where appropriate.
 list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})
 list(APPEND COMPILER_RT_COMMON_LINK_FLAGS ${stdlib_flag})
+
+if(COMPILER_RT_USE_LLVM_UNWINDER)
+  if (COMPILER_RT_ENABLE_STATIC_UNWINDER)
+    set(unwinder_target unwind_static)
+  else()
+    set(unwinder_target unwind_shared)
+  endif()
+  list(APPEND SANITIZER_CXX_ABI_LIBRARIES "$<$<TARGET_EXISTS:${unwinder_target}>:$<TARGET_LINKER_FILE:${unwinder_target}>>")
+endif()
 
 macro(append_libcxx_libs var)
   if (${var}_INTREE)
