@@ -162,9 +162,9 @@ namespace UndefinedBehavior {
   constexpr int shl_signed_ok = 1 << 30; // ok
   constexpr int shl_signed_into_sign = 1 << 31; // ok (DR1457)
   constexpr int shl_signed_into_sign_2 = 0x7fffffff << 1; // ok (DR1457)
-  constexpr int shl_signed_off_end = 2 << 31; // cxx11-error {{constant expression}} cxx11-note {{signed left shift discards bits}} expected-warning {{signed shift result (0x100000000) requires 34 bits to represent, but 'int' only has 32 bits}}
-  constexpr int shl_signed_off_end_2 = 0x7fffffff << 2; // cxx11-error {{constant expression}} cxx11-note {{signed left shift discards bits}} expected-warning {{signed shift result (0x1FFFFFFFC) requires 34 bits to represent, but 'int' only has 32 bits}}
-  constexpr int shl_signed_overflow = 1024 << 31; // cxx11-error {{constant expression}} cxx11-note {{signed left shift discards bits}} expected-warning {{requires 43 bits to represent}}
+  constexpr int shl_signed_off_end = 2 << 31; // cxx11-error {{constant expression}} cxx11-note {{signed left shift discards bits}} cxx11-warning {{signed shift result (0x100000000) requires 34 bits to represent, but 'int' only has 32 bits}}
+  constexpr int shl_signed_off_end_2 = 0x7fffffff << 2; // cxx11-error {{constant expression}} cxx11-note {{signed left shift discards bits}} cxx11-warning {{signed shift result (0x1FFFFFFFC) requires 34 bits to represent, but 'int' only has 32 bits}}
+  constexpr int shl_signed_overflow = 1024 << 31; // cxx11-error {{constant expression}} cxx11-note {{signed left shift discards bits}} cxx11-warning {{requires 43 bits to represent}}
   constexpr int shl_signed_ok2 = 1024 << 20; // ok
 
   constexpr int shr_m1 = 0 >> -1; // expected-error {{constant expression}} expected-note {{negative shift count -1}}

@@ -11416,10 +11416,16 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
     return;
   llvm::APSInt Left = LHSResult.Val.getInt();
 
-  // If LHS does not have a signed type and non-negative value
-  // then, the behavior is undefined before C++2a. Warn about it.
-  if (Left.isNegative() && !S.getLangOpts().isSignedOverflowDefined() &&
-      !S.getLangOpts().CPlusPlus20) {
+  // Don't warn if signed overflow is defined, then all the rest of the
+  // diagnostics will not be triggered because the behavior is defined.
+  // Also don't warn in C++20 mode (and newer), as signed left shifts
+  // always wrap and never overflow.
+  if (S.getLangOpts().isSignedOverflowDefined() || S.getLangOpts().CPlusPlus20)
+    return;
+
+  // If LHS does not have a non-negative value then, the
+  // behavior is undefined before C++2a. Warn about it.
+  if (Left.isNegative()) {
     S.DiagRuntimeBehavior(Loc, LHS.get(),
                           S.PDiag(diag::warn_shift_lhs_negative)
                             << LHS.get()->getSourceRange());
