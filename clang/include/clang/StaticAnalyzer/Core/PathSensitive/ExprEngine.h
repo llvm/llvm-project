@@ -608,17 +608,6 @@ public:
                          StmtNodeBuilder &Bldr);
 
 public:
-  SVal evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
-                 NonLoc L, NonLoc R, QualType T) {
-    return svalBuilder.evalBinOpNN(state, op, L, R, T);
-  }
-
-  SVal evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
-                 NonLoc L, SVal R, QualType T) {
-    return R.isValid() ? svalBuilder.evalBinOpNN(state, op, L,
-                                                 R.castAs<NonLoc>(), T) : R;
-  }
-
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,
                  SVal LHS, SVal RHS, QualType T) {
     return svalBuilder.evalBinOp(ST, Op, LHS, RHS, T);
