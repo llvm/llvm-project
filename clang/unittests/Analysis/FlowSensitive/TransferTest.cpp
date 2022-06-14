@@ -293,29 +293,29 @@ TEST_F(TransferTest, ReferenceVarDecl) {
       // [[p]]
     }
   )";
-  runDataflow(Code,
-              [](llvm::ArrayRef<
-                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                     Results,
-                 ASTContext &ASTCtx) {
-                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
-                const Environment &Env = Results[0].second.Env;
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
 
-                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-                ASSERT_THAT(FooDecl, NotNull());
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
 
-                const StorageLocation *FooLoc =
-                    Env.getStorageLocation(*FooDecl, SkipPast::None);
-                ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
+        const StorageLocation *FooLoc =
+            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
-                const ReferenceValue *FooVal =
-                    cast<ReferenceValue>(Env.getValue(*FooLoc));
-                const StorageLocation &FooPointeeLoc = FooVal->getPointeeLoc();
-                EXPECT_TRUE(isa<AggregateStorageLocation>(&FooPointeeLoc));
+        const ReferenceValue *FooVal =
+            cast<ReferenceValue>(Env.getValue(*FooLoc));
+        const StorageLocation &FooReferentLoc = FooVal->getReferentLoc();
+        EXPECT_TRUE(isa<AggregateStorageLocation>(&FooReferentLoc));
 
-                const Value *FooPointeeVal = Env.getValue(FooPointeeLoc);
-                EXPECT_TRUE(isa_and_nonnull<StructValue>(FooPointeeVal));
-              });
+        const Value *FooReferentVal = Env.getValue(FooReferentLoc);
+        EXPECT_TRUE(isa_and_nonnull<StructValue>(FooReferentVal));
+      });
 }
 
 TEST_F(TransferTest, SelfReferentialReferenceVarDecl) {
@@ -397,31 +397,31 @@ TEST_F(TransferTest, SelfReferentialReferenceVarDecl) {
     const auto *FooLoc = cast<ScalarStorageLocation>(
         Env.getStorageLocation(*FooDecl, SkipPast::None));
     const auto *FooVal = cast<ReferenceValue>(Env.getValue(*FooLoc));
-    const auto *FooPointeeVal =
-        cast<StructValue>(Env.getValue(FooVal->getPointeeLoc()));
+    const auto *FooReferentVal =
+        cast<StructValue>(Env.getValue(FooVal->getReferentLoc()));
 
     const auto *BarVal =
-        cast<ReferenceValue>(FooPointeeVal->getChild(*BarDecl));
-    const auto *BarPointeeVal =
-        cast<StructValue>(Env.getValue(BarVal->getPointeeLoc()));
+        cast<ReferenceValue>(FooReferentVal->getChild(*BarDecl));
+    const auto *BarReferentVal =
+        cast<StructValue>(Env.getValue(BarVal->getReferentLoc()));
 
     const auto *FooRefVal =
-        cast<ReferenceValue>(BarPointeeVal->getChild(*FooRefDecl));
-    const StorageLocation &FooRefPointeeLoc = FooRefVal->getPointeeLoc();
-    EXPECT_THAT(Env.getValue(FooRefPointeeLoc), IsNull());
+        cast<ReferenceValue>(BarReferentVal->getChild(*FooRefDecl));
+    const StorageLocation &FooReferentLoc = FooRefVal->getReferentLoc();
+    EXPECT_THAT(Env.getValue(FooReferentLoc), IsNull());
 
     const auto *FooPtrVal =
-        cast<PointerValue>(BarPointeeVal->getChild(*FooPtrDecl));
+        cast<PointerValue>(BarReferentVal->getChild(*FooPtrDecl));
     const StorageLocation &FooPtrPointeeLoc = FooPtrVal->getPointeeLoc();
     EXPECT_THAT(Env.getValue(FooPtrPointeeLoc), IsNull());
 
     const auto *BazRefVal =
-        cast<ReferenceValue>(BarPointeeVal->getChild(*BazRefDecl));
-    const StorageLocation &BazRefPointeeLoc = BazRefVal->getPointeeLoc();
-    EXPECT_THAT(Env.getValue(BazRefPointeeLoc), NotNull());
+        cast<ReferenceValue>(BarReferentVal->getChild(*BazRefDecl));
+    const StorageLocation &BazReferentLoc = BazRefVal->getReferentLoc();
+    EXPECT_THAT(Env.getValue(BazReferentLoc), NotNull());
 
     const auto *BazPtrVal =
-        cast<PointerValue>(BarPointeeVal->getChild(*BazPtrDecl));
+        cast<PointerValue>(BarReferentVal->getChild(*BazPtrDecl));
     const StorageLocation &BazPtrPointeeLoc = BazPtrVal->getPointeeLoc();
     EXPECT_THAT(Env.getValue(BazPtrPointeeLoc), NotNull());
   });
@@ -564,8 +564,8 @@ TEST_F(TransferTest, SelfReferentialPointerVarDecl) {
 
         const auto *FooRefVal =
             cast<ReferenceValue>(BarPointeeVal->getChild(*FooRefDecl));
-        const StorageLocation &FooRefPointeeLoc = FooRefVal->getPointeeLoc();
-        EXPECT_THAT(Env.getValue(FooRefPointeeLoc), IsNull());
+        const StorageLocation &FooReferentLoc = FooRefVal->getReferentLoc();
+        EXPECT_THAT(Env.getValue(FooReferentLoc), IsNull());
 
         const auto *FooPtrVal =
             cast<PointerValue>(BarPointeeVal->getChild(*FooPtrDecl));
@@ -574,8 +574,8 @@ TEST_F(TransferTest, SelfReferentialPointerVarDecl) {
 
         const auto *BazRefVal =
             cast<ReferenceValue>(BarPointeeVal->getChild(*BazRefDecl));
-        const StorageLocation &BazRefPointeeLoc = BazRefVal->getPointeeLoc();
-        EXPECT_THAT(Env.getValue(BazRefPointeeLoc), NotNull());
+        const StorageLocation &BazReferentLoc = BazRefVal->getReferentLoc();
+        EXPECT_THAT(Env.getValue(BazReferentLoc), NotNull());
 
         const auto *BazPtrVal =
             cast<PointerValue>(BarPointeeVal->getChild(*BazPtrDecl));
@@ -952,31 +952,31 @@ TEST_F(TransferTest, ReferenceParamDecl) {
       // [[p]]
     }
   )";
-  runDataflow(Code,
-              [](llvm::ArrayRef<
-                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                     Results,
-                 ASTContext &ASTCtx) {
-                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
-                const Environment &Env = Results[0].second.Env;
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
 
-                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-                ASSERT_THAT(FooDecl, NotNull());
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
 
-                const StorageLocation *FooLoc =
-                    Env.getStorageLocation(*FooDecl, SkipPast::None);
-                ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
+        const StorageLocation *FooLoc =
+            Env.getStorageLocation(*FooDecl, SkipPast::None);
+        ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
-                const ReferenceValue *FooVal =
-                    dyn_cast<ReferenceValue>(Env.getValue(*FooLoc));
-                ASSERT_THAT(FooVal, NotNull());
+        const ReferenceValue *FooVal =
+            dyn_cast<ReferenceValue>(Env.getValue(*FooLoc));
+        ASSERT_THAT(FooVal, NotNull());
 
-                const StorageLocation &FooPointeeLoc = FooVal->getPointeeLoc();
-                EXPECT_TRUE(isa<AggregateStorageLocation>(&FooPointeeLoc));
+        const StorageLocation &FooReferentLoc = FooVal->getReferentLoc();
+        EXPECT_TRUE(isa<AggregateStorageLocation>(&FooReferentLoc));
 
-                const Value *FooPointeeVal = Env.getValue(FooPointeeLoc);
-                EXPECT_TRUE(isa_and_nonnull<StructValue>(FooPointeeVal));
-              });
+        const Value *FooReferentVal = Env.getValue(FooReferentLoc);
+        EXPECT_TRUE(isa_and_nonnull<StructValue>(FooReferentVal));
+      });
 }
 
 TEST_F(TransferTest, PointerParamDecl) {
@@ -1378,13 +1378,13 @@ TEST_F(TransferTest, ReferenceMember) {
             Env.getStorageLocation(*FooDecl, SkipPast::None));
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal = cast<ReferenceValue>(FooVal->getChild(*BarDecl));
-        const auto *BarPointeeVal =
-            cast<IntegerValue>(Env.getValue(BarVal->getPointeeLoc()));
+        const auto *BarReferentVal =
+            cast<IntegerValue>(Env.getValue(BarVal->getReferentLoc()));
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        EXPECT_EQ(Env.getValue(*BazDecl, SkipPast::None), BarPointeeVal);
+        EXPECT_EQ(Env.getValue(*BazDecl, SkipPast::None), BarReferentVal);
       });
 }
 
@@ -1752,7 +1752,7 @@ TEST_F(TransferTest, DefaultInitializerReference) {
 
         const auto *QuxVal =
             cast<ReferenceValue>(Env.getValue(*QuxDecl, SkipPast::None));
-        EXPECT_EQ(&QuxVal->getPointeeLoc(), &FooVal->getPointeeLoc());
+        EXPECT_EQ(&QuxVal->getReferentLoc(), &FooVal->getReferentLoc());
       });
 }
 
@@ -2299,7 +2299,7 @@ TEST_F(TransferTest, DerefDependentPtr) {
             cast<PointerValue>(Env.getValue(*FooDecl, SkipPast::None));
         const auto *BarVal =
             cast<ReferenceValue>(Env.getValue(*BarDecl, SkipPast::None));
-        EXPECT_EQ(&BarVal->getPointeeLoc(), &FooVal->getPointeeLoc());
+        EXPECT_EQ(&BarVal->getReferentLoc(), &FooVal->getPointeeLoc());
       });
 }
 

@@ -236,7 +236,7 @@ StorageLocation *maybeInitializeOptionalValueMember(QualType Q,
   // `Value` representing the optional (here, `OptionalVal`).
   if (auto *ValueProp = OptionalVal.getProperty("value")) {
     auto *ValueRef = clang::cast<ReferenceValue>(ValueProp);
-    auto &ValueLoc = ValueRef->getPointeeLoc();
+    auto &ValueLoc = ValueRef->getReferentLoc();
     if (Env.getValue(ValueLoc) == nullptr) {
       // The property was previously set, but the value has been lost. This can
       // happen, for example, because of an environment merge (where the two
