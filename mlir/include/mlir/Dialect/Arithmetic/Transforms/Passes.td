@@ -33,4 +33,20 @@ def ArithmeticExpandOps : Pass<"arith-expand"> {
   let constructor = "mlir::arith::createArithmeticExpandOpsPass()";
 }
 
+def ArithmeticUnsignedWhenEquivalent : Pass<"arith-unsigned-when-equivalent"> {
+  let summary = "Replace signed ops with unsigned ones where they are proven equivalent";
+  let description = [{
+    Replace signed ops with their unsigned equivalents when integer range analysis
+    determines that their arguments and results are all guaranteed to be
+    non-negative when interpreted as signed integers. When this occurs,
+    we know that the semantics of the signed and unsigned operations are the same,
+    since they share the same behavior when their operands and results  are in the
+    range [0, signed_max(type)].
+
+    The affect ops include division, remainder, shifts, min, max, and integer
+    comparisons.
+  }];
+  let constructor = "mlir::arith::createArithmeticUnsignedWhenEquivalentPass()";
+}
+
 #endif // MLIR_DIALECT_ARITHMETIC_TRANSFORMS_PASSES
