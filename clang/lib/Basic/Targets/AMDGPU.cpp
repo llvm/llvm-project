@@ -462,9 +462,13 @@ void AMDGPUTargetInfo::setAuxTarget(const TargetInfo *Aux) {
   // supported by AMDGPU. Therefore keep its own format for these two types.
   auto SaveLongDoubleFormat = LongDoubleFormat;
   auto SaveFloat128Format = Float128Format;
+  auto SaveLongDoubleWidth = LongDoubleWidth;
+  auto SaveLongDoubleAlign = LongDoubleAlign;
   copyAuxTarget(Aux);
   LongDoubleFormat = SaveLongDoubleFormat;
   Float128Format = SaveFloat128Format;
+  LongDoubleWidth = SaveLongDoubleWidth;
+  LongDoubleAlign = SaveLongDoubleAlign;
   // For certain builtin types support on the host target, claim they are
   // support to pass the compilation of the host code during the device-side
   // compilation.
