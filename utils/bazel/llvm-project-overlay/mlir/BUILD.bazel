@@ -8206,6 +8206,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":CastInterfacesTdFiles",
+        ":InferIntRangeInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -8302,6 +8303,7 @@ cc_library(
         ":ArithmeticOpsIncGen",
         ":CommonFolders",
         ":IR",
+        ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":SideEffectInterfaces",
         ":VectorInterfaces",
