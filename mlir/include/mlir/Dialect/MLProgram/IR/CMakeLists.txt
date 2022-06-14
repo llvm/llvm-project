@@ -7,7 +7,6 @@ mlir_tablegen(MLProgramAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(MLProgramAttributes.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIRMLProgramAttributesIncGen)
 add_dependencies(mlir-headers MLIRMLProgramAttributesIncGen)
-add_mlir_doc(MLProgramAttributes MLProgramAttributes Dialects/ -gen-attrdef-doc)
 
 set(LLVM_TARGET_DEFINITIONS MLProgramTypes.td)
 mlir_tablegen(MLProgramTypes.h.inc -gen-typedef-decls)
