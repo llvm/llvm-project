@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -analyzer-checker=core,osx -analyzer-store=region -verify -fblocks   -analyzer-opt-analyze-nested-blocks %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -analyzer-checker=core,osx -verify -fblocks   -analyzer-opt-analyze-nested-blocks %s
 // expected-no-diagnostics
 
 // Test handling of OSAtomicCompareAndSwap when C++ inserts "no-op" casts and we

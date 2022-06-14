@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-store=region -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -Wno-objc-root-class %s
 
 extern void clang_analyzer_warnIfReached(void);
 void clang_analyzer_eval(int);

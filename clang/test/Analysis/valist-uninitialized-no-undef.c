@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,valist.Uninitialized,valist.CopyToSelf -analyzer-output=text -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,valist.Uninitialized,valist.CopyToSelf -analyzer-output=text -verify %s
 
 #include "Inputs/system-header-simulator-for-valist.h"
 

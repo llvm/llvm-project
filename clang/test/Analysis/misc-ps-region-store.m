@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,alpha.security.ArrayBound -analyzer-store=region -verify -fblocks -analyzer-opt-analyze-nested-blocks -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -DTEST_64 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,alpha.security.ArrayBound -analyzer-store=region -verify -fblocks   -analyzer-opt-analyze-nested-blocks -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,alpha.security.ArrayBound -verify -fblocks -analyzer-opt-analyze-nested-blocks -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -DTEST_64 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,alpha.security.ArrayBound -verify -fblocks   -analyzer-opt-analyze-nested-blocks -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
 
 typedef long unsigned int size_t;
 void *memcpy(void *, const void *, size_t);
