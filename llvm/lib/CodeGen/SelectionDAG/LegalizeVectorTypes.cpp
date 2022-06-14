@@ -6144,8 +6144,20 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_SEQ(SDNode *N) {
   SDValue NeutralElem = DAG.getNeutralElement(BaseOpc, dl, ElemVT, Flags);
 
   // Pad the vector with the neutral element.
-  unsigned OrigElts = OrigVT.getVectorNumElements();
-  unsigned WideElts = WideVT.getVectorNumElements();
+  unsigned OrigElts = OrigVT.getVectorMinNumElements();
+  unsigned WideElts = WideVT.getVectorMinNumElements();
+
+  if (WideVT.isScalableVector()) {
+    unsigned GCD = greatestCommonDivisor(OrigElts, WideElts);
+    EVT SplatVT = EVT::getVectorVT(*DAG.getContext(), ElemVT,
+                                   ElementCount::getScalable(GCD));
+    SDValue SplatNeutral = DAG.getSplatVector(SplatVT, dl, NeutralElem);
+    for (unsigned Idx = OrigElts; Idx < WideElts; Idx = Idx + GCD)
+      Op = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideVT, Op, SplatNeutral,
+                       DAG.getVectorIdxConstant(Idx, dl));
+    return DAG.getNode(Opc, dl, N->getValueType(0), AccOp, Op, Flags);
+  }
+
   for (unsigned Idx = OrigElts; Idx < WideElts; Idx++)
     Op = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, WideVT, Op, NeutralElem,
                      DAG.getVectorIdxConstant(Idx, dl));
