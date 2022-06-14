@@ -17,6 +17,83 @@ include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 
+def AlternativesOp : TransformDialectOp<"alternatives",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getSuccessorEntryOperands", "getSuccessorRegions",
+         "getRegionInvocationBounds"]>,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     IsolatedFromAbove, PossibleTopLevelTransformOpTrait,
+     SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">]> {
+  let summary = "Attempts sequences of transforms until one succeeds";
+  let description = [{
+    This op may have an arbitrary number of regions, each of which represents a
+    sequence of transform operations to be applied to the same payload IR. The
+    regions are visited in order of appearance, and transforms in them are
+    applied in their respective order of appearance. If one of these transforms
+    fails to apply, the remaining ops in the same region are skipped an the next
+    region is attempted. If all transformations in a region succeed, the
+    remaining regions are skipped and the entire "alternatives" transformation
+    succeeds. If all regions contained a failing transformation, the entire
+    "alternatives" transformation fails.
+
+    It is up to the nested operations to define which errors are "recoverable"
+    (or "silencable") and allow another alternatives to be attempted, and which
+    errors should be propagated without attempting the other alternatives.
+
+    The single operand of this operation is the scope in which the alternative
+    transformation sequences are attempted, that is, an operation in the payload
+    IR that contains all the other operations that may be modified by the
+    transformations. There is no check that the transforms are indeed scoped
+    as their "apply" methods can be arbitrarily complex. Therefore it is the
+    responsibility of the user to ensure that the transforms are scoped
+    correctly, or to produce an irrecoverable error and thus abort the execution
+    without attempting the remaining alternatives. Note that the payload IR
+    outside of the given scope is not necessarily in the valid state, or even
+    accessible to the tranfsormation.
+    
+    The changes to the IR within the scope performed by transforms in the failed
+    alternative region are reverted before attempting the next region.
+    Practically, this is achieved by cloning the scope. Therefore it is advised
+    to limit the scope as much as possible and place the most likely
+    alternatives early in the region list. The operation is also isolated from
+    above and requires rediscovering the operations within the given scope to
+    avoid additional handle invalidation. The latter restriction may be lifted
+    in the future.
+
+    Each of the regions may yield transform IR handles. The handles of the first
+    successful alternative region are returned as the results of the
+    "alternatives" op. Therefore, each alternative region must yield the same
+    number of results, which should also match the number and the types of the
+    "alternatives" op results.
+
+    Remark: this op allows one to implement a simple "try" construct as follows:
+
+    ```mlir
+    %result = transform.alternatives %scope {
+    ^bb0(%arg0: !pdl.operation):
+      // Try a failible transformation.
+      %0 = transform.failible %arg0 // ...
+      // If succeeded, yield the the result of the transformation.
+      transform.yield %0 : !pdl.operation
+    }, {
+    ^bb0(%arg0: !pdl.operation):
+      // Otherwise, the second alternative is tried and it always succeeeds by
+      // returning the original handle.
+      transform.yield %arg0 : !pdl.operation
+    }
+    ```
+  }];
+
+  let arguments = (ins Optional<PDL_Operation>:$scope);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$alternatives);
+
+  let assemblyFormat =
+    "($scope^)? (`->` type($results)^)? attr-dict-with-keyword regions";
+  let hasVerifier = 1;
+}
+
 def GetClosestIsolatedParentOp : TransformDialectOp<"get_closest_isolated_parent",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      NavigationTransformOpTrait, MemoryEffectsOpInterface]> {

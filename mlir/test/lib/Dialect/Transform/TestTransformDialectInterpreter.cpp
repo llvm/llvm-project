@@ -47,7 +47,7 @@ public:
             enableExpensiveChecks));
     for (auto op :
          module.getBody()->getOps<transform::TransformOpInterface>()) {
-      if (failed(state.applyTransform(op)))
+      if (failed(state.applyTransform(op).checkAndReport()))
         return signalPassFailure();
     }
   }

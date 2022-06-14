@@ -14,6 +14,7 @@
 #include "mlir/Dialect/SCF/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
+#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 using namespace mlir;
@@ -30,7 +31,7 @@ public:
 // GetParentForOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult
+DiagnosedSilencableFailure
 transform::GetParentForOp::apply(transform::TransformResults &results,
                                  transform::TransformState &state) {
   SetVector<Operation *> parents;
@@ -40,9 +41,10 @@ transform::GetParentForOp::apply(transform::TransformResults &results,
     for (unsigned i = 0, e = getNumLoops(); i < e; ++i) {
       loop = current->getParentOfType<scf::ForOp>();
       if (!loop) {
-        InFlightDiagnostic diag = emitError() << "could not find an '"
-                                              << scf::ForOp::getOperationName()
-                                              << "' parent";
+        DiagnosedSilencableFailure diag = emitSilencableError()
+                                          << "could not find an '"
+                                          << scf::ForOp::getOperationName()
+                                          << "' parent";
         diag.attachNote(target->getLoc()) << "target op";
         return diag;
       }
@@ -51,7 +53,7 @@ transform::GetParentForOp::apply(transform::TransformResults &results,
     parents.insert(loop);
   }
   results.set(getResult().cast<OpResult>(), parents.getArrayRef());
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -83,7 +85,7 @@ static scf::ExecuteRegionOp wrapInExecuteRegion(RewriterBase &b,
   return executeRegionOp;
 }
 
-LogicalResult
+DiagnosedSilencableFailure
 transform::LoopOutlineOp::apply(transform::TransformResults &results,
                                 transform::TransformState &state) {
   SmallVector<Operation *> transformed;
@@ -94,7 +96,8 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
     SimpleRewriter rewriter(getContext());
     scf::ExecuteRegionOp exec = wrapInExecuteRegion(rewriter, target);
     if (!exec) {
-      InFlightDiagnostic diag = emitError() << "failed to outline";
+      DiagnosedSilencableFailure diag = emitSilencableError()
+                                        << "failed to outline";
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
     }
@@ -102,8 +105,10 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
     FailureOr<func::FuncOp> outlined = outlineSingleBlockRegion(
         rewriter, location, exec.getRegion(), getFuncName(), &call);
 
-    if (failed(outlined))
-      return reportUnknownTransformError(target);
+    if (failed(outlined)) {
+      (void)reportUnknownTransformError(target);
+      return DiagnosedSilencableFailure::definiteFailure();
+    }
 
     if (symbolTableOp) {
       SymbolTable &symbolTable =
@@ -115,7 +120,7 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
     transformed.push_back(*outlined);
   }
   results.set(getTransformed().cast<OpResult>(), transformed);
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//

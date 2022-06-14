@@ -81,7 +81,7 @@ transform.with_pdl_patterns {
 
 // -----
 
-// expected-error @below {{expects one region}}
+// expected-error @below {{expects at least one region}}
 "transform.test_transform_unrestricted_op_no_interface"() : () -> ()
 
 // -----
@@ -152,4 +152,35 @@ transform.sequence {
       test_consume_operand_if_matches_param_or_fail %arg2[42]
     }
   }
+}
+
+// -----
+
+transform.sequence {
+^bb1(%arg1: !pdl.operation):
+  // expected-error @below {{expects at least one region}}
+  transform.alternatives
+}
+
+// -----
+
+transform.sequence {
+^bb1(%arg1: !pdl.operation):
+  // expected-error @below {{expects terminator operands to have the same type as results of the operation}}
+  %2 = transform.alternatives %arg1 -> !pdl.operation {
+  ^bb2(%arg2: !pdl.operation):
+    transform.yield %arg2 : !pdl.operation
+  }, {
+  ^bb2(%arg2: !pdl.operation):
+    // expected-note @below {{terminator}}
+    transform.yield
+  }
+}
+
+// -----
+
+// expected-error @below {{expects the entry block to have one argument of type '!pdl.operation'}}
+transform.alternatives {
+^bb0:
+  transform.yield
 }
