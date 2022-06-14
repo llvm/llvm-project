@@ -358,6 +358,14 @@ typedef LLVMErrorRef (*LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction)(
     LLVMOrcCLookupSet LookupSet, size_t LookupSetSize);
 
 /**
+ * Disposer for a custom generator.
+ *
+ * Will be called by ORC when the JITDylib that the generator is attached to
+ * is destroyed.
+ */
+typedef void (*LLVMOrcDisposeCAPIDefinitionGeneratorFunction)(void *Ctx);
+
+/**
  * Predicate function for SymbolStringPoolEntries.
  */
 typedef int (*LLVMOrcSymbolPredicate)(void *Ctx,
@@ -573,6 +581,11 @@ void LLVMOrcRetainSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S);
  */
 void LLVMOrcReleaseSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S);
 
+/**
+ * Return the c-string for the given symbol. This string will remain valid until
+ * the entry is freed (once all LLVMOrcSymbolStringPoolEntryRefs have been
+ * released).
+ */
 const char *LLVMOrcSymbolStringPoolEntryStr(LLVMOrcSymbolStringPoolEntryRef S);
 
 /**
@@ -970,9 +983,27 @@ void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
 
 /**
  * Create a custom generator.
+ *
+ * The F argument will be used to implement the DefinitionGenerator's
+ * tryToGenerate method (see
+ * LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction).
+ *
+ * Ctx is a context object that will be passed to F. This argument is
+ * permitted to be null.
+ *
+ * Dispose is the disposal function for Ctx. This argument is permitted to be
+ * null (in which case the client is responsible for the lifetime of Ctx).
  */
 LLVMOrcDefinitionGeneratorRef LLVMOrcCreateCustomCAPIDefinitionGenerator(
-    LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction F, void *Ctx);
+    LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction F, void *Ctx,
+    LLVMOrcDisposeCAPIDefinitionGeneratorFunction Dispose);
+
+/**
+ * Continue a lookup that was suspended in a generator (see
+ * LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction).
+ */
+void LLVMOrcLookupStateContinueLookup(LLVMOrcLookupStateRef S,
+                                      LLVMErrorRef Err);
 
 /**
  * Get a DynamicLibrarySearchGenerator that will reflect process symbols into

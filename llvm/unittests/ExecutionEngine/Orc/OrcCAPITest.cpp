@@ -107,8 +107,12 @@ public:
     MainDylib = LLVMOrcLLJITGetMainJITDylib(Jit);
   }
   void TearDown() override {
-    LLVMOrcDisposeLLJIT(Jit);
-    Jit = nullptr;
+    // Check whether Jit has already been torn down -- we allow clients to do
+    // this manually to check teardown behavior.
+    if (Jit) {
+      LLVMOrcDisposeLLJIT(Jit);
+      Jit = nullptr;
+    }
   }
 
 protected:
@@ -410,7 +414,7 @@ TEST_F(OrcCAPITestBase, ExecutionSessionLookup_Failure) {
 TEST_F(OrcCAPITestBase, DefinitionGenerators) {
   LLVMOrcDefinitionGeneratorRef Gen =
       LLVMOrcCreateCustomCAPIDefinitionGenerator(&definitionGeneratorFn,
-                                                 nullptr);
+                                                 nullptr, nullptr);
   LLVMOrcJITDylibAddGenerator(MainDylib, Gen);
   LLVMOrcJITTargetAddress OutAddr;
   if (LLVMErrorRef E = LLVMOrcLLJITLookup(Jit, &OutAddr, "test"))
@@ -659,4 +663,111 @@ TEST_F(OrcCAPITestBase, MaterializationResponsibility) {
   }
   ASSERT_TRUE(!!Addr);
   ASSERT_EQ(Addr, (LLVMOrcJITTargetAddress)&TargetFn);
+}
+
+struct SuspendedLookupContext {
+  std::function<void()> AsyncWork;
+  LLVMOrcSymbolStringPoolEntryRef NameToGenerate;
+  JITTargetAddress AddrToGenerate;
+
+  bool Disposed = false;
+  bool QueryCompleted = true;
+};
+
+static LLVMErrorRef TryToGenerateWithSuspendedLookup(
+    LLVMOrcDefinitionGeneratorRef GeneratorObj, void *RawCtx,
+    LLVMOrcLookupStateRef *LookupState, LLVMOrcLookupKind Kind,
+    LLVMOrcJITDylibRef JD, LLVMOrcJITDylibLookupFlags JDLookupFlags,
+    LLVMOrcCLookupSet LookupSet, size_t LookupSetSize) {
+
+  auto *Ctx = static_cast<SuspendedLookupContext *>(RawCtx);
+
+  assert(LookupSetSize == 1);
+  assert(LookupSet[0].Name == Ctx->NameToGenerate);
+
+  LLVMJITEvaluatedSymbol Sym = {0x1234, {LLVMJITSymbolGenericFlagsExported, 0}};
+  LLVMOrcRetainSymbolStringPoolEntry(LookupSet[0].Name);
+  LLVMOrcCSymbolMapPair Pair = {LookupSet[0].Name, Sym};
+  LLVMOrcCSymbolMapPair Pairs[] = {Pair};
+  LLVMOrcMaterializationUnitRef MU = LLVMOrcAbsoluteSymbols(Pairs, 1);
+
+  // Capture and reset LookupState to suspend the lookup. We'll continue it in
+  // the SuspendedLookup testcase below.
+  Ctx->AsyncWork = [LS = *LookupState, JD, MU]() {
+    LLVMErrorRef Err = LLVMOrcJITDylibDefine(JD, MU);
+    LLVMOrcLookupStateContinueLookup(LS, Err);
+  };
+  *LookupState = nullptr;
+  return LLVMErrorSuccess;
+}
+
+static void DisposeSuspendedLookupContext(void *Ctx) {
+  static_cast<SuspendedLookupContext *>(Ctx)->Disposed = true;
+}
+
+static void
+suspendLookupTestLookupHandlerCallback(LLVMErrorRef Err,
+                                       LLVMOrcCSymbolMapPairs Result,
+                                       size_t NumPairs, void *RawCtx) {
+  if (Err) {
+    FAIL() << "Suspended DefinitionGenerator did not create symbol \"foo\": "
+           << toString(Err);
+    return;
+  }
+
+  EXPECT_EQ(NumPairs, 1U)
+      << "Unexpected number of result entries: expected 1, got " << NumPairs;
+
+  auto *Ctx = static_cast<SuspendedLookupContext *>(RawCtx);
+  EXPECT_EQ(Result[0].Name, Ctx->NameToGenerate);
+  EXPECT_EQ(Result[0].Sym.Address, Ctx->AddrToGenerate);
+
+  Ctx->QueryCompleted = true;
+}
+
+TEST_F(OrcCAPITestBase, SuspendedLookup) {
+  // Test that we can suspend lookup in a custom generator.
+  SuspendedLookupContext Ctx;
+  Ctx.NameToGenerate = LLVMOrcLLJITMangleAndIntern(Jit, "foo");
+  Ctx.AddrToGenerate = 0x1234;
+
+  // Add generator.
+  LLVMOrcJITDylibAddGenerator(MainDylib,
+                              LLVMOrcCreateCustomCAPIDefinitionGenerator(
+                                  &TryToGenerateWithSuspendedLookup, &Ctx,
+                                  DisposeSuspendedLookupContext));
+
+  // Expect no work to do before the lookup.
+  EXPECT_FALSE(Ctx.AsyncWork) << "Unexpected generator work before lookup";
+
+  // Issue lookup. This should trigger the generator, but generation should
+  // be suspended.
+  LLVMOrcCJITDylibSearchOrderElement SO[] = {
+      {MainDylib, LLVMOrcJITDylibLookupFlagsMatchExportedSymbolsOnly}};
+  LLVMOrcRetainSymbolStringPoolEntry(Ctx.NameToGenerate);
+  LLVMOrcCLookupSetElement LS[] = {
+      {Ctx.NameToGenerate, LLVMOrcSymbolLookupFlagsRequiredSymbol}};
+  LLVMOrcExecutionSessionLookup(ExecutionSession, LLVMOrcLookupKindStatic, SO,
+                                1, LS, 1,
+                                suspendLookupTestLookupHandlerCallback, &Ctx);
+
+  // Expect that we now have generator work to do.
+  EXPECT_TRUE(Ctx.AsyncWork)
+      << "Failed to generator (or failed to suspend generator)";
+
+  // Do the work. This should allow the query to complete.
+  Ctx.AsyncWork();
+
+  // Check that the query completed.
+  EXPECT_TRUE(Ctx.QueryCompleted);
+
+  // Release our local copy of the string.
+  LLVMOrcReleaseSymbolStringPoolEntry(Ctx.NameToGenerate);
+
+  // Explicitly tear down the JIT.
+  LLVMOrcDisposeLLJIT(Jit);
+  Jit = nullptr;
+
+  // Check that the generator context was "destroyed".
+  EXPECT_TRUE(Ctx.Disposed);
 }
