@@ -1612,7 +1612,7 @@ public:
 
     // Library call cost - other than size, make it expensive.
     unsigned SingleCallCost = CostKind == TTI::TCK_CodeSize ? 1 : 10;
-    SmallVector<unsigned, 2> ISDs;
+    unsigned ISD;
     switch (IID) {
     default: {
       // Scalable vectors cannot be scalarized, so return Invalid.
@@ -1657,82 +1657,82 @@ public:
     // Look for intrinsics that can be lowered directly or turned into a scalar
     // intrinsic call.
     case Intrinsic::sqrt:
-      ISDs.push_back(ISD::FSQRT);
+      ISD = ISD::FSQRT;
       break;
     case Intrinsic::sin:
-      ISDs.push_back(ISD::FSIN);
+      ISD = ISD::FSIN;
       break;
     case Intrinsic::cos:
-      ISDs.push_back(ISD::FCOS);
+      ISD = ISD::FCOS;
       break;
     case Intrinsic::exp:
-      ISDs.push_back(ISD::FEXP);
+      ISD = ISD::FEXP;
       break;
     case Intrinsic::exp2:
-      ISDs.push_back(ISD::FEXP2);
+      ISD = ISD::FEXP2;
       break;
     case Intrinsic::log:
-      ISDs.push_back(ISD::FLOG);
+      ISD = ISD::FLOG;
       break;
     case Intrinsic::log10:
-      ISDs.push_back(ISD::FLOG10);
+      ISD = ISD::FLOG10;
       break;
     case Intrinsic::log2:
-      ISDs.push_back(ISD::FLOG2);
+      ISD = ISD::FLOG2;
       break;
     case Intrinsic::fabs:
-      ISDs.push_back(ISD::FABS);
+      ISD = ISD::FABS;
       break;
     case Intrinsic::canonicalize:
-      ISDs.push_back(ISD::FCANONICALIZE);
+      ISD = ISD::FCANONICALIZE;
       break;
     case Intrinsic::minnum:
-      ISDs.push_back(ISD::FMINNUM);
+      ISD = ISD::FMINNUM;
       break;
     case Intrinsic::maxnum:
-      ISDs.push_back(ISD::FMAXNUM);
+      ISD = ISD::FMAXNUM;
       break;
     case Intrinsic::minimum:
-      ISDs.push_back(ISD::FMINIMUM);
+      ISD = ISD::FMINIMUM;
       break;
     case Intrinsic::maximum:
-      ISDs.push_back(ISD::FMAXIMUM);
+      ISD = ISD::FMAXIMUM;
       break;
     case Intrinsic::copysign:
-      ISDs.push_back(ISD::FCOPYSIGN);
+      ISD = ISD::FCOPYSIGN;
       break;
     case Intrinsic::floor:
-      ISDs.push_back(ISD::FFLOOR);
+      ISD = ISD::FFLOOR;
       break;
     case Intrinsic::ceil:
-      ISDs.push_back(ISD::FCEIL);
+      ISD = ISD::FCEIL;
       break;
     case Intrinsic::trunc:
-      ISDs.push_back(ISD::FTRUNC);
+      ISD = ISD::FTRUNC;
       break;
     case Intrinsic::nearbyint:
-      ISDs.push_back(ISD::FNEARBYINT);
+      ISD = ISD::FNEARBYINT;
       break;
     case Intrinsic::rint:
-      ISDs.push_back(ISD::FRINT);
+      ISD = ISD::FRINT;
       break;
     case Intrinsic::round:
-      ISDs.push_back(ISD::FROUND);
+      ISD = ISD::FROUND;
       break;
     case Intrinsic::roundeven:
-      ISDs.push_back(ISD::FROUNDEVEN);
+      ISD = ISD::FROUNDEVEN;
       break;
     case Intrinsic::pow:
-      ISDs.push_back(ISD::FPOW);
+      ISD = ISD::FPOW;
       break;
     case Intrinsic::fma:
-      ISDs.push_back(ISD::FMA);
+      ISD = ISD::FMA;
       break;
     case Intrinsic::fmuladd:
-      ISDs.push_back(ISD::FMA);
+      ISD = ISD::FMA;
       break;
     case Intrinsic::experimental_constrained_fmuladd:
-      ISDs.push_back(ISD::STRICT_FMA);
+      ISD = ISD::STRICT_FMA;
       break;
     // FIXME: We should return 0 whenever getIntrinsicCost == TCC_Free.
     case Intrinsic::lifetime_start:
@@ -1976,22 +1976,22 @@ public:
       return Cost;
     }
     case Intrinsic::ctpop:
-      ISDs.push_back(ISD::CTPOP);
+      ISD = ISD::CTPOP;
       // In case of legalization use TCC_Expensive. This is cheaper than a
       // library call but still not a cheap instruction.
       SingleCallCost = TargetTransformInfo::TCC_Expensive;
       break;
     case Intrinsic::ctlz:
-      ISDs.push_back(ISD::CTLZ);
+      ISD = ISD::CTLZ;
       break;
     case Intrinsic::cttz:
-      ISDs.push_back(ISD::CTTZ);
+      ISD = ISD::CTTZ;
       break;
     case Intrinsic::bswap:
-      ISDs.push_back(ISD::BSWAP);
+      ISD = ISD::BSWAP;
       break;
     case Intrinsic::bitreverse:
-      ISDs.push_back(ISD::BITREVERSE);
+      ISD = ISD::BITREVERSE;
       break;
     }
 
@@ -1999,38 +1999,25 @@ public:
     std::pair<InstructionCost, MVT> LT =
         TLI->getTypeLegalizationCost(DL, RetTy);
 
-    SmallVector<InstructionCost, 2> LegalCost;
-    SmallVector<InstructionCost, 2> CustomCost;
-    for (unsigned ISD : ISDs) {
-      if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
-        if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
-            TLI->isFAbsFree(LT.second)) {
-          return 0;
-        }
-
-        // The operation is legal. Assume it costs 1.
-        // If the type is split to multiple registers, assume that there is some
-        // overhead to this.
-        // TODO: Once we have extract/insert subvector cost we need to use them.
-        if (LT.first > 1)
-          LegalCost.push_back(LT.first * 2);
-        else
-          LegalCost.push_back(LT.first * 1);
-      } else if (!TLI->isOperationExpand(ISD, LT.second)) {
-        // If the operation is custom lowered then assume
-        // that the code is twice as expensive.
-        CustomCost.push_back(LT.first * 2);
+    if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
+      if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
+          TLI->isFAbsFree(LT.second)) {
+        return 0;
       }
+
+      // The operation is legal. Assume it costs 1.
+      // If the type is split to multiple registers, assume that there is some
+      // overhead to this.
+      // TODO: Once we have extract/insert subvector cost we need to use them.
+      if (LT.first > 1)
+        return (LT.first * 2);
+      else
+        return (LT.first * 1);
+    } else if (!TLI->isOperationExpand(ISD, LT.second)) {
+      // If the operation is custom lowered then assume
+      // that the code is twice as expensive.
+      return (LT.first * 2);
     }
-
-    auto *MinLegalCostI = std::min_element(LegalCost.begin(), LegalCost.end());
-    if (MinLegalCostI != LegalCost.end())
-      return *MinLegalCostI;
-
-    auto MinCustomCostI =
-        std::min_element(CustomCost.begin(), CustomCost.end());
-    if (MinCustomCostI != CustomCost.end())
-      return *MinCustomCostI;
 
     // If we can't lower fmuladd into an FMA estimate the cost as a floating
     // point mul followed by an add.
