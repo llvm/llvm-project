@@ -1902,7 +1902,8 @@ unsigned RAGreedy::tryLastChanceRecoloring(const LiveInterval &VirtReg,
       const LiveInterval *LI;
       MCRegister PhysReg;
       std::tie(LI, PhysReg) = RecolorStack[I];
-      Matrix->assign(*LI, PhysReg);
+      if (!LI->empty() && !MRI->reg_nodbg_empty(LI->reg()))
+        Matrix->assign(*LI, PhysReg);
     }
 
     // Pop the stack of recoloring attempts.
