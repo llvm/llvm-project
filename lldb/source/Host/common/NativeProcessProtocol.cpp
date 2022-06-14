@@ -322,6 +322,8 @@ void NativeProcessProtocol::NotifyDidExec() {
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOG(log, "process {0} exec()ed", GetID());
 
+  m_software_breakpoints.clear();
+
   m_delegate.DidExec(this);
 }
 

@@ -180,4 +180,9 @@ NativeProcessELF::GetLoadedSVR4Libraries() {
   return library_list;
 }
 
+void NativeProcessELF::NotifyDidExec() {
+  NativeProcessProtocol::NotifyDidExec();
+  m_shared_library_info_addr.reset();
+}
+
 } // namespace lldb_private
