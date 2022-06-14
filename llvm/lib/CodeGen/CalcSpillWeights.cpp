@@ -145,11 +145,6 @@ void VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &LI) {
   LI.setWeight(Weight);
 }
 
-float VirtRegAuxInfo::futureWeight(LiveInterval &LI, SlotIndex Start,
-                                   SlotIndex End) {
-  return weightCalcHelper(LI, &Start, &End);
-}
-
 float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
                                        SlotIndex *End) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
