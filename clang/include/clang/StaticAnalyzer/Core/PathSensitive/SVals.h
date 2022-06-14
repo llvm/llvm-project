@@ -331,11 +331,6 @@ public:
     return *static_cast<const llvm::APSInt *>(Data);
   }
 
-  // Transfer functions for unary operations on ConcreteInts.
-  ConcreteInt evalComplement(SValBuilder &svalBuilder) const;
-
-  ConcreteInt evalMinus(SValBuilder &svalBuilder) const;
-
   static bool classof(SVal V) {
     return V.getBaseKind() == NonLocKind && V.getSubKind() == ConcreteIntKind;
   }
