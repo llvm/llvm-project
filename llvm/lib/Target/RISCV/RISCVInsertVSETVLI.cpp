@@ -1361,26 +1361,65 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
                 AvailableInfo, OldInfo);
 }
 
+/// Which subfields of VL or VTYPE have values we need to preserve?
+struct DemandedFields {
+  bool VL = false;
+  bool SEW = false;
+  bool LMUL = false;
+  bool SEWLMULRatio = false;
+  bool TailPolicy = false;
+  bool MaskPolicy = false;
+
+  // Return true if any part of VTYPE was used
+  bool usedVTYPE() {
+    return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy;
+  }
+};
+
+static void doUnion(DemandedFields &A, DemandedFields B) {
+  A.VL |= B.VL;
+  A.SEW |= B.SEW;
+  A.LMUL |= B.LMUL;
+  A.SEWLMULRatio |= B.SEWLMULRatio;
+  A.TailPolicy |= B.TailPolicy;
+  A.MaskPolicy |= B.MaskPolicy;
+}
+
+// Return which fields are demanded by the given instruction.
+static DemandedFields getDemanded(const MachineInstr &MI) {
+  // Most instructions don't use any of these subfeilds.
+  DemandedFields Res;
+  // Start conservative if registers are used
+  if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VL))
+    Res.VL = true;
+  if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VTYPE)) {
+    Res.SEW = true;
+    Res.LMUL = true;
+    Res.SEWLMULRatio = true;
+    Res.TailPolicy = true;
+    Res.MaskPolicy = true;
+  }
+
+  return Res;
+}
+
 void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
   MachineInstr *PrevMI = nullptr;
-  bool UsedVL = false, UsedVTYPE = false;
+  DemandedFields Used;
   SmallVector<MachineInstr*> ToDelete;
   for (MachineInstr &MI : MBB) {
     // Note: Must be *before* vsetvli handling to account for config cases
     // which only change some subfields.
-    if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VL))
-      UsedVL = true;
-    if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VTYPE))
-      UsedVTYPE = true;
+    doUnion(Used, getDemanded(MI));
 
     if (!isVectorConfigInstr(MI))
       continue;
 
     if (PrevMI) {
-      if (!UsedVL && !UsedVTYPE) {
+      if (!Used.VL && !Used.usedVTYPE()) {
         ToDelete.push_back(PrevMI);
         // fallthrough
-      } else if (!UsedVTYPE && isVLPreservingConfig(MI)) {
+      } else if (!Used.usedVTYPE() && isVLPreservingConfig(MI)) {
         // Note: `vsetvli x0, x0, vtype' is the canonical instruction
         // for this case.  If you find yourself wanting to add other forms
         // to this "unused VTYPE" case, we're probably missing a
@@ -1395,12 +1434,11 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
       }
     }
     PrevMI = &MI;
-    UsedVL = false;
-    UsedVTYPE = false;
+    Used = getDemanded(MI);
     Register VRegDef = MI.getOperand(0).getReg();
     if (VRegDef != RISCV::X0 &&
         !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef)))
-      UsedVL = true;
+      Used.VL = true;
   }
 
   for (auto *MI : ToDelete)
