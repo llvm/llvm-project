@@ -441,13 +441,13 @@ SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
   return UnknownVal();
 }
 
-SVal SValBuilder::evalMinus(NonLoc val) {
-  switch (val.getSubKind()) {
+SVal SValBuilder::evalMinus(NonLoc X) {
+  switch (X.getSubKind()) {
   case nonloc::ConcreteIntKind:
-    return val.castAs<nonloc::ConcreteInt>().evalMinus(*this);
+    return makeIntVal(-X.castAs<nonloc::ConcreteInt>().getValue());
   case nonloc::SymbolValKind:
-    return makeNonLoc(val.castAs<nonloc::SymbolVal>().getSymbol(), UO_Minus,
-                      val.getType(Context));
+    return makeNonLoc(X.castAs<nonloc::SymbolVal>().getSymbol(), UO_Minus,
+                      X.getType(Context));
   default:
     return UnknownVal();
   }
@@ -456,7 +456,7 @@ SVal SValBuilder::evalMinus(NonLoc val) {
 SVal SValBuilder::evalComplement(NonLoc X) {
   switch (X.getSubKind()) {
   case nonloc::ConcreteIntKind:
-    return X.castAs<nonloc::ConcreteInt>().evalComplement(*this);
+    return makeIntVal(~X.castAs<nonloc::ConcreteInt>().getValue());
   case nonloc::SymbolValKind:
     return makeNonLoc(X.castAs<nonloc::SymbolVal>().getSymbol(), UO_Not,
                       X.getType(Context));
