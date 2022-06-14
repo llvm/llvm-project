@@ -6212,6 +6212,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
   unsigned IntrOpcode = Intr->BaseOpcode;
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
+  bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
 
   SmallVector<EVT, 3> ResultTypes(Op->values());
   SmallVector<EVT, 3> OrigResultTypes(Op->values());
@@ -6390,6 +6391,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   //
   // SIShrinkInstructions will convert NSA encodings to non-NSA after register
   // allocation when possible.
+  //
+  // TODO: we can actually allow partial NSA where the final register is a
+  // contiguous set of the remaining addresses.
+  // This could help where there are more addresses than supported.
   bool UseNSA = ST->hasFeature(AMDGPU::FeatureNSAEncoding) &&
                 VAddrs.size() >= 3 &&
                 VAddrs.size() <= (unsigned)ST->getNSAMaxSize();
@@ -6496,7 +6501,12 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       UseNSA ? VAddrs.size() : VAddr.getValueType().getSizeInBits() / 32;
   int Opcode = -1;
 
-  if (IsGFX10Plus) {
+  if (IsGFX11Plus) {
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
+                                   UseNSA ? AMDGPU::MIMGEncGfx11NSA
+                                          : AMDGPU::MIMGEncGfx11Default,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else if (IsGFX10Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode,
                                    UseNSA ? AMDGPU::MIMGEncGfx10NSA
                                           : AMDGPU::MIMGEncGfx10Default,
@@ -7555,12 +7565,14 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       return SDValue();
     }
 
+    const bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
     const bool IsA16 = RayDir.getValueType().getVectorElementType() == MVT::f16;
     const bool Is64 = NodePtr.getValueType() == MVT::i64;
     const unsigned NumVDataDwords = 4;
     const unsigned NumVAddrDwords = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
-    const bool UseNSA = Subtarget->hasNSAEncoding() &&
-                        NumVAddrDwords <= Subtarget->getNSAMaxSize();
+    const unsigned NumVAddrs = IsGFX11Plus ? (IsA16 ? 4 : 5) : NumVAddrDwords;
+    const bool UseNSA =
+        Subtarget->hasNSAEncoding() && NumVAddrs <= Subtarget->getNSAMaxSize();
     const unsigned BaseOpcodes[2][2] = {
         {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
         {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
@@ -7568,12 +7580,15 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     int Opcode;
     if (UseNSA) {
       Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                     AMDGPU::MIMGEncGfx10NSA, NumVDataDwords,
-                                     NumVAddrDwords);
+                                     IsGFX11Plus ? AMDGPU::MIMGEncGfx11NSA
+                                                 : AMDGPU::MIMGEncGfx10NSA,
+                                     NumVDataDwords, NumVAddrDwords);
     } else {
-      Opcode = AMDGPU::getMIMGOpcode(
-          BaseOpcodes[Is64][IsA16], AMDGPU::MIMGEncGfx10Default, NumVDataDwords,
-          PowerOf2Ceil(NumVAddrDwords));
+      Opcode =
+          AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                                IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default
+                                            : AMDGPU::MIMGEncGfx10Default,
+                                NumVDataDwords, PowerOf2Ceil(NumVAddrDwords));
     }
     assert(Opcode != -1);
 
@@ -7606,15 +7621,36 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       }
     };
 
-    if (Is64)
-      DAG.ExtractVectorElements(DAG.getBitcast(MVT::v2i32, NodePtr), Ops, 0, 2);
-    else
+    if (UseNSA && IsGFX11Plus) {
       Ops.push_back(NodePtr);
+      Ops.push_back(DAG.getBitcast(MVT::i32, RayExtent));
+      Ops.push_back(RayOrigin);
+      if (IsA16) {
+        SmallVector<SDValue, 3> DirLanes, InvDirLanes, MergedLanes;
+        DAG.ExtractVectorElements(RayDir, DirLanes, 0, 3);
+        DAG.ExtractVectorElements(RayInvDir, InvDirLanes, 0, 3);
+        for (unsigned I = 0; I < 3; ++I) {
+          MergedLanes.push_back(DAG.getBitcast(
+              MVT::i32, DAG.getBuildVector(MVT::v2f16, DL,
+                                           {DirLanes[I], InvDirLanes[I]})));
+        }
+        Ops.push_back(DAG.getBuildVector(MVT::v3i32, DL, MergedLanes));
+      } else {
+        Ops.push_back(RayDir);
+        Ops.push_back(RayInvDir);
+      }
+    } else {
+      if (Is64)
+        DAG.ExtractVectorElements(DAG.getBitcast(MVT::v2i32, NodePtr), Ops, 0,
+                                  2);
+      else
+        Ops.push_back(NodePtr);
 
-    Ops.push_back(DAG.getBitcast(MVT::i32, RayExtent));
-    packLanes(RayOrigin, true);
-    packLanes(RayDir, true);
-    packLanes(RayInvDir, false);
+      Ops.push_back(DAG.getBitcast(MVT::i32, RayExtent));
+      packLanes(RayOrigin, true);
+      packLanes(RayDir, true);
+      packLanes(RayInvDir, false);
+    }
 
     if (!UseNSA) {
       // Build a single vector containing all the operands so far prepared.
