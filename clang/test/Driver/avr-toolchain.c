@@ -53,22 +53,8 @@
 // LINKA-NOT: warning: {{.*}} data section address
 
 // RUN: %clang -### --target=avr --sysroot=%S/Inputs/ -mmcu=atmega328 %s 2>&1 | FileCheck --check-prefixes=NOGCC %s
+// NOGCC: warning: no avr-gcc installation can be found on the system, cannot link standard libraries
 // NOGCC: warning: standard library not linked and so no interrupt vector table or compiler runtime routines will be linked
 // NOGCC-NOT: warning: {{.*}} microcontroller
 // NOGCC-NOT: warning: {{.*}} avr-libc
 // NOGCC-NOT: warning: {{.*}} data section address
-
-// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s -fuse-ld=avrld 2>&1 | FileCheck --check-prefix=NOLD %s
-// NOLD: error: invalid linker
-
-// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s -fuse-ld=lld 2>&1 | FileCheck --check-prefix=LLD %s
-// LLD: {{".*lld"}}
-// LLD-NOT: "avr-ld"
-// LLD-NOT: "-mavr5"
-
-// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s -T avr.lds 2>&1 | FileCheck --check-prefix=LDS0 %s
-// LDS0: "-T" "avr.lds" "-mavr5"
-
-// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s -fuse-ld=lld -T avr.lds 2>&1 | FileCheck --check-prefix=LDS1 %s
-// LDS1: "-T" "avr.lds"
-// LDS1-NOT: "-mavr5"
