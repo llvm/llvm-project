@@ -152,14 +152,6 @@ Register MachineSSAUpdater::GetValueInMiddleOfBlock(MachineBasicBlock *BB,
   if (!HasValueForBlock(BB))
     return GetValueAtEndOfBlockInternal(BB, ExistingValueOnly);
 
-  // Ok, we have already got a value for this block. If it is out of our block
-  // or it is a phi - we can re-use it as it will be defined in the middle of
-  // block as well.
-  Register defR = getAvailableVals(AV).lookup(BB);
-  if (auto I = MRI->getVRegDef(defR))
-    if (I->isPHI() || I->getParent() != BB)
-      return defR;
-
   // If there are no predecessors, just return undef.
   if (BB->pred_empty()) {
     // If we cannot insert new instructions, just return $noreg.
