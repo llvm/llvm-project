@@ -121,7 +121,7 @@ private:
       : core_id(core_id), tid(tid), pid(pid) {}
 };
 
-/// Decodes a context switch trace gotten with perf_event_open.
+/// Decodes a context switch trace collected with perf_event_open.
 ///
 /// \param[in] data
 ///   The context switch trace in binary format.
