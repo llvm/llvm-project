@@ -9,12 +9,10 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-STRICT,GFX10PLUS-DENORM-STRICT,GFX10PLUS-DENORM,GFX10PLUS %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-CONTRACT,GFX10PLUS-DENORM-CONTRACT,GFX10PLUS-DENORM,GFX10PLUS %s
 
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN %s
-
-; TODO-GFX11_16BIT GFX11 tests depend on MOVs between 16 and 32 bit regs, which are currently in flux, so tests are disabled
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10PLUS-FLUSH,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=preserve-sign -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10PLUS-FLUSH,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=on -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-STRICT,GFX10PLUS-DENORM-STRICT,GFX10PLUS-DENORM,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -denormal-fp-math=ieee -denormal-fp-math-f32=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-DENORM,GCN-DENORM-CONTRACT,GFX10PLUS-DENORM-CONTRACT,GFX10PLUS-DENORM,GFX10PLUS %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare half @llvm.fmuladd.f16(half, half, half) #1
