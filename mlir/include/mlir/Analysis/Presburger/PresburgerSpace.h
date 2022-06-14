@@ -66,14 +66,14 @@ enum class IdKind { Symbol, Local, Domain, Range, SetDim = Range };
 /// other than Locals are equal. Equality of two spaces implies that number of
 /// identifiers of each kind are equal.
 ///
-/// PresburgerSpace optionally also supports attaching attachements to each
-/// variable in space. `resetAttachements<AttachementType>` enables attaching
-/// attachements to space. All attachements must be of the same type,
-/// `AttachementType`. `AttachementType` must have a
+/// PresburgerSpace optionally also supports attaching attachments to each
+/// variable in space. `resetAttachments<AttachmentType>` enables attaching
+/// attachments to space. All attachments must be of the same type,
+/// `AttachmentType`. `AttachmentType` must have a
 /// `llvm::PointerLikeTypeTraits` specialization available and should be
 /// supported via mlir::TypeID.
 ///
-/// These attachements can be used to check if two variables in two different
+/// These attachments can be used to check if two variables in two different
 /// spaces correspond to the same variable.
 class PresburgerSpace {
 public:
@@ -127,8 +127,8 @@ public:
   /// column position (i.e., not relative to the kind of identifier) of the
   /// first added identifier.
   ///
-  /// If attachements are being used, the newly added variables have no
-  /// attachements.
+  /// If attachments are being used, the newly added variables have no
+  /// attachments.
   unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1);
 
   /// Removes identifiers of the specified kind in the column range [idStart,
@@ -157,76 +157,76 @@ public:
   void dump() const;
 
   //===--------------------------------------------------------------------===//
-  //     Attachement Interactions
+  //     Attachment Interactions
   //===--------------------------------------------------------------------===//
 
-  /// Set the attachement for `i^th` variable to `attachement`. `T` here should
-  /// match the type used to enable attachements.
+  /// Set the attachment for `i^th` variable to `attachment`. `T` here should
+  /// match the type used to enable attachments.
   template <typename T>
-  void setAttachement(IdKind kind, unsigned i, T attachement) {
+  void setAttachment(IdKind kind, unsigned i, T attachment) {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(TypeID::get<T>() == attachementType && "Type mismatch");
+    assert(TypeID::get<T>() == attachmentType && "Type mismatch");
 #endif
-    atAttachement(kind, i) =
-        llvm::PointerLikeTypeTraits<T>::getAsVoidPointer(attachement);
+    atAttachment(kind, i) =
+        llvm::PointerLikeTypeTraits<T>::getAsVoidPointer(attachment);
   }
 
-  /// Get the attachement for `i^th` variable casted to type `T`. `T` here
-  /// should match the type used to enable attachements.
+  /// Get the attachment for `i^th` variable casted to type `T`. `T` here
+  /// should match the type used to enable attachments.
   template <typename T>
-  T getAttachement(IdKind kind, unsigned i) const {
+  T getAttachment(IdKind kind, unsigned i) const {
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(TypeID::get<T>() == attachementType && "Type mismatch");
+    assert(TypeID::get<T>() == attachmentType && "Type mismatch");
 #endif
     return llvm::PointerLikeTypeTraits<T>::getFromVoidPointer(
-        atAttachement(kind, i));
+        atAttachment(kind, i));
   }
 
   /// Check if the i^th variable of the specified kind has a non-null
-  /// attachement.
-  bool hasAttachement(IdKind kind, unsigned i) const {
-    return atAttachement(kind, i) != nullptr;
+  /// attachment.
+  bool hasAttachment(IdKind kind, unsigned i) const {
+    return atAttachment(kind, i) != nullptr;
   }
 
-  /// Check if the spaces are compatible, as well as have the same attachements
+  /// Check if the spaces are compatible, as well as have the same attachments
   /// for each variable.
   bool isAligned(const PresburgerSpace &other) const;
   /// Check if the number of variables of the specified kind match, and have
-  /// same attachements with the other space.
+  /// same attachments with the other space.
   bool isAligned(const PresburgerSpace &other, IdKind kind) const;
 
-  /// Find the variable of the specified kind with attachement `val`.
-  /// PresburgerSpace::kIdNotFound if attachement is not found.
+  /// Find the variable of the specified kind with attachment `val`.
+  /// PresburgerSpace::kIdNotFound if attachment is not found.
   template <typename T>
   unsigned findId(IdKind kind, T val) const {
     unsigned i = 0;
     for (unsigned e = getNumIdKind(kind); i < e; ++i)
-      if (hasAttachement(kind, i) && getAttachement<T>(kind, i) == val)
+      if (hasAttachment(kind, i) && getAttachment<T>(kind, i) == val)
         return i;
     return kIdNotFound;
   }
   static const unsigned kIdNotFound = UINT_MAX;
 
-  /// Returns if attachements are being used.
-  bool isUsingAttachements() const { return usingAttachements; }
+  /// Returns if attachments are being used.
+  bool isUsingAttachments() const { return usingAttachments; }
 
-  /// Reset the stored attachements in the space. Enables `usingAttachements` if
+  /// Reset the stored attachments in the space. Enables `usingAttachments` if
   /// it was `false` before.
   template <typename T>
-  void resetAttachements() {
-    attachements.clear();
-    attachements.resize(getNumDimAndSymbolIds());
+  void resetAttachments() {
+    attachments.clear();
+    attachments.resize(getNumDimAndSymbolIds());
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-    attachementType = TypeID::get<T>();
+    attachmentType = TypeID::get<T>();
 #endif
 
-    usingAttachements = true;
+    usingAttachments = true;
   }
 
-  /// Disable attachements being stored in space.
-  void disableAttachements() {
-    attachements.clear();
-    usingAttachements = false;
+  /// Disable attachments being stored in space.
+  void disableAttachments() {
+    attachments.clear();
+    usingAttachments = false;
   }
 
 protected:
@@ -235,20 +235,18 @@ protected:
       : numDomain(numDomain), numRange(numRange), numSymbols(numSymbols),
         numLocals(numLocals) {}
 
-  void *&atAttachement(IdKind kind, unsigned i) {
-    assert(usingAttachements &&
-           "Cannot access attachements when `usingAttachements` is false.");
-    assert(kind != IdKind::Local &&
-           "Local variables cannot have attachements.");
-    return attachements[getIdKindOffset(kind) + i];
+  void *&atAttachment(IdKind kind, unsigned i) {
+    assert(usingAttachments &&
+           "Cannot access attachments when `usingAttachments` is false.");
+    assert(kind != IdKind::Local && "Local variables cannot have attachments.");
+    return attachments[getIdKindOffset(kind) + i];
   }
 
-  void *atAttachement(IdKind kind, unsigned i) const {
-    assert(usingAttachements &&
-           "Cannot access attachements when `usingAttachements` is false.");
-    assert(kind != IdKind::Local &&
-           "Local variables cannot have attachements.");
-    return attachements[getIdKindOffset(kind) + i];
+  void *atAttachment(IdKind kind, unsigned i) const {
+    assert(usingAttachments &&
+           "Cannot access attachments when `usingAttachments` is false.");
+    assert(kind != IdKind::Local && "Local variables cannot have attachments.");
+    return attachments[getIdKindOffset(kind) + i];
   }
 
 private:
@@ -266,16 +264,16 @@ private:
   /// to existentially quantified variables).
   unsigned numLocals;
 
-  /// Stores whether or not attachements are being used in this space.
-  bool usingAttachements = false;
+  /// Stores whether or not attachments are being used in this space.
+  bool usingAttachments = false;
 
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-  /// TypeID of the attachements in space. This should be used in asserts only.
-  TypeID attachementType;
+  /// TypeID of the attachments in space. This should be used in asserts only.
+  TypeID attachmentType;
 #endif
 
-  /// Stores a attachement for each non-local identifier as a `void` pointer.
-  SmallVector<void *, 0> attachements;
+  /// Stores a attachment for each non-local identifier as a `void` pointer.
+  SmallVector<void *, 0> attachments;
 };
 
 } // namespace presburger
