@@ -2062,9 +2062,8 @@ define i16 @lshr_shl_pow2_const_xor(i16 %x) {
 
 define i16 @lshr_shl_pow2_const_case2(i16 %x) {
 ; CHECK-LABEL: @lshr_shl_pow2_const_case2(
-; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i16 8192, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[LSHR1]], 4
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[SHL]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[X:%.*]], 12
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i16 32, i16 0
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %lshr1 = lshr i16 8192, %x
@@ -2102,9 +2101,8 @@ define i16 @lshr_shl_pow2_const_negative_oneuse(i16 %x) {
 
 define <3 x i16> @lshr_shl_pow2_const_case1_uniform_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @lshr_shl_pow2_const_case1_uniform_vec(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 6, i16 6, i16 6>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 128, i16 128, i16 128>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 12, i16 12, i16 12>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 128, i16 128, i16 128>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %lshr = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, %x
@@ -2141,9 +2139,8 @@ define <3 x i16> @lshr_shl_pow2_const_case1_non_uniform_vec_negative(<3 x i16> %
 
 define <3 x i16> @lshr_shl_pow2_const_case1_undef1_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @lshr_shl_pow2_const_case1_undef1_vec(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 undef, i16 8192, i16 8192>, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 6, i16 6, i16 6>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 128, i16 128, i16 128>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 -1, i16 12, i16 12>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 128, i16 128, i16 128>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %lshr = lshr <3 x i16> <i16 undef, i16 8192, i16 8192>, %x
@@ -2154,9 +2151,8 @@ define <3 x i16> @lshr_shl_pow2_const_case1_undef1_vec(<3 x i16> %x) {
 
 define <3 x i16> @lshr_shl_pow2_const_case1_undef2_vec(<3 x i16> %x) {
 ; CHECK-LABEL: @lshr_shl_pow2_const_case1_undef2_vec(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, [[X:%.*]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i16> [[LSHR]], <i16 undef, i16 6, i16 6>
-; CHECK-NEXT:    [[R:%.*]] = and <3 x i16> [[SHL]], <i16 128, i16 128, i16 128>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <3 x i16> [[X:%.*]], <i16 undef, i16 12, i16 12>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i16> <i16 128, i16 128, i16 128>, <3 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <3 x i16> [[R]]
 ;
   %lshr = lshr <3 x i16> <i16 8192, i16 8192, i16 8192>, %x
