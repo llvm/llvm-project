@@ -360,11 +360,6 @@ public:
                                    StringRef OptionName,
                                    bool SearchInParents = false) const;
 
-  /// Retrieves and sets the UserMode. This is a high-level option,
-  /// which is used to set other low-level options. It is not accessible
-  /// outside of AnalyzerOptions.
-  UserModeKind getUserMode() const;
-
   ExplorationStrategyKind getExplorationStrategy() const;
   CTUPhase1InliningKind getCTUPhase1Inlining() const;
 
@@ -403,15 +398,6 @@ using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;
 //
 // For this reason, implement some methods in this header file.
 //===----------------------------------------------------------------------===//
-
-inline UserModeKind AnalyzerOptions::getUserMode() const {
-  auto K = llvm::StringSwitch<llvm::Optional<UserModeKind>>(UserMode)
-    .Case("shallow", UMK_Shallow)
-    .Case("deep", UMK_Deep)
-    .Default(None);
-  assert(K.hasValue() && "User mode is invalid.");
-  return K.getValue();
-}
 
 inline std::vector<StringRef>
 AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental) {
