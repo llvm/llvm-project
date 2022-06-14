@@ -45,6 +45,8 @@ protected:
   llvm::Expected<SVR4LibraryInfo>
   ReadSVR4LibraryInfo(lldb::addr_t link_map_addr);
 
+  void NotifyDidExec() override;
+
   std::unique_ptr<AuxVector> m_aux_vector;
   llvm::Optional<lldb::addr_t> m_shared_library_info_addr;
 };
