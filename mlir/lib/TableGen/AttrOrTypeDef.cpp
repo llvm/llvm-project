@@ -215,6 +215,11 @@ StringRef AttrOrTypeParameter::getName() const {
   return def->getArgName(index)->getValue();
 }
 
+std::string AttrOrTypeParameter::getAccessorName() const {
+  return "get" +
+         llvm::convertToCamelFromSnakeCase(getName(), /*capitalizeFirst=*/true);
+}
+
 Optional<StringRef> AttrOrTypeParameter::getAllocator() const {
   return getDefValue<llvm::StringInit>("allocator");
 }
