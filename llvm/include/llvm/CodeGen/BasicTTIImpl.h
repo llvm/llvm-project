@@ -1612,7 +1612,7 @@ public:
 
     // Library call cost - other than size, make it expensive.
     unsigned SingleCallCost = CostKind == TTI::TCK_CodeSize ? 1 : 10;
-    unsigned ISD;
+    unsigned ISD = 0;
     switch (IID) {
     default: {
       // Scalable vectors cannot be scalarized, so return Invalid.
