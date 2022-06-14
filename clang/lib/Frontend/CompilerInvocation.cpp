@@ -906,6 +906,10 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
   if (Arg *A = Args.getLastArg(OPT_analyzer_store))
     Diags.Report(diag::warn_analyzer_deprecated_option) << "-analyzer-store"
                                                         << "clang-16";
+  if (Arg *A = Args.getLastArg(OPT_analyzer_opt_analyze_nested_blocks))
+    Diags.Report(diag::warn_analyzer_deprecated_option)
+        << "-analyzer-opt-analyze-nested-blocks"
+        << "clang-16";
 
   if (Arg *A = Args.getLastArg(OPT_analyzer_constraints)) {
     StringRef Name = A->getValue();

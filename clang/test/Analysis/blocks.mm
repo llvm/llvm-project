@@ -1,7 +1,7 @@
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -fblocks -analyzer-opt-analyze-nested-blocks -verify -x objective-c++ %s
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-opt-analyze-nested-blocks -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core -fblocks -verify -x objective-c++ %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,WARNINGS %s
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-opt-analyze-nested-blocks -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -fblocks -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,ANALYZER %s
 
 // This file tests how we construct two different flavors of the Clang CFG -
