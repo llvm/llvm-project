@@ -869,6 +869,7 @@ struct TestVectorDistribution
     if (propagateDistribution) {
       RewritePatternSet patterns(ctx);
       vector::populatePropagateWarpVectorDistributionPatterns(patterns);
+      vector::populateReductionToGPUWarpShufflePatterns(patterns);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     }
     WarpExecuteOnLane0LoweringOptions options;
