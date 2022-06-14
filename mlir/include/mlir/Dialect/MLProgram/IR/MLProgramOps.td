@@ -10,6 +10,7 @@
 #define MLPROGRAM_OPS
 
 include "mlir/Dialect/MLProgram/IR/MLProgramBase.td"
+include "mlir/Dialect/MLProgram/IR/MLProgramAttributes.td"
 include "mlir/Dialect/MLProgram/IR/MLProgramTypes.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
