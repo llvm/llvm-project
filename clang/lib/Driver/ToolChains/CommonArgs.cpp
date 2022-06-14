@@ -143,28 +143,16 @@ void tools::handleTargetFeaturesGroup(const ArgList &Args,
   }
 }
 
-std::vector<StringRef>
-tools::unifyTargetFeatures(const std::vector<StringRef> &Features) {
-  std::vector<StringRef> UnifiedFeatures;
-  // Find the last of each feature.
-  llvm::StringMap<unsigned> LastOpt;
-  for (unsigned I = 0, N = Features.size(); I < N; ++I) {
-    StringRef Name = Features[I];
-    assert(Name[0] == '-' || Name[0] == '+');
-    LastOpt[Name.drop_front(1)] = I;
+SmallVector<StringRef>
+tools::unifyTargetFeatures(ArrayRef<StringRef> Features) {
+  // Only add a feature if it hasn't been seen before starting from the end.
+  SmallVector<StringRef> UnifiedFeatures;
+  llvm::DenseSet<StringRef> UsedFeatures;
+  for (StringRef Feature : llvm::reverse(Features)) {
+    if (UsedFeatures.insert(Feature.drop_front()).second)
+      UnifiedFeatures.insert(UnifiedFeatures.begin(), Feature);
   }
 
-  for (unsigned I = 0, N = Features.size(); I < N; ++I) {
-    // If this feature was overridden, ignore it.
-    StringRef Name = Features[I];
-    llvm::StringMap<unsigned>::iterator LastI = LastOpt.find(Name.drop_front(1));
-    assert(LastI != LastOpt.end());
-    unsigned Last = LastI->second;
-    if (Last != I)
-      continue;
-
-    UnifiedFeatures.push_back(Name);
-  }
   return UnifiedFeatures;
 }
 
