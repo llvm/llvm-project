@@ -4491,8 +4491,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
     } else {
       // NSA form
-      for (unsigned I = 2; I < N; ++I)
-        OpdsMapping[I] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+      for (unsigned I = 2; I < N; ++I) {
+        unsigned Size = MRI.getType(MI.getOperand(I).getReg()).getSizeInBits();
+        OpdsMapping[I] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+      }
     }
     break;
   }

@@ -861,6 +861,13 @@ defset list<AMDGPUImageDimIntrinsic> AMDGPUImageDimIntrinsics = {
             [IntrReadMem], [SDNPMemOperand]>;
   }
 
+  foreach dim = AMDGPUDims.Msaa in {
+    def int_amdgcn_image_msaa_load # _ # dim.Name:
+        AMDGPUImageDimIntrinsic<
+            AMDGPUDimNoSampleProfile<"MSAA_LOAD", dim, [llvm_any_ty], []>,
+            [IntrReadMem], [SDNPMemOperand]>;
+  }
+
   //////////////////////////////////////////////////////////////////////////
   // sample and getlod intrinsics
   //////////////////////////////////////////////////////////////////////////
