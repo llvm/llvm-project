@@ -30,9 +30,10 @@ Compile and run with the following commands:
 ```
 bin/clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
           -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer \
-          -fno-optimize-sibling-calls -m64 -Wl,-build-id inline.c -o memprof-inline.exe
+          -fno-optimize-sibling-calls -m64 -Wl,-build-id -Wl,-no-pie \
+          inline.c -o inline.memprofexe
 
-env MEMPROF_OPTIONS=log_path=stdout ./memprof-inline.exe > inline.memprofraw
+env MEMPROF_OPTIONS=log_path=stdout ./inline.memprofexe > inline.memprofraw
 ```
 
 RUN: llvm-profdata show --memory %p/Inputs/inline.memprofraw --profiled-binary %p/Inputs/inline.memprofexe | FileCheck %s

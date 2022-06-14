@@ -28,9 +28,10 @@ recorded.
 ```
 clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
       -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer \
-      -fno-optimize-sibling-calls -m64 -Wl,-build-id source.c -o multi.memprofexe
+      -fno-optimize-sibling-calls -m64 -Wl,-build-id -Wl,-no-pie \
+      source.c -o multi.memprofexe
 
-env MEMPROF_OPTIONS=log_path=stdout ./rawprofile.out > multi.memprofraw
+env MEMPROF_OPTIONS=log_path=stdout ./multi.memprofexe > multi.memprofraw
 ```
 
 RUN: llvm-profdata show --memory %p/Inputs/multi.memprofraw --profiled-binary %p/Inputs/multi.memprofexe -o - | FileCheck %s
