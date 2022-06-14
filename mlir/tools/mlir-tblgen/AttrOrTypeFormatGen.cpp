@@ -58,7 +58,7 @@ public:
 
   /// Generate the code to check whether the parameter should be printed.
   MethodBody &genPrintGuard(FmtContext &ctx, MethodBody &os) const {
-    std::string self = getParameterAccessorName(getName()) + "()";
+    std::string self = param.getAccessorName() + "()";
     ctx.withSelf(self);
     os << tgfmt("($_self", &ctx);
     if (llvm::Optional<StringRef> defaultValue = getParam().getDefaultValue()) {
@@ -718,7 +718,7 @@ void DefFormat::genLiteralPrinter(StringRef value, FmtContext &ctx,
 void DefFormat::genVariablePrinter(ParameterElement *el, FmtContext &ctx,
                                    MethodBody &os, bool skipGuard) {
   const AttrOrTypeParameter &param = el->getParam();
-  ctx.withSelf(getParameterAccessorName(param.getName()) + "()");
+  ctx.withSelf(param.getAccessorName() + "()");
 
   // Guard the printer on the presence of optional parameters and that they
   // aren't equal to their default values (if they have one).
@@ -812,8 +812,7 @@ void DefFormat::genCustomPrinter(CustomDirective *el, FmtContext &ctx,
     if (auto *ref = dyn_cast<RefDirective>(arg))
       param = ref->getArg();
     os << ",\n"
-       << getParameterAccessorName(cast<ParameterElement>(param)->getName())
-       << "()";
+       << cast<ParameterElement>(param)->getParam().getAccessorName() << "()";
   }
   os.unindent() << ");\n";
 }

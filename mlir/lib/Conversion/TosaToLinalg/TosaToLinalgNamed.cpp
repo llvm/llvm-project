@@ -202,7 +202,7 @@ public:
     if (isQuantized) {
       auto quantizationInfo =
           op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
-      int64_t iZp = quantizationInfo.getInput_zp();
+      int64_t iZp = quantizationInfo.getInputZp();
 
       int64_t intMin =
           APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
@@ -274,8 +274,8 @@ public:
     if (isQuantized) {
       auto quantizationInfo =
           op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
-      auto iZp = rewriter.getI32IntegerAttr(quantizationInfo.getInput_zp());
-      auto kZp = rewriter.getI32IntegerAttr(quantizationInfo.getWeight_zp());
+      auto iZp = rewriter.getI32IntegerAttr(quantizationInfo.getInputZp());
+      auto kZp = rewriter.getI32IntegerAttr(quantizationInfo.getWeightZp());
 
       auto iZpVal = rewriter.create<arith::ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, kZp);
@@ -366,8 +366,8 @@ public:
     if (isQuantized) {
       auto quantizationInfo =
           op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
-      iZp = rewriter.getI32IntegerAttr(quantizationInfo.getInput_zp());
-      kZp = rewriter.getI32IntegerAttr(quantizationInfo.getWeight_zp());
+      iZp = rewriter.getI32IntegerAttr(quantizationInfo.getInputZp());
+      kZp = rewriter.getI32IntegerAttr(quantizationInfo.getWeightZp());
     }
 
     auto weightShape = weightTy.getShape();
@@ -378,7 +378,7 @@ public:
     if (isQuantized) {
       auto quantizationInfo =
           op->getAttr("quantization_info").cast<tosa::ConvOpQuantizationAttr>();
-      int64_t iZp = quantizationInfo.getInput_zp();
+      int64_t iZp = quantizationInfo.getInputZp();
 
       int64_t intMin =
           APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
@@ -542,9 +542,9 @@ public:
 
     auto quantizationInfo = op.quantization_info().getValue();
     auto aZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(quantizationInfo.getA_zp()));
+        loc, rewriter.getI32IntegerAttr(quantizationInfo.getAZp()));
     auto bZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(quantizationInfo.getB_zp()));
+        loc, rewriter.getI32IntegerAttr(quantizationInfo.getBZp()));
     rewriter.replaceOpWithNewOp<linalg::QuantizedBatchMatmulOp>(
         op, TypeRange{op.getType()},
         ValueRange{adaptor.a(), adaptor.b(), aZp, bZp}, zeroTensor);
@@ -652,9 +652,9 @@ public:
 
     auto quantizationInfo = op.quantization_info().getValue();
     auto inputZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(quantizationInfo.getInput_zp()));
+        loc, rewriter.getI32IntegerAttr(quantizationInfo.getInputZp()));
     auto outputZp = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI32IntegerAttr(quantizationInfo.getWeight_zp()));
+        loc, rewriter.getI32IntegerAttr(quantizationInfo.getWeightZp()));
     Value matmul =
         rewriter
             .create<linalg::QuantizedMatmulOp>(
@@ -892,8 +892,7 @@ public:
             if (op.quantization_info()) {
               auto quantizationInfo = op.quantization_info().getValue();
               auto inputZp = rewriter.create<arith::ConstantOp>(
-                  loc,
-                  b.getIntegerAttr(accETy, quantizationInfo.getInput_zp()));
+                  loc, b.getIntegerAttr(accETy, quantizationInfo.getInputZp()));
               Value offset =
                   rewriter.create<arith::MulIOp>(loc, accETy, countI, inputZp);
               poolVal =
@@ -930,7 +929,7 @@ public:
               auto quantizationInfo = op.quantization_info().getValue();
               auto outputZp = rewriter.create<arith::ConstantOp>(
                   loc, b.getIntegerAttr(scaled.getType(),
-                                        quantizationInfo.getOutput_zp()));
+                                        quantizationInfo.getOutputZp()));
               scaled = rewriter.create<arith::AddIOp>(loc, scaled, outputZp)
                            .getResult();
             }

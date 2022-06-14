@@ -58,6 +58,9 @@ public:
   /// Get the parameter name.
   StringRef getName() const;
 
+  /// Get the parameter accessor name.
+  std::string getAccessorName() const;
+
   /// If specified, get the custom allocator code for this parameter.
   Optional<StringRef> getAllocator() const;
 

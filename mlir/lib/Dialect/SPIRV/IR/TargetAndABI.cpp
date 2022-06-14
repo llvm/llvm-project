@@ -145,7 +145,7 @@ spirv::EntryPointABIAttr spirv::lookupEntryPointABI(Operation *op) {
 
 DenseIntElementsAttr spirv::lookupLocalWorkGroupSize(Operation *op) {
   if (auto entryPoint = spirv::lookupEntryPointABI(op))
-    return entryPoint.getLocal_size();
+    return entryPoint.getLocalSize();
 
   return {};
 }
