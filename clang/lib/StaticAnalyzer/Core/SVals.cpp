@@ -253,20 +253,6 @@ bool SVal::isZeroConstant() const {
 }
 
 //===----------------------------------------------------------------------===//
-// Transfer function dispatch for Non-Locs.
-//===----------------------------------------------------------------------===//
-
-nonloc::ConcreteInt
-nonloc::ConcreteInt::evalComplement(SValBuilder &svalBuilder) const {
-  return svalBuilder.makeIntVal(~getValue());
-}
-
-nonloc::ConcreteInt
-nonloc::ConcreteInt::evalMinus(SValBuilder &svalBuilder) const {
-  return svalBuilder.makeIntVal(-getValue());
-}
-
-//===----------------------------------------------------------------------===//
 // Pretty-Printing.
 //===----------------------------------------------------------------------===//
 
