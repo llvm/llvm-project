@@ -353,3 +353,81 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
     @add_test_categories(["fork"])
     def test_vkill_both(self):
         self.vkill_test(kill_parent=True, kill_child=True)
+
+    def resume_one_test(self, run_order):
+        self.build()
+        self.prep_debug_monitor_and_inferior(inferior_args=["fork", "trap"])
+        self.add_qSupported_packets(["multiprocess+",
+                                     "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
+        ], True)
+        ret = self.expect_gdbremote_sequence()
+        parent_pid = ret["parent_pid"]
+        parent_tid = ret["parent_tid"]
+        child_pid = ret["child_pid"]
+        child_tid = ret["child_tid"]
+        self.reset_test_sequence()
+
+        parent_expect = [
+            "[$]T05thread:p{}.{};.*".format(parent_pid, parent_tid),
+            "[$]W00;process:{}#.*".format(parent_pid),
+        ]
+        child_expect = [
+            "[$]T05thread:p{}.{};.*".format(child_pid, child_tid),
+            "[$]W00;process:{}#.*".format(child_pid),
+        ]
+
+        for x in run_order:
+            if x == "parent":
+                pidtid = (parent_pid, parent_tid)
+                expect = parent_expect.pop(0)
+            elif x == "child":
+                pidtid = (child_pid, child_tid)
+                expect = child_expect.pop(0)
+            else:
+                assert False, "unexpected x={}".format(x)
+
+            self.test_sequence.add_log_lines([
+                # continue the selected process
+                "read packet: $Hcp{}.{}#00".format(*pidtid),
+                "send packet: $OK#00",
+                "read packet: $c#00",
+                {"direction": "send", "regex": expect},
+            ], True)
+            # if at least one process remained, check both PIDs
+            if parent_expect or child_expect:
+                self.test_sequence.add_log_lines([
+                    "read packet: $Hgp{}.{}#00".format(parent_pid, parent_tid),
+                    "send packet: ${}#00".format("OK" if parent_expect else "Eff"),
+                    "read packet: $Hgp{}.{}#00".format(child_pid, child_tid),
+                    "send packet: ${}#00".format("OK" if child_expect else "Eff"),
+                ], True)
+        self.expect_gdbremote_sequence()
+
+    @add_test_categories(["fork"])
+    def test_c_parent(self):
+        self.resume_one_test(run_order=["parent", "parent"])
+
+    @add_test_categories(["fork"])
+    def test_c_child(self):
+        self.resume_one_test(run_order=["child", "child"])
+
+    @add_test_categories(["fork"])
+    def test_c_parent_then_child(self):
+        self.resume_one_test(run_order=["parent", "parent", "child", "child"])
+
+    @add_test_categories(["fork"])
+    def test_c_child_then_parent(self):
+        self.resume_one_test(run_order=["child", "child", "parent", "parent"])
+
+    @add_test_categories(["fork"])
+    def test_c_interspersed(self):
+        self.resume_one_test(run_order=["parent", "child", "parent", "child"])
