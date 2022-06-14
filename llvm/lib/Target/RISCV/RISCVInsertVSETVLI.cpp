@@ -701,13 +701,12 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
   return NewInfo;
 }
 
-bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
-                                const VSETVLIInfo &Require,
-                                const VSETVLIInfo &CurInfo) {
-  unsigned EEW;
+/// Get the EEW for a load or store instruction.  Return None if MI is not
+/// a load or store which ignores SEW.
+static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
-    return false;
+    return None;
   case RISCV::PseudoVLE8_V_M1:
   case RISCV::PseudoVLE8_V_M1_MASK:
   case RISCV::PseudoVLE8_V_M2:
@@ -764,8 +763,7 @@ bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
   case RISCV::PseudoVSSE8_V_MF4_MASK:
   case RISCV::PseudoVSSE8_V_MF8:
   case RISCV::PseudoVSSE8_V_MF8_MASK:
-    EEW = 8;
-    break;
+    return 8;
   case RISCV::PseudoVLE16_V_M1:
   case RISCV::PseudoVLE16_V_M1_MASK:
   case RISCV::PseudoVLE16_V_M2:
@@ -814,8 +812,7 @@ bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
   case RISCV::PseudoVSSE16_V_MF2_MASK:
   case RISCV::PseudoVSSE16_V_MF4:
   case RISCV::PseudoVSSE16_V_MF4_MASK:
-    EEW = 16;
-    break;
+    return 16;
   case RISCV::PseudoVLE32_V_M1:
   case RISCV::PseudoVLE32_V_M1_MASK:
   case RISCV::PseudoVLE32_V_M2:
@@ -856,8 +853,7 @@ bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
   case RISCV::PseudoVSSE32_V_M8_MASK:
   case RISCV::PseudoVSSE32_V_MF2:
   case RISCV::PseudoVSSE32_V_MF2_MASK:
-    EEW = 32;
-    break;
+    return 32;
   case RISCV::PseudoVLE64_V_M1:
   case RISCV::PseudoVLE64_V_M1_MASK:
   case RISCV::PseudoVLE64_V_M2:
@@ -890,16 +886,23 @@ bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
   case RISCV::PseudoVSSE64_V_M4_MASK:
   case RISCV::PseudoVSSE64_V_M8:
   case RISCV::PseudoVSSE64_V_M8_MASK:
-    EEW = 64;
-    break;
+    return 64;
   }
+}
+
+static bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
+                                       const VSETVLIInfo &Require,
+                                       const VSETVLIInfo &CurInfo) {
+  Optional<unsigned> EEW = getEEWForLoadStore(MI);
+  if (!EEW)
+    return false;
 
   // Stores can ignore the tail and mask policies.
   const bool StoreOp = MI.getNumExplicitDefs() == 0;
   if (!StoreOp && !CurInfo.hasSamePolicy(Require))
     return false;
 
-  return CurInfo.isCompatibleWithLoadStoreEEW(EEW, Require);
+  return CurInfo.isCompatibleWithLoadStoreEEW(*EEW, Require);
 }
 
 /// Return true if a VSETVLI is required to transition from CurInfo to Require
