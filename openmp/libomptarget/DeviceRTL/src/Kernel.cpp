@@ -154,13 +154,6 @@ int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
     if (NThreadsICV != 0 && NThreadsICV < NumThreads)
       NumThreads = NThreadsICV;
 
-    // Round down to a multiple of WARPSIZE since it is legal to do so in
-    // OpenMP.
-    if (NumThreads < mapping::getWarpSize())
-      NumThreads = 1;
-    else
-      NumThreads = (NumThreads & ~((uint32_t)mapping::getWarpSize() - 1));
-
     synchronize::threadsAligned();
     if (TId == 0) {
       // Note that the order here is important. `icv::Level` has to be updated
