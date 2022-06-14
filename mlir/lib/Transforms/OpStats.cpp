@@ -27,6 +27,9 @@ struct PrintOpStatsPass : public PrintOpStatsBase<PrintOpStatsPass> {
   // Print summary of op stats.
   void printSummary();
 
+  // Print symmary of op stats in JSON.
+  void printSummaryInJSON();
+
 private:
   llvm::StringMap<int64_t> opCount;
   raw_ostream &os;
@@ -37,8 +40,12 @@ void PrintOpStatsPass::runOnOperation() {
   opCount.clear();
 
   // Compute the operation statistics for the currently visited operation.
-  getOperation()->walk([&](Operation *op) { ++opCount[op->getName().getStringRef()]; });
-  printSummary();
+  getOperation()->walk(
+      [&](Operation *op) { ++opCount[op->getName().getStringRef()]; });
+  if (printAsJSON) {
+    printSummaryInJSON();
+  } else
+    printSummary();
 }
 
 void PrintOpStatsPass::printSummary() {
@@ -78,6 +85,23 @@ void PrintOpStatsPass::printSummary() {
     os << llvm::left_justify(opName, maxLenOpName) << " , " << opCount[key]
        << '\n';
   }
+}
+
+void PrintOpStatsPass::printSummaryInJSON() {
+  SmallVector<StringRef, 64> sorted(opCount.keys());
+  llvm::sort(sorted);
+
+  os << "{\n";
+
+  for (unsigned i = 0, e = sorted.size(); i != e; ++i) {
+    const auto &key = sorted[i];
+    os << "  \"" << key << "\" : " << opCount[key];
+    if (i != e - 1)
+      os << ",\n";
+    else
+      os << "\n";
+  }
+  os << "}\n";
 }
 
 std::unique_ptr<Pass> mlir::createPrintOpStatsPass(raw_ostream &os) {

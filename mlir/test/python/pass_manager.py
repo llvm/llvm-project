@@ -36,19 +36,19 @@ def testParseSuccess():
     # A first import is expected to fail because the pass isn't registered
     # until we import mlir.transforms
     try:
-      pm = PassManager.parse("builtin.module(func.func(print-op-stats))")
+      pm = PassManager.parse("builtin.module(func.func(print-op-stats{json=false}))")
       # TODO: this error should be propagate to Python but the C API does not help right now.
       # CHECK: error: 'print-op-stats' does not refer to a registered pass or pass pipeline
     except ValueError as e:
-      # CHECK: ValueError exception: invalid pass pipeline 'builtin.module(func.func(print-op-stats))'.
+      # CHECK: ValueError exception: invalid pass pipeline 'builtin.module(func.func(print-op-stats{json=false}))'.
       log("ValueError exception:", e)
     else:
       log("Exception not produced")
 
     # This will register the pass and round-trip should be possible now.
     import mlir.transforms
-    pm = PassManager.parse("builtin.module(func.func(print-op-stats))")
-    # CHECK: Roundtrip: builtin.module(func.func(print-op-stats))
+    pm = PassManager.parse("builtin.module(func.func(print-op-stats{json=false}))")
+    # CHECK: Roundtrip: builtin.module(func.func(print-op-stats{json=false}))
     log("Roundtrip: ", pm)
 run(testParseSuccess)
 
@@ -86,7 +86,7 @@ run(testInvalidNesting)
 # CHECK-LABEL: TEST: testRun
 def testRunPipeline():
   with Context():
-    pm = PassManager.parse("print-op-stats")
+    pm = PassManager.parse("print-op-stats{json=false}")
     module = Module.parse(r"""func.func @successfulParse() { return }""")
     pm.run(module)
 # CHECK: Operations encountered:
