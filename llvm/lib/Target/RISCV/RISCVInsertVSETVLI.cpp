@@ -492,6 +492,8 @@ private:
                      MachineBasicBlock::iterator InsertPt, DebugLoc DL,
                      const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
 
+  void transferBefore(VSETVLIInfo &Info, const MachineInstr &MI);
+  void transferAfter(VSETVLIInfo &Info, const MachineInstr &MI);
   bool computeVLVTYPEChanges(const MachineBasicBlock &MBB);
   void computeIncomingVLVTYPE(const MachineBasicBlock &MBB);
   void emitVSETVLIs(MachineBasicBlock &MBB);
@@ -936,43 +938,56 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   return CurInfo.isUnknown() || !canSkipVSETVLIForLoadStore(MI, Require, CurInfo);
 }
 
+// Given an incoming state reaching MI, modifies that state so that it is minimally
+// compatible with MI.  The resulting state is guaranteed to be semantically legal
+// for MI, but may not be the state requested by MI.
+void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info, const MachineInstr &MI) {
+  uint64_t TSFlags = MI.getDesc().TSFlags;
+  if (!RISCVII::hasSEWOp(TSFlags))
+    return;
+  VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
+
+  if (!Info.isValid()) {
+    Info = NewInfo;
+  } else {
+    // If this instruction isn't compatible with the previous VL/VTYPE
+    // we need to insert a VSETVLI.
+    // NOTE: We only do this if the vtype we're comparing against was
+    // created in this block. We need the first and third phase to treat
+    // the store the same way.
+    if (needVSETVLI(MI, NewInfo, Info))
+      Info = NewInfo;
+  }
+}
+
+// Given a state with which we evaluated MI (see transferBefore above for why
+// this might be different that the state MI requested), modify the state to
+// reflect the changes MI might make.
+void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info, const MachineInstr &MI) {
+  if (isVectorConfigInstr(MI)) {
+    Info = getInfoForVSETVLI(MI);
+    return;
+  }
+
+  // If this is something that updates VL/VTYPE that we don't know about, set
+  // the state to unknown.
+  if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
+      MI.modifiesRegister(RISCV::VTYPE))
+    Info = VSETVLIInfo::getUnknown();
+}
+
 bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB) {
   bool HadVectorOp = false;
 
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
   BBInfo.Change = BBInfo.Pred;
   for (const MachineInstr &MI : MBB) {
-    // If this is an explicit VSETVLI or VSETIVLI, update our state.
-    if (isVectorConfigInstr(MI)) {
-      HadVectorOp = true;
-      BBInfo.Change = getInfoForVSETVLI(MI);
-      continue;
-    }
+    transferBefore(BBInfo.Change, MI);
 
-    uint64_t TSFlags = MI.getDesc().TSFlags;
-    if (RISCVII::hasSEWOp(TSFlags)) {
+    if (isVectorConfigInstr(MI) || RISCVII::hasSEWOp(MI.getDesc().TSFlags))
       HadVectorOp = true;
 
-      VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
-
-      if (!BBInfo.Change.isValid()) {
-        BBInfo.Change = NewInfo;
-      } else {
-        // If this instruction isn't compatible with the previous VL/VTYPE
-        // we need to insert a VSETVLI.
-        // NOTE: We only do this if the vtype we're comparing against was
-        // created in this block. We need the first and third phase to treat
-        // the store the same way.
-        if (needVSETVLI(MI, NewInfo, BBInfo.Change))
-          BBInfo.Change = NewInfo;
-      }
-    }
-
-    // If this is something that updates VL/VTYPE that we don't know about, set
-    // the state to unknown.
-    if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
-        MI.modifiesRegister(RISCV::VTYPE))
-      BBInfo.Change = VSETVLIInfo::getUnknown();
+    transferAfter(BBInfo.Change, MI);
   }
 
   return HadVectorOp;
@@ -1082,6 +1097,9 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
   // (meaning has not yet changed the abstract state).
   bool PrefixTransparent = true;
   for (MachineInstr &MI : MBB) {
+    const VSETVLIInfo PrevInfo = CurInfo;
+    transferBefore(CurInfo, MI);
+
     // If this is an explicit VSETVLI or VSETIVLI, update our state.
     if (isVectorConfigInstr(MI)) {
       // Conservatively, mark the VL and VTYPE as live.
@@ -1090,18 +1108,12 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
              "Unexpected operands where VL and VTYPE should be");
       MI.getOperand(3).setIsDead(false);
       MI.getOperand(4).setIsDead(false);
-      CurInfo = getInfoForVSETVLI(MI);
       PrefixTransparent = false;
-      continue;
     }
 
     uint64_t TSFlags = MI.getDesc().TSFlags;
     if (RISCVII::hasSEWOp(TSFlags)) {
-      VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
-
-      // If this instruction isn't compatible with the previous VL/VTYPE
-      // we need to update the abstract state, and possibly insert a VSETVLI.
-      if (needVSETVLI(MI, NewInfo, CurInfo)) {
+      if (PrevInfo != CurInfo) {
         // If this is the first implicit state change, and the state change
         // requested can be proven to produce the same register contents, we
         // can skip emitting the actual state change and continue as if we
@@ -1109,10 +1121,9 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
         // wouldn't be used and VL/VTYPE registers are correct.  Note that
         // we *do* need to model the state as if it changed as while the
         // register contents are unchanged, the abstract model can change.
-        if (!PrefixTransparent || needVSETVLIPHI(NewInfo, MBB))
-          insertVSETVLI(MBB, MI, NewInfo, CurInfo);
+        if (!PrefixTransparent || needVSETVLIPHI(CurInfo, MBB))
+          insertVSETVLI(MBB, MI, CurInfo, PrevInfo);
         PrefixTransparent = false;
-        CurInfo = NewInfo;
       }
 
       if (RISCVII::hasVLOp(TSFlags)) {
@@ -1129,13 +1140,11 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
                                               /*isImp*/ true));
     }
 
-    // If this is something that updates VL/VTYPE that we don't know about, set
-    // the state to unknown.
     if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
-        MI.modifiesRegister(RISCV::VTYPE)) {
-      CurInfo = VSETVLIInfo::getUnknown();
+        MI.modifiesRegister(RISCV::VTYPE))
       PrefixTransparent = false;
-    }
+
+    transferAfter(CurInfo, MI);
   }
 
   // If we reach the end of the block and our current info doesn't match the
