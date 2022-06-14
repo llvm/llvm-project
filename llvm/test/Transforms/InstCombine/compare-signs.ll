@@ -63,6 +63,68 @@ define <2 x i32> @test3vec(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
   ret <2 x i32> %t3
 }
 
+define <2 x i32> @test3vec_undef1(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
+; CHECK-LABEL: @test3vec_undef1(
+; CHECK-NEXT:    [[T0:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 24, i32 undef>
+; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 24, i32 24>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T0]], [[T1]]
+; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[T2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[T3]]
+;
+  %t0 = lshr <2 x i32> %a, <i32 24, i32 undef>
+  %t1 = lshr <2 x i32> %b, <i32 24, i32 24>
+  %t2 = icmp eq <2 x i32> %t0, %t1
+  %t3 = zext <2 x i1> %t2 to <2 x i32>
+  ret <2 x i32> %t3
+}
+
+define <2 x i32> @test3vec_undef2(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
+; CHECK-LABEL: @test3vec_undef2(
+; CHECK-NEXT:    [[T0:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 undef, i32 17>
+; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 undef, i32 17>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T0]], [[T1]]
+; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[T2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[T3]]
+;
+  %t0 = lshr <2 x i32> %a, <i32 undef, i32 17>
+  %t1 = lshr <2 x i32> %b, <i32 undef, i32 17>
+  %t2 = icmp eq <2 x i32> %t0, %t1
+  %t3 = zext <2 x i1> %t2 to <2 x i32>
+  ret <2 x i32> %t3
+}
+
+; negative test
+
+define <2 x i32> @test3vec_diff(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
+; CHECK-LABEL: @test3vec_diff(
+; CHECK-NEXT:    [[T0:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 30, i32 30>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T0]], [[T1]]
+; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[T2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[T3]]
+;
+  %t0 = lshr <2 x i32> %a, <i32 31, i32 31>
+  %t1 = lshr <2 x i32> %b, <i32 30, i32 30>
+  %t2 = icmp eq <2 x i32> %t0, %t1
+  %t3 = zext <2 x i1> %t2 to <2 x i32>
+  ret <2 x i32> %t3
+}
+
+define <2 x i32> @test3vec_non-uniform(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
+; CHECK-LABEL: @test3vec_non-uniform(
+; CHECK-NEXT:    [[T0:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 30, i32 31>
+; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[B:%.*]], <i32 30, i32 31>
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T0]], [[T1]]
+; CHECK-NEXT:    [[T3:%.*]] = zext <2 x i1> [[T2]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[T3]]
+;
+  %t0 = lshr <2 x i32> %a, <i32 30, i32 31>
+  %t1 = lshr <2 x i32> %b, <i32 30, i32 31>
+  %t2 = icmp eq <2 x i32> %t0, %t1
+  %t3 = zext <2 x i1> %t2 to <2 x i32>
+  ret <2 x i32> %t3
+}
+
 ; Variation on @test3: checking the 2nd bit in a situation where the 5th bit
 ; is one, not zero.
 define i32 @test3i(i32 %a, i32 %b) nounwind readnone {
