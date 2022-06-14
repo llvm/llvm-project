@@ -8,8 +8,6 @@
 //
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <numeric>
 
 // template <class _Float>
@@ -95,7 +93,8 @@ void fp_test()
     assert(d0 < d1);  // sanity checking
     assert(d1 < d2);  // sanity checking
 
-#if defined(__PPC__) && __LONG_DOUBLE_128__ && !(defined(__LONG_DOUBLE_IEEE128__) && __LONG_DOUBLE_IEEE128__)
+#if defined(__PPC__) && (defined(__LONG_DOUBLE_128__) && __LONG_DOUBLE_128__) &&                                       \
+    !(defined(__LONG_DOUBLE_IEEE128__) && __LONG_DOUBLE_IEEE128__)
 //	For 128 bit long double implemented as 2 doubles on PowerPC,
 //	nextafterl() of libm gives imprecise results which fails the
 //	midpoint() tests below. So skip the test for this case.
