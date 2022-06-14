@@ -50,14 +50,14 @@ TEST(PresburgerSpaceTest, removeIdRange) {
   EXPECT_EQ(space.getNumSymbolIds(), 2u);
 }
 
-TEST(PresburgerSpaceTest, insertIdAttachement) {
+TEST(PresburgerSpaceTest, insertIdAttachment) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 2, 1, 0);
-  space.resetAttachements<int *>();
+  space.resetAttachments<int *>();
 
-  // Attach attachement to domain ids.
-  int attachements[2] = {0, 1};
-  space.setAttachement<int *>(IdKind::Domain, 0, &attachements[0]);
-  space.setAttachement<int *>(IdKind::Domain, 1, &attachements[1]);
+  // Attach attachment to domain ids.
+  int attachments[2] = {0, 1};
+  space.setAttachment<int *>(IdKind::Domain, 0, &attachments[0]);
+  space.setAttachment<int *>(IdKind::Domain, 1, &attachments[1]);
 
   // Try inserting 2 domain ids.
   space.insertId(IdKind::Domain, 0, 2);
@@ -67,28 +67,28 @@ TEST(PresburgerSpaceTest, insertIdAttachement) {
   space.insertId(IdKind::Range, 0, 1);
   EXPECT_EQ(space.getNumRangeIds(), 3u);
 
-  // Check if the attachements for the old ids are still attached properly.
-  EXPECT_EQ(*space.getAttachement<int *>(IdKind::Domain, 2), attachements[0]);
-  EXPECT_EQ(*space.getAttachement<int *>(IdKind::Domain, 3), attachements[1]);
+  // Check if the attachments for the old ids are still attached properly.
+  EXPECT_EQ(*space.getAttachment<int *>(IdKind::Domain, 2), attachments[0]);
+  EXPECT_EQ(*space.getAttachment<int *>(IdKind::Domain, 3), attachments[1]);
 }
 
-TEST(PresburgerSpaceTest, removeIdRangeAttachement) {
+TEST(PresburgerSpaceTest, removeIdRangeAttachment) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 3, 0);
-  space.resetAttachements<int *>();
+  space.resetAttachments<int *>();
 
-  int attachements[6] = {0, 1, 2, 3, 4, 5};
+  int attachments[6] = {0, 1, 2, 3, 4, 5};
 
-  // Attach attachements to domain identifiers.
-  space.setAttachement<int *>(IdKind::Domain, 0, &attachements[0]);
-  space.setAttachement<int *>(IdKind::Domain, 1, &attachements[1]);
+  // Attach attachments to domain identifiers.
+  space.setAttachment<int *>(IdKind::Domain, 0, &attachments[0]);
+  space.setAttachment<int *>(IdKind::Domain, 1, &attachments[1]);
 
-  // Attach attachements to range identifiers.
-  space.setAttachement<int *>(IdKind::Range, 0, &attachements[2]);
+  // Attach attachments to range identifiers.
+  space.setAttachment<int *>(IdKind::Range, 0, &attachments[2]);
 
-  // Attach attachements to symbol identifiers.
-  space.setAttachement<int *>(IdKind::Symbol, 0, &attachements[3]);
-  space.setAttachement<int *>(IdKind::Symbol, 1, &attachements[4]);
-  space.setAttachement<int *>(IdKind::Symbol, 2, &attachements[5]);
+  // Attach attachments to symbol identifiers.
+  space.setAttachment<int *>(IdKind::Symbol, 0, &attachments[3]);
+  space.setAttachment<int *>(IdKind::Symbol, 1, &attachments[4]);
+  space.setAttachment<int *>(IdKind::Symbol, 2, &attachments[5]);
 
   // Remove 1 domain identifier.
   space.removeIdRange(IdKind::Domain, 0, 1);
@@ -101,10 +101,10 @@ TEST(PresburgerSpaceTest, removeIdRangeAttachement) {
   EXPECT_EQ(space.getNumRangeIds(), 0u);
   EXPECT_EQ(space.getNumSymbolIds(), 2u);
 
-  // Check if domain attachements are attached properly.
-  EXPECT_EQ(*space.getAttachement<int *>(IdKind::Domain, 0), attachements[1]);
+  // Check if domain attachments are attached properly.
+  EXPECT_EQ(*space.getAttachment<int *>(IdKind::Domain, 0), attachments[1]);
 
-  // Check if symbol attachements are attached properly.
-  EXPECT_EQ(*space.getAttachement<int *>(IdKind::Range, 0), attachements[4]);
-  EXPECT_EQ(*space.getAttachement<int *>(IdKind::Range, 1), attachements[5]);
+  // Check if symbol attachments are attached properly.
+  EXPECT_EQ(*space.getAttachment<int *>(IdKind::Range, 0), attachments[4]);
+  EXPECT_EQ(*space.getAttachment<int *>(IdKind::Range, 1), attachments[5]);
 }
