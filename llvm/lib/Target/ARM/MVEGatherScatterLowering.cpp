@@ -964,7 +964,7 @@ static bool hasAllGatScatUsers(Instruction *I, const DataLayout &DL) {
 
 bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
                                                LoopInfo *LI) {
-  LLVM_DEBUG(dbgs() << "masked gathers/scatters: trying to optimize\n"
+  LLVM_DEBUG(dbgs() << "masked gathers/scatters: trying to optimize: "
                     << *Offsets << "\n");
   // Optimise the addresses of gathers/scatters by moving invariant
   // calculations out of the loop
