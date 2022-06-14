@@ -60,10 +60,8 @@ define <4 x half> @shuffle_v4f16_234u(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_mov_b16_e32 v1.l, v2.l
+; GFX11-NEXT:    global_load_b64 v[1:2], v[2:3], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -939,9 +937,8 @@ define <4 x half> @shuffle_v4f16_2356(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, v3.l
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
+; GFX11-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -986,9 +983,8 @@ define <4 x half> @shuffle_v4f16_5623(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    global_load_b32 v1, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, v3.l
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX11-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -1188,9 +1184,8 @@ define <4 x i16> @shuffle_v4i16_2356(<4 x i16> addrspace(1)* %arg0, <4 x i16> ad
 ; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_mov_b16_e32 v1.l, v3.l
-; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX11-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; GFX11-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x i16>, <4 x i16> addrspace(1)* %arg0
@@ -1346,16 +1341,13 @@ define <4 x half> @shuffle_v4f16_1100(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX11-NEXT:    global_load_b64 v[1:2], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_mov_b16_e32 v3.l, v0.l
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, v1.l
-; GFX11-NEXT:    v_mov_b16_e32 v0.l, v1.l
-; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v2
-; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v3
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
-; GFX11-NEXT:    v_lshl_or_b32 v1, v3, 16, v2
+; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; GFX11-NEXT:    v_and_b32_e32 v3, 0xffff, v1
+; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v0
+; GFX11-NEXT:    v_lshl_or_b32 v1, v1, 16, v3
+; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -1398,10 +1390,9 @@ define <4 x half> @shuffle_v4f16_6161(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    global_load_b32 v2, v[2:3], off offset:4
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_mov_b16_e32 v1.l, v2.l
+; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1440,8 +1431,7 @@ define <4 x half> @shuffle_v4f16_2333(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, v1.l
-; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX11-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -1479,8 +1469,7 @@ define <4 x half> @shuffle_v4f16_6667(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, v1.l
-; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX11-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -1664,9 +1653,8 @@ define <4 x half> @shuffle_v8f16_13_14_2_3(<8 x half> addrspace(1)* %arg0, <8 x 
 ; GFX11-NEXT:    global_load_b32 v1, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, v3.l
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX11-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <8 x half>, <8 x half> addrspace(1)* %arg0
@@ -1701,8 +1689,7 @@ define <4 x half> @shuffle_v3f16_0122(<3 x half> addrspace(1)* %arg0, <3 x half>
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, v1.l
-; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX11-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <3 x half>, <3 x half> addrspace(1)* %arg0
@@ -1740,9 +1727,8 @@ define <4 x half> @shuffle_v2f16_0122(<2 x half> addrspace(1)* %arg0, <2 x half>
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_mov_b16_e32 v2.l, v0.l
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
+; GFX11-NEXT:    v_lshl_or_b32 v1, v0, 16, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <2 x half>, <2 x half> addrspace(1)* %arg0
   %val1 = load <2 x half>, <2 x half> addrspace(1)* %arg1
