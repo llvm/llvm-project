@@ -363,7 +363,7 @@ widenBitwiseBounds(const ConstantIntRanges &bound) {
   unsigned differingBits = bitwidth - (leftVal ^ rightVal).countLeadingZeros();
   leftVal.clearLowBits(differingBits);
   rightVal.setLowBits(differingBits);
-  return {leftVal, rightVal};
+  return std::make_tuple(std::move(leftVal), std::move(rightVal));
 }
 
 void arith::AndIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
