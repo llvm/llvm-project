@@ -69,6 +69,10 @@ void moveScalarUniformCode(WarpExecuteOnLane0Op op);
 void populatePropagateWarpVectorDistributionPatterns(
     RewritePatternSet &pattern);
 
+/// Collect patterns to distribute vector reduction ops using GPU warp shuffle
+/// ops.
+void populateReductionToGPUWarpShufflePatterns(RewritePatternSet &pattern);
+
 } // namespace vector
 } // namespace mlir
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_VECTORDISTRIBUTION_H_
