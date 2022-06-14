@@ -5787,17 +5787,12 @@ cc_library(
             "lib/Analysis/*/*.cpp",
             "lib/Analysis/*/*.h",
         ],
-        exclude = [
-            "lib/Analysis/Vector*.cpp",
-            "lib/Analysis/Vector*.h",
-        ],
     ),
     hdrs = glob(
         [
             "include/mlir/Analysis/*.h",
             "include/mlir/Analysis/*/*.h",
         ],
-        exclude = ["include/mlir/Analysis/Vector*.h"],
     ),
     includes = ["include"],
     deps = [
