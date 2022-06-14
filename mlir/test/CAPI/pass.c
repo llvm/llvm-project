@@ -138,14 +138,14 @@ void testPrintPassPipeline() {
   mlirOpPassManagerAddOwnedPass(nestedFuncPm, printOpStatPass);
 
   // Print the top level pass manager
-  // CHECK: Top-level: builtin.module(func.func(print-op-stats{json=false}))
+  // CHECK: Top-level: builtin.module(func.func(print-op-stats))
   fprintf(stderr, "Top-level: ");
   mlirPrintPassPipeline(mlirPassManagerGetAsOpPassManager(pm), printToStderr,
                         NULL);
   fprintf(stderr, "\n");
 
   // Print the pipeline nested one level down
-  // CHECK: Nested Module: func.func(print-op-stats{json=false})
+  // CHECK: Nested Module: func.func(print-op-stats)
   fprintf(stderr, "Nested Module: ");
   mlirPrintPassPipeline(nestedModulePm, printToStderr, NULL);
   fprintf(stderr, "\n");
@@ -166,9 +166,8 @@ void testParsePassPipeline() {
   // Try parse a pipeline.
   MlirLogicalResult status = mlirParsePassPipeline(
       mlirPassManagerGetAsOpPassManager(pm),
-      mlirStringRefCreateFromCString(
-          "builtin.module(func.func(print-op-stats{json=false}),"
-          " func.func(print-op-stats{json=false}))"));
+      mlirStringRefCreateFromCString("builtin.module(func.func(print-op-stats),"
+                                     " func.func(print-op-stats))"));
   // Expect a failure, we haven't registered the print-op-stats pass yet.
   if (mlirLogicalResultIsSuccess(status)) {
     fprintf(
@@ -180,9 +179,8 @@ void testParsePassPipeline() {
   mlirRegisterTransformsPrintOpStats();
   status = mlirParsePassPipeline(
       mlirPassManagerGetAsOpPassManager(pm),
-      mlirStringRefCreateFromCString(
-          "builtin.module(func.func(print-op-stats{json=false}),"
-          " func.func(print-op-stats{json=false}))"));
+      mlirStringRefCreateFromCString("builtin.module(func.func(print-op-stats),"
+                                     " func.func(print-op-stats))"));
   // Expect a failure, we haven't registered the print-op-stats pass yet.
   if (mlirLogicalResultIsFailure(status)) {
     fprintf(stderr,
@@ -190,8 +188,8 @@ void testParsePassPipeline() {
     exit(EXIT_FAILURE);
   }
 
-  // CHECK: Round-trip: builtin.module(func.func(print-op-stats{json=false}),
-  // func.func(print-op-stats{json=false}))
+  // CHECK: Round-trip: builtin.module(func.func(print-op-stats),
+  // func.func(print-op-stats))
   fprintf(stderr, "Round-trip: ");
   mlirPrintPassPipeline(mlirPassManagerGetAsOpPassManager(pm), printToStderr,
                         NULL);
