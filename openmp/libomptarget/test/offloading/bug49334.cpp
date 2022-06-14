@@ -3,8 +3,10 @@
 // Currently hangs on amdgpu
 // UNSUPPORTED: amdgcn-amd-amdhsa
 // UNSUPPORTED: amdgcn-amd-amdhsa-oldDriver
+// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-oldDriver
+// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 
 #include <cassert>
 #include <cmath>
