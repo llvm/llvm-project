@@ -182,6 +182,12 @@ namespace clang {
       /// Beware llvm::Align assumes power of two 8-bit bytes.
       llvm::Align getAsAlign() const { return llvm::Align(Quantity); }
 
+      /// getAsMaybeAlign - Returns Quantity as a valid llvm::Align or
+      /// llvm::None, Beware llvm::MaybeAlign assumes power of two 8-bit bytes.
+      llvm::MaybeAlign getAsMaybeAlign() const {
+        return llvm::MaybeAlign(Quantity);
+      }
+
       /// alignTo - Returns the next integer (mod 2**64) that is
       /// greater than or equal to this quantity and is a multiple of \p Align.
       /// Align must be non-zero.
