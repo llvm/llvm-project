@@ -278,6 +278,15 @@ public:
     return false;
   }
 
+  template <unsigned BaseReg> bool ImmToTile(SDValue N, SDValue &Imm) {
+    if (auto *CI = dyn_cast<ConstantSDNode>(N)) {
+      uint64_t C = CI->getZExtValue();
+      Imm = CurDAG->getRegister(BaseReg + C, MVT::Other);
+      return true;
+    }
+    return false;
+  }
+
   /// Form sequences of consecutive 64/128-bit registers for use in NEON
   /// instructions making use of a vector-list (e.g. ldN, tbl). Vecs must have
   /// between 1 and 4 elements. If it contains a single element that is returned
@@ -319,6 +328,11 @@ public:
   template <unsigned Scale>
   bool SelectSVERegRegAddrMode(SDValue N, SDValue &Base, SDValue &Offset) {
     return SelectSVERegRegAddrMode(N, Scale, Base, Offset);
+  }
+
+  template <unsigned Scale>
+  bool SelectSMETileSlice(SDValue N, SDValue &Vector, SDValue &Offset) {
+    return SelectSMETileSlice(N, Scale, Vector, Offset);
   }
 
   void SelectStore(SDNode *N, unsigned NumVecs, unsigned Opc);
@@ -389,6 +403,8 @@ private:
   bool SelectSVEArithImm(SDValue N, MVT VT, SDValue &Imm);
   bool SelectSVERegRegAddrMode(SDValue N, unsigned Scale, SDValue &Base,
                                SDValue &Offset);
+  bool SelectSMETileSlice(SDValue N, unsigned Scale, SDValue &Vector,
+                          SDValue &Offset);
 
   bool SelectAllActivePredicate(SDValue N);
 };
@@ -5223,4 +5239,28 @@ bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
       static_cast<const AArch64TargetLowering *>(getTargetLowering());
 
   return TLI->isAllActivePredicate(*CurDAG, N);
+}
+
+bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned Scale,
+                                             SDValue &Vector, SDValue &Offset) {
+  if (N.getOpcode() != ISD::ADD)
+    return false;
+
+  // Process an ADD node.
+  const SDValue LHS = N.getOperand(0);
+  const SDValue RHS = N.getOperand(1);
+
+  if (auto C = dyn_cast<ConstantSDNode>(RHS)) {
+    int64_t ImmOff = C->getSExtValue();
+    unsigned MaxSize = (1 << Scale) - 1;
+
+    if (ImmOff < 0 || ImmOff > MaxSize)
+      return false;
+
+    Vector = LHS;
+    Offset = CurDAG->getTargetConstant(ImmOff, SDLoc(N), MVT::i64);
+    return true;
+  }
+
+  return false;
 }
