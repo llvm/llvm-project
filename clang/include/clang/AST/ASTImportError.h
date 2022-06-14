@@ -18,11 +18,8 @@
 
 namespace clang {
 
-<<<<<<< HEAD
 class ASTImportError : public llvm::ErrorInfo<ASTImportError> {
-=======
-class ImportError : public llvm::ErrorInfo<ImportError> {
->>>>>>> 4bf928bce44adda059aba715664c41462536d483
+
 public:
   /// \brief Kind of error when importing an AST component.
   enum ErrorKind {
@@ -35,7 +32,6 @@ public:
 
   static char ID;
 
-<<<<<<< HEAD
   ASTImportError() : Error(Unknown) {}
   ASTImportError(const ASTImportError &Other) : Error(Other.Error) {}
   ASTImportError &operator=(const ASTImportError &Other) {
@@ -43,15 +39,6 @@ public:
     return *this;
   }
   ASTImportError(ErrorKind Error) : Error(Error) {}
-=======
-  ImportError() : Error(Unknown) {}
-  ImportError(const ImportError &Other) : Error(Other.Error) {}
-  ImportError &operator=(const ImportError &Other) {
-    Error = Other.Error;
-    return *this;
-  }
-  ImportError(ErrorKind Error) : Error(Error) {}
->>>>>>> 4bf928bce44adda059aba715664c41462536d483
 
   std::string toString() const;
 
