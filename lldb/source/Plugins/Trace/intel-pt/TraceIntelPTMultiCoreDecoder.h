@@ -52,15 +52,19 @@ public:
   size_t GetTotalContinuousExecutionsCount() const;
 
 private:
-  /// Traverse the context switch traces and recover the continuous executions
-  /// by thread.
-  llvm::Error DecodeContextSwitchTraces();
+  /// Traverse the context switch traces and the basic intel pt continuous subtraces
+  /// and produce a list of continuous executions for each process and thread.
+  ///
+  /// See \a DoCorrelateContextSwitchesAndIntelPtTraces.
+  ///
+  /// Any errors are stored in \a m_setup_error.
+  llvm::Error CorrelateContextSwitchesAndIntelPtTraces();
 
   /// Produce a mapping from thread ids to the list of continuos executions with
   /// their associated intel pt subtraces.
   llvm::Expected<
       llvm::DenseMap<lldb::tid_t, std::vector<IntelPTThreadContinousExecution>>>
-  CorrelateContextSwitchesAndIntelPtTraces();
+  DoCorrelateContextSwitchesAndIntelPtTraces();
 
   TraceIntelPT *m_trace;
   std::set<lldb::tid_t> m_tids;

@@ -97,9 +97,7 @@ private:
   ///   The status that was result of synchronizing to the most recent PSB.
   ///
   /// \param[in] stop_on_psb_change
-  ///   If \b true, decoding
-  ///   An optional offset to a given PSB. Decoding stops if a different PSB is
-  ///   reached.
+  ///   If \b true, decoding stops if a different PSB is reached.
   void DecodeInstructionsAndEvents(int status,
                                    bool stop_on_psb_change = false) {
     uint64_t psb_offset;
@@ -310,7 +308,7 @@ static Error SetupMemoryImage(PtInsnDecoderUP &decoder_up, Process &process) {
   return Error::success();
 }
 
-void lldb_private::trace_intel_pt::DecodeTrace(DecodedThread &decoded_thread,
+void lldb_private::trace_intel_pt::DecodeSingleTraceForThread(DecodedThread &decoded_thread,
                                                TraceIntelPT &trace_intel_pt,
                                                ArrayRef<uint8_t> buffer) {
   Expected<PtInsnDecoderUP> decoder_up =
@@ -326,7 +324,7 @@ void lldb_private::trace_intel_pt::DecodeTrace(DecodedThread &decoded_thread,
   libipt_decoder.DecodeUntilEndOfTrace();
 }
 
-void lldb_private::trace_intel_pt::DecodeTrace(
+void lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
     DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
     const DenseMap<lldb::core_id_t, llvm::ArrayRef<uint8_t>> &buffers,
     const std::vector<IntelPTThreadContinousExecution> &executions) {
@@ -438,8 +436,8 @@ lldb_private::trace_intel_pt::SplitTraceInContinuousExecutions(
                             &psb_offset); // this can't fail because we got here
 
     executions.push_back({
-        tsc,
         psb_offset,
+        tsc,
     });
   }
   return executions;
