@@ -458,14 +458,14 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
 void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, direction_ == Direction::Input && beganReadingRecord_);
   beganReadingRecord_ = false;
-  if (handler.InError() && handler.GetIoStat() != IostatEor) {
+  if (handler.GetIoStat() == IostatEnd ||
+      (IsRecordFile() && !recordLength.has_value())) {
     // Avoid bogus crashes in END/ERR circumstances; but
     // still increment the current record number so that
     // an attempted read of an endfile record, followed by
     // a BACKSPACE, will still be at EOF.
     ++currentRecordNumber;
   } else if (IsRecordFile()) {
-    RUNTIME_CHECK(handler, recordLength.has_value());
     recordOffsetInFrame_ += *recordLength;
     if (access != Access::Direct) {
       RUNTIME_CHECK(handler, isUnformatted.has_value());

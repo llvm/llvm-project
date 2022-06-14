@@ -67,7 +67,7 @@ define double @v_fdiv_f64(double %a, double %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[4:5], s4, v[2:3], v[2:3], v[0:1]
+; GFX10-NEXT:    v_div_scale_f64 v[4:5], null, v[2:3], v[2:3], v[0:1]
 ; GFX10-NEXT:    v_div_scale_f64 v[10:11], vcc_lo, v[0:1], v[2:3], v[0:1]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[6:7], v[4:5]
 ; GFX10-NEXT:    v_fma_f64 v[8:9], -v[4:5], v[6:7], 1.0
@@ -170,7 +170,7 @@ define double @v_fdiv_f64_ulp25(double %a, double %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[4:5], s4, v[2:3], v[2:3], v[0:1]
+; GFX10-NEXT:    v_div_scale_f64 v[4:5], null, v[2:3], v[2:3], v[0:1]
 ; GFX10-NEXT:    v_div_scale_f64 v[10:11], vcc_lo, v[0:1], v[2:3], v[0:1]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[6:7], v[4:5]
 ; GFX10-NEXT:    v_fma_f64 v[8:9], -v[4:5], v[6:7], 1.0
@@ -243,7 +243,7 @@ define double @v_rcp_f64(double %x) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[2:3], s4, v[0:1], v[0:1], 1.0
+; GFX10-NEXT:    v_div_scale_f64 v[2:3], null, v[0:1], v[0:1], 1.0
 ; GFX10-NEXT:    v_div_scale_f64 v[8:9], vcc_lo, 1.0, v[0:1], 1.0
 ; GFX10-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
 ; GFX10-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
@@ -316,7 +316,7 @@ define double @v_rcp_f64_arcp(double %x) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[2:3], s4, v[0:1], v[0:1], 1.0
+; GFX10-NEXT:    v_div_scale_f64 v[2:3], null, v[0:1], v[0:1], 1.0
 ; GFX10-NEXT:    v_div_scale_f64 v[8:9], vcc_lo, 1.0, v[0:1], 1.0
 ; GFX10-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
 ; GFX10-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
@@ -420,7 +420,7 @@ define double @v_rcp_f64_ulp25(double %x) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[2:3], s4, v[0:1], v[0:1], 1.0
+; GFX10-NEXT:    v_div_scale_f64 v[2:3], null, v[0:1], v[0:1], 1.0
 ; GFX10-NEXT:    v_div_scale_f64 v[8:9], vcc_lo, 1.0, v[0:1], 1.0
 ; GFX10-NEXT:    v_rcp_f64_e32 v[4:5], v[2:3]
 ; GFX10-NEXT:    v_fma_f64 v[6:7], -v[2:3], v[4:5], 1.0
@@ -523,7 +523,7 @@ define double @v_fdiv_f64_arcp_ulp25(double %a, double %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[4:5], s4, v[2:3], v[2:3], v[0:1]
+; GFX10-NEXT:    v_div_scale_f64 v[4:5], null, v[2:3], v[2:3], v[0:1]
 ; GFX10-NEXT:    v_div_scale_f64 v[10:11], vcc_lo, v[0:1], v[2:3], v[0:1]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[6:7], v[4:5]
 ; GFX10-NEXT:    v_fma_f64 v[8:9], -v[4:5], v[6:7], 1.0
@@ -634,8 +634,8 @@ define <2 x double> @v_fdiv_v2f64(<2 x double> %a, <2 x double> %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[8:9], s4, v[4:5], v[4:5], v[0:1]
-; GFX10-NEXT:    v_div_scale_f64 v[10:11], s4, v[6:7], v[6:7], v[2:3]
+; GFX10-NEXT:    v_div_scale_f64 v[8:9], null, v[4:5], v[4:5], v[0:1]
+; GFX10-NEXT:    v_div_scale_f64 v[10:11], null, v[6:7], v[6:7], v[2:3]
 ; GFX10-NEXT:    v_div_scale_f64 v[20:21], vcc_lo, v[0:1], v[4:5], v[0:1]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[12:13], v[8:9]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[14:15], v[10:11]
@@ -804,8 +804,8 @@ define <2 x double> @v_fdiv_v2f64_ulp25(<2 x double> %a, <2 x double> %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[8:9], s4, v[4:5], v[4:5], v[0:1]
-; GFX10-NEXT:    v_div_scale_f64 v[10:11], s4, v[6:7], v[6:7], v[2:3]
+; GFX10-NEXT:    v_div_scale_f64 v[8:9], null, v[4:5], v[4:5], v[0:1]
+; GFX10-NEXT:    v_div_scale_f64 v[10:11], null, v[6:7], v[6:7], v[2:3]
 ; GFX10-NEXT:    v_div_scale_f64 v[20:21], vcc_lo, v[0:1], v[4:5], v[0:1]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[12:13], v[8:9]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[14:15], v[10:11]
@@ -928,8 +928,8 @@ define <2 x double> @v_rcp_v2f64(<2 x double> %x) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[4:5], s4, v[0:1], v[0:1], 1.0
-; GFX10-NEXT:    v_div_scale_f64 v[6:7], s4, v[2:3], v[2:3], 1.0
+; GFX10-NEXT:    v_div_scale_f64 v[4:5], null, v[0:1], v[0:1], 1.0
+; GFX10-NEXT:    v_div_scale_f64 v[6:7], null, v[2:3], v[2:3], 1.0
 ; GFX10-NEXT:    v_div_scale_f64 v[16:17], vcc_lo, 1.0, v[0:1], 1.0
 ; GFX10-NEXT:    v_rcp_f64_e32 v[8:9], v[4:5]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[10:11], v[6:7]
@@ -1052,8 +1052,8 @@ define <2 x double> @v_rcp_v2f64_arcp(<2 x double> %x) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[4:5], s4, v[0:1], v[0:1], 1.0
-; GFX10-NEXT:    v_div_scale_f64 v[6:7], s4, v[2:3], v[2:3], 1.0
+; GFX10-NEXT:    v_div_scale_f64 v[4:5], null, v[0:1], v[0:1], 1.0
+; GFX10-NEXT:    v_div_scale_f64 v[6:7], null, v[2:3], v[2:3], 1.0
 ; GFX10-NEXT:    v_div_scale_f64 v[16:17], vcc_lo, 1.0, v[0:1], 1.0
 ; GFX10-NEXT:    v_rcp_f64_e32 v[8:9], v[4:5]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[10:11], v[6:7]
@@ -1223,8 +1223,8 @@ define <2 x double> @v_rcp_v2f64_ulp25(<2 x double> %x) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[4:5], s4, v[0:1], v[0:1], 1.0
-; GFX10-NEXT:    v_div_scale_f64 v[6:7], s4, v[2:3], v[2:3], 1.0
+; GFX10-NEXT:    v_div_scale_f64 v[4:5], null, v[0:1], v[0:1], 1.0
+; GFX10-NEXT:    v_div_scale_f64 v[6:7], null, v[2:3], v[2:3], 1.0
 ; GFX10-NEXT:    v_div_scale_f64 v[16:17], vcc_lo, 1.0, v[0:1], 1.0
 ; GFX10-NEXT:    v_rcp_f64_e32 v[8:9], v[4:5]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[10:11], v[6:7]
@@ -1393,8 +1393,8 @@ define <2 x double> @v_fdiv_v2f64_arcp_ulp25(<2 x double> %a, <2 x double> %b) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_div_scale_f64 v[8:9], s4, v[4:5], v[4:5], v[0:1]
-; GFX10-NEXT:    v_div_scale_f64 v[10:11], s4, v[6:7], v[6:7], v[2:3]
+; GFX10-NEXT:    v_div_scale_f64 v[8:9], null, v[4:5], v[4:5], v[0:1]
+; GFX10-NEXT:    v_div_scale_f64 v[10:11], null, v[6:7], v[6:7], v[2:3]
 ; GFX10-NEXT:    v_div_scale_f64 v[20:21], vcc_lo, v[0:1], v[4:5], v[0:1]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[12:13], v[8:9]
 ; GFX10-NEXT:    v_rcp_f64_e32 v[14:15], v[10:11]

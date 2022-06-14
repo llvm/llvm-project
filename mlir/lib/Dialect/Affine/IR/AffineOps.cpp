@@ -1731,11 +1731,11 @@ void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// correspond to the loop iterator operands, i.e., those excluding the
 /// induction variable. AffineForOp only has one region, so zero is the only
 /// valid value for `index`.
-OperandRange AffineForOp::getSuccessorEntryOperands(unsigned index) {
-  assert(index == 0 && "invalid region index");
+OperandRange AffineForOp::getSuccessorEntryOperands(Optional<unsigned> index) {
+  assert(!index || *index == 0 && "invalid region index");
 
   // The initial operands map to the loop arguments after the induction
-  // variable.
+  // variable or are forwarded to the results when the trip count is zero.
   return getIterOperands();
 }
 

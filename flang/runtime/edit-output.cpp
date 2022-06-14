@@ -182,8 +182,10 @@ const char *RealOutputEditingBase::FormatExponent(
     *--exponent = '0' + e - 10 * quotient;
     e = quotient;
   }
+  bool overflow{false};
   if (edit.expoDigits) {
     if (int ed{*edit.expoDigits}) { // Ew.dEe with e > 0
+      overflow = exponent + ed < eEnd;
       while (exponent > exponent_ + 2 /*E+*/ && exponent + ed > eEnd) {
         *--exponent = '0';
       }
@@ -200,7 +202,7 @@ const char *RealOutputEditingBase::FormatExponent(
     *--exponent = edit.descriptor == 'D' ? 'D' : 'E'; // not 'G'
   }
   length = eEnd - exponent;
-  return exponent;
+  return overflow ? nullptr : exponent;
 }
 
 bool RealOutputEditingBase::EmitPrefix(
@@ -258,6 +260,7 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
   if (edit.modes.editingFlags & signPlus) {
     flags |= decimal::AlwaysSign;
   }
+  bool noLeadingSpaces{editWidth == 0};
   if (editWidth == 0) { // "the processor selects the field width"
     if (edit.digits.has_value()) { // E0.d
       if (editDigits == 0) { // E0.0
@@ -352,13 +355,16 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
         1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes +
         expoLength};
     int width{editWidth > 0 ? editWidth : totalLength};
-    if (totalLength > width) {
+    if (totalLength > width || !exponent) {
       return io_.EmitRepeated('*', width);
     }
     if (totalLength < width && digitsBeforePoint == 0 &&
         zeroesBeforePoint == 0) {
       zeroesBeforePoint = 1;
       ++totalLength;
+    }
+    if (totalLength < width && noLeadingSpaces) {
+      width = totalLength;
     }
     return EmitPrefix(edit, totalLength, width) &&
         io_.Emit(converted.str, signLength + digitsBeforePoint) &&
@@ -475,9 +481,10 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
 template <int binaryPrecision>
 DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
   edit.descriptor = 'E';
+  int editWidth{edit.width.value_or(0)};
   int significantDigits{
       edit.digits.value_or(BinaryFloatingPoint::decimalPrecision)}; // 'd'
-  if (!edit.width.has_value() || (*edit.width > 0 && significantDigits == 0)) {
+  if (editWidth > 0 && significantDigits == 0) {
     return edit; // Gw.0 -> Ew.0 for w > 0
   }
   int flags{0};
@@ -487,7 +494,7 @@ DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
   decimal::ConversionToDecimalResult converted{
       Convert(significantDigits, edit.modes.round, flags)};
   if (IsInfOrNaN(converted)) {
-    return edit;
+    return edit; // Inf/Nan -> Ew.d (same as Fw.d)
   }
   int expo{IsZero() ? 1 : converted.decimalExponent}; // 's'
   if (expo < 0 || expo > significantDigits) {
@@ -496,7 +503,6 @@ DataEdit RealOutputEditing<binaryPrecision>::EditForGOutput(DataEdit edit) {
   edit.descriptor = 'F';
   edit.modes.scale = 0; // kP is ignored for G when no exponent field
   trailingBlanks_ = 0;
-  int editWidth{edit.width.value_or(0)};
   if (editWidth > 0) {
     int expoDigits{edit.expoDigits.value_or(0)};
     trailingBlanks_ = expoDigits > 0 ? expoDigits + 2 : 4; // 'n'
