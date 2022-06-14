@@ -563,8 +563,8 @@ mingw-dll-i686)
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
 aix)
-    export CC=ibm-clang
-    export CXX=ibm-clang++_r
+    export CC=clang
+    export CXX=clang++
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AIX.cmake" \
                    -DLIBCXX_TEST_CONFIG="ibm-libc++-shared.cfg.in" \
