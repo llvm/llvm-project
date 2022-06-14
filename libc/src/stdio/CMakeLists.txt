@@ -261,3 +261,17 @@ add_entrypoint_object(
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.vfprintf_internal
 )
+
+
+add_entrypoint_object(
+  printf
+  SRCS
+    printf.cpp
+  HDRS
+    printf.h
+  DEPENDS
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.vfprintf_internal
+)
