@@ -120,9 +120,8 @@ public:
   SVal evalIntegralCast(ProgramStateRef state, SVal val, QualType castTy,
                         QualType originalType);
 
-  virtual SVal evalMinus(NonLoc val) = 0;
-
-  virtual SVal evalComplement(NonLoc val) = 0;
+  SVal evalMinus(NonLoc val);
+  SVal evalComplement(NonLoc val);
 
   /// Create a new value which represents a binary expression with two non-
   /// location operands.
