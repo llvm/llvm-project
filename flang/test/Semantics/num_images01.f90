@@ -2,11 +2,17 @@
 ! Check for semantic errors in num_images() function calls
 
 subroutine test
+  use iso_fortran_env, only: team_type
+  implicit none
+
+  type(team_type) my_team
 
   ! correct calls, should produce no errors
   print *, num_images()
   print *, num_images(team_number=1)
   print *, num_images(1)
+  print *, num_images(my_team)
+  print *, num_images(team=my_team)
 
   ! incorrectly typed argument
   ! the error is seen as too many arguments to the num_images() call with no arguments
@@ -25,6 +31,7 @@ subroutine test
   !ERROR: unknown keyword argument to intrinsic 'num_images'
   print *, num_images(team_numbers=1)
 
-  !TODO: test num_images() calls related to team_type argument
+  !ERROR: unknown keyword argument to intrinsic 'num_images'
+  print *, num_images(teams=my_team)
 
 end subroutine
