@@ -947,8 +947,11 @@ multiclass sme_tile_to_vector<string mnemonic> {
 // SME Zero
 //===----------------------------------------------------------------------===//
 
+// NOTE: This definition isn't really correct because there are outputs, i.e.
+// the tile registers being zeroed. We fix this up in a custom inserter that
+// marks the appropriate registers as being implicitly defined.
 class sme_zero_inst<string mnemonic>
-    : I<(outs MatrixTileList:$imm), (ins),
+    : I<(outs), (ins MatrixTileList:$imm),
         mnemonic, "\t$imm", "", []>, Sched<[]> {
   bits<8> imm;
   let Inst{31-8} = 0b110000000000100000000000;
@@ -973,6 +976,15 @@ multiclass sme_zero<string mnemonic> {
   def : InstAlias<"zero\t\\{za0.s,za1.s,za3.s\\}", (!cast<Instruction>(NAME) 0b10111011), 1>;
   def : InstAlias<"zero\t\\{za0.s,za2.s,za3.s\\}", (!cast<Instruction>(NAME) 0b11011101), 1>;
   def : InstAlias<"zero\t\\{za1.s,za2.s,za3.s\\}", (!cast<Instruction>(NAME) 0b11101110), 1>;
+
+  def NAME # _PSEUDO : Pseudo<(outs), (ins i64imm:$tilelist), []>,
+      Sched<[]> {
+    // Translated to the actual instructions in AArch64ISelLowering.cpp
+    let usesCustomInserter = 1;
+  }
+
+  def : Pat<(int_aarch64_sme_zero imm:$imm),
+            (!cast<Instruction>(NAME # _PSEUDO) imm:$imm)>;
 }
 
 //===----------------------------------------------------------------------===//
