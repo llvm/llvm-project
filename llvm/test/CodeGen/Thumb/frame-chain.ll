@@ -1,12 +1,12 @@
-; RUN: llc -mtriple thumb-arm-none-eabi -filetype asm -o - %s -frame-pointer=all | FileCheck %s --check-prefixes=FP,LEAF-FP
-; RUN: llc -mtriple thumb-arm-none-eabi -filetype asm -o - %s -frame-pointer=all -mattr=+aapcs-frame-chain | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-FP
-; RUN: llc -mtriple thumb-arm-none-eabi -filetype asm -o - %s -frame-pointer=all -mattr=+aapcs-frame-chain-leaf | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-FP-AAPCS
-; RUN: llc -mtriple thumb-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf | FileCheck %s --check-prefixes=FP,LEAF-NOFP
-; RUN: llc -mtriple thumb-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf -mattr=+aapcs-frame-chain | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-NOFP
-; RUN: llc -mtriple thumb-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf -mattr=+aapcs-frame-chain-leaf | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-NOFP-AAPCS
-; RUN: llc -mtriple thumb-arm-none-eabi -filetype asm -o - %s -frame-pointer=none | FileCheck %s --check-prefixes=NOFP,LEAF-NOFP
-; RUN: llc -mtriple thumb-arm-none-eabi -filetype asm -o - %s -frame-pointer=none -mattr=+aapcs-frame-chain | FileCheck %s --check-prefixes=NOFP-AAPCS,LEAF-NOFP
-; RUN: llc -mtriple thumb-arm-none-eabi -filetype asm -o - %s -frame-pointer=none -mattr=+aapcs-frame-chain-leaf | FileCheck %s --check-prefixes=NOFP-AAPCS,LEAF-NOFP-AAPCS
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=all --verify-machineinstrs | FileCheck %s --check-prefixes=FP,LEAF-FP
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=all -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-FP
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=all -mattr=+aapcs-frame-chain-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-FP-AAPCS
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=FP,LEAF-NOFP
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-NOFP
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=non-leaf -mattr=+aapcs-frame-chain-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=FP-AAPCS,LEAF-NOFP-AAPCS
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=none --verify-machineinstrs | FileCheck %s --check-prefixes=NOFP,LEAF-NOFP
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=none -mattr=+aapcs-frame-chain --verify-machineinstrs | FileCheck %s --check-prefixes=NOFP-AAPCS,LEAF-NOFP
+; RUN: llc -mtriple thumbv6m-arm-none-eabi -filetype asm -o - %s -frame-pointer=none -mattr=+aapcs-frame-chain-leaf --verify-machineinstrs | FileCheck %s --check-prefixes=NOFP-AAPCS,LEAF-NOFP-AAPCS
 
 define dso_local noundef i32 @leaf(i32 noundef %0) {
 ; LEAF-FP-LABEL: leaf:
@@ -34,8 +34,7 @@ define dso_local noundef i32 @leaf(i32 noundef %0) {
 ; LEAF-FP-AAPCS-NEXT:    add sp, #4
 ; LEAF-FP-AAPCS-NEXT:    pop {r1}
 ; LEAF-FP-AAPCS-NEXT:    mov r11, r1
-; LEAF-FP-AAPCS-NEXT:    pop {r1}
-; LEAF-FP-AAPCS-NEXT:    bx r1
+; LEAF-FP-AAPCS-NEXT:    pop {pc}
 ;
 ; LEAF-NOFP-LABEL: leaf:
 ; LEAF-NOFP:       @ %bb.0:
@@ -74,9 +73,7 @@ define dso_local noundef i32 @non_leaf(i32 noundef %0) {
 ; FP-NEXT:    bl leaf
 ; FP-NEXT:    adds r0, r0, #1
 ; FP-NEXT:    add sp, #8
-; FP-NEXT:    pop {r7}
-; FP-NEXT:    pop {r1}
-; FP-NEXT:    bx r1
+; FP-NEXT:    pop {r7, pc}
 ;
 ; FP-AAPCS-LABEL: non_leaf:
 ; FP-AAPCS:       @ %bb.0:
@@ -95,8 +92,7 @@ define dso_local noundef i32 @non_leaf(i32 noundef %0) {
 ; FP-AAPCS-NEXT:    add sp, #8
 ; FP-AAPCS-NEXT:    pop {r1}
 ; FP-AAPCS-NEXT:    mov r11, r1
-; FP-AAPCS-NEXT:    pop {r1}
-; FP-AAPCS-NEXT:    bx r1
+; FP-AAPCS-NEXT:    pop {pc}
 ;
 ; NOFP-LABEL: non_leaf:
 ; NOFP:       @ %bb.0:
@@ -108,9 +104,7 @@ define dso_local noundef i32 @non_leaf(i32 noundef %0) {
 ; NOFP-NEXT:    bl leaf
 ; NOFP-NEXT:    adds r0, r0, #1
 ; NOFP-NEXT:    add sp, #8
-; NOFP-NEXT:    pop {r7}
-; NOFP-NEXT:    pop {r1}
-; NOFP-NEXT:    bx r1
+; NOFP-NEXT:    pop {r7, pc}
 ;
 ; NOFP-AAPCS-LABEL: non_leaf:
 ; NOFP-AAPCS:       @ %bb.0:
@@ -122,9 +116,7 @@ define dso_local noundef i32 @non_leaf(i32 noundef %0) {
 ; NOFP-AAPCS-NEXT:    bl leaf
 ; NOFP-AAPCS-NEXT:    adds r0, r0, #1
 ; NOFP-AAPCS-NEXT:    add sp, #8
-; NOFP-AAPCS-NEXT:    pop {r7}
-; NOFP-AAPCS-NEXT:    pop {r1}
-; NOFP-AAPCS-NEXT:    bx r1
+; NOFP-AAPCS-NEXT:    pop {r7, pc}
   %2 = alloca i32, align 4
   store i32 %0, i32* %2, align 4
   %3 = load i32, i32* %2, align 4
@@ -162,9 +154,7 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; FP-NEXT:    subs r4, r7, #7
 ; FP-NEXT:    subs r4, #1
 ; FP-NEXT:    mov sp, r4
-; FP-NEXT:    pop {r4, r6, r7}
-; FP-NEXT:    pop {r0}
-; FP-NEXT:    bx r0
+; FP-NEXT:    pop {r4, r6, r7, pc}
 ;
 ; FP-AAPCS-LABEL: required_fp:
 ; FP-AAPCS:       @ %bb.0:
@@ -201,8 +191,7 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; FP-AAPCS-NEXT:    pop {r4, r6}
 ; FP-AAPCS-NEXT:    pop {r0}
 ; FP-AAPCS-NEXT:    mov r11, r0
-; FP-AAPCS-NEXT:    pop {r0}
-; FP-AAPCS-NEXT:    bx r0
+; FP-AAPCS-NEXT:    pop {pc}
 ;
 ; NOFP-LABEL: required_fp:
 ; NOFP:       @ %bb.0:
@@ -231,9 +220,7 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; NOFP-NEXT:    subs r4, r7, #7
 ; NOFP-NEXT:    subs r4, #1
 ; NOFP-NEXT:    mov sp, r4
-; NOFP-NEXT:    pop {r4, r6, r7}
-; NOFP-NEXT:    pop {r0}
-; NOFP-NEXT:    bx r0
+; NOFP-NEXT:    pop {r4, r6, r7, pc}
 ;
 ; NOFP-AAPCS-LABEL: required_fp:
 ; NOFP-AAPCS:       @ %bb.0:
@@ -270,8 +257,7 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
 ; NOFP-AAPCS-NEXT:    pop {r4, r6}
 ; NOFP-AAPCS-NEXT:    pop {r0}
 ; NOFP-AAPCS-NEXT:    mov r11, r0
-; NOFP-AAPCS-NEXT:    pop {r0}
-; NOFP-AAPCS-NEXT:    bx r0
+; NOFP-AAPCS-NEXT:    pop {pc}
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
   %5 = alloca i8*, align 8
