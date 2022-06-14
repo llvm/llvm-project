@@ -331,7 +331,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
   case MCFragment::FT_Align: {
     const MCAlignFragment &AF = cast<MCAlignFragment>(F);
     unsigned Offset = Layout.getFragmentOffset(&AF);
-    unsigned Size = offsetToAlignment(Offset, Align(AF.getAlignment()));
+    unsigned Size = offsetToAlignment(Offset, AF.getAlignment());
 
     // Insert extra Nops for code alignment if the target define
     // shouldInsertExtraNopBytesForCodeAlign target hook.
@@ -343,7 +343,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
     // minimum nop size.
     if (Size > 0 && AF.hasEmitNops()) {
       while (Size % getBackend().getMinimumNopSize())
-        Size += AF.getAlignment();
+        Size += AF.getAlignment().value();
     }
     if (Size > AF.getMaxBytesToEmit())
       return 0;
