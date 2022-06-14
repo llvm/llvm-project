@@ -170,17 +170,17 @@ public:
 /// in C.
 class ReferenceValue final : public Value {
 public:
-  explicit ReferenceValue(StorageLocation &PointeeLoc)
-      : Value(Kind::Reference), PointeeLoc(PointeeLoc) {}
+  explicit ReferenceValue(StorageLocation &ReferentLoc)
+      : Value(Kind::Reference), ReferentLoc(ReferentLoc) {}
 
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::Reference;
   }
 
-  StorageLocation &getPointeeLoc() const { return PointeeLoc; }
+  StorageLocation &getReferentLoc() const { return ReferentLoc; }
 
 private:
-  StorageLocation &PointeeLoc;
+  StorageLocation &ReferentLoc;
 };
 
 /// Models a symbolic pointer. Specifically, any value of type `T*`.
