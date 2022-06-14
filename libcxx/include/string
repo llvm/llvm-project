@@ -540,6 +540,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__utility/unreachable.h>
 #include <climits>
 #include <compare>
+#include <cstdint>
 #include <cstdio>  // EOF
 #include <cstdlib>
 #include <cstring>
@@ -555,10 +556,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #  include <cwchar>
-#endif
-
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-#  include <cstdint>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -621,11 +618,8 @@ struct __can_be_converted_to_string_view : public _BoolConstant<
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
 typedef basic_string<char8_t> u8string;
 #endif
-
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 typedef basic_string<char16_t> u16string;
 typedef basic_string<char32_t> u32string;
-#endif
 
 struct __uninitialized_size_tag {};
 
@@ -635,10 +629,8 @@ class
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
     _LIBCPP_PREFERRED_NAME(u8string)
 #endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     _LIBCPP_PREFERRED_NAME(u16string)
     _LIBCPP_PREFERRED_NAME(u32string)
-#endif
     basic_string
 {
 public:

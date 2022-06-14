@@ -516,8 +516,6 @@ char_traits<char8_t>::find(const char_type* __s, size_t __n, const char_type& __
 
 #endif // _LIBCPP_HAS_NO_CHAR8_T
 
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t>
 {
@@ -697,8 +695,6 @@ char_traits<char32_t>::find(const char_type* __s, size_t __n, const char_type& _
     }
     return nullptr;
 }
-
-#endif // _LIBCPP_HAS_NO_UNICODE_CHARS
 
 // helper fns for basic_string and string_view
 
