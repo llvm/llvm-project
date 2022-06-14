@@ -5,8 +5,8 @@
 
 ; CHECK: Intrinsic has incorrect argument type!
 ; CHECK: ptr @llvm.ppc.cfence.f32
-define void @bar() {
+define float @bar(float* %fp) {
 entry:
-  %0 = load atomic float, float* undef acquire, align 8
-  ret void
+  %0 = load atomic float, float* %fp acquire, align 4
+  ret float %0
 }
