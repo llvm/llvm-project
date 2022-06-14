@@ -261,6 +261,19 @@ Diagnostics:
   EXPECT_THAT(Results[0].Diagnostics.Includes.IgnoreHeader,
               ElementsAre(val("foo"), val("bar")));
 }
+
+TEST(ParseYAML, Style) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Style:
+  FullyQualifiedNamespaces: [foo, bar])yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Style.FullyQualifiedNamespaces,
+              ElementsAre(val("foo"), val("bar")));
+}
 } // namespace
 } // namespace config
 } // namespace clangd
