@@ -281,9 +281,14 @@ namespace orc {
 class CAPIDefinitionGenerator final : public DefinitionGenerator {
 public:
   CAPIDefinitionGenerator(
-      void *Ctx,
+      LLVMOrcDisposeCAPIDefinitionGeneratorFunction Dispose, void *Ctx,
       LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction TryToGenerate)
-      : Ctx(Ctx), TryToGenerate(TryToGenerate) {}
+      : Dispose(Dispose), Ctx(Ctx), TryToGenerate(TryToGenerate) {}
+
+  ~CAPIDefinitionGenerator() {
+    if (Dispose)
+      Dispose(Ctx);
+  }
 
   Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                       JITDylibLookupFlags JDLookupFlags,
@@ -321,6 +326,7 @@ public:
   }
 
 private:
+  LLVMOrcDisposeCAPIDefinitionGeneratorFunction Dispose;
   void *Ctx;
   LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction TryToGenerate;
 };
@@ -669,9 +675,17 @@ void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
 }
 
 LLVMOrcDefinitionGeneratorRef LLVMOrcCreateCustomCAPIDefinitionGenerator(
-    LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction F, void *Ctx) {
-  auto DG = std::make_unique<CAPIDefinitionGenerator>(Ctx, F);
+    LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction F, void *Ctx,
+    LLVMOrcDisposeCAPIDefinitionGeneratorFunction Dispose) {
+  auto DG = std::make_unique<CAPIDefinitionGenerator>(Dispose, Ctx, F);
   return wrap(DG.release());
+}
+
+void LLVMOrcLookupStateContinueLookup(LLVMOrcLookupStateRef S,
+                                      LLVMErrorRef Err) {
+  LookupState LS;
+  OrcV2CAPIHelper::resetLookupState(LS, ::unwrap(S));
+  LS.continueLookup(unwrap(Err));
 }
 
 LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
