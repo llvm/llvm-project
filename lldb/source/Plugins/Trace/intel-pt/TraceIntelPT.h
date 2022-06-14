@@ -11,7 +11,7 @@
 
 #include "TaskTimer.h"
 #include "ThreadDecoder.h"
-#include "TraceIntelPTMultiCoreDecoder.h"
+#include "TraceIntelPTMultiCpuDecoder.h"
 #include "TraceIntelPTSessionFileParser.h"
 
 #include "lldb/Utility/FileSpec.h"
@@ -89,7 +89,7 @@ public:
   /// More information on the parameters below can be found in the
   /// jLLDBTraceStart section in lldb/docs/lldb-gdb-remote.txt.
   ///
-  /// \param[in] trace_buffer_size
+  /// \param[in] ipt_trace_size
   ///     Trace size per thread in bytes.
   ///
   /// \param[in] total_buffer_size_limit
@@ -101,17 +101,16 @@ public:
   /// \param[in] psb_period
   ///     This value defines the period in which PSB packets will be generated.
   ///
-  /// \param[in] per_core_tracing
-  ///     This value defines whether to have a trace buffer per thread or per
-  ///     cpu core.
+  /// \param[in] per_cpu_tracing
+  ///     This value defines whether to have an intel pt trace buffer per thread
+  ///     or per cpu core.
   ///
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
-  llvm::Error Start(uint64_t trace_buffer_size,
-                    uint64_t total_buffer_size_limit, bool enable_tsc,
-                    llvm::Optional<uint64_t> psb_period,
-                    bool m_per_core_tracing);
+  llvm::Error Start(uint64_t ipt_trace_size, uint64_t total_buffer_size_limit,
+                    bool enable_tsc, llvm::Optional<uint64_t> psb_period,
+                    bool m_per_cpu_tracing);
 
   /// \copydoc Trace::Start
   llvm::Error Start(StructuredData::ObjectSP configuration =
@@ -125,8 +124,8 @@ public:
   /// \param[in] tids
   ///     Threads to trace.
   ///
-  /// \param[in] trace_buffer_size
-  ///     Trace size per thread or per core in bytes.
+  /// \param[in] ipt_trace_size
+  ///     Trace size per thread or per cpu core in bytes.
   ///
   /// \param[in] enable_tsc
   ///     Whether to use enable TSC timestamps or not.
@@ -137,9 +136,8 @@ public:
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
-  llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids,
-                    uint64_t trace_buffer_size, bool enable_tsc,
-                    llvm::Optional<uint64_t> psb_period);
+  llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids, uint64_t ipt_trace_size,
+                    bool enable_tsc, llvm::Optional<uint64_t> psb_period);
 
   /// \copydoc Trace::Start
   llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids,
@@ -200,8 +198,8 @@ private:
   /// This variable should only be accessed directly by constructores or live
   /// process data refreshers.
   struct Storage {
-    llvm::Optional<TraceIntelPTMultiCoreDecoder> multicore_decoder;
-    /// These decoders are used for the non-per-core case
+    llvm::Optional<TraceIntelPTMultiCpuDecoder> multicpu_decoder;
+    /// These decoders are used for the non-per-cpu case
     llvm::DenseMap<lldb::tid_t, std::unique_ptr<ThreadDecoder>> thread_decoders;
     /// Helper variable used to track long running operations for telemetry.
     TaskTimer task_timer;

@@ -27,7 +27,7 @@ struct IntelPTThreadSubtrace {
   uint64_t tsc;
 };
 
-/// This struct represents a continuous execution of a thread in a core,
+/// This struct represents a continuous execution of a thread in a cpu,
 /// delimited by a context switch in and out, and a list of Intel PT subtraces
 /// that belong to this execution.
 struct IntelPTThreadContinousExecution {
@@ -65,7 +65,7 @@ void DecodeSingleTraceForThread(DecodedThread &decoded_thread, TraceIntelPT &tra
 ///   part of the execution ocurred.
 void DecodeSystemWideTraceForThread(
     DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
-    const llvm::DenseMap<lldb::core_id_t, llvm::ArrayRef<uint8_t>> &buffers,
+    const llvm::DenseMap<lldb::cpu_id_t, llvm::ArrayRef<uint8_t>> &buffers,
     const std::vector<IntelPTThreadContinousExecution> &executions);
 
 /// Given an intel pt trace, split it in chunks delimited by PSB packets. Each of these chunks

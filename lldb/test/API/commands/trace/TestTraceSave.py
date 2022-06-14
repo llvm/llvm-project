@@ -62,18 +62,18 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         self.expect("process trace save -d " +
             os.path.join(self.getBuildDir(), "intelpt-trace", "trace_not_live_dir"))
 
-    def testSaveMultiCoreTrace(self):
+    def testSaveMultiCpuTrace(self):
         '''
-            This test starts a per-core tracing session, then saves the session to disk, and
+            This test starts a per-cpu tracing session, then saves the session to disk, and
             finally it loads it again.
         '''
-        self.skipIfPerCoreTracingIsNotSupported()
+        self.skipIfPerCpuTracingIsNotSupported()
 
         self.expect("target create " +
             os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
         self.expect("b main")
         self.expect("r")
-        self.expect("process trace start --per-core-tracing")
+        self.expect("process trace start --per-cpu-tracing")
         self.expect("b 7")
 
         output_dir = os.path.join(self.getBuildDir(), "intelpt-trace", "trace_save")
@@ -84,14 +84,14 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
                 session = json.load(session_file)
                 # We expect tsc conversion info
                 self.assertTrue("tscPerfZeroConversion" in session)
-                # We expect at least one core
-                self.assertGreater(len(session["cores"]), 0)
+                # We expect at least one cpu
+                self.assertGreater(len(session["cpus"]), 0)
 
                 # We expect the required trace files to be created
-                for core in session["cores"]:
-                    core_files_prefix = os.path.join(output_dir, "cores", str(core["coreId"]))
-                    self.assertTrue(os.path.exists(core_files_prefix + ".intelpt_trace"))
-                    self.assertTrue(os.path.exists(core_files_prefix + ".perf_context_switch_trace"))
+                for cpu in session["cpus"]:
+                    cpu_files_prefix = os.path.join(output_dir, "cpus", str(cpu["id"]))
+                    self.assertTrue(os.path.exists(cpu_files_prefix + ".intelpt_trace"))
+                    self.assertTrue(os.path.exists(cpu_files_prefix + ".perf_context_switch_trace"))
 
                 # We expect at least one one process
                 self.assertGreater(len(session["processes"]), 0)
@@ -100,7 +100,7 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
                     self.assertGreater(len(process["threads"]), 0)
                     # We don't expect thread traces
                     for thread in process["threads"]:
-                        self.assertTrue(("traceBuffer" not in thread) or (thread["traceBuffer"] is None))
+                        self.assertTrue(("iptTrace" not in thread) or (thread["iptTrace"] is None))
 
         original_trace_session_file = os.path.join(output_dir, "trace.json")
         checkSessionBundle(original_trace_session_file)
@@ -130,9 +130,9 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
                         copied_thread = find(lambda thr : thr["tid"] == thread["tid"], copied_process["threads"])
                         self.assertTrue(copied_thread is not None)
 
-                for core in original["cores"]:
-                    copied_core = find(lambda cor : cor["coreId"] == core["coreId"], copy["cores"])
-                    self.assertTrue(copied_core is not None)
+                for cpu in original["cpus"]:
+                    copied_cpu = find(lambda cor : cor["id"] == cpu["id"], copy["cpus"])
+                    self.assertTrue(copied_cpu is not None)
 
     def testSaveTrace(self):
         self.expect("target create " +

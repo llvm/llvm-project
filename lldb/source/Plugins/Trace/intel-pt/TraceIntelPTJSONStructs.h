@@ -31,7 +31,7 @@ struct JSONModule {
 
 struct JSONThread {
   uint64_t tid;
-  llvm::Optional<std::string> trace_buffer;
+  llvm::Optional<std::string> ipt_trace;
 };
 
 struct JSONProcess {
@@ -41,9 +41,9 @@ struct JSONProcess {
   std::vector<JSONModule> modules;
 };
 
-struct JSONCore {
-  lldb::core_id_t core_id;
-  std::string trace_buffer;
+struct JSONCpu {
+  lldb::cpu_id_t id;
+  std::string ipt_trace;
   std::string context_switch_trace;
 };
 
@@ -51,10 +51,10 @@ struct JSONTraceSession {
   std::string type;
   pt_cpu cpu_info;
   std::vector<JSONProcess> processes;
-  llvm::Optional<std::vector<JSONCore>> cores;
+  llvm::Optional<std::vector<JSONCpu>> cpus;
   llvm::Optional<LinuxPerfZeroTscConversion> tsc_perf_zero_conversion;
 
-  llvm::Optional<std::vector<lldb::core_id_t>> GetCoreIds();
+  llvm::Optional<std::vector<lldb::cpu_id_t>> GetCpuIds();
 };
 
 llvm::json::Value toJSON(const JSONModule &module);
@@ -63,7 +63,7 @@ llvm::json::Value toJSON(const JSONThread &thread);
 
 llvm::json::Value toJSON(const JSONProcess &process);
 
-llvm::json::Value toJSON(const JSONCore &core);
+llvm::json::Value toJSON(const JSONCpu &cpu);
 
 llvm::json::Value toJSON(const pt_cpu &cpu_info);
 
@@ -78,7 +78,7 @@ bool fromJSON(const llvm::json::Value &value, JSONThread &thread,
 bool fromJSON(const llvm::json::Value &value, JSONProcess &process,
               llvm::json::Path path);
 
-bool fromJSON(const llvm::json::Value &value, JSONCore &core,
+bool fromJSON(const llvm::json::Value &value, JSONCpu &cpu,
               llvm::json::Path path);
 
 bool fromJSON(const llvm::json::Value &value, pt_cpu &cpu_info,

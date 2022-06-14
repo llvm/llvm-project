@@ -79,8 +79,8 @@ TraceIntelPTSessionFileParser::ParseThread(Process &process,
   lldb::tid_t tid = static_cast<lldb::tid_t>(thread.tid);
 
   Optional<FileSpec> trace_file;
-  if (thread.trace_buffer)
-    trace_file = FileSpec(*thread.trace_buffer);
+  if (thread.ipt_trace)
+    trace_file = FileSpec(*thread.ipt_trace);
 
   ThreadPostMortemTraceSP thread_sp =
       std::make_shared<ThreadPostMortemTrace>(process, tid, trace_file);
@@ -175,7 +175,7 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
           // optional.
         {
           "tid": integer,
-          "traceBuffer"?: string
+          "iptTrace"?: string
               // Path to the raw Intel PT buffer file for this thread.
         }
       ],
@@ -193,14 +193,14 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
       ]
     }
   ],
-  "cores"?: [
+  "cpus"?: [
     {
-      "coreId": integer,
+      "id": integer,
           // Id of this CPU core.
-      "traceBuffer": string,
-          // Path to the raw Intel PT buffer for this core.
+      "iptTrace": string,
+          // Path to the raw Intel PT buffer for this cpu core.
       "contextSwitchTrace": string,
-          // Path to the raw perf_event_open context switch trace file for this core.
+          // Path to the raw perf_event_open context switch trace file for this cpu core.
           // The perf_event must have been configured with PERF_SAMPLE_TID and
           // PERF_SAMPLE_TIME, as well as sample_id_all = 1.
     }
@@ -219,8 +219,8 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
 Notes:
 
 - All paths are either absolute or relative to folder containing the session file.
-- "cores" is provided if and only if processes[].threads[].traceBuffer is not provided.
-- "tscPerfZeroConversion" must be provided if "cores" is provided.
+- "cpus" is provided if and only if processes[].threads[].iptTrace is not provided.
+- "tscPerfZeroConversion" must be provided if "cpus" is provided.
  })";
   }
   return schema;
@@ -228,7 +228,7 @@ Notes:
 
 Error TraceIntelPTSessionFileParser::AugmentThreadsFromContextSwitches(
     JSONTraceSession &session) {
-  if (!session.cores)
+  if (!session.cpus)
     return Error::success();
 
   if (!session.tsc_perf_zero_conversion)
@@ -252,15 +252,15 @@ Error TraceIntelPTSessionFileParser::AugmentThreadsFromContextSwitches(
     if (indexed_threads[proc->second].count(tid))
       return;
     indexed_threads[proc->second].insert(tid);
-    proc->second->threads.push_back({tid, /*trace_buffer=*/None});
+    proc->second->threads.push_back({tid, /*ipt_trace=*/None});
   };
 
-  for (const JSONCore &core : *session.cores) {
+  for (const JSONCpu &cpu : *session.cpus) {
     Error err = Trace::OnDataFileRead(
-        FileSpec(core.context_switch_trace),
+        FileSpec(cpu.context_switch_trace),
         [&](ArrayRef<uint8_t> data) -> Error {
           Expected<std::vector<ThreadContinuousExecution>> executions =
-              DecodePerfContextSwitchTrace(data, core.core_id,
+              DecodePerfContextSwitchTrace(data, cpu.id,
                                            *session.tsc_perf_zero_conversion);
           if (!executions)
             return executions.takeError();
@@ -300,15 +300,15 @@ void TraceIntelPTSessionFileParser::NormalizeAllPaths(
         module.file = NormalizePath(*module.file).GetPath();
     }
     for (JSONThread &thread : process.threads) {
-      if (thread.trace_buffer)
-        thread.trace_buffer = NormalizePath(*thread.trace_buffer).GetPath();
+      if (thread.ipt_trace)
+        thread.ipt_trace = NormalizePath(*thread.ipt_trace).GetPath();
     }
   }
-  if (session.cores) {
-    for (JSONCore &core : *session.cores) {
-      core.context_switch_trace =
-          NormalizePath(core.context_switch_trace).GetPath();
-      core.trace_buffer = NormalizePath(core.trace_buffer).GetPath();
+  if (session.cpus) {
+    for (JSONCpu &cpu : *session.cpus) {
+      cpu.context_switch_trace =
+          NormalizePath(cpu.context_switch_trace).GetPath();
+      cpu.ipt_trace = NormalizePath(cpu.ipt_trace).GetPath();
     }
   }
 }

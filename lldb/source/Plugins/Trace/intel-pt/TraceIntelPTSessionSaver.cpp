@@ -103,13 +103,13 @@ BuildThreadsSection(Process &process, FileSpec directory) {
     JSONThread json_thread;
     json_thread.tid = tid;
 
-    if (trace_sp->GetTracedCores().empty()) {
+    if (trace_sp->GetTracedCpus().empty()) {
       FileSpec output_file = threads_dir;
       output_file.AppendPathComponent(std::to_string(tid) + ".intelpt_trace");
-      json_thread.trace_buffer = output_file.GetPath();
+      json_thread.ipt_trace = output_file.GetPath();
 
       llvm::Error err = process.GetTarget().GetTrace()->OnThreadBinaryDataRead(
-          tid, IntelPTDataKinds::kTraceBuffer,
+          tid, IntelPTDataKinds::kIptTrace,
           [&](llvm::ArrayRef<uint8_t> data) -> llvm::Error {
             return WriteBytesToDisk(output_file, data);
           });
@@ -122,28 +122,28 @@ BuildThreadsSection(Process &process, FileSpec directory) {
   return json_threads;
 }
 
-static llvm::Expected<llvm::Optional<std::vector<JSONCore>>>
-BuildCoresSection(TraceIntelPT &trace_ipt, FileSpec directory) {
-  if (trace_ipt.GetTracedCores().empty())
+static llvm::Expected<llvm::Optional<std::vector<JSONCpu>>>
+BuildCpusSection(TraceIntelPT &trace_ipt, FileSpec directory) {
+  if (trace_ipt.GetTracedCpus().empty())
     return None;
 
-  std::vector<JSONCore> json_cores;
-  FileSpec cores_dir = directory;
-  cores_dir.AppendPathComponent("cores");
-  sys::fs::create_directories(cores_dir.GetCString());
+  std::vector<JSONCpu> json_cpus;
+  FileSpec cpus_dir = directory;
+  cpus_dir.AppendPathComponent("cpus");
+  sys::fs::create_directories(cpus_dir.GetCString());
 
-  for (lldb::core_id_t core_id : trace_ipt.GetTracedCores()) {
-    JSONCore json_core;
-    json_core.core_id = core_id;
+  for (lldb::cpu_id_t cpu_id : trace_ipt.GetTracedCpus()) {
+    JSONCpu json_cpu;
+    json_cpu.id = cpu_id;
 
     {
-      FileSpec output_trace = cores_dir;
-      output_trace.AppendPathComponent(std::to_string(core_id) +
+      FileSpec output_trace = cpus_dir;
+      output_trace.AppendPathComponent(std::to_string(cpu_id) +
                                        ".intelpt_trace");
-      json_core.trace_buffer = output_trace.GetPath();
+      json_cpu.ipt_trace = output_trace.GetPath();
 
-      llvm::Error err = trace_ipt.OnCoreBinaryDataRead(
-          core_id, IntelPTDataKinds::kTraceBuffer,
+      llvm::Error err = trace_ipt.OnCpuBinaryDataRead(
+          cpu_id, IntelPTDataKinds::kIptTrace,
           [&](llvm::ArrayRef<uint8_t> data) -> llvm::Error {
             return WriteBytesToDisk(output_trace, data);
           });
@@ -152,22 +152,22 @@ BuildCoresSection(TraceIntelPT &trace_ipt, FileSpec directory) {
     }
 
     {
-      FileSpec output_context_switch_trace = cores_dir;
+      FileSpec output_context_switch_trace = cpus_dir;
       output_context_switch_trace.AppendPathComponent(
-          std::to_string(core_id) + ".perf_context_switch_trace");
-      json_core.context_switch_trace = output_context_switch_trace.GetPath();
+          std::to_string(cpu_id) + ".perf_context_switch_trace");
+      json_cpu.context_switch_trace = output_context_switch_trace.GetPath();
 
-      llvm::Error err = trace_ipt.OnCoreBinaryDataRead(
-          core_id, IntelPTDataKinds::kPerfContextSwitchTrace,
+      llvm::Error err = trace_ipt.OnCpuBinaryDataRead(
+          cpu_id, IntelPTDataKinds::kPerfContextSwitchTrace,
           [&](llvm::ArrayRef<uint8_t> data) -> llvm::Error {
             return WriteBytesToDisk(output_context_switch_trace, data);
           });
       if (err)
         return std::move(err);
     }
-    json_cores.push_back(std::move(json_core));
+    json_cpus.push_back(std::move(json_cpu));
   }
-  return json_cores;
+  return json_cpus;
 }
 
 /// Build modules sub-section of the trace's session. The original modules
@@ -298,13 +298,13 @@ Error TraceIntelPTSessionSaver::SaveToDisk(TraceIntelPT &trace_ipt,
   if (!json_processes)
     return json_processes.takeError();
 
-  Expected<Optional<std::vector<JSONCore>>> json_cores =
-      BuildCoresSection(trace_ipt, directory);
-  if (!json_cores)
-    return json_cores.takeError();
+  Expected<Optional<std::vector<JSONCpu>>> json_cpus =
+      BuildCpusSection(trace_ipt, directory);
+  if (!json_cpus)
+    return json_cpus.takeError();
 
   JSONTraceSession json_intel_pt_session{"intel-pt", *cpu_info, *json_processes,
-                                         *json_cores,
+                                         *json_cpus,
                                          trace_ipt.GetPerfZeroTscConversion()};
 
   return WriteSessionToFile(toJSON(json_intel_pt_session), directory);

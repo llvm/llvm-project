@@ -22,8 +22,7 @@ Error IntelPTPerThreadProcessTrace::TraceStop(lldb::tid_t tid) {
 }
 
 Error IntelPTPerThreadProcessTrace::TraceStart(lldb::tid_t tid) {
-  if (m_thread_traces.GetTotalBufferSize() +
-          m_tracing_params.trace_buffer_size >
+  if (m_thread_traces.GetTotalBufferSize() + m_tracing_params.ipt_trace_size >
       static_cast<size_t>(*m_tracing_params.process_buffer_size_limit))
     return createStringError(
         inconvertibleErrorCode(),
@@ -39,9 +38,9 @@ TraceIntelPTGetStateResponse IntelPTPerThreadProcessTrace::GetState() {
   TraceIntelPTGetStateResponse state;
   m_thread_traces.ForEachThread(
       [&](lldb::tid_t tid, const IntelPTSingleBufferTrace &thread_trace) {
-        state.traced_threads.push_back({tid,
-                                        {{IntelPTDataKinds::kTraceBuffer,
-                                          thread_trace.GetTraceBufferSize()}}});
+        state.traced_threads.push_back(
+            {tid,
+             {{IntelPTDataKinds::kIptTrace, thread_trace.GetIptTraceSize()}}});
       });
   return state;
 }

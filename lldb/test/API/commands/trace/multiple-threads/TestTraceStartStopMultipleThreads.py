@@ -162,8 +162,8 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     @testSBAPIAndCommands
-    def testStartPerCoreSession(self):
-        self.skipIfPerCoreTracingIsNotSupported()
+    def testStartPerCpuSession(self):
+        self.skipIfPerCpuTracingIsNotSupported()
 
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -173,34 +173,34 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
         self.expect("r")
 
         # We should fail if we hit the total buffer limit. Useful if the number
-        # of cores is huge.
+        # of cpus is huge.
         self.traceStartProcess(error="True", processBufferSizeLimit=100,
-            perCoreTracing=True,
+            perCpuTracing=True,
             substrs=["The process can't be traced because the process trace size "
             "limit has been reached. Consider retracing with a higher limit."])
 
-        self.traceStartProcess(perCoreTracing=True)
+        self.traceStartProcess(perCpuTracing=True)
         self.traceStopProcess()
 
-        self.traceStartProcess(perCoreTracing=True)
-        # We can't support multiple per-core tracing sessions.
-        self.traceStartProcess(error=True, perCoreTracing=True,
+        self.traceStartProcess(perCpuTracing=True)
+        # We can't support multiple per-cpu tracing sessions.
+        self.traceStartProcess(error=True, perCpuTracing=True,
             substrs=["Process currently traced. Stop process tracing first"])
 
-        # We can't support tracing per thread is per core is enabled.
+        # We can't support tracing per thread is per cpu is enabled.
         self.traceStartThread(
             error="True",
             substrs=["Thread with tid ", "is currently traced"])
 
-        # We can't stop individual thread when per core is enabled.
+        # We can't stop individual thread when per cpu is enabled.
         self.traceStopThread(error="True",
-            substrs=["Can't stop tracing an individual thread when per-core process tracing is enabled"])
+            substrs=["Can't stop tracing an individual thread when per-cpu process tracing is enabled"])
 
         # We move forward a little bit to collect some data
         self.expect("b 19")
         self.expect("c")
 
-        # We will assert that the trace state will contain valid context switch and trace buffer entries.
+        # We will assert that the trace state will contain valid context switch and intel pt trace buffer entries.
         # Besides that, we need to get tsc-to-nanos conversion information.
 
         # We first parse the json response from the custom packet
@@ -213,20 +213,20 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
                 output = json.loads(response)
 
         self.assertTrue(output is not None)
-        self.assertIn("cores", output)
+        self.assertIn("cpus", output)
         self.assertIn("tscPerfZeroConversion", output)
         found_non_empty_context_switch = False
 
-        for core in output["cores"]:
+        for cpu in output["cpus"]:
             context_switch_size = None
-            trace_buffer_size = None
-            for binary_data in core["binaryData"]:
-                if binary_data["kind"] == "traceBuffer":
-                    trace_buffer_size = binary_data["size"]
+            ipt_trace_size = None
+            for binary_data in cpu["binaryData"]:
+                if binary_data["kind"] == "iptTrace":
+                    ipt_trace_size = binary_data["size"]
                 elif binary_data["kind"] == "perfContextSwitchTrace":
                     context_switch_size = binary_data["size"]
             self.assertTrue(context_switch_size is not None)
-            self.assertTrue(trace_buffer_size is not None)
+            self.assertTrue(ipt_trace_size is not None)
             if context_switch_size > 0:
                 found_non_empty_context_switch = True
 
