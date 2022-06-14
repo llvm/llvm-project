@@ -302,50 +302,78 @@ static void handleSegmentBoundarySymbol(const Undefined &sym, StringRef segName,
     seg->segmentEndSymbols.push_back(createBoundarySymbol(sym));
 }
 
-void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
+// Try to find a definition for an undefined symbol.
+// Returns true if a definition was found and no diagnostics are needed.
+static bool recoverFromUndefinedSymbol(const Undefined &sym) {
   // Handle start/end symbols.
   StringRef name = sym.getName();
-  if (name.consume_front("section$start$"))
-    return handleSectionBoundarySymbol(sym, name, Boundary::Start);
-  if (name.consume_front("section$end$"))
-    return handleSectionBoundarySymbol(sym, name, Boundary::End);
-  if (name.consume_front("segment$start$"))
-    return handleSegmentBoundarySymbol(sym, name, Boundary::Start);
-  if (name.consume_front("segment$end$"))
-    return handleSegmentBoundarySymbol(sym, name, Boundary::End);
+  if (name.consume_front("section$start$")) {
+    handleSectionBoundarySymbol(sym, name, Boundary::Start);
+    return true;
+  }
+  if (name.consume_front("section$end$")) {
+    handleSectionBoundarySymbol(sym, name, Boundary::End);
+    return true;
+  }
+  if (name.consume_front("segment$start$")) {
+    handleSegmentBoundarySymbol(sym, name, Boundary::Start);
+    return true;
+  }
+  if (name.consume_front("segment$end$")) {
+    handleSegmentBoundarySymbol(sym, name, Boundary::End);
+    return true;
+  }
 
   // Handle -U.
   if (config->explicitDynamicLookups.count(sym.getName())) {
     symtab->addDynamicLookup(sym.getName());
-    return;
+    return true;
   }
 
   // Handle -undefined.
-  auto message = [source, &sym]() {
-    std::string message = "undefined symbol";
-    if (config->archMultiple)
-      message += (" for arch " + getArchitectureName(config->arch())).str();
-    message += ": " + toString(sym);
-    if (!source.empty())
-      message += "\n>>> referenced by " + source.str();
-    else
-      message += "\n>>> referenced by " + toString(sym.getFile());
-    return message;
-  };
-  switch (config->undefinedSymbolTreatment) {
-  case UndefinedSymbolTreatment::error:
-    error(message());
-    break;
-  case UndefinedSymbolTreatment::warning:
-    warn(message());
-    LLVM_FALLTHROUGH;
-  case UndefinedSymbolTreatment::dynamic_lookup:
-  case UndefinedSymbolTreatment::suppress:
+  if (config->undefinedSymbolTreatment ==
+          UndefinedSymbolTreatment::dynamic_lookup ||
+      config->undefinedSymbolTreatment == UndefinedSymbolTreatment::suppress) {
     symtab->addDynamicLookup(sym.getName());
-    break;
-  case UndefinedSymbolTreatment::unknown:
-    llvm_unreachable("unknown -undefined TREATMENT");
+    return true;
   }
+
+  // We do not return true here, as we still need to print diagnostics.
+  if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::warning)
+    symtab->addDynamicLookup(sym.getName());
+
+  return false;
+}
+
+static void printUndefinedDiagnostic(StringRef name, StringRef source) {
+  std::string message = "undefined symbol";
+  if (config->archMultiple)
+    message += (" for arch " + getArchitectureName(config->arch())).str();
+  message += (": " + name + "\n>>> referenced by " + source).str();
+
+  if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::error)
+    error(message);
+  else if (config->undefinedSymbolTreatment ==
+           UndefinedSymbolTreatment::warning)
+    warn(message);
+  else
+    assert(false && "diagnostics make sense for -undefined error|warning only");
+}
+
+void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
+  if (recoverFromUndefinedSymbol(sym))
+    return;
+  printUndefinedDiagnostic(sym.getName(), source);
+}
+
+void lld::macho::treatUndefinedSymbol(const Undefined &sym,
+                                      const InputSection *isec,
+                                      uint64_t offset) {
+  if (recoverFromUndefinedSymbol(sym))
+    return;
+
+  // TODO: Get source file/line from debug information.
+  printUndefinedDiagnostic(toString(sym), isec->getLocation(offset));
 }
 
 std::unique_ptr<SymbolTable> macho::symtab;

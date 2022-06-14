@@ -273,7 +273,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
               r.referent = s = sym;
       }
       if (auto *undefined = dyn_cast<Undefined>(s)) {
-        treatUndefinedSymbol(*undefined);
+        treatUndefinedSymbol(*undefined, isec, r.offset);
         // treatUndefinedSymbol() can replace s with a DylibSymbol; re-check.
         if (isa<Undefined>(s))
           continue;
