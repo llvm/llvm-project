@@ -340,15 +340,15 @@ struct FrameDataInfo {
     FieldIndexMap[V] = Index;
   }
 
-  uint64_t getAlign(Value *V) const {
+  Align getAlign(Value *V) const {
     auto Iter = FieldAlignMap.find(V);
     assert(Iter != FieldAlignMap.end());
     return Iter->second;
   }
 
-  void setAlign(Value *V, uint64_t Align) {
+  void setAlign(Value *V, Align AL) {
     assert(FieldAlignMap.count(V) == 0);
-    FieldAlignMap.insert({V, Align});
+    FieldAlignMap.insert({V, AL});
   }
 
   uint64_t getDynamicAlign(Value *V) const {
@@ -386,7 +386,7 @@ private:
   DenseMap<Value *, uint32_t> FieldIndexMap;
   // Map from values to their alignment on the frame. They would be set after
   // the frame is built.
-  DenseMap<Value *, uint64_t> FieldAlignMap;
+  DenseMap<Value *, Align> FieldAlignMap;
   DenseMap<Value *, uint64_t> FieldDynamicAlignMap;
   // Map from values to their offset on the frame. They would be set after
   // the frame is built.
@@ -580,7 +580,7 @@ void FrameDataInfo::updateLayoutIndex(FrameTypeBuilder &B) {
   auto Updater = [&](Value *I) {
     auto Field = B.getLayoutField(getFieldIndex(I));
     setFieldIndex(I, Field.LayoutFieldIndex);
-    setAlign(I, Field.Alignment.value());
+    setAlign(I, Field.Alignment);
     uint64_t dynamicAlign =
         Field.DynamicAlignBuffer
             ? Field.DynamicAlignBuffer + Field.Alignment.value()
@@ -1040,7 +1040,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
     auto Index = FrameData.getFieldIndex(V);
 
     OffsetCache.insert(
-        {Index, {FrameData.getAlign(V), FrameData.getOffset(V)}});
+        {Index, {FrameData.getAlign(V).value(), FrameData.getOffset(V)}});
   }
 
   DenseMap<Type *, DIType *> DITypeCache;
@@ -1579,11 +1579,12 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
         Builder.CreateInBoundsGEP(FrameTy, FramePtr, Indices));
     if (auto *AI = dyn_cast<AllocaInst>(Orig)) {
       if (FrameData.getDynamicAlign(Orig) != 0) {
-        assert(FrameData.getDynamicAlign(Orig) == AI->getAlignment());
+        assert(FrameData.getDynamicAlign(Orig) == AI->getAlign().value());
         auto *M = AI->getModule();
         auto *IntPtrTy = M->getDataLayout().getIntPtrType(AI->getType());
         auto *PtrValue = Builder.CreatePtrToInt(GEP, IntPtrTy);
-        auto *AlignMask = ConstantInt::get(IntPtrTy, AI->getAlignment() - 1);
+        auto *AlignMask =
+            ConstantInt::get(IntPtrTy, AI->getAlign().value() - 1);
         PtrValue = Builder.CreateAdd(PtrValue, AlignMask);
         PtrValue = Builder.CreateAnd(PtrValue, Builder.CreateNot(AlignMask));
         return Builder.CreateIntToPtr(PtrValue, AI->getType());
@@ -2171,7 +2172,7 @@ static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
 
     // Allocate memory.
     auto Alloca = Builder.CreateAlloca(Builder.getInt8Ty(), AI->getSize());
-    Alloca->setAlignment(Align(AI->getAlignment()));
+    Alloca->setAlignment(AI->getAlignment());
 
     for (auto U : AI->users()) {
       // Replace gets with the allocation.
