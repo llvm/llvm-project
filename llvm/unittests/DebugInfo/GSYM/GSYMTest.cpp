@@ -1644,6 +1644,35 @@ TEST(GSYMTest, TestDWARFTextRanges) {
   EXPECT_EQ(MethodName, "main");
 }
 
+TEST(GSYMTest, TestEmptySymbolEndAddressOfTextRanges) {
+  // Test that if we have valid text ranges and we have a symbol with no size
+  // as the last FunctionInfo entry that the size of the symbol gets set to the
+  // end address of the text range.
+  GsymCreator GC;
+  AddressRanges TextRanges;
+  TextRanges.insert(AddressRange(0x1000, 0x2000));
+  GC.SetValidTextRanges(TextRanges);
+  GC.addFunctionInfo(FunctionInfo(0x1500, 0, GC.insertString("symbol")));
+  auto &OS = llvm::nulls();
+  ASSERT_THAT_ERROR(GC.finalize(OS), Succeeded());
+  SmallString<512> Str;
+  raw_svector_ostream OutStrm(Str);
+  const auto ByteOrder = support::endian::system_endianness();
+  FileWriter FW(OutStrm, ByteOrder);
+  ASSERT_THAT_ERROR(GC.encode(FW), Succeeded());
+  Expected<GsymReader> GR = GsymReader::copyBuffer(OutStrm.str());
+  ASSERT_THAT_EXPECTED(GR, Succeeded());
+  // There should only be one function in our GSYM.
+  EXPECT_EQ(GR->getNumAddresses(), 1u);
+  auto ExpFI = GR->getFunctionInfo(0x1500);
+  ASSERT_THAT_EXPECTED(ExpFI, Succeeded());
+  ASSERT_EQ(ExpFI->Range, AddressRange(0x1500, 0x2000));
+  EXPECT_FALSE(ExpFI->OptLineTable.hasValue());
+  EXPECT_FALSE(ExpFI->Inline.hasValue());
+  StringRef MethodName = GR->getString(ExpFI->Name);
+  EXPECT_EQ(MethodName, "symbol");
+}
+
 TEST(GSYMTest, TestDWARFInlineInfo) {
   // Make sure we parse the line table and inline information correctly from
   // DWARF.
