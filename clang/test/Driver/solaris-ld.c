@@ -112,5 +112,5 @@
 // CHECK-RELOCATABLE:     "-L
 // CHECK-RELOCATABLE:     "-r"
 // CHECK-RELOCATABLE-NOT: "-l
-// CHECK-RELOCATABLE-NOT: {{.*}}crt{{[^.]+}}.o
-// CHECK-RELOCATABLE-NOT: {{.*}}values-{{[^.]+}}.o
+// CHECK-RELOCATABLE-NOT: /crt{{[^.]+}}.o
+// CHECK-RELOCATABLE-NOT: /values-{{[^.]+}}.o
