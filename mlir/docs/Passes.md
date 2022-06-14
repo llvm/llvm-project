@@ -76,6 +76,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "TensorPasses.md"]
 
+## `transform` Dialect Passes
+
+[include "TransformPasses.md"]
+
 ## `vector` Dialect Passes
 
 [include "VectorPasses.md"]
