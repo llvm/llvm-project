@@ -69,6 +69,9 @@ private:
   std::vector<Symbol *> symVector;
 };
 
+void reportPendingUndefinedSymbols();
+
+// Call reportPendingUndefinedSymbols() to emit diagnostics.
 void treatUndefinedSymbol(const Undefined &, StringRef source);
 void treatUndefinedSymbol(const Undefined &, const InputSection *,
                           uint64_t offset);
