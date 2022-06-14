@@ -100,6 +100,14 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   if (!HasValueForBlock(BB))
     return GetValueAtEndOfBlock(BB);
 
+  // Ok, we have already got a value for this block. If it is out of our block
+  // or it is a phi - we can re-use it as it will be defined in the middle of
+  // block as well.
+  Value *defV = FindValueForBlock(BB);
+  if (auto I = dyn_cast<Instruction>(defV))
+    if (isa<PHINode>(I) || I->getParent() != BB)
+      return defV;
+
   // Otherwise, we have the hard case.  Get the live-in values for each
   // predecessor.
   SmallVector<std::pair<BasicBlock *, Value *>, 8> PredValues;
