@@ -5,7 +5,7 @@
 declare void @consume(%struct.big_structure*)
 
 ; Function Attrs: noinline optnone uwtable
-define i8* @f(i1 %cond) "coroutine.presplit"="1" {
+define i8* @f(i1 %cond) presplitcoroutine {
 entry:
   %data = alloca %struct.big_structure, align 1
   %data2 = alloca %struct.big_structure, align 1

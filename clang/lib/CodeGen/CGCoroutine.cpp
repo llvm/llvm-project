@@ -654,9 +654,8 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     EmitStmt(Ret);
   }
 
-  // LLVM require the frontend to add the function attribute. See
-  // Coroutines.rst.
-  CurFn->addFnAttr("coroutine.presplit", "0");
+  // LLVM require the frontend to mark the coroutine.
+  CurFn->setPresplitCoroutine();
 }
 
 // Emit coroutine intrinsic and patch up arguments of the token type.

@@ -5,7 +5,7 @@
 ; Verifies that the both phis are stored correctly in the coroutine frame
 ; CHECK: %f.Frame = type { void (%f.Frame*)*, void (%f.Frame*)*, i32, i32, i1 }
 
-define i8* @f(i1 %n) "coroutine.presplit"="1" {
+define i8* @f(i1 %n) presplitcoroutine {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* bitcast ([3 x void (%f.Frame*)*]* @f.resumers to i8*))

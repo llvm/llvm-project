@@ -62,7 +62,7 @@ entry:
 ; CHECK:  store i64 2, i64* [[T4]]
 ; CHECK:  store i64 3, i64* [[T9]]
 
-define swiftcc void @my_async_function(i8* swiftasync %async.ctxt) "coroutine.presplit"="1" {
+define swiftcc void @my_async_function(i8* swiftasync %async.ctxt) presplitcoroutine {
 entry:
   %tmp = alloca i64, align 8
   %tmp2 = alloca i64, align 16

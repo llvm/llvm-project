@@ -1,7 +1,7 @@
 ; Third example from Doc/Coroutines.rst (two suspend points)
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -S | FileCheck %s
 
-define i8* @f(i32 %n) "coroutine.presplit"="0" {
+define i8* @f(i32 %n) presplitcoroutine {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %size = call i32 @llvm.coro.size.i32()

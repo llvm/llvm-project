@@ -59,7 +59,7 @@ declare i8* @llvm.coro.subfn.addr(i8* nocapture readonly, i8) #1
 declare i8* @malloc(i64)
 declare void @delete(i8* nonnull) #2
 
-attributes #0 = { "coroutine.presplit"="1" }
+attributes #0 = { presplitcoroutine }
 attributes #1 = { argmemonly nounwind readonly }
 attributes #2 = { nounwind }
 attributes #3 = { nounwind readnone }

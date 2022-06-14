@@ -9,7 +9,7 @@ declare void @g.dummy(%g.Frame*)
 
 declare i8* @g()
 
-define i8* @f() "coroutine.presplit"="1" {
+define i8* @f() presplitcoroutine {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %size = call i32 @llvm.coro.size.i32()

@@ -45,8 +45,7 @@ static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
 }
 
 bool Lowerer::lower(Function &F) {
-  bool IsPrivateAndUnprocessed =
-      F.hasFnAttribute(CORO_PRESPLIT_ATTR) && F.hasLocalLinkage();
+  bool IsPrivateAndUnprocessed = F.isPresplitCoroutine() && F.hasLocalLinkage();
   bool Changed = false;
 
   for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {

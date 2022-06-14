@@ -1,7 +1,7 @@
 ; Verifies that we materialize instruction across suspend points
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define i8* @f(i32 %n) "coroutine.presplit"="1" {
+define i8* @f(i32 %n) presplitcoroutine {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %size = call i32 @llvm.coro.size.i32()

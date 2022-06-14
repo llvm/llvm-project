@@ -24,7 +24,7 @@ entry:
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
 declare i8* @llvm.coro.begin(token, i8* writeonly)
 
-attributes #0 = { alwaysinline ssp uwtable "coroutine.presplit"="1" "use-sample-profile" }
+attributes #0 = { alwaysinline ssp uwtable presplitcoroutine "use-sample-profile" }
 
 !llvm.dbg.cu = !{}
 !llvm.module.flags = !{!1, !2, !3, !4}
