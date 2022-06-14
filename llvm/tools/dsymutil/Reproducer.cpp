@@ -97,5 +97,5 @@ Reproducer::createReproducer(ReproducerMode Mode, StringRef Root, int Argc,
   }
   if (EC)
     return errorCodeToError(EC);
-  return Repro;
+  return {std::move(Repro)};
 }
