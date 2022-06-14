@@ -1977,13 +1977,16 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
             return std::nullopt;
           }
         }
+        std::optional<DataRef> dataRef{ExtractDataRef(std::move(*dtExpr))};
+        if (dataRef.has_value() && !CheckRanks(std::move(*dataRef))) {
+          return std::nullopt;
+        }
         if (const Symbol *
             resolution{GetBindingResolution(dtExpr->GetType(), *sym)}) {
           AddPassArg(arguments, std::move(*dtExpr), *sym, false);
           return CalleeAndArguments{
               ProcedureDesignator{*resolution}, std::move(arguments)};
-        } else if (std::optional<DataRef> dataRef{
-                       ExtractDataRef(std::move(*dtExpr))}) {
+        } else if (dataRef.has_value()) {
           if (sym->attrs().test(semantics::Attr::NOPASS)) {
             return CalleeAndArguments{
                 ProcedureDesignator{Component{std::move(*dataRef), *sym}},
