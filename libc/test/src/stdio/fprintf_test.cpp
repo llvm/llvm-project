@@ -62,7 +62,7 @@ TEST(LlvmLibcFPrintfTest, WriteToFile) {
 
   written =
       __llvm_libc::fprintf(file, "Writing to a read only file should fail.");
-  EXPECT_EQ(written, -1);
+  EXPECT_LT(written, 0);
 
   ASSERT_EQ(__llvm_libc::fclose(file), 0);
 }

@@ -15,21 +15,22 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-void inline convert_char(Writer *writer, const FormatSection &to_conv) {
+int inline convert_char(Writer *writer, const FormatSection &to_conv) {
   char c = to_conv.conv_val_raw;
 
   if (to_conv.min_width > 1) {
     if ((to_conv.flags & FormatFlags::LEFT_JUSTIFIED) ==
         FormatFlags::LEFT_JUSTIFIED) {
-      writer->write(&c, 1);
-      writer->write_chars(' ', to_conv.min_width - 1);
+      RET_IF_RESULT_NEGATIVE(writer->write(&c, 1));
+      RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', to_conv.min_width - 1));
     } else {
-      writer->write_chars(' ', to_conv.min_width - 1);
-      writer->write(&c, 1);
+      RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', to_conv.min_width - 1));
+      RET_IF_RESULT_NEGATIVE(writer->write(&c, 1));
     }
   } else {
-    writer->write(&c, 1);
+    RET_IF_RESULT_NEGATIVE(writer->write(&c, 1));
   }
+  return 0;
 }
 
 } // namespace printf_core
