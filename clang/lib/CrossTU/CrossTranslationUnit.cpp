@@ -735,20 +735,19 @@ CrossTranslationUnitContext::importDefinitionImpl(const T *D, ASTUnit *Unit) {
 
   auto ToDeclOrError = Importer.Import(D);
   if (!ToDeclOrError) {
-    handleAllErrors(ToDeclOrError.takeError(),
-                    [&](const ImportError &IE) {
-                      switch (IE.Error) {
-                      case ImportError::NameConflict:
-                        ++NumNameConflicts;
-                         break;
-                      case ImportError::UnsupportedConstruct:
-                        ++NumUnsupportedNodeFound;
-                        break;
-                      case ImportError::Unknown:
-                        llvm_unreachable("Unknown import error happened.");
-                        break;
-                      }
-                    });
+    handleAllErrors(ToDeclOrError.takeError(), [&](const ASTImportError &IE) {
+      switch (IE.Error) {
+      case ASTImportError::NameConflict:
+        ++NumNameConflicts;
+        break;
+      case ASTImportError::UnsupportedConstruct:
+        ++NumUnsupportedNodeFound;
+        break;
+      case ASTImportError::Unknown:
+        llvm_unreachable("Unknown import error happened.");
+        break;
+      }
+    });
     return llvm::make_error<IndexError>(index_error_code::failed_import);
   }
   auto *ToDecl = cast<T>(*ToDeclOrError);

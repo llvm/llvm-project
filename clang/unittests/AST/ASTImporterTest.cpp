@@ -3208,8 +3208,8 @@ TEST_P(ImportBlock, ImportBlocksAreUnsupported) {
 
   auto ToBlockOrError = importOrError(FromBlock, Lang_CXX03);
 
-  const auto ExpectUnsupportedConstructError = [](const ImportError &Error) {
-    EXPECT_EQ(ImportError::UnsupportedConstruct, Error.Error);
+  const auto ExpectUnsupportedConstructError = [](const ASTImportError &Error) {
+    EXPECT_EQ(ASTImportError::UnsupportedConstruct, Error.Error);
   };
   llvm::handleAllErrors(ToBlockOrError.takeError(),
                         ExpectUnsupportedConstructError);
@@ -5469,9 +5469,9 @@ TEST_P(ErrorHandlingTest, ErrorHappensBeforeCreatingANewNode) {
 
   // But an error is set to the counterpart in the "from" context.
   ASTImporter *Importer = findFromTU(FromSpec)->Importer.get();
-  Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromSpec);
+  Optional<ASTImportError> OptErr = Importer->getImportDeclErrorIfAny(FromSpec);
   ASSERT_TRUE(OptErr);
-  EXPECT_EQ(OptErr->Error, ImportError::NameConflict);
+  EXPECT_EQ(OptErr->Error, ASTImportError::NameConflict);
 }
 
 // Check a case when a new AST node is created but not linked to the AST before
@@ -5493,9 +5493,9 @@ TEST_P(ErrorHandlingTest,
       0u);
 
   ASTImporter *Importer = findFromTU(FromFoo)->Importer.get();
-  Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromFoo);
+  Optional<ASTImportError> OptErr = Importer->getImportDeclErrorIfAny(FromFoo);
   ASSERT_TRUE(OptErr);
-  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
 }
 
 // Check a case when a new AST node is created and linked to the AST before
@@ -5526,12 +5526,13 @@ TEST_P(ErrorHandlingTest, ErrorHappensAfterNodeIsCreatedAndLinked) {
   // An error is set to the counterpart in the "from" context both for the fwd
   // decl and the definition.
   ASTImporter *Importer = findFromTU(FromProto)->Importer.get();
-  Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromProto);
+  Optional<ASTImportError> OptErr =
+      Importer->getImportDeclErrorIfAny(FromProto);
   ASSERT_TRUE(OptErr);
-  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
   OptErr = Importer->getImportDeclErrorIfAny(FromDef);
   ASSERT_TRUE(OptErr);
-  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
 }
 
 // An error should be set for a class if we cannot import one member.
@@ -5551,16 +5552,16 @@ TEST_P(ErrorHandlingTest, ErrorIsPropagatedFromMemberToClass) {
   // An error is set for X.
   EXPECT_FALSE(ImportedX);
   ASTImporter *Importer = findFromTU(FromX)->Importer.get();
-  Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
+  Optional<ASTImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
   ASSERT_TRUE(OptErr);
-  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
 
   // An error is set for f().
   auto *FromF = FirstDeclMatcher<CXXMethodDecl>().match(
       FromTU, cxxMethodDecl(hasName("f")));
   OptErr = Importer->getImportDeclErrorIfAny(FromF);
   ASSERT_TRUE(OptErr);
-  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
   // And any subsequent import should fail.
   CXXMethodDecl *ImportedF = Import(FromF, Lang_CXX03);
   EXPECT_FALSE(ImportedF);
@@ -5618,7 +5619,7 @@ TEST_P(ErrorHandlingTest, ErrorPropagatesThroughImportCycles) {
 
   // An error is set to the templated CXXRecordDecl of F.
   ASTImporter *Importer = findFromTU(FromFRD)->Importer.get();
-  Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromFRD);
+  Optional<ASTImportError> OptErr = Importer->getImportDeclErrorIfAny(FromFRD);
   EXPECT_TRUE(OptErr);
 
   // An error is set to A.
@@ -5676,7 +5677,7 @@ TEST_P(ErrorHandlingTest, ErrorIsNotPropagatedFromMemberToNamespace) {
   // There is no error set for X.
   EXPECT_TRUE(ImportedX);
   ASTImporter *Importer = findFromTU(FromX)->Importer.get();
-  Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
+  Optional<ASTImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
   ASSERT_FALSE(OptErr);
 
   // An error is set for f().
@@ -5684,7 +5685,7 @@ TEST_P(ErrorHandlingTest, ErrorIsNotPropagatedFromMemberToNamespace) {
       FromTU, functionDecl(hasName("f")));
   OptErr = Importer->getImportDeclErrorIfAny(FromF);
   ASSERT_TRUE(OptErr);
-  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
   // And any subsequent import should fail.
   FunctionDecl *ImportedF = Import(FromF, Lang_CXX03);
   EXPECT_FALSE(ImportedF);
@@ -5755,18 +5756,18 @@ TEST_P(ErrorHandlingTest,
     // An error is set for X ...
     EXPECT_FALSE(ImportedX);
     ASTImporter *Importer = findFromTU(FromX)->Importer.get();
-    Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
+    Optional<ASTImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
     ASSERT_TRUE(OptErr);
-    EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+    EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
   }
   // ... but the node had been created.
   auto *ToXDef = FirstDeclMatcher<CXXRecordDecl>().match(
       ToTU, cxxRecordDecl(hasName("X"), isDefinition()));
   // An error is set for "ToXDef" in the shared state.
-  Optional<ImportError> OptErr =
+  Optional<ASTImportError> OptErr =
       SharedStatePtr->getImportDeclErrorIfAny(ToXDef);
   ASSERT_TRUE(OptErr);
-  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
 
   auto *ToXFwd = FirstDeclMatcher<CXXRecordDecl>().match(
       ToTU, cxxRecordDecl(hasName("X"), unless(isDefinition())));
@@ -5798,10 +5799,10 @@ TEST_P(ErrorHandlingTest,
     // The import should fail.
     EXPECT_FALSE(ImportedX);
     ASTImporter *Importer = findFromTU(FromX)->Importer.get();
-    Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
+    Optional<ASTImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
     // And an error is set for this new X in the "from" ctx.
     ASSERT_TRUE(OptErr);
-    EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+    EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
   }
 }
 
@@ -5838,9 +5839,9 @@ TEST_P(ErrorHandlingTest, ImportOfOverriddenMethods) {
   EXPECT_FALSE(Import(FromFooA, Lang_CXX11));
   ASTImporter *Importer = findFromTU(FromFooA)->Importer.get();
   auto CheckError = [&Importer](Decl *FromD) {
-    Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromD);
+    Optional<ASTImportError> OptErr = Importer->getImportDeclErrorIfAny(FromD);
     ASSERT_TRUE(OptErr);
-    EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+    EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
   };
   CheckError(FromFooA);
   EXPECT_FALSE(Import(FromFooB, Lang_CXX11));
