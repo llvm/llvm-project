@@ -21,15 +21,12 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
 
-#include "PerGraphGOTAndPLTStubsBuilder.h"
-
 #define DEBUG_TYPE "jitlink"
 
 using namespace llvm;
 using namespace llvm::jitlink;
 
-namespace llvm {
-namespace jitlink {
+namespace {
 
 class ELFJITLinker_aarch64 : public JITLinker<ELFJITLinker_aarch64> {
   friend class JITLinker<ELFJITLinker_aarch64>;
@@ -293,90 +290,19 @@ public:
                                   aarch64::getEdgeKindName) {}
 };
 
-class PerGraphGOTAndPLTStubsBuilder_ELF_arm64
-    : public PerGraphGOTAndPLTStubsBuilder<
-          PerGraphGOTAndPLTStubsBuilder_ELF_arm64> {
-public:
-  using PerGraphGOTAndPLTStubsBuilder<
-      PerGraphGOTAndPLTStubsBuilder_ELF_arm64>::PerGraphGOTAndPLTStubsBuilder;
+Error buildTables_ELF_aarch64(LinkGraph &G) {
+  LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  bool isGOTEdgeToFix(Edge &E) const {
-    return E.getKind() == aarch64::GOTPage21 ||
-           E.getKind() == aarch64::GOTPageOffset12;
-  }
+  aarch64::GOTTableManager GOT;
+  aarch64::PLTTableManager PLT(GOT);
+  visitExistingEdges(G, GOT, PLT);
+  return Error::success();
+}
 
-  Symbol &createGOTEntry(Symbol &Target) {
-    auto &GOTEntryBlock = G.createContentBlock(
-        getGOTSection(), getGOTEntryBlockContent(), orc::ExecutorAddr(), 8, 0);
-    GOTEntryBlock.addEdge(aarch64::Pointer64, 0, Target, 0);
-    return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
-  }
+} // namespace
 
-  void fixGOTEdge(Edge &E, Symbol &GOTEntry) {
-    if (E.getKind() == aarch64::GOTPage21) {
-      E.setKind(aarch64::Page21);
-      E.setTarget(GOTEntry);
-    } else if (E.getKind() == aarch64::GOTPageOffset12) {
-      E.setKind(aarch64::PageOffset12);
-      E.setTarget(GOTEntry);
-    } else
-      llvm_unreachable("Not a GOT edge?");
-  }
-
-  bool isExternalBranchEdge(Edge &E) {
-    return E.getKind() == aarch64::Branch26 && !E.getTarget().isDefined();
-  }
-
-  Symbol &createPLTStub(Symbol &Target) {
-    auto &StubContentBlock = G.createContentBlock(
-        getStubsSection(), getStubBlockContent(), orc::ExecutorAddr(), 1, 0);
-    // Re-use GOT entries for stub targets.
-    auto &GOTEntrySymbol = getGOTEntry(Target);
-    StubContentBlock.addEdge(aarch64::LDRLiteral19, 0, GOTEntrySymbol, 0);
-    return G.addAnonymousSymbol(StubContentBlock, 0, 8, true, false);
-  }
-
-  void fixPLTEdge(Edge &E, Symbol &Stub) {
-    assert(E.getKind() == aarch64::Branch26 && "Not a Branch26 edge?");
-    assert(E.getAddend() == 0 && "Branch26 edge has non-zero addend?");
-    E.setTarget(Stub);
-  }
-
-private:
-  Section &getGOTSection() {
-    if (!GOTSection)
-      GOTSection = &G.createSection("$__GOT", MemProt::Read | MemProt::Exec);
-    return *GOTSection;
-  }
-
-  Section &getStubsSection() {
-    if (!StubsSection)
-      StubsSection =
-          &G.createSection("$__STUBS", MemProt::Read | MemProt::Exec);
-    return *StubsSection;
-  }
-
-  ArrayRef<char> getGOTEntryBlockContent() {
-    return {reinterpret_cast<const char *>(NullGOTEntryContent),
-            sizeof(NullGOTEntryContent)};
-  }
-
-  ArrayRef<char> getStubBlockContent() {
-    return {reinterpret_cast<const char *>(StubContent), sizeof(StubContent)};
-  }
-
-  static const uint8_t NullGOTEntryContent[8];
-  static const uint8_t StubContent[8];
-  Section *GOTSection = nullptr;
-  Section *StubsSection = nullptr;
-};
-
-const uint8_t PerGraphGOTAndPLTStubsBuilder_ELF_arm64::NullGOTEntryContent[8] =
-    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-const uint8_t PerGraphGOTAndPLTStubsBuilder_ELF_arm64::StubContent[8] = {
-    0x10, 0x00, 0x00, 0x58, // LDR x16, <literal>
-    0x00, 0x02, 0x1f, 0xd6  // BR  x16
-};
+namespace llvm {
+namespace jitlink {
 
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromELFObject_aarch64(MemoryBufferRef ObjectBuffer) {
@@ -404,18 +330,21 @@ void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
   PassConfiguration Config;
   const Triple &TT = G->getTargetTriple();
   if (Ctx->shouldAddDefaultTargetPasses(TT)) {
+    // Add eh-frame passses.
     Config.PrePrunePasses.push_back(DWARFRecordSectionSplitter(".eh_frame"));
     Config.PrePrunePasses.push_back(EHFrameEdgeFixer(
         ".eh_frame", 8, aarch64::Pointer32, aarch64::Pointer64,
         aarch64::Delta32, aarch64::Delta64, aarch64::NegDelta32));
+
+    // Add a mark-live pass.
     if (auto MarkLive = Ctx->getMarkLivePass(TT))
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
-  }
 
-  Config.PostPrunePasses.push_back(
-      PerGraphGOTAndPLTStubsBuilder_ELF_arm64::asPass);
+    // Add an in-place GOT/Stubs build pass.
+    Config.PostPrunePasses.push_back(buildTables_ELF_aarch64);
+  }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));
