@@ -26,21 +26,37 @@ static std::string createReproducerDir(std::error_code &EC) {
 Reproducer::Reproducer() : VFS(vfs::getRealFileSystem()) {}
 Reproducer::~Reproducer() = default;
 
-ReproducerGenerate::ReproducerGenerate(std::error_code &EC)
-    : Root(createReproducerDir(EC)) {
+ReproducerGenerate::ReproducerGenerate(std::error_code &EC, int Argc,
+                                       char **Argv, bool GenerateOnExit)
+    : Root(createReproducerDir(EC)), GenerateOnExit(GenerateOnExit) {
+  for (int I = 0; I < Argc; ++I)
+    Args.push_back(Argv[I]);
   if (!Root.empty())
     FC = std::make_shared<FileCollector>(Root, Root);
   VFS = FileCollector::createCollectorVFS(vfs::getRealFileSystem(), FC);
 }
 
 ReproducerGenerate::~ReproducerGenerate() {
+  if (GenerateOnExit && !Generated)
+    generate();
+}
+
+void ReproducerGenerate::generate() {
   if (!FC)
     return;
+  Generated = true;
   FC->copyFiles(false);
   SmallString<128> Mapping(Root);
   sys::path::append(Mapping, "mapping.yaml");
   FC->writeMapping(Mapping.str());
-  outs() << "reproducer written to " << Root << '\n';
+  errs() << "********************\n";
+  errs() << "Reproducer written to " << Root << '\n';
+  errs() << "Please include the reproducer and the following invocation in "
+            "your bug report:\n";
+  for (llvm::StringRef Arg : Args)
+    errs() << Arg << ' ';
+  errs() << "--use-reproducer " << Root << '\n';
+  errs() << "********************\n";
 }
 
 ReproducerUse::~ReproducerUse() = default;
@@ -60,26 +76,26 @@ ReproducerUse::ReproducerUse(StringRef Root, std::error_code &EC) {
 }
 
 llvm::Expected<std::unique_ptr<Reproducer>>
-Reproducer::createReproducer(ReproducerMode Mode, StringRef Root) {
+Reproducer::createReproducer(ReproducerMode Mode, StringRef Root, int Argc,
+                             char **Argv) {
+
+  std::error_code EC;
+  std::unique_ptr<Reproducer> Repro;
   switch (Mode) {
-  case ReproducerMode::Generate: {
-    std::error_code EC;
-    std::unique_ptr<Reproducer> Repro =
-        std::make_unique<ReproducerGenerate>(EC);
-    if (EC)
-      return errorCodeToError(EC);
-    return std::move(Repro);
-  }
-  case ReproducerMode::Use: {
-    std::error_code EC;
-    std::unique_ptr<Reproducer> Repro =
-        std::make_unique<ReproducerUse>(Root, EC);
-    if (EC)
-      return errorCodeToError(EC);
-    return std::move(Repro);
-  }
+  case ReproducerMode::GenerateOnExit:
+    Repro = std::make_unique<ReproducerGenerate>(EC, Argc, Argv, true);
+    break;
+  case ReproducerMode::GenerateOnCrash:
+    Repro = std::make_unique<ReproducerGenerate>(EC, Argc, Argv, false);
+    break;
+  case ReproducerMode::Use:
+    Repro = std::make_unique<ReproducerUse>(Root, EC);
+    break;
   case ReproducerMode::Off:
-    return std::make_unique<Reproducer>();
+    Repro = std::make_unique<Reproducer>();
+    break;
   }
-  llvm_unreachable("All cases handled above.");
+  if (EC)
+    return errorCodeToError(EC);
+  return Repro;
 }
