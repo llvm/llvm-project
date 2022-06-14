@@ -98,19 +98,12 @@ public:
 
   /// Convert to the specified SVal type, asserting that this SVal is of
   /// the desired type.
-  template<typename T>
-  T castAs() const {
-    assert(T::classof(*this));
-    return *static_cast<const T *>(this);
-  }
+  template <typename T> T castAs() const { return llvm::cast<T>(*this); }
 
   /// Convert to the specified SVal type, returning None if this SVal is
   /// not of the desired type.
-  template<typename T>
-  Optional<T> getAs() const {
-    if (!T::classof(*this))
-      return None;
-    return *static_cast<const T *>(this);
+  template <typename T> Optional<T> getAs() const {
+    return llvm::dyn_cast<T>(*this);
   }
 
   unsigned getRawKind() const { return Kind; }
@@ -563,5 +556,29 @@ public:
 } // namespace loc
 } // namespace ento
 } // namespace clang
+
+namespace llvm {
+template <typename To, typename From>
+struct CastInfo<
+    To, From,
+    std::enable_if_t<std::is_base_of<::clang::ento::SVal, From>::value>>
+    : public CastIsPossible<To, ::clang::ento::SVal> {
+  using Self = CastInfo<
+      To, From,
+      std::enable_if_t<std::is_base_of<::clang::ento::SVal, From>::value>>;
+  static bool isPossible(const From &V) {
+    return To::classof(*static_cast<const ::clang::ento::SVal *>(&V));
+  }
+  static Optional<To> castFailed() { return Optional<To>{}; }
+  static To doCast(const From &f) {
+    return *static_cast<const To *>(cast<::clang::ento::SVal>(&f));
+  }
+  static Optional<To> doCastIfPossible(const From &f) {
+    if (!Self::isPossible(f))
+      return Self::castFailed();
+    return doCast(f);
+  }
+};
+} // namespace llvm
 
 #endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SVALS_H
