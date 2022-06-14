@@ -2583,3 +2583,46 @@ def int_aarch64_sve_whilewr_b : SVE2_CONFLICT_DETECT_Intrinsic;
 def int_aarch64_sve_whilewr_h : SVE2_CONFLICT_DETECT_Intrinsic;
 def int_aarch64_sve_whilewr_s : SVE2_CONFLICT_DETECT_Intrinsic;
 def int_aarch64_sve_whilewr_d : SVE2_CONFLICT_DETECT_Intrinsic;
+
+// Scalable Matrix Extension (SME) Intrinsics
+let TargetPrefix = "aarch64" in {
+  class SME_Load_Store_B_Intrinsic
+    : DefaultAttrsIntrinsic<[],
+        [llvm_nxv16i1_ty, llvm_ptr_ty, llvm_i64_ty, llvm_i32_ty], []>;
+  class SME_Load_Store_H_Intrinsic
+    : DefaultAttrsIntrinsic<[],
+        [llvm_nxv16i1_ty, LLVMPointerType<llvm_i16_ty>, llvm_i64_ty, llvm_i32_ty], []>;
+  class SME_Load_Store_S_Intrinsic
+    : DefaultAttrsIntrinsic<[],
+        [llvm_nxv16i1_ty, LLVMPointerType<llvm_i32_ty>, llvm_i64_ty, llvm_i32_ty], []>;
+  class SME_Load_Store_D_Intrinsic
+    : DefaultAttrsIntrinsic<[],
+        [llvm_nxv16i1_ty, LLVMPointerType<llvm_i64_ty>, llvm_i64_ty, llvm_i32_ty], []>;
+  class SME_Load_Store_Q_Intrinsic
+    : DefaultAttrsIntrinsic<[],
+        [llvm_nxv16i1_ty, LLVMPointerType<llvm_i128_ty>, llvm_i64_ty, llvm_i32_ty], []>;
+
+  // Loads
+  def int_aarch64_sme_ld1b_horiz : SME_Load_Store_B_Intrinsic;
+  def int_aarch64_sme_ld1h_horiz : SME_Load_Store_H_Intrinsic;
+  def int_aarch64_sme_ld1w_horiz : SME_Load_Store_S_Intrinsic;
+  def int_aarch64_sme_ld1d_horiz : SME_Load_Store_D_Intrinsic;
+  def int_aarch64_sme_ld1q_horiz : SME_Load_Store_Q_Intrinsic;
+  def int_aarch64_sme_ld1b_vert  : SME_Load_Store_B_Intrinsic;
+  def int_aarch64_sme_ld1h_vert  : SME_Load_Store_H_Intrinsic;
+  def int_aarch64_sme_ld1w_vert  : SME_Load_Store_S_Intrinsic;
+  def int_aarch64_sme_ld1d_vert  : SME_Load_Store_D_Intrinsic;
+  def int_aarch64_sme_ld1q_vert  : SME_Load_Store_Q_Intrinsic;
+
+  // Stores
+  def int_aarch64_sme_st1b_horiz : SME_Load_Store_B_Intrinsic;
+  def int_aarch64_sme_st1h_horiz : SME_Load_Store_H_Intrinsic;
+  def int_aarch64_sme_st1w_horiz : SME_Load_Store_S_Intrinsic;
+  def int_aarch64_sme_st1d_horiz : SME_Load_Store_D_Intrinsic;
+  def int_aarch64_sme_st1q_horiz : SME_Load_Store_Q_Intrinsic;
+  def int_aarch64_sme_st1b_vert  : SME_Load_Store_B_Intrinsic;
+  def int_aarch64_sme_st1h_vert  : SME_Load_Store_H_Intrinsic;
+  def int_aarch64_sme_st1w_vert  : SME_Load_Store_S_Intrinsic;
+  def int_aarch64_sme_st1d_vert  : SME_Load_Store_D_Intrinsic;
+  def int_aarch64_sme_st1q_vert  : SME_Load_Store_Q_Intrinsic;
+}
