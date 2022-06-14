@@ -55,7 +55,7 @@ template <class CharT>
 struct std::formatter<status, CharT> {
   int type = 0;
 
-  constexpr auto parse(auto& parse_ctx) -> decltype(parse_ctx.begin()) {
+  constexpr auto parse(basic_format_parse_context<CharT>& parse_ctx) -> decltype(parse_ctx.begin()) {
     auto begin = parse_ctx.begin();
     auto end = parse_ctx.end();
     if (begin == end)
@@ -83,7 +83,8 @@ struct std::formatter<status, CharT> {
     return begin;
   }
 
-  auto format(status s, auto& ctx) -> decltype(ctx.out()) {
+  template <class Out>
+  auto format(status s, basic_format_context<Out, CharT>& ctx) -> decltype(ctx.out()) {
     const char* names[] = {"foo", "bar", "foobar"};
     char buffer[6];
     const char* begin;
