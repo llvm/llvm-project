@@ -246,6 +246,55 @@ define void @ld1q_with_addr_offset(<vscale x 16 x i1> %pg, i128* %ptr, i64 %inde
   ret void;
 }
 
+define void @ldr(i8* %ptr) {
+; CHECK-LABEL: ldr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, wzr
+; CHECK-NEXT:    ldr za[w12, 0], [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.sme.ldr(i32 0, i8* %ptr)
+  ret void;
+}
+
+define void @ldr_with_off_15(i8* %ptr) {
+; CHECK-LABEL: ldr_with_off_15:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, wzr
+; CHECK-NEXT:    add x8, x0, #15
+; CHECK-NEXT:    ldr za[w12, 0], [x8]
+; CHECK-NEXT:    ret
+  %base = getelementptr i8, i8* %ptr, i64 15
+  call void @llvm.aarch64.sme.ldr(i32 0, i8* %base)
+  ret void;
+}
+
+define void @ldr_with_off_15mulvl(i8* %ptr) {
+; CHECK-LABEL: ldr_with_off_15mulvl:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, wzr
+; CHECK-NEXT:    ldr za[w12, 15], [x0, #15, mul vl]
+; CHECK-NEXT:    ret
+  %vscale = call i64 @llvm.vscale.i64()
+  %mulvl = mul i64 %vscale, 240
+  %base = getelementptr i8, i8* %ptr, i64 %mulvl
+  call void @llvm.aarch64.sme.ldr(i32 0, i8* %base)
+  ret void;
+}
+
+define void @ldr_with_off_16mulvl(i8* %ptr) {
+; CHECK-LABEL: ldr_with_off_16mulvl:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w12, wzr
+; CHECK-NEXT:    addvl x8, x0, #16
+; CHECK-NEXT:    ldr za[w12, 0], [x8]
+; CHECK-NEXT:    ret
+  %vscale = call i64 @llvm.vscale.i64()
+  %mulvl = mul i64 %vscale, 256
+  %base = getelementptr i8, i8* %ptr, i64 %mulvl
+  call void @llvm.aarch64.sme.ldr(i32 0, i8* %base)
+  ret void;
+}
+
 declare void @llvm.aarch64.sme.ld1b.horiz(<vscale x 16 x i1>, i8*, i64, i32)
 declare void @llvm.aarch64.sme.ld1h.horiz(<vscale x 16 x i1>, i16*, i64, i32)
 declare void @llvm.aarch64.sme.ld1w.horiz(<vscale x 16 x i1>, i32*, i64, i32)
@@ -256,3 +305,6 @@ declare void @llvm.aarch64.sme.ld1h.vert(<vscale x 16 x i1>, i16*, i64, i32)
 declare void @llvm.aarch64.sme.ld1w.vert(<vscale x 16 x i1>, i32*, i64, i32)
 declare void @llvm.aarch64.sme.ld1d.vert(<vscale x 16 x i1>, i64*, i64, i32)
 declare void @llvm.aarch64.sme.ld1q.vert(<vscale x 16 x i1>, i128*, i64, i32)
+
+declare void @llvm.aarch64.sme.ldr(i32, i8*)
+declare i64 @llvm.vscale.i64()
