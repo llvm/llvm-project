@@ -28,6 +28,7 @@ enum EdgeKind_aarch64 : Edge::Kind {
   Pointer64Anon,
   Page21,
   PageOffset12,
+  MoveWide16,
   GOTPage21,
   GOTPageOffset12,
   TLVPage21,
@@ -67,6 +68,25 @@ inline unsigned getPageOffset12Shift(uint32_t Instr) {
         ImplicitShift = 4;
 
     return ImplicitShift;
+  }
+
+  return 0;
+}
+
+// Returns whether the Instr is MOVK/MOVZ (imm16) with a zero immediate field
+inline bool isMoveWideImm16(uint32_t Instr) {
+  constexpr uint32_t MoveWideImm16Mask = 0x5f9fffe0;
+  return (Instr & MoveWideImm16Mask) == 0x52800000;
+}
+
+// Returns the amount the address operand of MOVK/MOVZ (imm16)
+// should be shifted right by.
+//
+// The shift value is specfied in the assembly as LSL #<shift>.
+inline unsigned getMoveWide16Shift(uint32_t Instr) {
+  if (isMoveWideImm16(Instr)) {
+    uint32_t ImplicitShift = (Instr >> 21) & 0b11;
+    return ImplicitShift << 4;
   }
 
   return 0;
@@ -149,6 +169,20 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
 
     uint32_t EncodedImm = (TargetOffset >> ImmShift) << 10;
     uint32_t FixedInstr = RawInstr | EncodedImm;
+    *(ulittle32_t *)FixupPtr = FixedInstr;
+    break;
+  }
+  case MoveWide16: {
+    uint64_t TargetOffset =
+        (E.getTarget().getAddress() + E.getAddend()).getValue();
+
+    uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
+    assert(isMoveWideImm16(RawInstr) &&
+           "RawInstr isn't a MOVK/MOVZ instruction");
+
+    unsigned ImmShift = getMoveWide16Shift(RawInstr);
+    uint32_t Imm = (TargetOffset >> ImmShift) & 0xffff;
+    uint32_t FixedInstr = RawInstr | (Imm << 5);
     *(ulittle32_t *)FixupPtr = FixedInstr;
     break;
   }
