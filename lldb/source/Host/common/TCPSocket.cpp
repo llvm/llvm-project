@@ -170,7 +170,7 @@ Status TCPSocket::Connect(llvm::StringRef name) {
     if (-1 == llvm::sys::RetryAfterSignal(-1, ::connect, GetNativeSocket(),
                                           &address.sockaddr(),
                                           address.GetLength())) {
-      CLOSE_SOCKET(GetNativeSocket());
+      Close();
       continue;
     }
 
