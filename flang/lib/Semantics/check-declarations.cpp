@@ -46,6 +46,7 @@ public:
   void Check(const ArraySpec &);
   void Check(const DeclTypeSpec &, bool canHaveAssumedTypeParameters);
   void Check(const Symbol &);
+  void CheckCommonBlock(const Symbol &);
   void Check(const Scope &);
   const Procedure *Characterize(const Symbol &);
 
@@ -374,6 +375,8 @@ void CheckHelper::Check(const Symbol &symbol) {
         symbol.name());
   }
 }
+
+void CheckHelper::CheckCommonBlock(const Symbol &symbol) { CheckBindC(symbol); }
 
 void CheckHelper::CheckValue(
     const Symbol &symbol, const DerivedTypeSpec *derived) { // C863 - C865
@@ -1729,6 +1732,9 @@ void CheckHelper::Check(const Scope &scope) {
     for (const auto &pair : scope) {
       Check(*pair.second);
     }
+    for (const auto &pair : scope.commonBlocks()) {
+      CheckCommonBlock(*pair.second);
+    }
     int mainProgCnt{0};
     for (const Scope &child : scope.children()) {
       Check(child);
@@ -1865,7 +1871,7 @@ static const std::string *DefinesBindCName(const Symbol &symbol) {
   const auto *subp{symbol.detailsIf<SubprogramDetails>()};
   if ((subp && !subp->isInterface() &&
           ClassifyProcedure(symbol) != ProcedureDefinitionClass::Internal) ||
-      symbol.has<ObjectEntityDetails>()) {
+      symbol.has<ObjectEntityDetails>() || symbol.has<CommonBlockDetails>()) {
     // Symbol defines data or entry point
     return symbol.GetBindName();
   } else {
@@ -1887,7 +1893,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
     if (!pair.second) {
       const Symbol &other{*pair.first->second};
       if (DefinesBindCName(other) && !context_.HasError(other)) {
-        if (auto *msg{messages_.Say(
+        if (auto *msg{messages_.Say(symbol.name(),
                 "Two symbols have the same BIND(C) name '%s'"_err_en_US,
                 *name)}) {
           msg->Attach(other.name(), "Conflicting symbol"_en_US);
