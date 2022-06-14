@@ -822,6 +822,13 @@ public:
       std::string name = converter.mangleName(*symbol);
       mlir::func::FuncOp func =
           Fortran::lower::getOrDeclareFunction(name, proc, converter);
+      // Abstract results require later rewrite of the function type.
+      // This currently does not happen inside GloalOps, causing LLVM
+      // IR verification failure. This helper is only here to catch these
+      // cases and emit a TODOs for now.
+      if (inInitializer && fir::hasAbstractResult(func.getFunctionType()))
+        TODO(converter.genLocation(symbol->name()),
+             "static description of non trivial procedure bindings");
       funcPtr = builder.create<fir::AddrOfOp>(loc, func.getFunctionType(),
                                               builder.getSymbolRefAttr(name));
     }
