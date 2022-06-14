@@ -948,6 +948,16 @@ func.func @test_mulf(%arg0 : f32) -> (f32, f32, f32, f32) {
   return %0, %1, %2, %3 : f32, f32, f32, f32
 }
 
+// CHECK-LABEL: @test_mulf1(
+func.func @test_mulf1(%arg0 : f32, %arg1 : f32) -> (f32) {
+  // CHECK-NEXT:  %[[X:.+]] = arith.mulf %arg0, %arg1 : f32
+  // CHECK-NEXT:  return %[[X]]
+  %0 = arith.negf %arg0 : f32
+  %1 = arith.negf %arg1 : f32
+  %2 = arith.mulf %0, %1 : f32
+  return %2 : f32
+}
+
 // -----
 
 // CHECK-LABEL: @test_divf(
@@ -959,6 +969,16 @@ func.func @test_divf(%arg0 : f64) -> (f64, f64) {
   %0 = arith.divf %arg0, %c1 : f64
   %1 = arith.divf %c1, %c2 : f64
   return %0, %1 : f64, f64
+}
+
+// CHECK-LABEL: @test_divf1(
+func.func @test_divf1(%arg0 : f32, %arg1 : f32) -> (f32) {
+  // CHECK-NEXT:  %[[X:.+]] = arith.divf %arg0, %arg1 : f32
+  // CHECK-NEXT:  return %[[X]]
+  %0 = arith.negf %arg0 : f32
+  %1 = arith.negf %arg1 : f32
+  %2 = arith.divf %0, %1 : f32
+  return %2 : f32
 }
 
 // -----
