@@ -3165,7 +3165,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
     ASanStackVariableDescription D = {AI->getName().data(),
                                       ASan.getAllocaSizeInBytes(*AI),
                                       0,
-                                      AI->getAlignment(),
+                                      AI->getAlign().value(),
                                       AI,
                                       0,
                                       0};
@@ -3429,7 +3429,7 @@ void FunctionStackPoisoner::poisonAlloca(Value *V, uint64_t Size,
 void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   IRBuilder<> IRB(AI);
 
-  const uint64_t Alignment = std::max(kAllocaRzSize, AI->getAlignment());
+  const Align Alignment = std::max(Align(kAllocaRzSize), AI->getAlign());
   const uint64_t AllocaRedzoneMask = kAllocaRzSize - 1;
 
   Value *Zero = Constant::getNullValue(IntptrTy);
@@ -3460,17 +3460,19 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   // Alignment is added to locate left redzone, PartialPadding for possible
   // partial redzone and kAllocaRzSize for right redzone respectively.
   Value *AdditionalChunkSize = IRB.CreateAdd(
-      ConstantInt::get(IntptrTy, Alignment + kAllocaRzSize), PartialPadding);
+      ConstantInt::get(IntptrTy, Alignment.value() + kAllocaRzSize),
+      PartialPadding);
 
   Value *NewSize = IRB.CreateAdd(OldSize, AdditionalChunkSize);
 
   // Insert new alloca with new NewSize and Alignment params.
   AllocaInst *NewAlloca = IRB.CreateAlloca(IRB.getInt8Ty(), NewSize);
-  NewAlloca->setAlignment(Align(Alignment));
+  NewAlloca->setAlignment(Alignment);
 
   // NewAddress = Address + Alignment
-  Value *NewAddress = IRB.CreateAdd(IRB.CreatePtrToInt(NewAlloca, IntptrTy),
-                                    ConstantInt::get(IntptrTy, Alignment));
+  Value *NewAddress =
+      IRB.CreateAdd(IRB.CreatePtrToInt(NewAlloca, IntptrTy),
+                    ConstantInt::get(IntptrTy, Alignment.value()));
 
   // Insert __asan_alloca_poison call for new created alloca.
   IRB.CreateCall(AsanAllocaPoisonFunc, {NewAddress, OldSize});
