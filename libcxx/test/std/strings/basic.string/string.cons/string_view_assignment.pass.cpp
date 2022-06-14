@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // basic_string<charT,traits,Allocator>& operator=(basic_string_view<charT, traits> sv); // constexpr since C++20

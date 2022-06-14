@@ -7,7 +7,7 @@ config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} ' +
     '-D__LIBC_NO_CPP_MATH_OVERLOADS__ ' +
     '-D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS ' +
-    '-I %{libcxx}/test/support -I %{libcxx}/src'
+    '-I %{libcxx}/test/support -pthread -I %{libcxx}/src'
 ))
 config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib} -lc++ -lc++abi -Wl,-bbigtoc'

@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // basic_string(basic_string<charT,traits,Allocator>&& str); // constexpr since C++20

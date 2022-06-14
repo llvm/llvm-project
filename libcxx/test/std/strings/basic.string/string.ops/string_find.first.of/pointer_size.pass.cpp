@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // size_type find_first_of(const charT* s, size_type pos = 0) const; // constexpr since C++20

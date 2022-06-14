@@ -8,8 +8,6 @@
 
 // <string>
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // basic_string(const charT* s, const Allocator& a = Allocator()); // constexpr since C++20
 
 #include <string>

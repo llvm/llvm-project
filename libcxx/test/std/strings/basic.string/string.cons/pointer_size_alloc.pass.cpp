@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // basic_string(const charT* s, size_type n, const Allocator& a = Allocator()); // constexpr since C++20

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // basic_string substr(size_type pos = 0, size_type n = npos) const; // constexpr since C++20

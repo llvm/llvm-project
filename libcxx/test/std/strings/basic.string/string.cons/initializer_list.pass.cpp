@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // basic_string(initializer_list<charT> il, const Allocator& a = Allocator()); // constexpr since C++20
