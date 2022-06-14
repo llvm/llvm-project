@@ -6,11 +6,11 @@ define i1 @test_ult() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp ult i8 10, 11
 ; CHECK-NEXT:    [[F_0:%.*]] = icmp ult i8 10, 10
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_0]], [[F_0]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 10, 9
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[F_1]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 10, -10
-; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[T_1]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], true
 ; CHECK-NEXT:    ret i1 [[RES_3]]
 ;
 entry:
@@ -75,11 +75,11 @@ define i1 @test_slt() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp ult i8 10, 11
 ; CHECK-NEXT:    [[F_0:%.*]] = icmp ult i8 10, 10
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_0]], [[F_0]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i8 10, 9
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[F_1]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp ult i8 10, -10
-; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[F_2]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], true
 ; CHECK-NEXT:    ret i1 [[RES_3]]
 ;
 entry:
