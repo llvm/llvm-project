@@ -467,6 +467,10 @@ public:
   void VisitBindingDecl(const BindingDecl *D) {
     if (Traversal == TK_IgnoreUnlessSpelledInSource)
       return;
+
+    if (const auto *V = D->getHoldingVar())
+      Visit(V);
+
     if (const auto *E = D->getBinding())
       Visit(E);
   }
