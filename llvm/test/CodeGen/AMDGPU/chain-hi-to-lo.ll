@@ -174,7 +174,7 @@ define <2 x half> @chain_hi_to_lo_arithmatic(half addrspace(5)* %base, half %in)
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_add_f16_e32 v1.l, 1.0, v1.l
+; GFX11-NEXT:    v_add_f16_e32 v1, 1.0, v1
 ; GFX11-NEXT:    scratch_load_d16_hi_b16 v1, v0, off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v1

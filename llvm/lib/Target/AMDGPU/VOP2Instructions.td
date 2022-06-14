@@ -836,7 +836,7 @@ let FPDPRounding = 1 in {
 /*defm V_SUB_F16 : VOP2Inst <"v_sub_f16", VOP2_to_VOP3_Profile<VOP_F16_F16_F16, VOP3_OPSEL>, any_fsub>;*/
 /*defm V_SUBREV_F16 : VOP2Inst <"v_subrev_f16", VOP2_to_VOP3_Profile<VOP_F16_F16_F16, VOP3_OPSEL>, null_frag, "v_sub_f16">;*/
 /*defm V_MUL_F16 : VOP2Inst <"v_mul_f16", VOP2_to_VOP3_Profile<VOP_F16_F16_F16, VOP3_OPSEL>, any_fmul>;*/
-let SubtargetPredicate = isGFX8GFX9GFX10 in {
+let SubtargetPredicate =  NotHasTrue16BitInsts in {
 defm V_ADD_F16 : VOP2Inst <"v_add_f16", VOP_F16_F16_F16, any_fadd>;
 }
 let SubtargetPredicate = HasTrue16BitInsts in {
@@ -1435,7 +1435,8 @@ defm V_CVT_PK_RTZ_F16_F32  : VOP2_Real_FULL_with_name_gfx11<0x02f,
   "V_CVT_PKRTZ_F16_F32", "v_cvt_pk_rtz_f16_f32">;
 defm V_PK_FMAC_F16     : VOP2Only_Real_gfx11<0x03c>;
 
-defm V_ADD_F16_T16         : VOP2_Real_T16_FULL_gfx11<0x032, "v_add_f16">;
+// TODO-GFX11 True16 disabled till spilling is fixed
+// defm V_ADD_F16_T16         : VOP2_Real_T16_FULL_gfx11<0x032, "v_add_f16">;
 
 // VOP3 only.
 defm V_CNDMASK_B16        : VOP3Only_Realtriple_gfx11<0x25d>;
@@ -1727,7 +1728,7 @@ defm V_XNOR_B32        : VOP2_Real_gfx10_gfx11<0x01e>;
 defm V_FMAC_F32        : VOP2_Real_gfx10_gfx11<0x02b>;
 defm V_FMAMK_F32       : VOP2Only_Real_MADK_gfx10_gfx11<0x02c>;
 defm V_FMAAK_F32       : VOP2Only_Real_MADK_gfx10_gfx11<0x02d>;
-defm V_ADD_F16         : VOP2_Real_gfx10<0x032>;
+defm V_ADD_F16         : VOP2_Real_gfx10_gfx11<0x032>;
 defm V_SUB_F16         : VOP2_Real_gfx10_gfx11<0x033>;
 defm V_SUBREV_F16      : VOP2_Real_gfx10_gfx11<0x034>;
 defm V_MUL_F16         : VOP2_Real_gfx10_gfx11<0x035>;
