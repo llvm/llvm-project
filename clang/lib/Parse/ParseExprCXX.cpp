@@ -453,8 +453,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       bool IsCorrectedToColon = false;
       bool *CorrectionFlagPtr = ColonIsSacred ? &IsCorrectedToColon : nullptr;
       if (Actions.ActOnCXXNestedNameSpecifier(
-              getCurScope(), IdInfo, EnteringContext, SS, false,
-              CorrectionFlagPtr, OnlyNamespace)) {
+              getCurScope(), IdInfo, EnteringContext, SS, CorrectionFlagPtr,
+              OnlyNamespace)) {
         // Identifier is not recognized as a nested name, but we can have
         // mistyped '::' instead of ':'.
         if (CorrectionFlagPtr && IsCorrectedToColon) {
