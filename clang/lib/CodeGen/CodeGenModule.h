@@ -1486,6 +1486,33 @@ public:
   void printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                        const Decl *D) const;
 
+  /// Move some lazily-emitted states to the NewBuilder. This is especially
+  /// essential for the incremental parsing environment like Clang Interpreter,
+  /// because we'll lose all important information after each repl.
+  void moveLazyEmissionStates(CodeGenModule *NewBuilder) {
+    assert(DeferredDeclsToEmit.empty() &&
+           "Should have emitted all decls deferred to emit.");
+    assert(NewBuilder->DeferredDecls.empty() &&
+           "Newly created module should not have deferred decls");
+    std::swap(NewBuilder->DeferredDecls, DeferredDecls);
+
+    assert(NewBuilder->DeferredVTables.empty() &&
+           "Newly created module should not have deferred vtables");
+    std::swap(NewBuilder->DeferredVTables, DeferredVTables);
+
+    assert(NewBuilder->MangledDeclNames.empty() &&
+           "Newly created module should not have mangled decl names");
+    assert(NewBuilder->Manglings.empty() &&
+           "Newly created module should not have manglings");
+    std::swap(NewBuilder->Manglings, Manglings);
+
+    assert(WeakRefReferences.empty() &&
+           "Not all WeakRefRefs have been applied");
+    std::swap(NewBuilder->WeakRefReferences, WeakRefReferences);
+
+    std::swap(NewBuilder->TBAA, TBAA);
+  }
+
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
       StringRef MangledName, llvm::Type *Ty, GlobalDecl D, bool ForVTable,
