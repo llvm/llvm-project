@@ -80,9 +80,7 @@ Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     *(ulittle64_t *)FixupPtr = Value;
     break;
   }
-  case Page21:
-  case TLVPage21:
-  case GOTPage21: {
+  case Page21: {
     assert((E.getKind() != GOTPage21 || E.getAddend() == 0) &&
            "GOTPAGE21 with non-zero addend");
     uint64_t TargetPage =
@@ -115,21 +113,6 @@ Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
       return make_error<JITLinkError>("PAGEOFF12 target is not aligned");
 
     uint32_t EncodedImm = (TargetOffset >> ImmShift) << 10;
-    uint32_t FixedInstr = RawInstr | EncodedImm;
-    *(ulittle32_t *)FixupPtr = FixedInstr;
-    break;
-  }
-  case TLVPageOffset12:
-  case GOTPageOffset12: {
-    assert(E.getAddend() == 0 && "GOTPAGEOF12 with non-zero addend");
-
-    uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
-    assert((RawInstr & 0xfffffc00) == 0xf9400000 &&
-           "RawInstr isn't a 64-bit LDR immediate");
-
-    uint32_t TargetOffset = E.getTarget().getAddress().getValue() & 0xfff;
-    assert((TargetOffset & 0x7) == 0 && "GOT entry is not 8-byte aligned");
-    uint32_t EncodedImm = (TargetOffset >> 3) << 10;
     uint32_t FixedInstr = RawInstr | EncodedImm;
     *(ulittle32_t *)FixupPtr = FixedInstr;
     break;
@@ -170,6 +153,15 @@ Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
       *(little64_t *)FixupPtr = Value;
     break;
   }
+  case TLVPage21:
+  case GOTPage21:
+  case TLVPageOffset12:
+  case GOTPageOffset12:
+  case PointerToGOT: {
+    return make_error<JITLinkError>(
+        "In graph " + G.getName() + ", section " + B.getSection().getName() +
+        "GOT/TLV edge kinds not lowered: " + getEdgeKindName(E.getKind()));
+  }
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
@@ -178,6 +170,14 @@ Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
 
   return Error::success();
 }
+
+const uint8_t NullGOTEntryContent[8] = {0x00, 0x00, 0x00, 0x00,
+                                        0x00, 0x00, 0x00, 0x00};
+
+const uint8_t StubContent[8] = {
+    0x10, 0x00, 0x00, 0x58, // LDR x16, <literal>
+    0x00, 0x02, 0x1f, 0xd6  // BR  x16
+};
 
 const char *getEdgeKindName(Edge::Kind R) {
   switch (R) {
