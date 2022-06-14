@@ -15,6 +15,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IntrinsicInst.h"
 
 namespace llvm {
@@ -46,17 +47,24 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
     Callback(Ends[0]);
     return true;
   }
+  SmallPtrSet<BasicBlock *, 2> EndBlocks;
+  for (auto *End : Ends) {
+    EndBlocks.insert(End->getParent());
+  }
   SmallVector<Instruction *, 8> ReachableRetVec;
   unsigned NumCoveredExits = 0;
   for (auto *RI : RetVec) {
     if (!isPotentiallyReachable(Start, RI, nullptr, &DT))
       continue;
     ReachableRetVec.push_back(RI);
-    // TODO(fmayer): We don't support diamond shapes, where multiple lifetime
-    // ends together dominate the RI, but none of them does by itself.
-    // Check how often this happens and decide whether to support this here.
-    if (llvm::any_of(Ends, [&](auto *End) { return DT.dominates(End, RI); }))
+    // If there is an end in the same basic block as the return, we know for
+    // sure that the return is covered. Otherwise, we can check whether there
+    // is a way to reach the RI from the start of the lifetime without passing
+    // through an end.
+    if (EndBlocks.count(RI->getParent()) > 0 ||
+        !isPotentiallyReachable(Start, RI, &EndBlocks, &DT)) {
       ++NumCoveredExits;
+    }
   }
   // If there's a mix of covered and non-covered exits, just put the untag
   // on exits, so we avoid the redundancy of untagging twice.
