@@ -856,25 +856,6 @@ void MachineFunction::addCleanup(MachineBasicBlock *LandingPad) {
   LP.TypeIds.push_back(0);
 }
 
-void MachineFunction::addSEHCatchHandler(MachineBasicBlock *LandingPad,
-                                         const Function *Filter,
-                                         const BlockAddress *RecoverBA) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  SEHHandler Handler;
-  Handler.FilterOrFinally = Filter;
-  Handler.RecoverBA = RecoverBA;
-  LP.SEHHandlers.push_back(Handler);
-}
-
-void MachineFunction::addSEHCleanupHandler(MachineBasicBlock *LandingPad,
-                                           const Function *Cleanup) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  SEHHandler Handler;
-  Handler.FilterOrFinally = Cleanup;
-  Handler.RecoverBA = nullptr;
-  LP.SEHHandlers.push_back(Handler);
-}
-
 void MachineFunction::setCallSiteLandingPad(MCSymbol *Sym,
                                             ArrayRef<unsigned> Sites) {
   LPadToCallSiteMap[Sym].append(Sites.begin(), Sites.end());
