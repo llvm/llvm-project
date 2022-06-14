@@ -141,12 +141,20 @@ class CountLeadingZerosPattern final
       return failure();
 
     Location loc = countOp.getLoc();
+    Value allOneBits = getScalarOrVectorI32Constant(type, -1, rewriter, loc);
+    Value val32 = getScalarOrVectorI32Constant(type, 32, rewriter, loc);
     Value val31 = getScalarOrVectorI32Constant(type, 31, rewriter, loc);
     Value msb =
         rewriter.create<spirv::GLSLFindUMsbOp>(loc, adaptor.getOperand());
     // We need to subtract from 31 given that the index is from the least
     // significant bit.
-    rewriter.replaceOpWithNewOp<spirv::ISubOp>(countOp, val31, msb);
+    Value sub = rewriter.create<spirv::ISubOp>(loc, val31, msb);
+    // If the integer has all zero bits, GLSL FindUMsb would return -1. So
+    // theoretically (31 - FindUMsb) should still give the correct result.
+    // However, certain Vulkan implementations have driver bugs regarding it.
+    // So handle the corner case explicity to workaround it.
+    Value cmp = rewriter.create<spirv::IEqualOp>(loc, msb, allOneBits);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(countOp, cmp, val32, sub);
     return success();
   }
 };
