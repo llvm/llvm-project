@@ -704,10 +704,10 @@ public:
         // We may remove II.  By default continue on the next/prev instruction.
         ++II;
         // If we were to erase II, move again.
-        auto EraseFromParent = [&II](Value *V) {
+        auto EraseFromParent = [&II, &BB](Value *V) {
           auto *Inst = cast<Instruction>(V);
           if (Inst->use_empty()) {
-            if (Inst == &*II) {
+            if (II != BB.rend() && Inst == &*II) {
               ++II;
             }
             Inst->eraseFromParent();
