@@ -8,6 +8,7 @@ SpacesInAngles: Leave
 AlwaysBreakTemplateDeclarations: true
 PointerAlignment: Left
 
+
 # Disable formatting options which may break tests.
 SortIncludes: false
 ReflowComments: false
