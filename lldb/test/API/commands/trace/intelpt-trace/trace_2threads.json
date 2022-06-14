@@ -13,11 +13,11 @@
       "threads": [
         {
           "tid": 3842849,
-          "traceBuffer": "3842849.trace"
+          "iptTrace": "3842849.trace"
         },
         {
           "tid": 3842850,
-          "traceBuffer": "3842849.trace"
+          "iptTrace": "3842849.trace"
         }
       ],
       "modules": [

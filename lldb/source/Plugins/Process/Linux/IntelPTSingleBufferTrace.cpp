@@ -201,7 +201,7 @@ CreateIntelPTPerfEventConfiguration(bool enable_tsc,
 }
 #endif
 
-size_t IntelPTSingleBufferTrace::GetTraceBufferSize() const {
+size_t IntelPTSingleBufferTrace::GetIptTraceSize() const {
   return m_perf_event.GetAuxBuffer().size();
 }
 
@@ -213,7 +213,7 @@ Error IntelPTSingleBufferTrace::Resume() {
   return m_perf_event.EnableWithIoctl();
 }
 
-Expected<std::vector<uint8_t>> IntelPTSingleBufferTrace::GetTraceBuffer() {
+Expected<std::vector<uint8_t>> IntelPTSingleBufferTrace::GetIptTrace() {
   // Disable the perf event to force a flush out of the CPU's internal buffer.
   // Besides, we can guarantee that the CPU won't override any data as we are
   // reading the buffer.
@@ -234,27 +234,26 @@ Expected<std::vector<uint8_t>> IntelPTSingleBufferTrace::GetTraceBuffer() {
 Expected<IntelPTSingleBufferTrace>
 IntelPTSingleBufferTrace::Start(const TraceIntelPTStartRequest &request,
                                 Optional<lldb::tid_t> tid,
-                                Optional<core_id_t> core_id, bool disabled) {
+                                Optional<cpu_id_t> cpu_id, bool disabled) {
 #ifndef PERF_ATTR_SIZE_VER5
   return createStringError(inconvertibleErrorCode(),
                            "Intel PT Linux perf event not supported");
 #else
   Log *log = GetLog(POSIXLog::Trace);
 
-  LLDB_LOG(log, "Will start tracing thread id {0} and cpu id {1}", tid,
-           core_id);
+  LLDB_LOG(log, "Will start tracing thread id {0} and cpu id {1}", tid, cpu_id);
 
-  if (__builtin_popcount(request.trace_buffer_size) != 1 ||
-      request.trace_buffer_size < 4096) {
+  if (__builtin_popcount(request.ipt_trace_size) != 1 ||
+      request.ipt_trace_size < 4096) {
     return createStringError(
         inconvertibleErrorCode(),
-        "The trace buffer size must be a power of 2 greater than or equal to "
+        "The intel pt trace size must be a power of 2 greater than or equal to "
         "4096 (2^12) bytes. It was %" PRIu64 ".",
-        request.trace_buffer_size);
+        request.ipt_trace_size);
   }
   uint64_t page_size = getpagesize();
   uint64_t aux_buffer_numpages = static_cast<uint64_t>(llvm::PowerOf2Floor(
-      (request.trace_buffer_size + page_size - 1) / page_size));
+      (request.ipt_trace_size + page_size - 1) / page_size));
 
   Expected<perf_event_attr> attr = CreateIntelPTPerfEventConfiguration(
       request.enable_tsc, request.psb_period.map([](int value) {
@@ -264,10 +263,10 @@ IntelPTSingleBufferTrace::Start(const TraceIntelPTStartRequest &request,
     return attr.takeError();
   attr->disabled = disabled;
 
-  LLDB_LOG(log, "Will create trace buffer of size {0}",
-           request.trace_buffer_size);
+  LLDB_LOG(log, "Will create intel pt trace buffer of size {0}",
+           request.ipt_trace_size);
 
-  if (Expected<PerfEvent> perf_event = PerfEvent::Init(*attr, tid, core_id)) {
+  if (Expected<PerfEvent> perf_event = PerfEvent::Init(*attr, tid, cpu_id)) {
     if (Error mmap_err = perf_event->MmapMetadataAndBuffers(
             /*num_data_pages=*/0, aux_buffer_numpages,
             /*data_buffer_write=*/true)) {

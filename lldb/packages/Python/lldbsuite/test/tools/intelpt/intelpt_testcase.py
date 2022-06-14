@@ -33,7 +33,7 @@ class TraceIntelPTTestCaseBase(TestBase):
         if 'intel-pt' not in configuration.enabled_plugins:
             self.skipTest("The intel-pt test plugin is not enabled")
 
-    def skipIfPerCoreTracingIsNotSupported(self):
+    def skipIfPerCpuTracingIsNotSupported(self):
         def is_supported():
             try:
                 with open("/proc/sys/kernel/perf_event_paranoid", "r") as permissions:
@@ -43,7 +43,7 @@ class TraceIntelPTTestCaseBase(TestBase):
             except:
                 return False
         if not is_supported():
-            self.skipTest("Per core tracing is not supported. You need "
+            self.skipTest("Per cpu tracing is not supported. You need "
                 "/proc/sys/kernel/perf_event_paranoid to be 0 or -1.")
 
     def getTraceOrCreate(self):
@@ -58,38 +58,38 @@ class TraceIntelPTTestCaseBase(TestBase):
         else:
             self.assertSuccess(sberror)
 
-    def createConfiguration(self, traceBufferSize=None,
+    def createConfiguration(self, iptTraceSize=None,
                             processBufferSizeLimit=None, enableTsc=False,
-                            psbPeriod=None, perCoreTracing=False):
+                            psbPeriod=None, perCpuTracing=False):
         obj = {}
         if processBufferSizeLimit is not None:
             obj["processBufferSizeLimit"] = processBufferSizeLimit
-        if traceBufferSize is not None:
-            obj["traceBufferSize"] = traceBufferSize
+        if iptTraceSize is not None:
+            obj["iptTraceSize"] = iptTraceSize
         if psbPeriod is not None:
             obj["psbPeriod"] = psbPeriod
         obj["enableTsc"] = enableTsc
-        obj["perCoreTracing"] = perCoreTracing
+        obj["perCpuTracing"] = perCpuTracing
 
         configuration = lldb.SBStructuredData()
         configuration.SetFromJSON(json.dumps(obj))
         return configuration
 
     def traceStartThread(self, thread=None, error=False, substrs=None,
-                         traceBufferSize=None, enableTsc=False, psbPeriod=None):
+                         iptTraceSize=None, enableTsc=False, psbPeriod=None):
         if self.USE_SB_API:
             trace = self.getTraceOrCreate()
             thread = thread if thread is not None else self.thread()
             configuration = self.createConfiguration(
-                traceBufferSize=traceBufferSize, enableTsc=enableTsc,
+                iptTraceSize=iptTraceSize, enableTsc=enableTsc,
                 psbPeriod=psbPeriod)
             self.assertSBError(trace.Start(thread, configuration), error)
         else:
             command = "thread trace start"
             if thread is not None:
                 command += " " + str(thread.GetIndexID())
-            if traceBufferSize is not None:
-                command += " -s " + str(traceBufferSize)
+            if iptTraceSize is not None:
+                command += " -s " + str(iptTraceSize)
             if enableTsc:
                 command += " --tsc"
             if psbPeriod is not None:
@@ -98,12 +98,12 @@ class TraceIntelPTTestCaseBase(TestBase):
 
     def traceStartProcess(self, processBufferSizeLimit=None, error=False,
                           substrs=None, enableTsc=False, psbPeriod=None,
-                          perCoreTracing=False):
+                          perCpuTracing=False):
         if self.USE_SB_API:
             trace = self.getTraceOrCreate()
             configuration = self.createConfiguration(
                 processBufferSizeLimit=processBufferSizeLimit, enableTsc=enableTsc,
-                psbPeriod=psbPeriod, perCoreTracing=perCoreTracing)
+                psbPeriod=psbPeriod, perCpuTracing=perCpuTracing)
             self.assertSBError(trace.Start(configuration), error=error)
         else:
             command = "process trace start"
@@ -113,8 +113,8 @@ class TraceIntelPTTestCaseBase(TestBase):
                 command += " --tsc"
             if psbPeriod is not None:
                 command += " --psb-period " + str(psbPeriod)
-            if perCoreTracing:
-                command += " --per-core-tracing"
+            if perCpuTracing:
+                command += " --per-cpu-tracing"
             self.expect(command, error=error, substrs=substrs)
 
     def traceStopProcess(self):

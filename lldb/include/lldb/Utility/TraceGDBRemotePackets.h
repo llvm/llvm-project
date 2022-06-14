@@ -118,21 +118,21 @@ bool fromJSON(const llvm::json::Value &value, TraceThreadState &packet,
 
 llvm::json::Value toJSON(const TraceThreadState &packet);
 
-struct TraceCoreState {
-  lldb::core_id_t core_id;
+struct TraceCpuState {
+  lldb::cpu_id_t id;
   /// List of binary data objects for this core.
   std::vector<TraceBinaryData> binary_data;
 };
 
-bool fromJSON(const llvm::json::Value &value, TraceCoreState &packet,
+bool fromJSON(const llvm::json::Value &value, TraceCpuState &packet,
               llvm::json::Path path);
 
-llvm::json::Value toJSON(const TraceCoreState &packet);
+llvm::json::Value toJSON(const TraceCpuState &packet);
 
 struct TraceGetStateResponse {
   std::vector<TraceThreadState> traced_threads;
   std::vector<TraceBinaryData> process_binary_data;
-  llvm::Optional<std::vector<TraceCoreState>> cores;
+  llvm::Optional<std::vector<TraceCpuState>> cpus;
   llvm::Optional<std::vector<std::string>> warnings;
 
   void AddWarning(llvm::StringRef warning);
@@ -154,7 +154,7 @@ struct TraceGetBinaryDataRequest {
   /// Optional tid if the data is related to a thread.
   llvm::Optional<lldb::tid_t> tid;
   /// Optional core id if the data is related to a cpu core.
-  llvm::Optional<lldb::core_id_t> core_id;
+  llvm::Optional<lldb::cpu_id_t> cpu_id;
 };
 
 bool fromJSON(const llvm::json::Value &value,

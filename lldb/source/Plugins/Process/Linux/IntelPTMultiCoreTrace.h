@@ -44,18 +44,18 @@ public:
 
   /// Execute the provided callback on each core that is being traced.
   ///
-  /// \param[in] callback.core_id
+  /// \param[in] callback.cpu_id
   ///   The core id that is being traced.
   ///
   /// \param[in] callback.core_trace
   ///   The single-buffer trace instance for the given core.
-  void ForEachCore(std::function<void(lldb::core_id_t core_id,
+  void ForEachCore(std::function<void(lldb::cpu_id_t cpu_id,
                                       IntelPTSingleBufferTrace &core_trace)>
                        callback);
 
   /// Execute the provided callback on each core that is being traced.
   ///
-  /// \param[in] callback.core_id
+  /// \param[in] callback.cpu_id
   ///   The core id that is being traced.
   ///
   /// \param[in] callback.intelpt_trace
@@ -63,7 +63,7 @@ public:
   ///
   /// \param[in] callback.context_switch_trace
   ///   The perf event collecting context switches for the given core.
-  void ForEachCore(std::function<void(lldb::core_id_t core_id,
+  void ForEachCore(std::function<void(lldb::cpu_id_t cpu_id,
                                       IntelPTSingleBufferTrace &intelpt_trace,
                                       ContextSwitchTrace &context_switch_trace)>
                        callback);
@@ -87,13 +87,13 @@ private:
   /// This assumes that all underlying perf_events for each core are part of the
   /// same perf event group.
   IntelPTMultiCoreTrace(
-      llvm::DenseMap<lldb::core_id_t,
+      llvm::DenseMap<lldb::cpu_id_t,
                      std::pair<IntelPTSingleBufferTrace, ContextSwitchTrace>>
           &&traces_per_core,
       NativeProcessProtocol &process)
       : m_traces_per_core(std::move(traces_per_core)), m_process(process) {}
 
-  llvm::DenseMap<lldb::core_id_t,
+  llvm::DenseMap<lldb::cpu_id_t,
                  std::pair<IntelPTSingleBufferTrace, ContextSwitchTrace>>
       m_traces_per_core;
 

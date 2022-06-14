@@ -110,7 +110,7 @@ public:
   ///     instance, or an \a llvm::Error otherwise.
   static llvm::Expected<PerfEvent> Init(perf_event_attr &attr,
                                         llvm::Optional<lldb::pid_t> pid,
-                                        llvm::Optional<lldb::core_id_t> cpu,
+                                        llvm::Optional<lldb::cpu_id_t> cpu,
                                         llvm::Optional<long> group_fd,
                                         unsigned long flags);
 
@@ -128,7 +128,7 @@ public:
   ///     all threads and processes are monitored.
   static llvm::Expected<PerfEvent>
   Init(perf_event_attr &attr, llvm::Optional<lldb::pid_t> pid,
-       llvm::Optional<lldb::core_id_t> core = llvm::None);
+       llvm::Optional<lldb::cpu_id_t> core = llvm::None);
 
   /// Mmap the metadata page and the data and aux buffers of the perf event and
   /// expose them through \a PerfEvent::GetMetadataPage() , \a
@@ -309,14 +309,14 @@ private:
 
 /// Create a perf event that tracks context switches on a cpu.
 ///
-/// \param[in] core_id
+/// \param[in] cpu_id
 ///   The core to trace.
 ///
 /// \param[in] parent_perf_event
 ///   An optional perf event that will be grouped with the
 ///   new perf event.
 llvm::Expected<PerfEvent>
-CreateContextSwitchTracePerfEvent(lldb::core_id_t core_id,
+CreateContextSwitchTracePerfEvent(lldb::cpu_id_t cpu_id,
                                   const PerfEvent *parent_perf_event = nullptr);
 
 /// Load \a PerfTscConversionParameters from \a perf_event_mmap_page, if

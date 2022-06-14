@@ -36,7 +36,7 @@ public:
   ///     The tid of the thread to be traced. If \b None, then this traces all
   ///     threads of all processes.
   ///
-  /// \param[in] core_id
+  /// \param[in] cpu_id
   ///     The CPU core id where to trace. If \b None, then this traces all CPUs.
   ///
   /// \param[in] disabled
@@ -50,7 +50,7 @@ public:
   static llvm::Expected<IntelPTSingleBufferTrace>
   Start(const TraceIntelPTStartRequest &request,
         llvm::Optional<lldb::tid_t> tid,
-        llvm::Optional<lldb::core_id_t> core_id = llvm::None,
+        llvm::Optional<lldb::cpu_id_t> cpu_id = llvm::None,
         bool disabled = false);
 
   /// \return
@@ -59,19 +59,19 @@ public:
   llvm::Expected<std::vector<uint8_t>>
   GetBinaryData(const TraceGetBinaryDataRequest &request) const;
 
-  /// Read the trace buffer managed by this trace instance. To ensure that the
-  /// data is up-to-date and is not corrupted by read-write race conditions, the
-  /// underlying perf_event is paused during read, and later it's returned to
-  /// its initial state.
+  /// Read the intel pt trace buffer managed by this trace instance. To ensure
+  /// that the data is up-to-date and is not corrupted by read-write race
+  /// conditions, the underlying perf_event is paused during read, and later
+  /// it's returned to its initial state.
   ///
   /// \return
   ///     A vector with the requested binary data.
-  llvm::Expected<std::vector<uint8_t>> GetTraceBuffer();
+  llvm::Expected<std::vector<uint8_t>> GetIptTrace();
 
   /// \return
-  ///     The total the size in bytes used by the trace buffer managed by this
-  ///     trace instance.
-  size_t GetTraceBufferSize() const;
+  ///     The total the size in bytes used by the intel pt trace buffer managed
+  ///     by this trace instance.
+  size_t GetIptTraceSize() const;
 
   /// Resume the collection of this trace.
   ///

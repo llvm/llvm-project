@@ -14,12 +14,12 @@ using namespace llvm::json;
 namespace lldb_private {
 
 const char *IntelPTDataKinds::kProcFsCpuInfo = "procfsCpuInfo";
-const char *IntelPTDataKinds::kTraceBuffer = "traceBuffer";
+const char *IntelPTDataKinds::kIptTrace = "iptTrace";
 const char *IntelPTDataKinds::kPerfContextSwitchTrace =
     "perfContextSwitchTrace";
 
-bool TraceIntelPTStartRequest::IsPerCoreTracing() const {
-  return per_core_tracing.getValueOr(false);
+bool TraceIntelPTStartRequest::IsPerCpuTracing() const {
+  return per_cpu_tracing.getValueOr(false);
 }
 
 bool fromJSON(const json::Value &value, TraceIntelPTStartRequest &packet,
@@ -28,12 +28,12 @@ bool fromJSON(const json::Value &value, TraceIntelPTStartRequest &packet,
   if (!o || !fromJSON(value, (TraceStartRequest &)packet, path) ||
       !o.map("enableTsc", packet.enable_tsc) ||
       !o.map("psbPeriod", packet.psb_period) ||
-      !o.map("traceBufferSize", packet.trace_buffer_size))
+      !o.map("iptTraceSize", packet.ipt_trace_size))
     return false;
 
   if (packet.IsProcessTracing()) {
     if (!o.map("processBufferSizeLimit", packet.process_buffer_size_limit) ||
-        !o.map("perCoreTracing", packet.per_core_tracing))
+        !o.map("perCpuTracing", packet.per_cpu_tracing))
       return false;
   }
   return true;
@@ -42,11 +42,11 @@ bool fromJSON(const json::Value &value, TraceIntelPTStartRequest &packet,
 json::Value toJSON(const TraceIntelPTStartRequest &packet) {
   json::Value base = toJSON((const TraceStartRequest &)packet);
   json::Object &obj = *base.getAsObject();
-  obj.try_emplace("traceBufferSize", packet.trace_buffer_size);
+  obj.try_emplace("iptTraceSize", packet.ipt_trace_size);
   obj.try_emplace("processBufferSizeLimit", packet.process_buffer_size_limit);
   obj.try_emplace("psbPeriod", packet.psb_period);
   obj.try_emplace("enableTsc", packet.enable_tsc);
-  obj.try_emplace("perCoreTracing", packet.per_core_tracing);
+  obj.try_emplace("perCpuTracing", packet.per_cpu_tracing);
   return base;
 }
 

@@ -24,7 +24,7 @@ namespace lldb_private {
 // List of data kinds used by jLLDBGetState and jLLDBGetBinaryData.
 struct IntelPTDataKinds {
   static const char *kProcFsCpuInfo;
-  static const char *kTraceBuffer;
+  static const char *kIptTrace;
   static const char *kPerfContextSwitchTrace;
 };
 
@@ -32,7 +32,7 @@ struct IntelPTDataKinds {
 /// \{
 struct TraceIntelPTStartRequest : TraceStartRequest {
   /// Size in bytes to use for each thread's trace buffer.
-  uint64_t trace_buffer_size;
+  uint64_t ipt_trace_size;
 
   /// Whether to enable TSC
   bool enable_tsc;
@@ -47,10 +47,10 @@ struct TraceIntelPTStartRequest : TraceStartRequest {
   /// then a "tracing" stop event is triggered.
   llvm::Optional<uint64_t> process_buffer_size_limit;
 
-  /// Whether to have a trace buffer per thread or per cpu core.
-  llvm::Optional<bool> per_core_tracing;
+  /// Whether to have a trace buffer per thread or per cpu cpu.
+  llvm::Optional<bool> per_cpu_tracing;
 
-  bool IsPerCoreTracing() const;
+  bool IsPerCpuTracing() const;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceIntelPTStartRequest &packet,
