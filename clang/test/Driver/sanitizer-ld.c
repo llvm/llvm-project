@@ -107,7 +107,6 @@
 // CHECK-ASAN-FREEBSD: "--export-dynamic"
 // CHECK-ASAN-FREEBSD: "-lpthread"
 // CHECK-ASAN-FREEBSD: "-lrt"
-// CHECK-ASAN-FREEBSD: "-lresolv"
 
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-unknown-freebsd -fuse-ld=ld -fsanitize=address \
