@@ -21,4 +21,4 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-RELOCATABLE
 // CHECK-RELOCATABLE:     "-r"
 // CHECK-RELOCATABLE-NOT: "-l
-// CHECK-RELOCATABLE-NOT: {{.*}}crt{{[^.]+}}.o
+// CHECK-RELOCATABLE-NOT: /crt{{[^.]+}}.o
