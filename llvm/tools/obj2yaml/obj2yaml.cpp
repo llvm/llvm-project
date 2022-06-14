@@ -55,6 +55,8 @@ static Error dumpInput(StringRef File) {
     return archive2yaml(outs(), MemBuf);
   case file_magic::dxcontainer_object:
     return dxcontainer2yaml(outs(), MemBuf);
+  case file_magic::offload_binary:
+    return offload2yaml(outs(), MemBuf);
   default:
     break;
   }
