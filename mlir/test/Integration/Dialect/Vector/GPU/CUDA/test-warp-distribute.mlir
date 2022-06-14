@@ -11,6 +11,31 @@
 // RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
+// Run the same test cases with distribution and propagation.
+// RUN: mlir-opt %s  -test-vector-warp-distribute="hoist-uniform distribute-transfer-write" \
+// RUN:   -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if -canonicalize | \
+// RUN: mlir-opt -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
+// RUN:  -gpu-kernel-outlining \
+// RUN:  -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,reconcile-unrealized-casts,gpu-to-cubin)' \
+// RUN:  -gpu-to-llvm -reconcile-unrealized-casts |\
+// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_cuda_runtime%shlibext \
+// RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
+// RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext | \
+// RUN: FileCheck %s
+
+// RUN: mlir-opt %s  -test-vector-warp-distribute="hoist-uniform distribute-transfer-write propagate-distribution" \
+// RUN:   -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if -canonicalize | \
+// RUN: mlir-opt -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
+// RUN:  -gpu-kernel-outlining \
+// RUN:  -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,reconcile-unrealized-casts,gpu-to-cubin)' \
+// RUN:  -gpu-to-llvm -reconcile-unrealized-casts |\
+// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_cuda_runtime%shlibext \
+// RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
+// RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext | \
+// RUN: FileCheck %s
+
 func.func @gpu_func(%arg1: memref<32xf32>, %arg2: memref<32xf32>) {
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index

@@ -65,6 +65,10 @@ void populateDistributeTransferWriteOpPatterns(
 /// region.
 void moveScalarUniformCode(WarpExecuteOnLane0Op op);
 
+/// Collect patterns to propagate warp distribution.
+void populatePropagateWarpVectorDistributionPatterns(
+    RewritePatternSet &pattern);
+
 } // namespace vector
 } // namespace mlir
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_VECTORDISTRIBUTION_H_
