@@ -1,5 +1,33 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
+// CHECK-LABEL: func @depthwise_conv_1d_nwc_wcm
+func.func @depthwise_conv_1d_nwc_wcm(%input: tensor<1x12x8xf32>, %filter: tensor<3x8x8xf32>) -> tensor<1x10x8x8xf32> {
+  %zero = arith.constant 0.000000e+00 : f32
+  %init = linalg.init_tensor [1, 10, 8, 8] : tensor<1x10x8x8xf32>
+  %fill = linalg.fill ins(%zero : f32) outs(%init : tensor<1x10x8x8xf32>) -> tensor<1x10x8x8xf32>
+  // CHECK: depthwise_conv_1d_nwc_wcm
+  %0 = linalg.depthwise_conv_1d_nwc_wcm {dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
+    ins(%input, %filter : tensor<1x12x8xf32>, tensor<3x8x8xf32>)
+    outs(%fill : tensor<1x10x8x8xf32>) -> tensor<1x10x8x8xf32>
+  return %0 : tensor<1x10x8x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @depthwise_conv_1d_nwc_wc
+func.func @depthwise_conv_1d_nwc_wc(%input: tensor<1x12x8xf32>, %filter: tensor<3x8xf32>) -> tensor<1x10x8xf32> {
+  %zero = arith.constant 0.000000e+00 : f32
+  %init = linalg.init_tensor [1, 10, 8] : tensor<1x10x8xf32>
+  %fill = linalg.fill ins(%zero : f32) outs(%init : tensor<1x10x8xf32>) -> tensor<1x10x8xf32>
+  // CHECK: depthwise_conv_1d_nwc_wc
+  %0 = linalg.depthwise_conv_1d_nwc_wc {dilations = dense<1> : tensor<1xi64>, strides = dense<1> : tensor<1xi64>}
+    ins(%input, %filter : tensor<1x12x8xf32>, tensor<3x8xf32>)
+    outs(%fill : tensor<1x10x8xf32>) -> tensor<1x10x8xf32>
+  return %0 : tensor<1x10x8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @depthwise_conv_2d_nhwc_hwcm_tensor
 func.func @depthwise_conv_2d_nhwc_hwcm_tensor(%input: tensor<2x4x5x2xf32>, %filter: tensor<2x2x2x3xf32>) -> tensor<2x3x4x2x3xf32> {
   %zero = arith.constant 0.000000e+00 : f32
@@ -126,6 +154,34 @@ func.func @depthwise_conv_2d_input_nhwc_filter_wrong_stride_size(%input: memref<
     ins(%input, %filter: memref<1x113x113x96xf32>, memref<3x3x96xf32>)
     outs(%output: memref<1x56x56x96xf32>)
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @depthwise_conv_3d_ndhwc_dhwcm
+func.func @depthwise_conv_3d_ndhwc_dhwcm(%input: tensor<2x6x13x12x6xf32>, %filter: tensor<2x1x3x6x6xf32>) -> tensor<2x3x13x4x6x6xf32> {
+  %zero = arith.constant 0.000000e+00 : f32
+  %init = linalg.init_tensor [2, 3, 13, 4, 6, 6] : tensor<2x3x13x4x6x6xf32>
+  %fill = linalg.fill ins(%zero : f32) outs(%init : tensor<2x3x13x4x6x6xf32>) -> tensor<2x3x13x4x6x6xf32>
+  // CHECK: depthwise_conv_3d_ndhwc_dhwcm
+  %0 = linalg.depthwise_conv_3d_ndhwc_dhwcm {dilations = dense<1> : tensor<3xi64>, strides = dense<[2, 1, 3]> : tensor<3xi64>}
+    ins(%input, %filter : tensor<2x6x13x12x6xf32>, tensor<2x1x3x6x6xf32>)
+    outs(%fill : tensor<2x3x13x4x6x6xf32>) -> tensor<2x3x13x4x6x6xf32>
+  return %0 : tensor<2x3x13x4x6x6xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @depthwise_conv_3d_ndhwc_dhwc
+func.func @depthwise_conv_3d_ndhwc_dhwc(%input: tensor<2x6x13x12x6xf32>, %filter: tensor<2x1x3x6xf32>) -> tensor<2x3x13x4x6xf32> {
+  %zero = arith.constant 0.000000e+00 : f32
+  %init = linalg.init_tensor [2, 3, 13, 4, 6] : tensor<2x3x13x4x6xf32>
+  %fill = linalg.fill ins(%zero : f32) outs(%init : tensor<2x3x13x4x6xf32>) -> tensor<2x3x13x4x6xf32>
+  // CHECK: depthwise_conv_3d_ndhwc_dhwc
+  %0 = linalg.depthwise_conv_3d_ndhwc_dhwc {dilations = dense<1> : tensor<3xi64>, strides = dense<[2, 1, 3]> : tensor<3xi64>}
+    ins(%input, %filter : tensor<2x6x13x12x6xf32>, tensor<2x1x3x6xf32>)
+    outs(%fill : tensor<2x3x13x4x6xf32>) -> tensor<2x3x13x4x6xf32>
+  return %0 : tensor<2x3x13x4x6xf32>
 }
 
 // -----
