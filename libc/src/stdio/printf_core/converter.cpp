@@ -40,7 +40,7 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'u':
     return convert_int(writer, to_conv);
   case 'o':
-    // return convert_oct(writer, to_conv);
+    return convert_oct(writer, to_conv);
   case 'x':
   case 'X':
     return convert_hex(writer, to_conv);
