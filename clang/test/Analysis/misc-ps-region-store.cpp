@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -fblocks -analyzer-opt-analyze-nested-blocks %s -fexceptions -fcxx-exceptions -Wno-tautological-undefined-compare
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -fblocks -analyzer-opt-analyze-nested-blocks %s -fexceptions -fcxx-exceptions -Wno-tautological-undefined-compare
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -fblocks %s -fexceptions -fcxx-exceptions -Wno-tautological-undefined-compare
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify -fblocks %s -fexceptions -fcxx-exceptions -Wno-tautological-undefined-compare
 
 void clang_analyzer_warnIfReached();
 
