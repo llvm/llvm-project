@@ -38,6 +38,8 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "Page21";
   case PageOffset12:
     return "PageOffset12";
+  case MoveWide16:
+    return "MoveWide16";
   case GOTPage21:
     return "GOTPage21";
   case GOTPageOffset12:
