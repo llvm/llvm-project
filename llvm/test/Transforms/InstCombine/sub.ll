@@ -1847,10 +1847,7 @@ define i32 @nuw_zext_zext_different_width(i8 %x, i7 %y) {
 
 define i16 @sext_nsw_noundef(i8 noundef %x, i8 %y) {
 ; CHECK-LABEL: @sext_nsw_noundef(
-; CHECK-NEXT:    [[D:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[EX:%.*]] = sext i8 [[X]] to i16
-; CHECK-NEXT:    [[ED:%.*]] = sext i8 [[D]] to i16
-; CHECK-NEXT:    [[Z:%.*]] = sub nsw i16 [[EX]], [[ED]]
+; CHECK-NEXT:    [[Z:%.*]] = sext i8 [[Y:%.*]] to i16
 ; CHECK-NEXT:    ret i16 [[Z]]
 ;
   %d = sub nsw i8 %x, %y
@@ -1859,6 +1856,8 @@ define i16 @sext_nsw_noundef(i8 noundef %x, i8 %y) {
   %z = sub i16 %ex, %ed
   ret i16 %z
 }
+
+; negative test - requires noundef
 
 define i16 @sext_nsw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sext_nsw(
@@ -1875,6 +1874,8 @@ define i16 @sext_nsw(i8 %x, i8 %y) {
   ret i16 %z
 }
 
+; negative test - requires nsw
+
 define i16 @sext_noundef(i8 noundef %x, i8 %y) {
 ; CHECK-LABEL: @sext_noundef(
 ; CHECK-NEXT:    [[D:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
@@ -1889,6 +1890,8 @@ define i16 @sext_noundef(i8 noundef %x, i8 %y) {
   %z = sub i16 %ex, %ed
   ret i16 %z
 }
+
+; negative test - must have common operand
 
 define i16 @sext_nsw_noundef_wrong_val(i8 noundef %x, i8 noundef %y, i8 noundef %q) {
 ; CHECK-LABEL: @sext_nsw_noundef_wrong_val(
@@ -1905,13 +1908,12 @@ define i16 @sext_nsw_noundef_wrong_val(i8 noundef %x, i8 noundef %y, i8 noundef 
   ret i16 %z
 }
 
+; two no-wrap analyses combine to allow reduction
+
 define i16 @srem_sext_noundef(i8 noundef %x, i8 %y) {
 ; CHECK-LABEL: @srem_sext_noundef(
 ; CHECK-NEXT:    [[R:%.*]] = srem i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = sub nsw i8 [[X]], [[R]]
-; CHECK-NEXT:    [[SD:%.*]] = sext i8 [[D]] to i16
-; CHECK-NEXT:    [[SX:%.*]] = sext i8 [[X]] to i16
-; CHECK-NEXT:    [[Z:%.*]] = sub nsw i16 [[SX]], [[SD]]
+; CHECK-NEXT:    [[Z:%.*]] = sext i8 [[R]] to i16
 ; CHECK-NEXT:    ret i16 [[Z]]
 ;
   %r = srem i8 %x, %y

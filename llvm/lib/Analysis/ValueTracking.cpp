@@ -4987,9 +4987,15 @@ OverflowResult llvm::computeOverflowForSignedSub(const Value *LHS,
   // X - (X % ?)
   // The remainder of a value can't have greater magnitude than itself,
   // so the subtraction can't overflow.
-  if (match(RHS, m_SRem(m_Specific(LHS), m_Value())) &&
-      isGuaranteedNotToBeUndefOrPoison(LHS, AC, CxtI, DT))
-    return OverflowResult::NeverOverflows;
+
+  // X - (X -nsw ?)
+  // In the minimal case, this would simplify to "?", so there's no subtract
+  // at all. But if this analysis is used to peek through casts, for example,
+  // then determining no-overflow may allow other transforms.
+  if (match(RHS, m_SRem(m_Specific(LHS), m_Value())) ||
+      match(RHS, m_NSWSub(m_Specific(LHS), m_Value())))
+    if (isGuaranteedNotToBeUndefOrPoison(LHS, AC, CxtI, DT))
+      return OverflowResult::NeverOverflows;
 
   // If LHS and RHS each have at least two sign bits, the subtraction
   // cannot overflow.
