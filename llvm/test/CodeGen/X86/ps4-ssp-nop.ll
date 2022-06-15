@@ -1,9 +1,13 @@
 ; Verify that a ud2 is generated after the call to __stack_chk_fail.
 
 ; RUN: llc < %s -mtriple=x86_64-scei-ps4 -enable-selectiondag-sp=false -O0 -o - | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-sie-ps5  -enable-selectiondag-sp=false -O0 -o - | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-scei-ps4 -enable-selectiondag-sp=false -O2 -o - | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-sie-ps5  -enable-selectiondag-sp=false -O2 -o - | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-scei-ps4 -enable-selectiondag-sp=true  -O0 -o - | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-sie-ps5  -enable-selectiondag-sp=true  -O0 -o - | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-scei-ps4 -enable-selectiondag-sp=true  -O2 -o - | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-sie-ps5  -enable-selectiondag-sp=true  -O2 -o - | FileCheck %s
 
 
 ; CHECK: check_input:
