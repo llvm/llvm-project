@@ -413,6 +413,23 @@ TEST(CompletionTest, Accessible) {
   )cpp");
   EXPECT_THAT(External.Completions,
               AllOf(has("pub"), Not(has("prot")), Not(has("priv"))));
+
+  auto Results = completions(R"cpp(
+      struct Foo {
+        public: void pub();
+        protected: void prot();
+        private: void priv();
+      };
+      struct Bar : public Foo {
+        private: using Foo::pub;
+      };
+      void test() {
+        Bar B;
+        B.^
+      }
+  )cpp");
+  EXPECT_THAT(Results.Completions,
+              AllOf(Not(has("priv")), Not(has("prot")), Not(has("pub"))));
 }
 
 TEST(CompletionTest, Qualifiers) {
