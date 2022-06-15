@@ -3138,7 +3138,8 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   m_ast_context_ap.reset(swift::ASTContext::get(
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSILOptions(),
       GetSearchPathOptions(), GetClangImporterOptions(),
-      GetSymbolGraphOptions(), GetSourceManager(), GetDiagnosticEngine()));
+      GetSymbolGraphOptions(), GetSourceManager(), GetDiagnosticEngine(),
+      ReportModuleLoadingProgress));
   m_diagnostic_consumer_ap.reset(new StoringDiagnosticConsumer(*this));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
@@ -3406,6 +3407,15 @@ void SwiftASTContext::CacheModule(swift::ModuleDecl *module) {
   if (m_swift_module_cache.find(ID) != m_swift_module_cache.end())
     return;
   m_swift_module_cache.insert({ID, module});
+}
+
+bool SwiftASTContext::ReportModuleLoadingProgress(llvm::StringRef module_name,
+                                                  bool is_overlay) {
+  Progress progress(llvm::formatv(is_overlay ? "Importing overlay module {0}"
+                                             : "Importing module {0}",
+                                  module_name.data())
+                        .str());
+  return true;
 }
 
 swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
