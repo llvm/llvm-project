@@ -8,9 +8,9 @@ define void @BZ2_bzDecompress_bb5_2E_outer_bb35_2E_i_bb54_2E_i(i32*, i32 %c_nblo
 ; CHECK-NEXT:    movl %edx, %edx
 ; CHECK-NEXT:    movl (%rdi,%rdx,4), %edx
 ; CHECK-NEXT:    movzbl %dl, %eax
+; CHECK-NEXT:    addl $4, %eax
 ; CHECK-NEXT:    shrq $6, %rdx
 ; CHECK-NEXT:    andl $67108860, %edx # imm = 0x3FFFFFC
-; CHECK-NEXT:    addl $4, %eax
 ; CHECK-NEXT:    movl (%rdi,%rdx), %edx
 ; CHECK-NEXT:    movzbl %dl, %edi
 ; CHECK-NEXT:    shrl $8, %edx
