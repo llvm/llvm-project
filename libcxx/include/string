@@ -546,7 +546,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <cstring>
 #include <initializer_list>
 #include <iosfwd>
-#include <iterator> // TODO: Remove this include
 #include <limits>
 #include <memory>
 #include <stdexcept>
