@@ -359,7 +359,7 @@ let SubtargetPredicate = HasDot8Insts  in {
 
 defm V_DOT2_F32_BF16 : VOP3PInst<"v_dot2_f32_bf16",
   VOP3P_Profile<VOP_F32_V2I16_V2I16_F32, VOP3_REGULAR, /*HasDPP*/ 1>,
-  null_frag, 1>;
+  int_amdgcn_fdot2_f32_bf16, 1>;
 
 } // End SubtargetPredicate = HasDot8Insts
 
@@ -381,8 +381,8 @@ multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
 }
 
 let SubtargetPredicate = HasDot8Insts  in {
-defm V_DOT4_I32_IU8 : VOP3PDOTIUInst<"v_dot4_i32_iu8", null_frag>;
-defm V_DOT8_I32_IU4 : VOP3PDOTIUInst<"v_dot8_i32_iu4", null_frag>;
+defm V_DOT4_I32_IU8 : VOP3PDOTIUInst<"v_dot4_i32_iu8", int_amdgcn_sudot4>;
+defm V_DOT8_I32_IU4 : VOP3PDOTIUInst<"v_dot8_i32_iu4", int_amdgcn_sudot8>;
 } // End SubtargetPredicate = HasDot8Insts
 
 def : UDot2Pat<V_DOT2_U32_U16>;
