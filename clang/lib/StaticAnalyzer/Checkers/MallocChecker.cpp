@@ -927,11 +927,6 @@ public:
     ID.AddPointer(&Tag);
     ID.AddPointer(Sym);
   }
-
-  void *getTag() const {
-    static int Tag = 0;
-    return static_cast<void *>(&Tag);
-  }
 };
 
 } // end anonymous namespace

@@ -527,11 +527,6 @@ public:
     ID.AddPointer(RegionOfInterest);
   }
 
-  void *getTag() const {
-    static int Tag = 0;
-    return static_cast<void *>(&Tag);
-  }
-
 private:
   /// \return Whether \c RegionOfInterest was modified at \p CurrN compared to
   /// the value it holds in \p CallExitBeginN.
