@@ -1674,12 +1674,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
     return SendIllFormedResponse(packet, "Missing action from vCont package");
   }
 
-  // Check if this is all continue (no options or ";c").
-  if (::strcmp(packet.Peek(), ";c") == 0) {
-    // Move past the ';', then do a simple 'c'.
-    packet.SetFilePos(packet.GetFilePos() + 1);
-    return Handle_c(packet);
-  } else if (::strcmp(packet.Peek(), ";s") == 0) {
+  if (::strcmp(packet.Peek(), ";s") == 0) {
     // Move past the ';', then do a simple 's'.
     packet.SetFilePos(packet.GetFilePos() + 1);
     return Handle_s(packet);
@@ -1688,13 +1683,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
     return SendOKResponse();
   }
 
-  // Ensure we have a native process.
-  if (!m_continue_process) {
-    LLDB_LOG(log, "no debugged process");
-    return SendErrorResponse(0x36);
-  }
-
-  ResumeActionList thread_actions;
+  std::unordered_map<lldb::pid_t, ResumeActionList> thread_actions;
 
   while (packet.GetBytesLeft() && *packet.Peek() == ';') {
     // Skip the semi-colon.
@@ -1737,32 +1726,62 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
       break;
     }
 
+    lldb::pid_t pid = StringExtractorGDBRemote::AllProcesses;
+    lldb::tid_t tid = StringExtractorGDBRemote::AllThreads;
+
     // Parse out optional :{thread-id} value.
     if (packet.GetBytesLeft() && (*packet.Peek() == ':')) {
       // Consume the separator.
       packet.GetChar();
 
-      llvm::Expected<lldb::tid_t> tid_ret =
-          ReadTid(packet, /*allow_all=*/true, m_continue_process->GetID());
-      if (!tid_ret)
-        return SendErrorResponse(tid_ret.takeError());
+      auto pid_tid = packet.GetPidTid(StringExtractorGDBRemote::AllProcesses);
+      if (!pid_tid)
+        return SendIllFormedResponse(packet, "Malformed thread-id");
 
-      thread_action.tid = tid_ret.get();
-      if (thread_action.tid == StringExtractorGDBRemote::AllThreads)
-        thread_action.tid = LLDB_INVALID_THREAD_ID;
+      pid = pid_tid->first;
+      tid = pid_tid->second;
     }
 
-    thread_actions.Append(thread_action);
+    if (pid == StringExtractorGDBRemote::AllProcesses) {
+      if (m_debugged_processes.size() > 1)
+        return SendIllFormedResponse(
+            packet, "Resuming multiple processes not supported yet");
+      if (!m_continue_process) {
+        LLDB_LOG(log, "no debugged process");
+        return SendErrorResponse(0x36);
+      }
+      pid = m_continue_process->GetID();
+    }
+
+    if (tid == StringExtractorGDBRemote::AllThreads)
+      tid = LLDB_INVALID_THREAD_ID;
+
+    thread_action.tid = tid;
+
+    thread_actions[pid].Append(thread_action);
   }
 
-  Status error = m_continue_process->Resume(thread_actions);
-  if (error.Fail()) {
-    LLDB_LOG(log, "vCont failed for process {0}: {1}",
-             m_continue_process->GetID(), error);
-    return SendErrorResponse(GDBRemoteServerError::eErrorResume);
-  }
+  assert(thread_actions.size() >= 1);
+  if (thread_actions.size() > 1)
+    return SendIllFormedResponse(
+        packet, "Resuming multiple processes not supported yet");
 
-  LLDB_LOG(log, "continued process {0}", m_continue_process->GetID());
+  for (std::pair<lldb::pid_t, ResumeActionList> x : thread_actions) {
+    auto process_it = m_debugged_processes.find(x.first);
+    if (process_it == m_debugged_processes.end()) {
+      LLDB_LOG(log, "vCont failed for process {0}: process not debugged",
+               x.first);
+      return SendErrorResponse(GDBRemoteServerError::eErrorResume);
+    }
+
+    Status error = process_it->second->Resume(x.second);
+    if (error.Fail()) {
+      LLDB_LOG(log, "vCont failed for process {0}: {1}", x.first, error);
+      return SendErrorResponse(GDBRemoteServerError::eErrorResume);
+    }
+
+    LLDB_LOG(log, "continued process {0}", x.first);
+  }
 
   return SendContinueSuccessResponse();
 }
@@ -4009,38 +4028,6 @@ std::string GDBRemoteCommunicationServerLLGS::XMLEncodeAttributeValue(
     }
   }
   return result;
-}
-
-llvm::Expected<lldb::tid_t> GDBRemoteCommunicationServerLLGS::ReadTid(
-    StringExtractorGDBRemote &packet, bool allow_all, lldb::pid_t default_pid) {
-  assert(m_current_process);
-  assert(m_current_process->GetID() != LLDB_INVALID_PROCESS_ID);
-
-  auto pid_tid = packet.GetPidTid(default_pid);
-  if (!pid_tid)
-    return llvm::make_error<StringError>(inconvertibleErrorCode(),
-                                         "Malformed thread-id");
-
-  lldb::pid_t pid = pid_tid->first;
-  lldb::tid_t tid = pid_tid->second;
-
-  if (!allow_all && pid == StringExtractorGDBRemote::AllProcesses)
-    return llvm::make_error<StringError>(
-        inconvertibleErrorCode(),
-        llvm::formatv("PID value {0} not allowed", pid == 0 ? 0 : -1));
-
-  if (!allow_all && tid == StringExtractorGDBRemote::AllThreads)
-    return llvm::make_error<StringError>(
-        inconvertibleErrorCode(),
-        llvm::formatv("TID value {0} not allowed", tid == 0 ? 0 : -1));
-
-  if (pid != StringExtractorGDBRemote::AllProcesses) {
-    if (pid != m_current_process->GetID())
-      return llvm::make_error<StringError>(
-          inconvertibleErrorCode(), llvm::formatv("PID {0} not debugged", pid));
-  }
-
-  return tid;
 }
 
 std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
