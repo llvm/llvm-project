@@ -48,3 +48,24 @@ module m
   integer, bind(c, name="ss2") :: s5
 
 end
+
+subroutine common1()
+  real :: x
+  common /com/ x
+  bind(c, name='xcom') /com/ ! no error
+end subroutine
+
+subroutine common2()
+  real :: x
+  common /com/ x
+  bind(c, name='xcom') /com/ ! no error
+end subroutine
+
+module a
+  integer, bind(c, name="int") :: i
+end module
+
+module b
+  !ERROR: Two symbols have the same BIND(C) name 'int'
+  integer, bind(c, name="int") :: i
+end module
