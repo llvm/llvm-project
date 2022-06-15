@@ -367,6 +367,34 @@ bool AnalysisState::canOmitTensorCopy(OpOperand &opOperand) const {
   return false;
 }
 
+bool AnalysisState::isInPlace(OpOperand &opOperand) const {
+  // In the absence of analysis information, OpOperands that bufferize to a
+  // memory write are out-of-place, i.e., an alloc and copy is inserted.
+  return !bufferizesToMemoryWrite(opOperand);
+}
+
+bool AnalysisState::areEquivalentBufferizedValues(Value v1, Value v2) const {
+  // In the absence of analysis information, we do not know if the values are
+  // equivalent. The conservative answer is "false".
+  return false;
+}
+
+bool AnalysisState::areAliasingBufferizedValues(Value v1, Value v2) const {
+  // In the absence of analysis information, we do not know if the values may be
+  // aliasing. The conservative answer is "true".
+  return false;
+}
+
+bool AnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
+  // In the absence of analysis information, the conservative answer is "false".
+  return false;
+}
+
+bool AnalysisState::isTensorYielded(Value tensor) const {
+  // In the absence of analysis information, the conservative answer is "true".
+  return true;
+}
+
 // bufferization.to_memref is not allowed to change the rank.
 static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
 #ifndef NDEBUG
