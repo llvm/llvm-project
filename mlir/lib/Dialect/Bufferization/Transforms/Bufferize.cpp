@@ -182,7 +182,6 @@ struct OneShotBufferizePass
       // pass.
       opt.allowReturnAllocs = allowReturnAllocs;
       opt.allowUnknownOps = allowUnknownOps;
-      opt.alwaysAliasingWithDest = alwaysAliasingWithDest;
       opt.analysisFuzzerSeed = analysisFuzzerSeed;
       opt.createDeallocs = createDeallocs;
       opt.functionBoundaryTypeConversion =
