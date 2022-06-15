@@ -264,7 +264,9 @@ Improvements to Clang's diagnostics
 - ``-Wshift-overflow`` will not warn for signed left shifts in C++20 mode
   (and newer), as it will always wrap and never overflow. This fixes
   `Issue 52873 <https://github.com/llvm/llvm-project/issues/52873>`_.
-
+- When using class templates without arguments, clang now tells developers
+  that template arguments are missing in certain contexts.
+  This fixes `Issue 55962 <https://github.com/llvm/llvm-project/issues/55962>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
