@@ -21,6 +21,10 @@ namespace {
 struct PrintOpStatsPass : public PrintOpStatsBase<PrintOpStatsPass> {
   explicit PrintOpStatsPass(raw_ostream &os) : os(os) {}
 
+  explicit PrintOpStatsPass(raw_ostream &os, bool printAsJSON) : os(os) {
+    this->printAsJSON = printAsJSON;
+  }
+
   // Prints the resultant operation statistics post iterating over the module.
   void runOnOperation() override;
 
@@ -105,5 +109,10 @@ void PrintOpStatsPass::printSummaryInJSON() {
 }
 
 std::unique_ptr<Pass> mlir::createPrintOpStatsPass(raw_ostream &os) {
+  return std::make_unique<PrintOpStatsPass>(os);
+}
+
+std::unique_ptr<Pass> mlir::createPrintOpStatsPass(raw_ostream &os,
+                                                   bool printAsJSON) {
   return std::make_unique<PrintOpStatsPass>(os);
 }
