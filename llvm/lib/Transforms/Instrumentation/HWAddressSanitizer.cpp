@@ -259,9 +259,7 @@ public:
 
   void setSSI(const StackSafetyGlobalInfo *S) { SSI = S; }
 
-  bool sanitizeFunction(Function &F,
-                        llvm::function_ref<const DominatorTree &()> GetDT,
-                        llvm::function_ref<const PostDominatorTree &()> GetPDT);
+  bool sanitizeFunction(Function &F, FunctionAnalysisManager &FAM);
   void initializeModule();
   void createHwasanCtorComdat();
 
@@ -294,8 +292,7 @@ public:
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
   bool instrumentStack(memtag::StackInfo &Info, Value *StackTag,
-                       llvm::function_ref<const DominatorTree &()> GetDT,
-                       llvm::function_ref<const PostDominatorTree &()> GetPDT);
+                       const DominatorTree &DT, const PostDominatorTree &PDT);
   Value *readRegister(IRBuilder<> &IRB, StringRef Name);
   bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
@@ -397,16 +394,8 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
   HWAddressSanitizer HWASan(M, Options.CompileKernel, Options.Recover, SSI);
   bool Modified = false;
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  for (Function &F : M) {
-    Modified |= HWASan.sanitizeFunction(
-        F,
-        [&]() -> const DominatorTree & {
-          return FAM.getResult<DominatorTreeAnalysis>(F);
-        },
-        [&]() -> const PostDominatorTree & {
-          return FAM.getResult<PostDominatorTreeAnalysis>(F);
-        });
-  }
+  for (Function &F : M)
+    Modified |= HWASan.sanitizeFunction(F, FAM);
   if (Modified)
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -1225,10 +1214,10 @@ static bool isLifetimeIntrinsic(Value *V) {
   return II && II->isLifetimeStartOrEnd();
 }
 
-bool HWAddressSanitizer::instrumentStack(
-    memtag::StackInfo &SInfo, Value *StackTag,
-    llvm::function_ref<const DominatorTree &()> GetDT,
-    llvm::function_ref<const PostDominatorTree &()> GetPDT) {
+bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
+                                         Value *StackTag,
+                                         const DominatorTree &DT,
+                                         const PostDominatorTree &PDT) {
   // Ideally, we want to calculate tagged stack base pointer, and rewrite all
   // alloca addresses using that. Unfortunately, offsets are not known yet
   // (unless we use ASan-style mega-alloca). Instead we keep the base tag in a
@@ -1304,16 +1293,15 @@ bool HWAddressSanitizer::instrumentStack(
     // statement if return_twice functions are called.
     bool StandardLifetime =
         SInfo.UnrecognizedLifetimes.empty() &&
-        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd,
-                                   &GetDT(), ClMaxLifetimes) &&
+        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
+                                   ClMaxLifetimes) &&
         !SInfo.CallsReturnTwice;
     if (DetectUseAfterScope && StandardLifetime) {
       IntrinsicInst *Start = Info.LifetimeStart[0];
       IRB.SetInsertPoint(Start->getNextNode());
       tagAlloca(IRB, AI, Tag, Size);
-      if (!memtag::forAllReachableExits(GetDT(), GetPDT(), Start,
-                                        Info.LifetimeEnd, SInfo.RetVec,
-                                        TagEnd)) {
+      if (!memtag::forAllReachableExits(DT, PDT, Start, Info.LifetimeEnd,
+                                        SInfo.RetVec, TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
       }
@@ -1353,9 +1341,8 @@ bool HWAddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
          !(SSI && SSI->isSafe(AI));
 }
 
-bool HWAddressSanitizer::sanitizeFunction(
-    Function &F, llvm::function_ref<const DominatorTree &()> GetDT,
-    llvm::function_ref<const PostDominatorTree &()> GetPDT) {
+bool HWAddressSanitizer::sanitizeFunction(Function &F,
+                                          FunctionAnalysisManager &FAM) {
   if (&F == HwasanCtorFunction)
     return false;
 
@@ -1416,9 +1403,11 @@ bool HWAddressSanitizer::sanitizeFunction(
                    !SInfo.AllocasToInstrument.empty());
 
   if (!SInfo.AllocasToInstrument.empty()) {
+    const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+    const PostDominatorTree &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
     Value *StackTag =
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
-    instrumentStack(SInfo, StackTag, GetDT, GetPDT);
+    instrumentStack(SInfo, StackTag, DT, PDT);
   }
 
   // If we split the entry block, move any allocas that were originally in the
