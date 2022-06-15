@@ -31,6 +31,24 @@
  *
  * WG14 DR125: yes
  * Using things declared as 'extern (qualified) void'
+ *
+ * WG14 DR127: dup 013
+ * Composite type of an enumerated type and an integral type
+ *
+ * WG14 DR132: dup 109
+ * Can undefined behavior occur at translation time, or only at run time?
+ *
+ * WG14 DR133: yes
+ * Undefined behavior not previously listed in subclause G2
+ *
+ * WG14 DR138: yes
+ * Is there an allocated storage duration?
+ *
+ * WG14 DR139: yes
+ * Compatibility of complete and incomplete types
+ *
+ * WG14 DR146: yes
+ * Nugatory constraint
  */
 
 
@@ -230,4 +248,82 @@ void dr123(void) {
 void dr124(void) {
   /* A cast can cast to void or any qualified version of void. */
   (const volatile void)0;
+}
+
+/* WG14 DR126:  yes
+ * What does 'synonym' mean with respect to typedef names?
+ */
+void dr126(void) {
+  typedef int *IP;
+  const IP object; /* expected-note {{variable 'object' declared const here}} */
+
+  /* The root of the DR is whether 'object' is a pointer to a const int, or a
+   * const pointer to int.
+   */
+  *object = 12; /* ok */
+  ++object; /* expected-error {{cannot assign to variable 'object' with const-qualified type 'const IP' (aka 'int *const')}} */
+}
+
+/* WG14 DR128: yes
+ * Editorial issue relating to tag declarations in type specifiers
+ */
+void dr128(void) {
+  {
+    struct TAG { int i; };
+  }
+  {
+    struct TAG object; /* expected-error {{variable has incomplete type 'struct TAG'}}
+                          expected-note {{forward declaration of 'struct TAG'}}
+                        */
+  }
+}
+
+/* WG14 DR129: yes
+ * Tags and name spaces
+ */
+struct dr129_t { int i; };
+void dr129(void) {
+  enum dr129_t { enumerator }; /* expected-note {{previous use is here}} */
+  void *vp;
+
+  (void)(struct dr129_t *)vp; /* expected-error {{use of 'dr129_t' with tag type that does not match previous declaration}} */
+}
+
+/* WG14 DR131: yes
+ * const member qualification and assignment
+ */
+void dr131(void) {
+  struct S {
+    const int i; /* expected-note {{data member 'i' declared const here}} */
+  } s1, s2;
+  s1 = s2; /* expected-error {{cannot assign to variable 's1' with const-qualified data member 'i'}} */
+}
+
+/* WG14 DR142: yes
+ * Reservation of macro names
+ */
+void dr142(void) {
+#include <stddef.h>
+/* FIXME: undefining a macro defined by the standard library is undefined
+ * behavior. We have diagnostics when declaring reserved identifiers, and we
+ * could consider extending that to undefining a macro defined in a system
+ * header. However, whether we diagnose or not, we conform.
+ */
+#undef NULL
+}
+
+/* WG14 DR144: yes
+ * Preprocessing of preprocessing directives
+ */
+#define DR144
+# DR144 include <stddef.h> /* expected-error {{invalid preprocessing directive}} */
+DR144 # include <stddef.h> /* expected-error {{expected identifier or '('}} */
+
+/* WG14 DR145: yes
+ * Constant expressions
+ */
+void dr145(void) {
+  static int array[10];
+  static int *ip = (int *)0;
+  static int i = array[0] + array[1]; /* expected-error {{initializer element is not a compile-time constant}} */
 }
