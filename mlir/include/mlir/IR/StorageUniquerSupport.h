@@ -127,6 +127,8 @@ public:
     if (!abstract)
       llvm::report_fatal_error("Registering an interface for an attribute/type "
                                "that is not itself registered.");
+    (void)std::initializer_list<int>{
+        (checkInterfaceTarget<IfaceModels>(), 0)...};
     abstract->interfaceMap.template insert<IfaceModels...>();
   }
 
@@ -182,6 +184,35 @@ protected:
 
   /// Utility for easy access to the storage instance.
   ImplType *getImpl() const { return static_cast<ImplType *>(this->impl); }
+
+private:
+  /// Trait to check if T provides a 'ConcreteEntity' type alias.
+  template <typename T>
+  using has_concrete_entity_t = typename T::ConcreteEntity;
+
+  /// A struct-wrapped type alias to T::ConcreteEntity if provided and to
+  /// ConcreteT otherwise. This is akin to std::conditional but doesn't fail on
+  /// the missing typedef. Useful for checking if the interface is targeting the
+  /// right class.
+  template <typename T,
+            bool = llvm::is_detected<has_concrete_entity_t, T>::value>
+  struct IfaceTargetOrConcreteT {
+    using type = typename T::ConcreteEntity;
+  };
+  template <typename T>
+  struct IfaceTargetOrConcreteT<T, false> {
+    using type = ConcreteT;
+  };
+
+  /// A hook for static assertion that the external interface model T is
+  /// targeting a base class of the concrete attribute/type. The model can also
+  /// be a fallback model that works for every attribute/type.
+  template <typename T>
+  static void checkInterfaceTarget() {
+    static_assert(std::is_base_of<typename IfaceTargetOrConcreteT<T>::type,
+                                  ConcreteT>::value,
+                  "attaching an interface to the wrong attribute/type kind");
+  }
 };
 } // namespace detail
 } // namespace mlir
