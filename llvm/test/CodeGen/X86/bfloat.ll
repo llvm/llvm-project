@@ -26,3 +26,46 @@ define void @add(ptr %pa, ptr %pb, ptr %pc) {
   store bfloat %add, ptr %pc
   ret void
 }
+
+define void @add_double(ptr %pa, ptr %pb, ptr %pc) {
+; CHECK-LABEL: add_double:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset %rbx, -24
+; CHECK-NEXT:    .cfi_offset %r14, -16
+; CHECK-NEXT:    movq %rdx, %r14
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    callq __truncdfbf2@PLT
+; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    callq __truncdfbf2@PLT
+; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
+; CHECK-NEXT:    shll $16, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
+; CHECK-NEXT:    movsd %xmm0, (%r14)
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
+  %la = load double, ptr %pa
+  %a = fptrunc double %la to bfloat
+  %lb = load double, ptr %pb
+  %b = fptrunc double %lb to bfloat
+  %add = fadd bfloat %a, %b
+  %dadd = fpext bfloat %add to double
+  store double %dadd, ptr %pc
+  ret void
+}
