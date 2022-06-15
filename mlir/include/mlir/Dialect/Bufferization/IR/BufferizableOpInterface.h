@@ -230,6 +230,16 @@ struct BufferizationOptions {
   /// bufferized or not.
   bool bufferizeFunctionBoundaries = false;
 
+  /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
+  /// If this flag is set to `false`, those invariants are no longer enforced
+  /// with buffer copies.
+  ///
+  /// Note: Deactivating this flag can lead to incorrect bufferization results
+  /// when used incorrectly. This flag is useful with
+  /// `AlwaysCopyBufferizationState` which bufferizes all writing tensor
+  /// OpOperands out-of-place.
+  bool enforceAliasingInvariants = true;
+
   /// This flag controls buffer types on function signatures.
   ///
   /// * InferLayoutMap: All function parameter types have a fully dynamic layout
