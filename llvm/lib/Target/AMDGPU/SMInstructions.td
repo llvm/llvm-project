@@ -40,6 +40,7 @@ class SM_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   let mayLoad = 1;
   let hasSideEffects = 0;
   let UseNamedOperandTable = 1;
+  let maybeAtomic = 1;
   let SchedRW = [WriteSMEM];
 
   string Mnemonic = opName;
@@ -286,7 +287,6 @@ class SM_Atomic_Pseudo <string opName,
   // Should these be set?
   let ScalarStore = 1;
   let hasSideEffects = 1;
-  let maybeAtomic = 1;
 
   let IsAtomicNoRet = !not(isRet);
   let IsAtomicRet = isRet;
