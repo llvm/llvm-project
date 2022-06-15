@@ -424,7 +424,51 @@ void GCNHazardRecognizer::RecedeCycle() {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
+typedef enum { HazardFound, HazardExpired, NoHazardFound } HazardFnResult;
+
 typedef function_ref<bool(const MachineInstr &, int WaitStates)> IsExpiredFn;
+
+// Search for a hazard in a block and its predecessors.
+template <typename StateT>
+static bool
+hasHazard(StateT State,
+          function_ref<HazardFnResult(StateT &, const MachineInstr &)> IsHazard,
+          function_ref<void(StateT &, const MachineInstr &)> UpdateState,
+          const MachineBasicBlock *MBB,
+          MachineBasicBlock::const_reverse_instr_iterator I,
+          DenseSet<const MachineBasicBlock *> &Visited) {
+  for (auto E = MBB->instr_rend(); I != E; ++I) {
+    // No need to look at parent BUNDLE instructions.
+    if (I->isBundle())
+      continue;
+
+    switch (IsHazard(State, *I)) {
+    case HazardFound:
+      return true;
+    case HazardExpired:
+      return false;
+    default:
+      // Continue search
+      break;
+    }
+
+    if (I->isInlineAsm() || I->isMetaInstruction())
+      continue;
+
+    UpdateState(State, *I);
+  }
+
+  for (MachineBasicBlock *Pred : MBB->predecessors()) {
+    if (!Visited.insert(Pred).second)
+      continue;
+
+    if (hasHazard(State, IsHazard, UpdateState, Pred, Pred->instr_rbegin(),
+                  Visited))
+      return true;
+  }
+
+  return false;
+}
 
 // Returns a minimum wait states since \p I walking all predecessors.
 // Only scans until \p IsExpired does not return true.
@@ -1031,6 +1075,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixSMEMtoVectorWriteHazards(MI);
   fixVcmpxExecWARHazard(MI);
   fixLdsBranchVmemWARHazard(MI);
+  fixVALUPartialForwardingHazard(MI);
+  fixVALUTransUseHazard(MI);
 }
 
 bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {
@@ -1316,6 +1362,233 @@ bool GCNHazardRecognizer::fixLdsBranchVmemWARHazard(MachineInstr *MI) {
           TII->get(AMDGPU::S_WAITCNT_VSCNT))
     .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
     .addImm(0);
+
+  return true;
+}
+
+bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
+  if (!ST.isWave64())
+    return false;
+  if (!ST.hasVALUPartialForwardingHazard())
+    return false;
+  if (!SIInstrInfo::isVALU(*MI))
+    return false;
+
+  SmallSetVector<Register, 4> SrcVGPRs;
+
+  for (const MachineOperand &Use : MI->explicit_uses()) {
+    if (Use.isReg() && TRI.isVGPR(MF.getRegInfo(), Use.getReg()))
+      SrcVGPRs.insert(Use.getReg());
+  }
+
+  // Only applies with >= 2 unique VGPR sources
+  if (SrcVGPRs.size() <= 1)
+    return false;
+
+  // Look for the following pattern:
+  //   Va <- VALU [PreExecPos]
+  //   intv1
+  //   Exec <- SALU [ExecPos]
+  //   intv2
+  //   Vb <- VALU [PostExecPos]
+  //   intv3
+  //   MI Va, Vb (WaitState = 0)
+  //
+  // Where:
+  // intv1 + intv2 <= 2 VALUs
+  // intv3 <= 4 VALUs
+  //
+  // If found, insert an appropriate S_WAITCNT_DEPCTR before MI.
+
+  const int Intv1plus2MaxVALUs = 2;
+  const int Intv3MaxVALUs = 4;
+  const int IntvMaxVALUs = 6;
+  const int NoHazardVALUWaitStates = IntvMaxVALUs + 2;
+
+  struct StateType {
+    SmallDenseMap<Register, int, 4> DefPos;
+    int ExecPos = std::numeric_limits<int>::max();
+    int VALUs = 0;
+  };
+
+  StateType State;
+
+  // This overloads expiry testing with all the hazard detection
+  auto IsHazardFn = [&, this](StateType &State, const MachineInstr &I) {
+    // Too many VALU states have passed
+    if (State.VALUs > NoHazardVALUWaitStates)
+      return HazardExpired;
+
+    // Instructions which cause va_vdst==0 expire hazard
+    if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
+        SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
+        (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+         I.getOperand(0).getImm() == 0x0fff))
+      return HazardExpired;
+
+    // Track registers writes
+    bool Changed = false;
+    if (SIInstrInfo::isVALU(I)) {
+      for (Register Src : SrcVGPRs) {
+        if (!State.DefPos.count(Src) && I.modifiesRegister(Src, &TRI)) {
+          State.DefPos[Src] = State.VALUs;
+          Changed = true;
+        }
+      }
+    } else if (SIInstrInfo::isSALU(I)) {
+      if (State.ExecPos == std::numeric_limits<int>::max()) {
+        if (!State.DefPos.empty() && I.modifiesRegister(AMDGPU::EXEC, &TRI)) {
+          State.ExecPos = State.VALUs;
+          Changed = true;
+        }
+      }
+    }
+
+    // Early expiration: too many VALUs in intv3
+    if (State.VALUs > Intv3MaxVALUs && State.DefPos.empty())
+      return HazardExpired;
+
+    // Only evaluate state if something changed
+    if (!Changed)
+      return NoHazardFound;
+
+    // Determine positions of VALUs pre/post exec change
+    if (State.ExecPos == std::numeric_limits<int>::max())
+      return NoHazardFound;
+
+    int PreExecPos = std::numeric_limits<int>::max();
+    int PostExecPos = std::numeric_limits<int>::max();
+
+    for (auto Entry : State.DefPos) {
+      int DefVALUs = Entry.second;
+      if (DefVALUs != std::numeric_limits<int>::max()) {
+        if (DefVALUs >= State.ExecPos)
+          PreExecPos = std::min(PreExecPos, DefVALUs);
+        else if (DefVALUs < State.ExecPos)
+          PostExecPos = std::min(PostExecPos, DefVALUs);
+      }
+    }
+
+    // Need a VALUs post exec change
+    if (PostExecPos == std::numeric_limits<int>::max())
+      return NoHazardFound;
+
+    // Too many VALUs in intv3?
+    int Intv3VALUs = PostExecPos;
+    if (Intv3VALUs > Intv3MaxVALUs)
+      return HazardExpired;
+
+    // Too many VALUs in intv2?
+    int Intv2VALUs = (State.ExecPos - PostExecPos) - 1;
+    if (Intv2VALUs > Intv1plus2MaxVALUs)
+      return HazardExpired;
+
+    // Need a VALUs pre exec change
+    if (PreExecPos == std::numeric_limits<int>::max())
+      return NoHazardFound;
+
+    // Too many VALUs in intv1?
+    int Intv1VALUs = PreExecPos - State.ExecPos;
+    if (Intv1VALUs > Intv1plus2MaxVALUs)
+      return HazardExpired;
+
+    // Too many VALUs in intv1 + intv2
+    if (Intv1VALUs + Intv2VALUs > Intv1plus2MaxVALUs)
+      return HazardExpired;
+
+    return HazardFound;
+  };
+  auto UpdateStateFn = [](StateType &State, const MachineInstr &MI) {
+    if (SIInstrInfo::isVALU(MI))
+      State.VALUs += 1;
+  };
+
+  DenseSet<const MachineBasicBlock *> Visited;
+  if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn, MI->getParent(),
+                            std::next(MI->getReverseIterator()), Visited))
+    return false;
+
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII.get(AMDGPU::S_WAITCNT_DEPCTR))
+      .addImm(0x0fff);
+
+  return true;
+}
+
+bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
+  if (!ST.hasVALUTransUseHazard())
+    return false;
+  if (!SIInstrInfo::isVALU(*MI))
+    return false;
+
+  SmallSet<Register, 4> SrcVGPRs;
+
+  for (const MachineOperand &Use : MI->explicit_uses()) {
+    if (Use.isReg() && TRI.isVGPR(MF.getRegInfo(), Use.getReg()))
+      SrcVGPRs.insert(Use.getReg());
+  }
+
+  // Look for the following pattern:
+  //   Va <- TRANS VALU
+  //   intv
+  //   MI Va (WaitState = 0)
+  //
+  // Where:
+  // intv <= 5 VALUs / 1 TRANS
+  //
+  // If found, insert an appropriate S_WAITCNT_DEPCTR before MI.
+
+  const int IntvMaxVALUs = 5;
+  const int IntvMaxTRANS = 1;
+
+  struct StateType {
+    int VALUs = 0;
+    int TRANS = 0;
+  };
+
+  StateType State;
+
+  // This overloads expiry testing with all the hazard detection
+  auto IsHazardFn = [&, this](StateType &State, const MachineInstr &I) {
+    // Too many VALU states have passed
+    if (State.VALUs > IntvMaxVALUs || State.TRANS > IntvMaxTRANS)
+      return HazardExpired;
+
+    // Instructions which cause va_vdst==0 expire hazard
+    if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
+        SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
+        (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+         I.getOperand(0).getImm() == 0x0fff))
+      return HazardExpired;
+
+    // Track registers writes
+    if (SIInstrInfo::isTRANS(I)) {
+      for (Register Src : SrcVGPRs) {
+        if (I.modifiesRegister(Src, &TRI)) {
+          return HazardFound;
+        }
+      }
+    }
+
+    return NoHazardFound;
+  };
+  auto UpdateStateFn = [](StateType &State, const MachineInstr &MI) {
+    if (SIInstrInfo::isVALU(MI))
+      State.VALUs += 1;
+    if (SIInstrInfo::isTRANS(MI))
+      State.TRANS += 1;
+  };
+
+  DenseSet<const MachineBasicBlock *> Visited;
+  if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn, MI->getParent(),
+                            std::next(MI->getReverseIterator()), Visited))
+    return false;
+
+  // Hazard is observed - insert a wait on va_dst counter to ensure hazard is
+  // avoided (mask 0x0fff achieves this).
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII.get(AMDGPU::S_WAITCNT_DEPCTR))
+      .addImm(0x0fff);
 
   return true;
 }
