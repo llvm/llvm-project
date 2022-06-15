@@ -169,11 +169,17 @@ auto isCallReturningOptional() {
       optionalOrAliasType(), referenceType(pointee(optionalOrAliasType()))))));
 }
 
+/// Sets `HasValueVal` as the symbolic value that represents the "has_value"
+/// property of the optional value `OptionalVal`.
+void setHasValue(Value &OptionalVal, BoolValue &HasValueVal) {
+  OptionalVal.setProperty("has_value", HasValueVal);
+}
+
 /// Creates a symbolic value for an `optional` value using `HasValueVal` as the
 /// symbolic value of its "has_value" property.
 StructValue &createOptionalValue(Environment &Env, BoolValue &HasValueVal) {
   auto OptionalVal = std::make_unique<StructValue>();
-  OptionalVal->setProperty("has_value", HasValueVal);
+  setHasValue(*OptionalVal, HasValueVal);
   return Env.takeOwnership(std::move(OptionalVal));
 }
 
@@ -274,9 +280,26 @@ void initializeOptionalReference(const Expr *OptionalExpr,
   if (auto *OptionalVal =
           State.Env.getValue(*OptionalExpr, SkipPast::Reference)) {
     if (OptionalVal->getProperty("has_value") == nullptr) {
-      OptionalVal->setProperty("has_value", State.Env.makeAtomicBoolValue());
+      setHasValue(*OptionalVal, State.Env.makeAtomicBoolValue());
     }
   }
+}
+
+/// Returns true if and only if `OptionalVal` is initialized and known to be
+/// empty in `Env.
+bool isEmptyOptional(const Value &OptionalVal, const Environment &Env) {
+  auto *HasValueVal =
+      cast_or_null<BoolValue>(OptionalVal.getProperty("has_value"));
+  return HasValueVal != nullptr &&
+         Env.flowConditionImplies(Env.makeNot(*HasValueVal));
+}
+
+/// Returns true if and only if `OptionalVal` is initialized and known to be
+/// non-empty in `Env.
+bool isNonEmptyOptional(const Value &OptionalVal, const Environment &Env) {
+  auto *HasValueVal =
+      cast_or_null<BoolValue>(OptionalVal.getProperty("has_value"));
+  return HasValueVal != nullptr && Env.flowConditionImplies(*HasValueVal);
 }
 
 void transferUnwrapCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
@@ -649,6 +672,32 @@ void UncheckedOptionalAccessModel::transfer(const Stmt *S,
                                             Environment &Env) {
   LatticeTransferState State(L, Env);
   TransferMatchSwitch(*S, getASTContext(), State);
+}
+
+bool UncheckedOptionalAccessModel::compareEquivalent(QualType Type,
+                                                     const Value &Val1,
+                                                     const Environment &Env1,
+                                                     const Value &Val2,
+                                                     const Environment &Env2) {
+  return isNonEmptyOptional(Val1, Env1) == isNonEmptyOptional(Val2, Env2);
+}
+
+bool UncheckedOptionalAccessModel::merge(QualType Type, const Value &Val1,
+                                         const Environment &Env1,
+                                         const Value &Val2,
+                                         const Environment &Env2,
+                                         Value &MergedVal,
+                                         Environment &MergedEnv) {
+  if (!IsOptionalType(Type))
+    return true;
+
+  auto &HasValueVal = MergedEnv.makeAtomicBoolValue();
+  if (isNonEmptyOptional(Val1, Env1) && isNonEmptyOptional(Val2, Env2))
+    MergedEnv.addToFlowCondition(HasValueVal);
+  else if (isEmptyOptional(Val1, Env1) && isEmptyOptional(Val2, Env2))
+    MergedEnv.addToFlowCondition(MergedEnv.makeNot(HasValueVal));
+  setHasValue(MergedVal, HasValueVal);
+  return true;
 }
 
 } // namespace dataflow
