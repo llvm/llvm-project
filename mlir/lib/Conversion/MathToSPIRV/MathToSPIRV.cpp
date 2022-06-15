@@ -201,6 +201,33 @@ struct Log1pOpPattern final : public OpConversionPattern<math::Log1pOp> {
     return success();
   }
 };
+
+/// Converts math.powf to SPIRV-Ops.
+struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(math::PowFOp powfOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = getTypeConverter()->convertType(powfOp.getType());
+    if (!dstType)
+      return failure();
+
+    // Per GLSL Pow extended instruction spec:
+    // "Result is undefined if x < 0. Result is undefined if x = 0 and y <= 0."
+    Location loc = powfOp.getLoc();
+    Value zero =
+        spirv::ConstantOp::getZero(adaptor.getLhs().getType(), loc, rewriter);
+    Value lessThan =
+        rewriter.create<spirv::FOrdLessThanOp>(loc, adaptor.getLhs(), zero);
+    Value abs = rewriter.create<spirv::GLSLFAbsOp>(loc, adaptor.getLhs());
+    Value pow = rewriter.create<spirv::GLSLPowOp>(loc, abs, adaptor.getRhs());
+    Value negate = rewriter.create<spirv::FNegateOp>(loc, pow);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(powfOp, lessThan, negate, pow);
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -216,7 +243,7 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
   // GLSL patterns
   patterns
       .add<CountLeadingZerosPattern, Log1pOpPattern<spirv::GLSLLogOp>,
-           ExpM1OpPattern<spirv::GLSLExpOp>,
+           ExpM1OpPattern<spirv::GLSLExpOp>, PowFOpPattern,
            spirv::ElementwiseOpPattern<math::AbsOp, spirv::GLSLFAbsOp>,
            spirv::ElementwiseOpPattern<math::CeilOp, spirv::GLSLCeilOp>,
            spirv::ElementwiseOpPattern<math::CosOp, spirv::GLSLCosOp>,
@@ -224,7 +251,6 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
            spirv::ElementwiseOpPattern<math::FloorOp, spirv::GLSLFloorOp>,
            spirv::ElementwiseOpPattern<math::FmaOp, spirv::GLSLFmaOp>,
            spirv::ElementwiseOpPattern<math::LogOp, spirv::GLSLLogOp>,
-           spirv::ElementwiseOpPattern<math::PowFOp, spirv::GLSLPowOp>,
            spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::GLSLInverseSqrtOp>,
            spirv::ElementwiseOpPattern<math::SinOp, spirv::GLSLSinOp>,
            spirv::ElementwiseOpPattern<math::SqrtOp, spirv::GLSLSqrtOp>,
