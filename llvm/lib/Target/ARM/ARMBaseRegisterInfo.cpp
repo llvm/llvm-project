@@ -63,8 +63,12 @@ const MCPhysReg*
 ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
   bool UseSplitPush = STI.splitFramePushPop(*MF);
-  const Function &F = MF->getFunction();
+  const MCPhysReg *RegList =
+      STI.isTargetDarwin()
+          ? CSR_iOS_SaveList
+          : (UseSplitPush ? CSR_AAPCS_SplitPush_SaveList : CSR_AAPCS_SaveList);
 
+  const Function &F = MF->getFunction();
   if (F.getCallingConv() == CallingConv::GHC) {
     // GHC set of callee saved regs is empty as all those regs are
     // used for passing STG regs around
@@ -76,13 +80,13 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   } else if (F.getCallingConv() == CallingConv::SwiftTail) {
     return STI.isTargetDarwin()
                ? CSR_iOS_SwiftTail_SaveList
-               : (UseSplitPush ? CSR_ATPCS_SplitPush_SwiftTail_SaveList
+               : (UseSplitPush ? CSR_AAPCS_SplitPush_SwiftTail_SaveList
                                : CSR_AAPCS_SwiftTail_SaveList);
   } else if (F.hasFnAttribute("interrupt")) {
     if (STI.isMClass()) {
       // M-class CPUs have hardware which saves the registers needed to allow a
       // function conforming to the AAPCS to function as a handler.
-      return UseSplitPush ? CSR_ATPCS_SplitPush_SaveList : CSR_AAPCS_SaveList;
+      return UseSplitPush ? CSR_AAPCS_SplitPush_SaveList : CSR_AAPCS_SaveList;
     } else if (F.getFnAttribute("interrupt").getValueAsString() == "FIQ") {
       // Fast interrupt mode gives the handler a private copy of R8-R14, so less
       // need to be saved to restore user-mode state.
@@ -99,7 +103,7 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (STI.isTargetDarwin())
       return CSR_iOS_SwiftError_SaveList;
 
-    return UseSplitPush ? CSR_ATPCS_SplitPush_SwiftError_SaveList :
+    return UseSplitPush ? CSR_AAPCS_SplitPush_SwiftError_SaveList :
       CSR_AAPCS_SwiftError_SaveList;
   }
 
@@ -107,15 +111,7 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return MF->getInfo<ARMFunctionInfo>()->isSplitCSR()
                ? CSR_iOS_CXX_TLS_PE_SaveList
                : CSR_iOS_CXX_TLS_SaveList;
-
-  if (STI.isTargetDarwin())
-    return CSR_iOS_SaveList;
-
-  if (UseSplitPush)
-    return STI.createAAPCSFrameChain() ? CSR_AAPCS_SplitPush_SaveList
-                                       : CSR_ATPCS_SplitPush_SaveList;
-
-  return CSR_AAPCS_SaveList;
+  return RegList;
 }
 
 const MCPhysReg *ARMBaseRegisterInfo::getCalleeSavedRegsViaCopy(
@@ -244,7 +240,7 @@ bool ARMBaseRegisterInfo::isInlineAsmReadOnlyReg(const MachineFunction &MF,
 
   BitVector Reserved(getNumRegs());
   markSuperRegs(Reserved, ARM::PC);
-  if (TFI->isFPReserved(MF))
+  if (TFI->hasFP(MF))
     markSuperRegs(Reserved, STI.getFramePointerReg());
   if (hasBasePointer(MF))
     markSuperRegs(Reserved, BasePtr);

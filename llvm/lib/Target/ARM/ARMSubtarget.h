@@ -430,8 +430,7 @@ public:
   }
 
   MCPhysReg getFramePointerReg() const {
-    if (isTargetDarwin() ||
-        (!isTargetWindows() && isThumb() && !createAAPCSFrameChain()))
+    if (isTargetDarwin() || (!isTargetWindows() && isThumb()))
       return ARM::R7;
     return ARM::R11;
   }
