@@ -300,13 +300,15 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
   SmallVector<unsigned, 8> RegsToErase;
   bool ReadsPhysRegs = false;
   bool isOrigDef = false;
-  unsigned Dest;
+  Register Dest;
+  unsigned DestSubReg;
   // Only optimize rematerialize case when the instruction has one def, since
   // otherwise we could leave some dead defs in the code.  This case is
   // extremely rare.
   if (VRM && MI->getOperand(0).isReg() && MI->getOperand(0).isDef() &&
       MI->getDesc().getNumDefs() == 1) {
     Dest = MI->getOperand(0).getReg();
+    DestSubReg = MI->getOperand(0).getSubReg();
     unsigned Original = VRM->getOriginal(Dest);
     LiveInterval &OrigLI = LIS.getInterval(Original);
     VNInfo *OrigVNI = OrigLI.getVNInfoAt(Idx);
@@ -384,8 +386,18 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     if (isOrigDef && DeadRemats && !HasLiveVRegUses &&
         TII.isTriviallyReMaterializable(*MI)) {
       LiveInterval &NewLI = createEmptyIntervalFrom(Dest, false);
-      VNInfo *VNI = NewLI.getNextValue(Idx, LIS.getVNInfoAllocator());
+      VNInfo::Allocator &Alloc = LIS.getVNInfoAllocator();
+      VNInfo *VNI = NewLI.getNextValue(Idx, Alloc);
       NewLI.addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(), VNI));
+
+      if (DestSubReg) {
+        const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+        auto *SR = NewLI.createSubRange(
+            Alloc, TRI->getSubRegIndexLaneMask(DestSubReg));
+        SR->addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(),
+                                             SR->getNextValue(Idx, Alloc)));
+      }
+
       pop_back();
       DeadRemats->insert(MI);
       const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
