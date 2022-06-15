@@ -1861,7 +1861,26 @@ TEST_P(UncheckedOptionalAccessTest, Emplace) {
   )",
                          UnorderedElementsAre(Pair("check", "safe")));
 
-  // FIXME: Add tests that call `emplace` in conditional branches.
+  // FIXME: Add tests that call `emplace` in conditional branches:
+  //  ExpectLatticeChecksFor(
+  //      R"(
+  //    #include "unchecked_optional_access_test.h"
+  //
+  //    void target($ns::$optional<int> opt, bool b) {
+  //      if (b) {
+  //        opt.emplace(0);
+  //      }
+  //      if (b) {
+  //        opt.value();
+  //        /*[[check-1]]*/
+  //      } else {
+  //        opt.value();
+  //        /*[[check-2]]*/
+  //      }
+  //    }
+  //  )",
+  //      UnorderedElementsAre(Pair("check-1", "safe"),
+  //                           Pair("check-2", "unsafe: input.cc:12:9")));
 }
 
 TEST_P(UncheckedOptionalAccessTest, Reset) {
@@ -1892,7 +1911,27 @@ TEST_P(UncheckedOptionalAccessTest, Reset) {
   )",
       UnorderedElementsAre(Pair("check", "unsafe: input.cc:7:9")));
 
-  // FIXME: Add tests that call `reset` in conditional branches.
+  // FIXME: Add tests that call `reset` in conditional branches:
+  //  ExpectLatticeChecksFor(
+  //      R"(
+  //    #include "unchecked_optional_access_test.h"
+  //
+  //    void target(bool b) {
+  //      $ns::$optional<int> opt = $ns::make_optional(0);
+  //      if (b) {
+  //        opt.reset();
+  //      }
+  //      if (b) {
+  //        opt.value();
+  //        /*[[check-1]]*/
+  //      } else {
+  //        opt.value();
+  //        /*[[check-2]]*/
+  //      }
+  //    }
+  //  )",
+  //      UnorderedElementsAre(Pair("check-1", "unsafe: input.cc:10:9"),
+  //                           Pair("check-2", "safe")));
 }
 
 TEST_P(UncheckedOptionalAccessTest, ValueAssignment) {
@@ -2345,6 +2384,284 @@ TEST_P(UncheckedOptionalAccessTest, AssignThroughLvalueReferencePtr) {
     }
   )",
       UnorderedElementsAre(Pair("check", "unsafe: input.cc:12:7")));
+}
+
+TEST_P(UncheckedOptionalAccessTest, CorrelatedBranches) {
+  ExpectLatticeChecksFor(R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b, $ns::$optional<int> opt) {
+      if (b || opt.has_value()) {
+        if (!b) {
+          opt.value();
+          /*[[check-1]]*/
+        }
+      }
+    }
+  )code",
+                         UnorderedElementsAre(Pair("check-1", "safe")));
+
+  ExpectLatticeChecksFor(R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b, $ns::$optional<int> opt) {
+      if (b && !opt.has_value()) return;
+      if (b) {
+        opt.value();
+        /*[[check-2]]*/
+      }
+    }
+  )code",
+                         UnorderedElementsAre(Pair("check-2", "safe")));
+
+  ExpectLatticeChecksFor(
+      R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b, $ns::$optional<int> opt) {
+      if (opt.has_value()) b = true;
+      if (b) {
+        opt.value();
+        /*[[check-3]]*/
+      }
+    }
+  )code",
+      UnorderedElementsAre(Pair("check-3", "unsafe: input.cc:7:9")));
+
+  ExpectLatticeChecksFor(R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b, $ns::$optional<int> opt) {
+      if (b) return;
+      if (opt.has_value()) b = true;
+      if (b) {
+        opt.value();
+        /*[[check-4]]*/
+      }
+    }
+  )code",
+                         UnorderedElementsAre(Pair("check-4", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b, $ns::$optional<int> opt) {
+      if (opt.has_value() == b) {
+        if (b) {
+          opt.value();
+          /*[[check-5]]*/
+        }
+      }
+    }
+  )",
+                         UnorderedElementsAre(Pair("check-5", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b, $ns::$optional<int> opt) {
+      if (opt.has_value() != b) {
+        if (!b) {
+          opt.value();
+          /*[[check-6]]*/
+        }
+      }
+    }
+  )",
+                         UnorderedElementsAre(Pair("check-6", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b) {
+      $ns::$optional<int> opt1 = $ns::nullopt;
+      $ns::$optional<int> opt2;
+      if (b) {
+        opt2 = $ns::nullopt;
+      } else {
+        opt2 = $ns::nullopt;
+      }
+      if (opt2.has_value()) {
+        opt1.value();
+        /*[[check]]*/
+      }
+    }
+  )",
+                         UnorderedElementsAre(Pair("check", "safe")));
+
+  // FIXME: Add support for operator==.
+  // ExpectLatticeChecksFor(R"(
+  //   #include "unchecked_optional_access_test.h"
+  //
+  //   void target($ns::$optional<int> opt1, $ns::$optional<int> opt2) {
+  //     if (opt1 == opt2) {
+  //       if (opt1.has_value()) {
+  //         opt2.value();
+  //         /*[[check-7]]*/
+  //       }
+  //     }
+  //   }
+  // )",
+  //                     UnorderedElementsAre(Pair("check-7", "safe")));
+}
+
+TEST_P(UncheckedOptionalAccessTest, JoinDistinctValues) {
+  ExpectLatticeChecksFor(
+      R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b) {
+      $ns::$optional<int> opt;
+      if (b) {
+        opt = Make<$ns::$optional<int>>();
+      } else {
+        opt = Make<$ns::$optional<int>>();
+      }
+      if (opt.has_value()) {
+        opt.value();
+        /*[[check-1]]*/
+      } else {
+        opt.value();
+        /*[[check-2]]*/
+      }
+    }
+  )code",
+      UnorderedElementsAre(Pair("check-1", "safe"),
+                           Pair("check-2", "unsafe: input.cc:15:9")));
+
+  ExpectLatticeChecksFor(R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b) {
+      $ns::$optional<int> opt;
+      if (b) {
+        opt = Make<$ns::$optional<int>>();
+        if (!opt.has_value()) return;
+      } else {
+        opt = Make<$ns::$optional<int>>();
+        if (!opt.has_value()) return;
+      }
+      opt.value();
+      /*[[check-3]]*/
+    }
+  )code",
+                         UnorderedElementsAre(Pair("check-3", "safe")));
+
+  ExpectLatticeChecksFor(
+      R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b) {
+      $ns::$optional<int> opt;
+      if (b) {
+        opt = Make<$ns::$optional<int>>();
+        if (!opt.has_value()) return;
+      } else {
+        opt = Make<$ns::$optional<int>>();
+      }
+      opt.value();
+      /*[[check-4]]*/
+    }
+  )code",
+      UnorderedElementsAre(Pair("check-4", "unsafe: input.cc:12:7")));
+
+  ExpectLatticeChecksFor(
+      R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b) {
+      $ns::$optional<int> opt;
+      if (b) {
+        opt = 1;
+      } else {
+        opt = 2;
+      }
+      opt.value();
+      /*[[check-5]]*/
+    }
+  )code",
+      UnorderedElementsAre(Pair("check-5", "safe")));
+
+  ExpectLatticeChecksFor(
+      R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target(bool b) {
+      $ns::$optional<int> opt;
+      if (b) {
+        opt = 1;
+      } else {
+        opt = Make<$ns::$optional<int>>();
+      }
+      opt.value();
+      /*[[check-6]]*/
+    }
+  )code",
+      UnorderedElementsAre(Pair("check-6", "unsafe: input.cc:11:7")));
+}
+
+TEST_P(UncheckedOptionalAccessTest, ReassignValueInLoop) {
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = 3;
+      while (Make<bool>()) {
+        opt.value();
+        /*[[check-1]]*/
+      }
+    }
+  )",
+                         UnorderedElementsAre(Pair("check-1", "safe")));
+
+  ExpectLatticeChecksFor(R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = 3;
+      while (Make<bool>()) {
+        opt.value();
+        /*[[check-2]]*/
+
+        opt = Make<$ns::$optional<int>>();
+        if (!opt.has_value()) return;
+      }
+    }
+  )",
+                         UnorderedElementsAre(Pair("check-2", "safe")));
+
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = 3;
+      while (Make<bool>()) {
+        opt.value();
+        /*[[check-3]]*/
+
+        opt = Make<$ns::$optional<int>>();
+      }
+    }
+  )",
+      UnorderedElementsAre(Pair("check-3", "unsafe: input.cc:7:9")));
+
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt = 3;
+      while (Make<bool>()) {
+        opt.value();
+        /*[[check-4]]*/
+
+        opt = Make<$ns::$optional<int>>();
+        if (!opt.has_value()) continue;
+      }
+    }
+  )",
+      UnorderedElementsAre(Pair("check-4", "unsafe: input.cc:7:9")));
 }
 
 // FIXME: Add support for:
