@@ -54,7 +54,8 @@ mlir::bufferization::insertTensorCopies(Operation *op,
     if (auto allocTensorOp = dyn_cast<AllocTensorOp>(op)) {
       if (allocTensorOp.escape())
         return WalkResult::advance();
-      bool escape = state.isTensorYielded(allocTensorOp.result());
+      bool escape = !state.getOptions().createDeallocs ||
+                    state.isTensorYielded(allocTensorOp.result());
       allocTensorOp.escapeAttr(rewriter.getBoolAttr(escape));
       return WalkResult::advance();
     }
@@ -92,6 +93,7 @@ struct TensorCopyInsertionPass
       OneShotBufferizationOptions options;
       options.allowReturnAllocs = allowReturnAllocs;
       options.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
+      options.createDeallocs = createDeallocs;
       if (failed(insertTensorCopies(getOperation(), options)))
         signalPassFailure();
     }
