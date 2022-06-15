@@ -146,7 +146,7 @@ struct StreamState {
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddPointer(LastOperation);
     ID.AddInteger(State);
-    ID.AddInteger(ErrorState);
+    ErrorState.Profile(ID);
     ID.AddBoolean(FilePositionIndeterminate);
   }
 };
