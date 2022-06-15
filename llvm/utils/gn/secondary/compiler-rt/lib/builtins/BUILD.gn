@@ -196,6 +196,7 @@ static_library("builtins") {
     "truncdfbf2.c",
     "truncdfhf2.c",
     "truncdfsf2.c",
+    "truncsfbf2.c",
     "truncsfhf2.c",
     "ucmpdi2.c",
     "ucmpti2.c",
