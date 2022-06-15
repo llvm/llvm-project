@@ -9,7 +9,7 @@
 // REQUIRES: has-clang-tidy
 // XFAIL: modules-build
 
-// RUN: clang-tidy %s --warnings-as-errors=* -header-filter=.* -- -Wno-unknown-warning-option %{compile_flags}
+// RUN: clang-tidy %s --warnings-as-errors=* -header-filter=.* -- -Wweak-vtables -Wno-unknown-warning-option %{compile_flags}
 // -Wno-unknown-warning-option tells clang-tidy to ignore '-W' command-line arguments that it doesn't know.
 // There are some GCC-specific ones where clang-tidy would warn otherwise.
 
