@@ -27,27 +27,31 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp> class allocator;
 
-#if _LIBCPP_STD_VER <= 17
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION)
 template <>
 class _LIBCPP_TEMPLATE_VIS allocator<void>
 {
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
 public:
     _LIBCPP_DEPRECATED_IN_CXX17 typedef void*             pointer;
     _LIBCPP_DEPRECATED_IN_CXX17 typedef const void*       const_pointer;
     _LIBCPP_DEPRECATED_IN_CXX17 typedef void              value_type;
 
     template <class _Up> struct _LIBCPP_DEPRECATED_IN_CXX17 rebind {typedef allocator<_Up> other;};
+#endif
 };
 
 template <>
 class _LIBCPP_TEMPLATE_VIS allocator<const void>
 {
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
 public:
     _LIBCPP_DEPRECATED_IN_CXX17 typedef const void*       pointer;
     _LIBCPP_DEPRECATED_IN_CXX17 typedef const void*       const_pointer;
     _LIBCPP_DEPRECATED_IN_CXX17 typedef const void        value_type;
 
     template <class _Up> struct _LIBCPP_DEPRECATED_IN_CXX17 rebind {typedef allocator<_Up> other;};
+#endif
 };
 #endif
 
