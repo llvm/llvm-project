@@ -266,9 +266,9 @@ void func_multiple_addr2(void) {
   __attribute__((opencl_private)) private_int_t var5;  // expected-warning {{multiple identical address spaces specified for type}}
   __attribute__((opencl_private)) private_int_t *var6; // expected-warning {{multiple identical address spaces specified for type}}
 #if __OPENCL_CPP_VERSION__
-  [[clang::opencl_private]] __global int var7;         // expected-error {{multiple address spaces specified for type}}
-  [[clang::opencl_private]] __global int *var8;        // expected-error {{multiple address spaces specified for type}}
-  [[clang::opencl_private]] private_int_t var9;        // expected-warning {{multiple identical address spaces specified for type}}
-  [[clang::opencl_private]] private_int_t *var10;      // expected-warning {{multiple identical address spaces specified for type}}
+  __global int [[clang::opencl_private]] var7;         // expected-error {{multiple address spaces specified for type}}
+  __global int [[clang::opencl_private]] *var8;        // expected-error {{multiple address spaces specified for type}}
+  private_int_t [[clang::opencl_private]] var9;        // expected-warning {{multiple identical address spaces specified for type}}
+  private_int_t [[clang::opencl_private]] *var10;      // expected-warning {{multiple identical address spaces specified for type}}
 #endif // !__OPENCL_CPP_VERSION__
 }

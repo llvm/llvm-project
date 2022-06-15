@@ -639,7 +639,7 @@ TypeResult Parser::parseOpenMPDeclareMapperVarDecl(SourceRange &Range,
 
   // Parse the declarator.
   DeclaratorContext Context = DeclaratorContext::Prototype;
-  Declarator DeclaratorInfo(DS, Context);
+  Declarator DeclaratorInfo(DS, ParsedAttributesView::none(), Context);
   ParseDeclarator(DeclaratorInfo);
   Range = DeclaratorInfo.getSourceRange();
   if (DeclaratorInfo.getIdentifier() == nullptr) {

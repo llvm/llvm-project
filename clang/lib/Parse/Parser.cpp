@@ -748,6 +748,9 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
 
 /// ParseExternalDeclaration:
 ///
+/// The `Attrs` that are passed in are C++11 attributes and appertain to the
+/// declaration.
+///
 ///       external-declaration: [C99 6.9], declaration: [C++ dcl.dcl]
 ///         function-definition
 ///         declaration
@@ -937,7 +940,9 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     // A function definition cannot start with any of these keywords.
     {
       SourceLocation DeclEnd;
-      return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs);
+      ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+      return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs,
+                              EmptyDeclSpecAttrs);
     }
 
   case tok::kw_static:
@@ -947,7 +952,9 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
         << 0;
       SourceLocation DeclEnd;
-      return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs);
+      ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+      return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs,
+                              EmptyDeclSpecAttrs);
     }
     goto dont_know;
 
@@ -958,7 +965,9 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       // Inline namespaces. Allowed as an extension even in C++03.
       if (NextKind == tok::kw_namespace) {
         SourceLocation DeclEnd;
-        return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs);
+        ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+        return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs,
+                                EmptyDeclSpecAttrs);
       }
 
       // Parse (then ignore) 'inline' prior to a template instantiation. This is
@@ -967,7 +976,9 @@ Parser::DeclGroupPtrTy Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
         Diag(ConsumeToken(), diag::warn_static_inline_explicit_inst_ignored)
           << 1;
         SourceLocation DeclEnd;
-        return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs);
+        ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+        return ParseDeclaration(DeclaratorContext::File, DeclEnd, Attrs,
+                                EmptyDeclSpecAttrs);
       }
     }
     goto dont_know;
@@ -1120,8 +1131,6 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 
-  DS.takeAttributesFrom(Attrs);
-
   // ObjC2 allows prefix attributes on class interfaces and protocols.
   // FIXME: This still needs better diagnostics. We should only accept
   // attributes here, no types, etc.
@@ -1136,6 +1145,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     }
 
     DS.abort();
+    DS.takeAttributesFrom(Attrs);
 
     const char *PrevSpec = nullptr;
     unsigned DiagID;
@@ -1159,11 +1169,12 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
   if (getLangOpts().CPlusPlus && isTokenStringLiteral() &&
       DS.getStorageClassSpec() == DeclSpec::SCS_extern &&
       DS.getParsedSpecifiers() == DeclSpec::PQ_StorageClassSpecifier) {
+    ProhibitAttributes(Attrs);
     Decl *TheDecl = ParseLinkage(DS, DeclaratorContext::File);
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 
-  return ParseDeclGroup(DS, DeclaratorContext::File);
+  return ParseDeclGroup(DS, DeclaratorContext::File, Attrs);
 }
 
 Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
@@ -1481,7 +1492,8 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
     }
 
     // Parse the first declarator attached to this declspec.
-    Declarator ParmDeclarator(DS, DeclaratorContext::KNRTypeList);
+    Declarator ParmDeclarator(DS, ParsedAttributesView::none(),
+                              DeclaratorContext::KNRTypeList);
     ParseDeclarator(ParmDeclarator);
 
     // Handle the full declarator list.

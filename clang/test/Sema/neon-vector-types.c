@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple armv7 -target-feature +neon -fsyntax-only -verify
-// RUN: %clang_cc1 %s -triple armv8 -target-feature +neon -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple armv7 -target-feature +neon -fsyntax-only -fdouble-square-bracket-attributes -verify
+// RUN: %clang_cc1 %s -triple armv8 -target-feature +neon -fsyntax-only -fdouble-square-bracket-attributes -verify
 
 typedef float float32_t;
 typedef signed char poly8_t;
@@ -15,6 +15,16 @@ typedef __attribute__((neon_vector_type(2))) float32_t float32x2_t;
 typedef __attribute__((neon_vector_type(4))) float32_t float32x4_t;
 typedef __attribute__((neon_polyvector_type(16))) poly8_t  poly8x16_t;
 typedef __attribute__((neon_polyvector_type(8)))  poly16_t poly16x8_t;
+
+// Verify that we can use the [[]] spelling of the attributes.
+// We intentionally use the same type alias names to check that both versions
+// define the same type.
+typedef int [[clang::neon_vector_type(2)]] int32x2_t;
+typedef poly8_t [[clang::neon_polyvector_type(16)]] poly8x16_t;
+
+// Verify that we can use the attributes outside of a typedef.
+int [[clang::neon_vector_type(2)]] int32x2_var;
+poly8_t [[clang::neon_polyvector_type(16)]] poly8x16_var;
 
 // The attributes must have a single argument.
 typedef __attribute__((neon_vector_type(2, 4))) int only_one_arg; // expected-error{{'neon_vector_type' attribute takes one argument}}
