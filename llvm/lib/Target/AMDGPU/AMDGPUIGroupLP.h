@@ -14,7 +14,8 @@
 
 namespace llvm {
 
-std::unique_ptr<ScheduleDAGMutation> createMFMAIGroupLPDAGMutation();
+std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation();
+std::unique_ptr<ScheduleDAGMutation> createSchedBarrierDAGMutation();
 
 } // namespace llvm
 
