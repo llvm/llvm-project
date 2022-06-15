@@ -629,15 +629,6 @@ static void distributeFunctionTypeAttrFromDeclSpec(TypeProcessingState &state,
                                                    QualType &declSpecType) {
   state.saveDeclSpecAttrs();
 
-  // C++11 attributes before the decl specifiers actually appertain to
-  // the declarators. Move them straight there. We don't support the
-  // 'put them wherever you like' semantics we allow for GNU attributes.
-  if (attr.isStandardAttributeSyntax()) {
-    moveAttrFromListToList(attr, state.getCurrentAttributes(),
-                           state.getDeclarator().getAttributes());
-    return;
-  }
-
   // Try to distribute to the innermost.
   if (distributeFunctionTypeAttrToInnermost(
           state, attr, state.getCurrentAttributes(), declSpecType))
@@ -648,8 +639,10 @@ static void distributeFunctionTypeAttrFromDeclSpec(TypeProcessingState &state,
   state.addIgnoredTypeAttr(attr);
 }
 
-/// A function type attribute was written on the declarator.  Try to
-/// apply it somewhere.
+/// A function type attribute was written on the declarator or declaration.
+/// Try to apply it somewhere.
+/// `Attrs` is the attribute list containing the declaration (either of the
+/// declarator or the declaration).
 static void distributeFunctionTypeAttrFromDeclarator(TypeProcessingState &state,
                                                      ParsedAttr &attr,
                                                      QualType &declSpecType) {
@@ -666,7 +659,7 @@ static void distributeFunctionTypeAttrFromDeclarator(TypeProcessingState &state,
   state.addIgnoredTypeAttr(attr);
 }
 
-/// Given that there are attributes written on the declarator
+/// Given that there are attributes written on the declarator or declaration
 /// itself, try to distribute any type attributes to the appropriate
 /// declarator chunk.
 ///
@@ -675,11 +668,11 @@ static void distributeFunctionTypeAttrFromDeclarator(TypeProcessingState &state,
 ///   int (f ATTR)();
 /// but not necessarily this:
 ///   int f() ATTR;
+///
+/// `Attrs` is the attribute list containing the declaration (either of the
+/// declarator or the declaration).
 static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
                                               QualType &declSpecType) {
-  // Collect all the type attributes from the declarator itself.
-  assert(!state.getDeclarator().getAttributes().empty() &&
-         "declarator has no attrs!");
   // The called functions in this loop actually remove things from the current
   // list, so iterating over the existing list isn't possible.  Instead, make a
   // non-owning copy and iterate over that.
@@ -1792,8 +1785,42 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   // list of type attributes to be temporarily saved while the type
   // attributes are pushed around.
   // pipe attributes will be handled later ( at GetFullTypeForDeclarator )
-  if (!DS.isTypeSpecPipe())
+  if (!DS.isTypeSpecPipe()) {
+    // We also apply declaration attributes that "slide" to the decl spec.
+    // Ordering can be important for attributes. The decalaration attributes
+    // come syntactically before the decl spec attributes, so we process them
+    // in that order.
+    ParsedAttributesView SlidingAttrs;
+    for (ParsedAttr &AL : declarator.getDeclarationAttributes()) {
+      if (AL.slidesFromDeclToDeclSpecLegacyBehavior()) {
+        SlidingAttrs.addAtEnd(&AL);
+
+        // For standard syntax attributes, which would normally appertain to the
+        // declaration here, suggest moving them to the type instead. But only
+        // do this for our own vendor attributes; moving other vendors'
+        // attributes might hurt portability.
+        // There's one special case that we need to deal with here: The
+        // `MatrixType` attribute may only be used in a typedef declaration. If
+        // it's being used anywhere else, don't output the warning as
+        // ProcessDeclAttributes() will output an error anyway.
+        if (AL.isStandardAttributeSyntax() && AL.isClangScope() &&
+            !(AL.getKind() == ParsedAttr::AT_MatrixType &&
+              DS.getStorageClassSpec() != DeclSpec::SCS_typedef)) {
+          S.Diag(AL.getLoc(), diag::warn_type_attribute_deprecated_on_decl)
+              << AL;
+        }
+      }
+    }
+    // During this call to processTypeAttrs(),
+    // TypeProcessingState::getCurrentAttributes() will erroneously return a
+    // reference to the DeclSpec attributes, rather than the declaration
+    // attributes. However, this doesn't matter, as getCurrentAttributes()
+    // is only called when distributing attributes from one attribute list
+    // to another. Declaration attributes are always C++11 attributes, and these
+    // are never distributed.
+    processTypeAttrs(state, Result, TAL_DeclSpec, SlidingAttrs);
     processTypeAttrs(state, Result, TAL_DeclSpec, DS.getAttributes());
+  }
 
   // Apply const/volatile/restrict qualifiers to T.
   if (unsigned TypeQuals = DS.getTypeQualifiers()) {
@@ -3400,8 +3427,10 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     break;
   }
 
-  if (!D.getAttributes().empty())
-    distributeTypeAttrsFromDeclarator(state, T);
+  // Note: We don't need to distribute declaration attributes (i.e.
+  // D.getDeclarationAttributes()) because those are always C++11 attributes,
+  // and those don't get distributed.
+  distributeTypeAttrsFromDeclarator(state, T);
 
   // Find the deduced type in this type. Look in the trailing return type if we
   // have one, otherwise in the DeclSpec type.
@@ -4702,7 +4731,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                    AttrList.hasAttribute(ParsedAttr::AT_CFReturnsNotRetained);
           };
           if (const auto *InnermostChunk = D.getInnermostNonParenChunk()) {
-            if (hasCFReturnsAttr(D.getAttributes()) ||
+            if (hasCFReturnsAttr(D.getDeclarationAttributes()) ||
+                hasCFReturnsAttr(D.getAttributes()) ||
                 hasCFReturnsAttr(InnermostChunk->getAttrs()) ||
                 hasCFReturnsAttr(D.getDeclSpec().getAttributes())) {
               inferNullability = NullabilityKind::Nullable;
@@ -5273,7 +5303,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // function is marked with the "overloadable" attribute. Scan
         // for this attribute now.
         if (!FTI.NumParams && FTI.isVariadic && !LangOpts.CPlusPlus)
-          if (!D.getAttributes().hasAttribute(ParsedAttr::AT_Overloadable) &&
+          if (!D.getDeclarationAttributes().hasAttribute(
+                  ParsedAttr::AT_Overloadable) &&
+              !D.getAttributes().hasAttribute(ParsedAttr::AT_Overloadable) &&
               !D.getDeclSpec().getAttributes().hasAttribute(
                   ParsedAttr::AT_Overloadable))
             S.Diag(FTI.getEllipsisLoc(), diag::err_ellipsis_first_param);
@@ -5689,7 +5721,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     }
   }
 
-  // Apply any undistributed attributes from the declarator.
+  // Apply any undistributed attributes from the declaration or declarator.
+  ParsedAttributesView NonSlidingAttrs;
+  for (ParsedAttr &AL : D.getDeclarationAttributes()) {
+    if (!AL.slidesFromDeclToDeclSpecLegacyBehavior()) {
+      NonSlidingAttrs.addAtEnd(&AL);
+    }
+  }
+  processTypeAttrs(state, T, TAL_DeclName, NonSlidingAttrs);
   processTypeAttrs(state, T, TAL_DeclName, D.getAttributes());
 
   // Diagnose any ignored type attributes.
@@ -8234,12 +8273,14 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
           if (!IsTypeAttr)
             continue;
         }
-      } else if (TAL != TAL_DeclChunk && !isAddressSpaceKind(attr) &&
-                 attr.getKind() != ParsedAttr::AT_AnnotateType) {
+      } else if (TAL != TAL_DeclSpec && TAL != TAL_DeclChunk &&
+                 !attr.isTypeAttr()) {
         // Otherwise, only consider type processing for a C++11 attribute if
-        // it's actually been applied to a type.
-        // We also allow C++11 address_space and annotate_type and
-        // OpenCL language address space attributes to pass through.
+        // - it has actually been applied to a type (decl-specifier-seq or
+        //   declarator chunk), or
+        // - it is a type attribute, irrespective of where it was applied (so
+        //   that we can support the legacy behavior of some type attributes
+        //   that can be applied to the declaration name).
         continue;
       }
     }
@@ -8257,10 +8298,14 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
 
     case ParsedAttr::UnknownAttribute:
-      if (attr.isStandardAttributeSyntax() && TAL == TAL_DeclChunk)
+      if (attr.isStandardAttributeSyntax()) {
         state.getSema().Diag(attr.getLoc(),
                              diag::warn_unknown_attribute_ignored)
             << attr << attr.getRange();
+        // Mark the attribute as invalid so we don't emit the same diagnostic
+        // multiple times.
+        attr.setInvalid();
+      }
       break;
 
     case ParsedAttr::IgnoredAttribute:
@@ -8329,6 +8374,15 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
 
     case ParsedAttr::AT_NoDeref: {
+      // FIXME: `noderef` currently doesn't work correctly in [[]] syntax.
+      // See https://github.com/llvm/llvm-project/issues/55790 for details.
+      // For the time being, we simply emit a warning that the attribute is
+      // ignored.
+      if (attr.isStandardAttributeSyntax()) {
+        state.getSema().Diag(attr.getLoc(), diag::warn_attribute_ignored)
+            << attr;
+        break;
+      }
       ASTContext &Ctx = state.getSema().Context;
       type = state.getAttributedType(createSimpleAttr<NoDerefAttr>(Ctx, attr),
                                      type, type);
@@ -8405,6 +8459,16 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       LLVM_FALLTHROUGH;
     FUNCTION_TYPE_ATTRS_CASELIST:
       attr.setUsedAsTypeAttr();
+
+      // Attributes with standard syntax have strict rules for what they
+      // appertain to and hence should not use the "distribution" logic below.
+      if (attr.isStandardAttributeSyntax()) {
+        if (!handleFunctionTypeAttr(state, attr, type)) {
+          diagnoseBadTypeAttribute(state.getSema(), attr, type);
+          attr.setInvalid();
+        }
+        break;
+      }
 
       // Never process function type attributes as part of the
       // declaration-specifiers.

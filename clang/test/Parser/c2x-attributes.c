@@ -34,6 +34,8 @@ struct [[]] S1 {
   int [[]] : 0; // OK, attribute applies to the type.
   int p, [[]] : 0; // expected-error {{an attribute list cannot appear here}}
   int q, [[]] r; // expected-error {{an attribute list cannot appear here}}
+  [[]] int; // expected-error {{an attribute list cannot appear here}} \
+            // expected-warning {{declaration does not declare anything}}
 };
 
 [[]] struct S2 { int a; }; // expected-error {{misplaced attributes}}
