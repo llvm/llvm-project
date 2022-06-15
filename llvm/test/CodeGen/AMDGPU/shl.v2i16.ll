@@ -581,13 +581,13 @@ define amdgpu_kernel void @shl_v_imm_v4i16(<4 x i16> addrspace(1)* %out, <4 x i1
 ; CI-NEXT:    buffer_load_dwordx2 v[2:3], v[0:1], s[4:7], 0 addr64
 ; CI-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_lshrrev_b32_e32 v4, 8, v3
-; CI-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
-; CI-NEXT:    v_and_b32_e32 v4, 0xff00, v4
-; CI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; CI-NEXT:    v_lshlrev_b32_e32 v4, 8, v3
+; CI-NEXT:    v_lshrrev_b32_e32 v3, 8, v3
 ; CI-NEXT:    v_and_b32_e32 v3, 0xff00, v3
-; CI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; CI-NEXT:    v_or_b32_e32 v3, v3, v4
+; CI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
+; CI-NEXT:    v_and_b32_e32 v4, 0xff00, v4
+; CI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; CI-NEXT:    v_or_b32_e32 v3, v4, v3
 ; CI-NEXT:    v_and_b32_e32 v2, 0xff00ff00, v2
 ; CI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
 ; CI-NEXT:    s_endpgm

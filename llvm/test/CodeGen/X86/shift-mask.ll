@@ -258,11 +258,11 @@ define i64 @test_i64_shl_lshr_0(i64 %a0) {
 define i64 @test_i64_shl_lshr_1(i64 %a0) {
 ; X86-LABEL: test_i64_shl_lshr_1:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    leal (,%ecx,4), %eax
+; X86-NEXT:    shldl $2, %eax, %edx
+; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    andl $-32, %eax
-; X86-NEXT:    shldl $2, %ecx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-MASK-LABEL: test_i64_shl_lshr_1:
@@ -288,8 +288,8 @@ define i64 @test_i64_shl_lshr_2(i64 %a0) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    shrdl $2, %edx, %eax
-; X86-NEXT:    andl $-8, %eax
 ; X86-NEXT:    shrl $2, %edx
+; X86-NEXT:    andl $-8, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-MASK-LABEL: test_i64_shl_lshr_2:
