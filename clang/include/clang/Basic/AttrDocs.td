@@ -6510,7 +6510,7 @@ For example:
 The attribute does not have any effect on the semantics of the type system,
 neither type checking rules, nor runtime semantics. In particular:
 
-- ``std::is_same<T, T [[clang::annotate_type("foo")]]`` is true for all types
+- ``std::is_same<T, T [[clang::annotate_type("foo")]]>`` is true for all types
   ``T``.
 
 - It is not permissible for overloaded functions or template specializations
