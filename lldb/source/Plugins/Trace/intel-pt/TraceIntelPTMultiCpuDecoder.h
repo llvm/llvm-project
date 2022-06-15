@@ -12,6 +12,7 @@
 #include "LibiptDecoder.h"
 #include "PerfContextSwitchDecoder.h"
 #include "ThreadDecoder.h"
+#include "forward-declarations.h"
 
 namespace lldb_private {
 namespace trace_intel_pt {
@@ -31,7 +32,7 @@ class TraceIntelPTMultiCpuDecoder {
 public:
   /// \param[in] TraceIntelPT
   ///   The trace object to be decoded
-  TraceIntelPTMultiCpuDecoder(TraceIntelPT &trace);
+  TraceIntelPTMultiCpuDecoder(TraceIntelPTSP trace_sp);
 
   /// \return
   ///   A \a DecodedThread for the \p thread by decoding its instructions on all
@@ -67,7 +68,9 @@ private:
       llvm::DenseMap<lldb::tid_t, std::vector<IntelPTThreadContinousExecution>>>
   DoCorrelateContextSwitchesAndIntelPtTraces();
 
-  TraceIntelPT *m_trace;
+  TraceIntelPTSP GetTrace();
+
+  std::weak_ptr<TraceIntelPT> m_trace_wp;
   std::set<lldb::tid_t> m_tids;
   llvm::Optional<
       llvm::DenseMap<lldb::tid_t, std::vector<IntelPTThreadContinousExecution>>>

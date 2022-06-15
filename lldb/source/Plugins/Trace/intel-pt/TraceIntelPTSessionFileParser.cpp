@@ -284,7 +284,8 @@ Expected<TraceSP> TraceIntelPTSessionFileParser::CreateTraceIntelPTInstance(
                    parsed_process.threads.end());
   }
 
-  TraceSP trace_instance(new TraceIntelPT(session, processes, threads));
+  TraceSP trace_instance = TraceIntelPT::CreateInstanceForPostmortemTrace(
+      session, processes, threads);
   for (const ParsedProcess &parsed_process : parsed_processes)
     parsed_process.target_sp->SetTrace(trace_instance);
 

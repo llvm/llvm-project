@@ -74,23 +74,26 @@ Expected<TraceSP> TraceIntelPT::CreateInstanceForLiveProcess(Process &process) {
   return instance;
 }
 
-TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
-                           ArrayRef<ProcessSP> traced_processes,
-                           ArrayRef<ThreadPostMortemTraceSP> traced_threads)
-    : Trace(traced_processes, session.GetCpuIds()),
-      m_cpu_info(session.cpu_info) {
-  m_storage.tsc_conversion = session.tsc_perf_zero_conversion;
+TraceIntelPTSP TraceIntelPT::GetSharedPtr() {
+  return std::static_pointer_cast<TraceIntelPT>(shared_from_this());
+}
+
+TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
+    JSONTraceSession &session, ArrayRef<ProcessSP> traced_processes,
+    ArrayRef<ThreadPostMortemTraceSP> traced_threads) {
+  TraceIntelPTSP trace_sp(new TraceIntelPT(session, traced_processes));
+  trace_sp->m_storage.tsc_conversion = session.tsc_perf_zero_conversion;
 
   if (session.cpus) {
     std::vector<cpu_id_t> cpus;
 
     for (const JSONCpu &cpu : *session.cpus) {
-      SetPostMortemCpuDataFile(cpu.id, IntelPTDataKinds::kIptTrace,
-                               FileSpec(cpu.ipt_trace));
+      trace_sp->SetPostMortemCpuDataFile(cpu.id, IntelPTDataKinds::kIptTrace,
+                                         FileSpec(cpu.ipt_trace));
 
-      SetPostMortemCpuDataFile(cpu.id,
-                               IntelPTDataKinds::kPerfContextSwitchTrace,
-                               FileSpec(cpu.context_switch_trace));
+      trace_sp->SetPostMortemCpuDataFile(
+          cpu.id, IntelPTDataKinds::kPerfContextSwitchTrace,
+          FileSpec(cpu.context_switch_trace));
       cpus.push_back(cpu.id);
     }
 
@@ -99,18 +102,27 @@ TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
       for (const JSONThread &thread : process.threads)
         tids.push_back(thread.tid);
 
-    m_storage.multicpu_decoder.emplace(*this);
+    trace_sp->m_storage.multicpu_decoder.emplace(trace_sp);
   } else {
     for (const ThreadPostMortemTraceSP &thread : traced_threads) {
-      m_storage.thread_decoders.try_emplace(
-          thread->GetID(), std::make_unique<ThreadDecoder>(thread, *this));
+      trace_sp->m_storage.thread_decoders.try_emplace(
+          thread->GetID(), std::make_unique<ThreadDecoder>(thread, *trace_sp));
       if (const Optional<FileSpec> &trace_file = thread->GetTraceFile()) {
-        SetPostMortemThreadDataFile(thread->GetID(),
-                                    IntelPTDataKinds::kIptTrace, *trace_file);
+        trace_sp->SetPostMortemThreadDataFile(
+            thread->GetID(), IntelPTDataKinds::kIptTrace, *trace_file);
       }
     }
   }
+
+  for (const ProcessSP &process_sp : traced_processes)
+    process_sp->GetTarget().SetTrace(trace_sp);
+  return trace_sp;
 }
+
+TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
+                           ArrayRef<ProcessSP> traced_processes)
+    : Trace(traced_processes, session.GetCpuIds()),
+      m_cpu_info(session.cpu_info) {}
 
 DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
   if (const char *error = RefreshLiveProcessState())
@@ -351,7 +363,7 @@ Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
     if (!intelpt_state->tsc_perf_zero_conversion)
       return createStringError(inconvertibleErrorCode(),
                                "Missing perf time_zero conversion values");
-    m_storage.multicpu_decoder.emplace(*this);
+    m_storage.multicpu_decoder.emplace(GetSharedPtr());
   }
 
   if (m_storage.tsc_conversion) {

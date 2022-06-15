@@ -63,16 +63,18 @@ static V *LookupAsPtr(DenseMap<K, V> &map, K k) {
   return &it->second;
 }
 
+/// Similar to the methods above but it looks for an item in a map of maps.
 template <typename K1, typename K2, typename V>
-static Optional<V> Lookup2(DenseMap<K1, DenseMap<K2, V>> &map, K1 k1, K2 k2) {
+static Optional<V> Lookup(DenseMap<K1, DenseMap<K2, V>> &map, K1 k1, K2 k2) {
   auto it = map.find(k1);
   if (it == map.end())
     return None;
   return Lookup(it->second, k2);
 }
 
+/// Similar to the methods above but it looks for an item in a map of maps.
 template <typename K1, typename K2, typename V>
-static V *Lookup2AsPtr(DenseMap<K1, DenseMap<K2, V>> &map, K1 k1, K2 k2) {
+static V *LookupAsPtr(DenseMap<K1, DenseMap<K2, V>> &map, K1 k1, K2 k2) {
   auto it = map.find(k1);
   if (it == map.end())
     return nullptr;
@@ -159,13 +161,13 @@ Expected<std::string> Trace::GetLiveProcessState() {
 Optional<uint64_t> Trace::GetLiveThreadBinaryDataSize(lldb::tid_t tid,
                                                       llvm::StringRef kind) {
   Storage &storage = GetUpdatedStorage();
-  return Lookup2(storage.live_thread_data, tid, ConstString(kind));
+  return Lookup(storage.live_thread_data, tid, ConstString(kind));
 }
 
 Optional<uint64_t> Trace::GetLiveCpuBinaryDataSize(lldb::cpu_id_t cpu_id,
                                                    llvm::StringRef kind) {
   Storage &storage = GetUpdatedStorage();
-  return Lookup2(storage.live_cpu_data_sizes, cpu_id, ConstString(kind));
+  return Lookup(storage.live_cpu_data_sizes, cpu_id, ConstString(kind));
 }
 
 Optional<uint64_t> Trace::GetLiveProcessBinaryDataSize(llvm::StringRef kind) {
@@ -345,7 +347,7 @@ llvm::Expected<FileSpec>
 Trace::GetPostMortemThreadDataFile(lldb::tid_t tid, llvm::StringRef kind) {
   Storage &storage = GetUpdatedStorage();
   if (Optional<FileSpec> file =
-          Lookup2(storage.postmortem_thread_data, tid, ConstString(kind)))
+          Lookup(storage.postmortem_thread_data, tid, ConstString(kind)))
     return *file;
   else
     return createStringError(
@@ -358,7 +360,7 @@ llvm::Expected<FileSpec> Trace::GetPostMortemCpuDataFile(lldb::cpu_id_t cpu_id,
                                                          llvm::StringRef kind) {
   Storage &storage = GetUpdatedStorage();
   if (Optional<FileSpec> file =
-          Lookup2(storage.postmortem_cpu_data, cpu_id, ConstString(kind)))
+          Lookup(storage.postmortem_cpu_data, cpu_id, ConstString(kind)))
     return *file;
   else
     return createStringError(
@@ -393,7 +395,7 @@ llvm::Error Trace::OnLiveCpuBinaryDataRead(lldb::cpu_id_t cpu_id,
                                            OnBinaryDataReadCallback callback) {
   Storage &storage = GetUpdatedStorage();
   if (std::vector<uint8_t> *cpu_data =
-          Lookup2AsPtr(storage.live_cpu_data, cpu_id, ConstString(kind)))
+          LookupAsPtr(storage.live_cpu_data, cpu_id, ConstString(kind)))
     return callback(*cpu_data);
 
   Expected<std::vector<uint8_t>> data = GetLiveCpuBinaryData(cpu_id, kind);
