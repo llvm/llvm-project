@@ -975,9 +975,7 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
   if (D->hasGlobalStorage() && !D->isStaticLocal()) {
     QualType Ty = D->getType();
     assert(!Ty.isNull());
-    if (Ty.isConstQualified() && Ty->isArithmeticType()) {
-      // TODO: We could walk the complex types here and see if everything is
-      // constified.
+    if (Ty.isConstQualified()) {
       sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
     } else if (Ctx.getSourceManager().isInSystemHeader(D->getLocation())) {
       sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
