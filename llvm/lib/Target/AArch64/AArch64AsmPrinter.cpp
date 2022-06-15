@@ -605,7 +605,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
 
     if (!Stubs.empty()) {
       // Switch to the "__auth_ptr" section.
-      OutStreamer->SwitchSection(
+      OutStreamer->switchSection(
           OutContext.getMachOSection("__DATA", "__auth_ptr", MachO::S_REGULAR,
                                      SectionKind::getMetadata()));
       emitAlignment(Align(8));
