@@ -15,7 +15,7 @@
 // In the below tests, --rtlib=platform is used so that the driver ignores
 // the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib
 
-// RUN: %clang -### %s -fuse-ld= \
+// RUN: env "PATH=" %clang -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 -no-pie \
@@ -30,7 +30,7 @@
 // C-RV64-BAREMETAL-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clang -### %s -fuse-ld= \
+// RUN: env "PATH=" %clang -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
@@ -44,7 +44,7 @@
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx -### %s -fuse-ld= \
+// RUN: env "PATH=" %clangxx -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
@@ -60,7 +60,7 @@
 // CXX-RV64-BAREMETAL-LP64: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx -### %s -fuse-ld= \
+// RUN: env "PATH=" %clangxx -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
@@ -75,7 +75,7 @@
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clang -### %s -fuse-ld= -no-pie \
+// RUN: env "PATH=" %clang -### %s -fuse-ld= -no-pie \
 // RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform -mabi=lp64 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
@@ -90,7 +90,7 @@
 // C-RV64-LINUX-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/lib64/lp64"
 // C-RV64-LINUX-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib64/lp64"
 
-// RUN: %clang -### %s -fuse-ld=ld -no-pie \
+// RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie \
 // RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform -march=rv64imafd \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
