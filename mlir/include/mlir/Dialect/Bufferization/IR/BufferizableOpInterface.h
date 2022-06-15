@@ -398,23 +398,23 @@ public:
   SetVector<Value> findLastPrecedingWrite(Value value) const;
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
-  virtual bool isInPlace(OpOperand &opOperand) const = 0;
+  virtual bool isInPlace(OpOperand &opOperand) const;
 
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
-  virtual bool areEquivalentBufferizedValues(Value v1, Value v2) const = 0;
+  virtual bool areEquivalentBufferizedValues(Value v1, Value v2) const;
 
   /// Return true if `v1` and `v2` may bufferize to aliasing buffers.
-  virtual bool areAliasingBufferizedValues(Value v1, Value v2) const = 0;
+  virtual bool areAliasingBufferizedValues(Value v1, Value v2) const;
 
   /// Return `true` if the given tensor has undefined contents.
-  virtual bool hasUndefinedContents(OpOperand *opOperand) const = 0;
+  virtual bool hasUndefinedContents(OpOperand *opOperand) const;
 
   /// Return true if the given tensor (or an aliasing tensor) is yielded from
   /// the containing block. Also include all aliasing tensors in the same block.
   ///
   /// Note: In the absence of an analysis, an implementation may return true for
   /// any given tensor.
-  virtual bool isTensorYielded(Value tensor) const = 0;
+  virtual bool isTensorYielded(Value tensor) const;
 
   /// Return `true` if the given dialect state exists.
   bool hasDialectState(StringRef name) const {
@@ -449,13 +449,12 @@ public:
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const { return options; }
 
-protected:
   explicit AnalysisState(const BufferizationOptions &options);
 
   // AnalysisState should be passed as a reference.
   AnalysisState(const AnalysisState &) = delete;
 
-  ~AnalysisState() = default;
+  virtual ~AnalysisState() = default;
 
 private:
   /// Dialect-specific analysis state.
