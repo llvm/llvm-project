@@ -138,7 +138,7 @@ Changes to the WebAssembly Backend
 Changes to the X86 Backend
 --------------------------
 
-* Support ``half`` type on SSE2 and above targets.
+* ...
 
 Changes to the OCaml bindings
 -----------------------------
