@@ -2075,7 +2075,8 @@ private:
       SourceLocation *TrailingElseLoc = nullptr);
   StmtResult ParseStatementOrDeclarationAfterAttributes(
       StmtVector &Stmts, ParsedStmtContext StmtCtx,
-      SourceLocation *TrailingElseLoc, ParsedAttributes &Attrs);
+      SourceLocation *TrailingElseLoc, ParsedAttributes &DeclAttrs,
+      ParsedAttributes &DeclSpecAttrs);
   StmtResult ParseExprStatement(ParsedStmtContext StmtCtx);
   StmtResult ParseLabeledStatement(ParsedAttributes &Attrs,
                                    ParsedStmtContext StmtCtx);
@@ -2324,15 +2325,18 @@ private:
 
   DeclGroupPtrTy ParseDeclaration(DeclaratorContext Context,
                                   SourceLocation &DeclEnd,
-                                  ParsedAttributes &Attrs,
+                                  ParsedAttributes &DeclAttrs,
+                                  ParsedAttributes &DeclSpecAttrs,
                                   SourceLocation *DeclSpecStart = nullptr);
   DeclGroupPtrTy
   ParseSimpleDeclaration(DeclaratorContext Context, SourceLocation &DeclEnd,
-                         ParsedAttributes &Attrs, bool RequireSemi,
+                         ParsedAttributes &DeclAttrs,
+                         ParsedAttributes &DeclSpecAttrs, bool RequireSemi,
                          ForRangeInit *FRI = nullptr,
                          SourceLocation *DeclSpecStart = nullptr);
   bool MightBeDeclarator(DeclaratorContext Context);
   DeclGroupPtrTy ParseDeclGroup(ParsingDeclSpec &DS, DeclaratorContext Context,
+                                ParsedAttributes &Attrs,
                                 SourceLocation *DeclEnd = nullptr,
                                 ForRangeInit *FRI = nullptr);
   Decl *ParseDeclarationAfterDeclarator(Declarator &D,

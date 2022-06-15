@@ -3354,8 +3354,6 @@ def warn_redeclaration_without_import_attribute : Warning<
 def warn_dllimport_dropped_from_inline_function : Warning<
   "%q0 redeclared inline; %1 attribute ignored">,
   InGroup<IgnoredAttributes>;
-def warn_attribute_ignored : Warning<"%0 attribute ignored">,
-  InGroup<IgnoredAttributes>;
 def warn_nothrow_attribute_ignored : Warning<"'nothrow' attribute conflicts with"
   " exception specification; attribute ignored">,
   InGroup<IgnoredAttributes>;
@@ -3392,8 +3390,11 @@ def note_attribute_has_no_effect_on_compile_time_if_here : Note<
   "annotating the 'if %select{constexpr|consteval}0' statement here">;
 def err_decl_attribute_invalid_on_stmt : Error<
   "%0 attribute cannot be applied to a statement">;
-def err_stmt_attribute_invalid_on_decl : Error<
+def err_attribute_invalid_on_decl : Error<
   "%0 attribute cannot be applied to a declaration">;
+def warn_type_attribute_deprecated_on_decl : Warning<
+  "applying attribute %0 to a declaration is deprecated; apply it to the type instead">,
+  InGroup<DeprecatedAttributes>;
 def warn_declspec_attribute_ignored : Warning<
   "attribute %0 is ignored, place it after "
   "\"%select{class|struct|interface|union|enum}1\" to apply attribute to "

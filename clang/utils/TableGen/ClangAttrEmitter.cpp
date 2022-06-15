@@ -3739,7 +3739,7 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
     if (!StmtSubjects.empty()) {
       OS << "bool diagAppertainsToDecl(Sema &S, const ParsedAttr &AL, ";
       OS << "const Decl *D) const override {\n";
-      OS << "  S.Diag(AL.getLoc(), diag::err_stmt_attribute_invalid_on_decl)\n";
+      OS << "  S.Diag(AL.getLoc(), diag::err_attribute_invalid_on_decl)\n";
       OS << "    << AL << D->getLocation();\n";
       OS << "  return false;\n";
       OS << "}\n\n";

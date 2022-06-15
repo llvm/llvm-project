@@ -8316,15 +8316,21 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
 /// ProcessDeclAttribute - Apply the specific attribute to the specified decl if
 /// the attribute applies to decls.  If the attribute is a type attribute, just
 /// silently ignore it if a GNU attribute.
-static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
-                                 const ParsedAttr &AL,
-                                 bool IncludeCXX11Attributes) {
+static void
+ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
+                     const Sema::ProcessDeclAttributeOptions &Options) {
   if (AL.isInvalid() || AL.getKind() == ParsedAttr::IgnoredAttribute)
     return;
 
   // Ignore C++11 attributes on declarator chunks: they appertain to the type
   // instead.
-  if (AL.isCXX11Attribute() && !IncludeCXX11Attributes)
+  // FIXME: We currently check the attribute syntax directly instead of using
+  // isCXX11Attribute(), which currently erroneously classifies the C11
+  // `_Alignas` attribute as a C++11 attribute. `_Alignas` can appear on the
+  // `DeclSpec`, so we need to let it through here to make sure it is processed
+  // appropriately. Once the behavior of isCXX11Attribute() is fixed, we can
+  // go back to using that here.
+  if (AL.getSyntax() == ParsedAttr::AS_CXX11 && !Options.IncludeCXX11Attributes)
     return;
 
   // Unknown attributes are automatically warned on. Target-specific attributes
@@ -8357,14 +8363,76 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     if (AL.getInfo().handleDeclAttribute(S, D, AL) != ParsedAttrInfo::NotHandled)
       break;
     if (!AL.isStmtAttr()) {
-      // Type attributes are handled elsewhere; silently move on.
       assert(AL.isTypeAttr() && "Non-type attribute not handled");
-      break;
+    }
+    if (AL.isTypeAttr()) {
+      if (Options.IgnoreTypeAttributes)
+        break;
+      if (!AL.isStandardAttributeSyntax()) {
+        // Non-[[]] type attributes are handled in processTypeAttrs(); silently
+        // move on.
+        break;
+      }
+
+      // According to the C and C++ standards, we should never see a
+      // [[]] type attribute on a declaration. However, we have in the past
+      // allowed some type attributes to "slide" to the `DeclSpec`, so we need
+      // to continue to support this legacy behavior. We only do this, however,
+      // if
+      // - we actually have a `DeclSpec`, i.e. if we're looking at a
+      //   `DeclaratorDecl`, or
+      // - we are looking at an alias-declaration, where historically we have
+      //   allowed type attributes after the identifier to slide to the type.
+      if (AL.slidesFromDeclToDeclSpecLegacyBehavior() &&
+          isa<DeclaratorDecl, TypeAliasDecl>(D)) {
+        // Suggest moving the attribute to the type instead, but only for our
+        // own vendor attributes; moving other vendors' attributes might hurt
+        // portability.
+        if (AL.isClangScope()) {
+          S.Diag(AL.getLoc(), diag::warn_type_attribute_deprecated_on_decl)
+              << AL << D->getLocation();
+        }
+
+        // Allow this type attribute to be handled in processTypeAttrs();
+        // silently move on.
+        break;
+      }
+
+      if (AL.getKind() == ParsedAttr::AT_Regparm) {
+        // `regparm` is a special case: It's a type attribute but we still want
+        // to treat it as if it had been written on the declaration because that
+        // way we'll be able to handle it directly in `processTypeAttr()`.
+        // If we treated `regparm` it as if it had been written on the
+        // `DeclSpec`, the logic in `distributeFunctionTypeAttrFromDeclSepc()`
+        // would try to move it to the declarator, but that doesn't work: We
+        // can't remove the attribute from the list of declaration attributes
+        // because it might be needed by other declarators in the same
+        // declaration.
+        break;
+      }
+
+      if (AL.getKind() == ParsedAttr::AT_VectorSize) {
+        // `vector_size` is a special case: It's a type attribute semantically,
+        // but GCC expects the [[]] syntax to be written on the declaration (and
+        // warns that the attribute has no effect if it is placed on the
+        // decl-specifier-seq).
+        // Silently move on and allow the attribute to be handled in
+        // processTypeAttr().
+        break;
+      }
+
+      if (AL.getKind() == ParsedAttr::AT_NoDeref) {
+        // FIXME: `noderef` currently doesn't work correctly in [[]] syntax.
+        // See https://github.com/llvm/llvm-project/issues/55790 for details.
+        // We allow processTypeAttrs() to emit a warning and silently move on.
+        break;
+      }
     }
     // N.B., ClangAttrEmitter.cpp emits a diagnostic helper that ensures a
     // statement attribute is not written on a declaration, but this code is
-    // needed for attributes in Attr.td that do not list any subjects.
-    S.Diag(AL.getLoc(), diag::err_stmt_attribute_invalid_on_decl)
+    // needed for type attributes as well as statement attributes in Attr.td
+    // that do not list any subjects.
+    S.Diag(AL.getLoc(), diag::err_attribute_invalid_on_decl)
         << AL << D->getLocation();
     break;
   case ParsedAttr::AT_Interrupt:
@@ -9010,14 +9078,14 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
 
 /// ProcessDeclAttributeList - Apply all the decl attributes in the specified
 /// attribute list to the specified decl, ignoring any type attributes.
-void Sema::ProcessDeclAttributeList(Scope *S, Decl *D,
-                                    const ParsedAttributesView &AttrList,
-                                    bool IncludeCXX11Attributes) {
+void Sema::ProcessDeclAttributeList(
+    Scope *S, Decl *D, const ParsedAttributesView &AttrList,
+    const ProcessDeclAttributeOptions &Options) {
   if (AttrList.empty())
     return;
 
   for (const ParsedAttr &AL : AttrList)
-    ProcessDeclAttribute(*this, S, D, AL, IncludeCXX11Attributes);
+    ProcessDeclAttribute(*this, S, D, AL, Options);
 
   // FIXME: We should be able to handle these cases in TableGen.
   // GCC accepts
@@ -9105,7 +9173,8 @@ bool Sema::ProcessAccessDeclAttributeList(
     AccessSpecDecl *ASDecl, const ParsedAttributesView &AttrList) {
   for (const ParsedAttr &AL : AttrList) {
     if (AL.getKind() == ParsedAttr::AT_Annotate) {
-      ProcessDeclAttribute(*this, nullptr, ASDecl, AL, AL.isCXX11Attribute());
+      ProcessDeclAttribute(*this, nullptr, ASDecl, AL,
+                           ProcessDeclAttributeOptions());
     } else {
       Diag(AL.getLoc(), diag::err_only_annotate_after_access_spec);
       return true;
@@ -9138,6 +9207,7 @@ static void checkUnusedDeclAttributes(Sema &S, const ParsedAttributesView &A) {
 /// used to build a declaration, complain about any decl attributes
 /// which might be lying around on it.
 void Sema::checkUnusedDeclAttributes(Declarator &D) {
+  ::checkUnusedDeclAttributes(*this, D.getDeclarationAttributes());
   ::checkUnusedDeclAttributes(*this, D.getDeclSpec().getAttributes());
   ::checkUnusedDeclAttributes(*this, D.getAttributes());
   for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i)
@@ -9246,17 +9316,43 @@ void Sema::ProcessPragmaWeak(Scope *S, Decl *D) {
 /// it, apply them to D.  This is a bit tricky because PD can have attributes
 /// specified in many different places, and we need to find and apply them all.
 void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
+  // Ordering of attributes can be important, so we take care to process
+  // attributes in the order in which they appeared in the source code.
+
+  // First, process attributes that appeared on the declaration itself (but
+  // only if they don't have the legacy behavior of "sliding" to the DeclSepc).
+  ParsedAttributesView NonSlidingAttrs;
+  for (ParsedAttr &AL : PD.getDeclarationAttributes()) {
+    if (AL.slidesFromDeclToDeclSpecLegacyBehavior()) {
+      // Skip processing the attribute, but do check if it appertains to the
+      // declaration. This is needed for the `MatrixType` attribute, which,
+      // despite being a type attribute, defines a `SubjectList` that only
+      // allows it to be used on typedef declarations.
+      AL.diagnoseAppertainsTo(*this, D);
+    } else {
+      NonSlidingAttrs.addAtEnd(&AL);
+    }
+  }
+  ProcessDeclAttributeList(S, D, NonSlidingAttrs);
+
   // Apply decl attributes from the DeclSpec if present.
-  if (!PD.getDeclSpec().getAttributes().empty())
-    ProcessDeclAttributeList(S, D, PD.getDeclSpec().getAttributes());
+  if (!PD.getDeclSpec().getAttributes().empty()) {
+    ProcessDeclAttributeList(S, D, PD.getDeclSpec().getAttributes(),
+                             ProcessDeclAttributeOptions()
+                                 .WithIncludeCXX11Attributes(false)
+                                 .WithIgnoreTypeAttributes(true));
+  }
 
   // Walk the declarator structure, applying decl attributes that were in a type
   // position to the decl itself.  This handles cases like:
   //   int *__attr__(x)** D;
   // when X is a decl attribute.
-  for (unsigned i = 0, e = PD.getNumTypeObjects(); i != e; ++i)
+  for (unsigned i = 0, e = PD.getNumTypeObjects(); i != e; ++i) {
     ProcessDeclAttributeList(S, D, PD.getTypeObject(i).getAttrs(),
-                             /*IncludeCXX11Attributes=*/false);
+                             ProcessDeclAttributeOptions()
+                                 .WithIncludeCXX11Attributes(false)
+                                 .WithIgnoreTypeAttributes(true));
+  }
 
   // Finally, apply any attributes on the decl itself.
   ProcessDeclAttributeList(S, D, PD.getAttributes());

@@ -355,8 +355,8 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
                 getCurScope(), DS.getSourceRange().getBegin(), Lang.get(),
                 Tok.is(tok::l_brace) ? Tok.getLocation() : SourceLocation());
 
-  ParsedAttributes attrs(AttrFactory);
-  MaybeParseCXX11Attributes(attrs);
+  ParsedAttributes DeclAttrs(AttrFactory);
+  MaybeParseCXX11Attributes(DeclAttrs);
 
   if (Tok.isNot(tok::l_brace)) {
     // Reset the source range in DS, as the leading "extern"
@@ -365,7 +365,7 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
     DS.SetRangeEnd(SourceLocation());
     // ... but anyway remember that such an "extern" was seen.
     DS.setExternInLinkageSpec(true);
-    ParseExternalDeclaration(attrs, &DS);
+    ParseExternalDeclaration(DeclAttrs, &DS);
     return LinkageSpec ? Actions.ActOnFinishLinkageSpecification(
                              getCurScope(), LinkageSpec, SourceLocation())
                        : nullptr;
@@ -373,7 +373,7 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
 
   DS.abort();
 
-  ProhibitAttributes(attrs);
+  ProhibitAttributes(DeclAttrs);
 
   BalancedDelimiterTracker T(*this, tok::l_brace);
   T.consumeOpen();
@@ -1217,7 +1217,8 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
 
     EndLocation = ParseDecltypeSpecifier(DS);
 
-    Declarator DeclaratorInfo(DS, DeclaratorContext::TypeName);
+    Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
+                              DeclaratorContext::TypeName);
     return Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
   }
 
@@ -1309,7 +1310,8 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   DS.SetTypeSpecType(TST_typename, IdLoc, PrevSpec, DiagID, Type,
                      Actions.getASTContext().getPrintingPolicy());
 
-  Declarator DeclaratorInfo(DS, DeclaratorContext::TypeName);
+  Declarator DeclaratorInfo(DS, ParsedAttributesView::none(),
+                            DeclaratorContext::TypeName);
   return Actions.ActOnTypeName(getCurScope(), DeclaratorInfo);
 }
 
@@ -2680,23 +2682,15 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
                                           TemplateInfo, TemplateDiags);
   }
 
-  ParsedAttributes attrs(AttrFactory);
-  ParsedAttributesView FnAttrs;
+  ParsedAttributes DeclAttrs(AttrFactory);
   // Optional C++11 attribute-specifier
-  MaybeParseCXX11Attributes(attrs);
+  MaybeParseCXX11Attributes(DeclAttrs);
 
   // The next token may be an OpenMP pragma annotation token. That would
   // normally be handled from ParseCXXClassMemberDeclarationWithPragmas, but in
   // this case, it came from an *attribute* rather than a pragma. Handle it now.
   if (Tok.is(tok::annot_attr_openmp))
-    return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, attrs);
-
-  // We need to keep these attributes for future diagnostic
-  // before they are taken over by declaration specifier.
-  FnAttrs.addAll(attrs.begin(), attrs.end());
-  FnAttrs.Range = attrs.Range;
-
-  MaybeParseMicrosoftAttributes(attrs);
+    return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, DeclAttrs);
 
   if (Tok.is(tok::kw_using)) {
     // Eat 'using'.
@@ -2717,8 +2711,11 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     SourceLocation DeclEnd;
     // Otherwise, it must be a using-declaration or an alias-declaration.
     return ParseUsingDeclaration(DeclaratorContext::Member, TemplateInfo,
-                                 UsingLoc, DeclEnd, attrs, AS);
+                                 UsingLoc, DeclEnd, DeclAttrs, AS);
   }
+
+  ParsedAttributes DeclSpecAttrs(AttrFactory);
+  MaybeParseMicrosoftAttributes(DeclSpecAttrs);
 
   // Hold late-parsed attributes so we can attach a Decl to them later.
   LateParsedAttrList CommonLateParsedAttrs;
@@ -2726,7 +2723,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   // decl-specifier-seq:
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this, TemplateDiags);
-  DS.takeAttributesFrom(attrs);
+  DS.takeAttributesFrom(DeclSpecAttrs);
+
   if (MalformedTypeSpec)
     DS.SetTypeSpecError();
 
@@ -2764,7 +2762,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
 
   if (TryConsumeToken(tok::semi)) {
     if (DS.isFriendSpecified())
-      ProhibitAttributes(FnAttrs);
+      ProhibitAttributes(DeclAttrs);
 
     RecordDecl *AnonRecord = nullptr;
     Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(
@@ -2777,7 +2775,8 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
 
-  ParsingDeclarator DeclaratorInfo(*this, DS, DeclaratorContext::Member);
+  ParsingDeclarator DeclaratorInfo(*this, DS, DeclAttrs,
+                                   DeclaratorContext::Member);
   if (TemplateInfo.TemplateParams)
     DeclaratorInfo.setTemplateParameterLists(TemplateParams);
   VirtSpecifiers VS;
@@ -2869,7 +2868,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
         DS.isFriendSpecified()) {
       // Diagnose attributes that appear before decl specifier:
       // [[]] friend int foo();
-      ProhibitAttributes(FnAttrs);
+      ProhibitAttributes(DeclAttrs);
     }
 
     if (DefinitionKind != FunctionDefinitionKind::Declaration) {

@@ -16860,7 +16860,8 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
   // Try to convert the decl specifier to a type.  This works for
   // friend templates because ActOnTag never produces a ClassTemplateDecl
   // for a TUK_Friend.
-  Declarator TheDeclarator(DS, DeclaratorContext::Member);
+  Declarator TheDeclarator(DS, ParsedAttributesView::none(),
+                           DeclaratorContext::Member);
   TypeSourceInfo *TSI = GetTypeForDeclarator(TheDeclarator, S);
   QualType T = TSI->getType();
   if (TheDeclarator.isInvalidType())
