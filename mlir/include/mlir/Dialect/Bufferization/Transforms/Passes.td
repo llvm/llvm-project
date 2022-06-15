@@ -327,6 +327,12 @@ def TensorCopyInsertion : Pass<"tensor-copy-insertion"> {
     were decided to bufferize out-of-place. After running this pass, a
     bufferization can write to buffers directly (without making copies) and no
     longer has to care about potential read-after-write conflicts.
+
+    Note: By default, all newly inserted tensor copies/allocs (i.e., newly
+    created `bufferization.alloc_tensor` ops) that do not escape block are
+    annotated with `escape = false`. If `create-allocs` is unset, all newly
+    inserted tensor copies/allocs are annotated with `escape = true`. In that
+    case, they are not getting deallocated when bufferizing the IR.
   }];
   let options = [
     Option<"allowReturnAllocs", "allow-return-allocs", "bool",
@@ -335,6 +341,8 @@ def TensorCopyInsertion : Pass<"tensor-copy-insertion"> {
     Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
            "bool", /*default=*/"0",
            "Bufferize function boundaries (experimental).">,
+    Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
+           "Specify if new allocations should be deallocated.">,
   ];
   let constructor = "mlir::bufferization::createTensorCopyInsertionPass()";
 }
