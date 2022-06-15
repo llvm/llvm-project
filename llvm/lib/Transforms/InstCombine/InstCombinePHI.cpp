@@ -1121,6 +1121,13 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
       return nullptr;
     }
 
+    // If the incoming value is a PHI node before a catchswitch, we cannot
+    // extract the value within that BB because we cannot insert any non-PHI
+    // instructions in the BB.
+    for (auto *Pred : PN->blocks())
+      if (isa<CatchSwitchInst>(Pred->getFirstNonPHI()))
+        return nullptr;
+
     for (User *U : PN->users()) {
       Instruction *UserI = cast<Instruction>(U);
 

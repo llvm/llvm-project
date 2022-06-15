@@ -10,6 +10,7 @@
 // amdgcn does not have printf definition
 // XFAIL: amdgcn-amd-amdhsa
 // XFAIL: amdgcn-amd-amdhsa-oldDriver
+// XFAIL: amdgcn-amd-amdhsa-LTO
 
 #include <stdio.h>
 #include <omp.h>

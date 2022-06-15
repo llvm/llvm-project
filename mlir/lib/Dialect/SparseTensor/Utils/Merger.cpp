@@ -377,6 +377,7 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
   case kBinary:
     return false;
   }
+  llvm_unreachable("unexpected kind");
 }
 
 #ifndef NDEBUG

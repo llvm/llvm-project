@@ -1548,7 +1548,7 @@ defm V_XNOR_B32        : VOP2_Real_gfx10_gfx11<0x01e>;
 defm V_FMAC_F32        : VOP2_Real_gfx10_gfx11<0x02b>;
 defm V_FMAMK_F32       : VOP2Only_Real_MADK_gfx10_gfx11<0x02c>;
 defm V_FMAAK_F32       : VOP2Only_Real_MADK_gfx10_gfx11<0x02d>;
-defm V_ADD_F16         : VOP2_Real_gfx10<0x032>;
+defm V_ADD_F16         : VOP2_Real_gfx10_gfx11<0x032>;
 defm V_SUB_F16         : VOP2_Real_gfx10_gfx11<0x033>;
 defm V_SUBREV_F16      : VOP2_Real_gfx10_gfx11<0x034>;
 defm V_MUL_F16         : VOP2_Real_gfx10_gfx11<0x035>;

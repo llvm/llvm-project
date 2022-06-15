@@ -36,7 +36,7 @@ class ASTImporterSharedState {
   /// imported. The same declaration may or may not be included in
   /// ImportedFromDecls. This map is updated continuously during imports and
   /// never cleared (like ImportedFromDecls).
-  llvm::DenseMap<Decl *, ImportError> ImportErrors;
+  llvm::DenseMap<Decl *, ASTImportError> ImportErrors;
 
   /// Set of the newly created declarations.
   llvm::DenseSet<Decl *> NewDecls;
@@ -65,15 +65,15 @@ public:
         LookupTable->remove(ND);
   }
 
-  llvm::Optional<ImportError> getImportDeclErrorIfAny(Decl *ToD) const {
+  llvm::Optional<ASTImportError> getImportDeclErrorIfAny(Decl *ToD) const {
     auto Pos = ImportErrors.find(ToD);
     if (Pos != ImportErrors.end())
       return Pos->second;
     else
-      return Optional<ImportError>();
+      return Optional<ASTImportError>();
   }
 
-  void setImportDeclError(Decl *To, ImportError Error) {
+  void setImportDeclError(Decl *To, ASTImportError Error) {
     ImportErrors[To] = Error;
   }
 

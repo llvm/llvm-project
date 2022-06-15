@@ -63,8 +63,6 @@ public:
       : SValBuilder(alloc, context, stateMgr) {}
   ~SimpleSValBuilder() override {}
 
-  SVal evalMinus(NonLoc val) override;
-  SVal evalComplement(NonLoc val) override;
   SVal evalBinOpNN(ProgramStateRef state, BinaryOperator::Opcode op,
                    NonLoc lhs, NonLoc rhs, QualType resultTy) override;
   SVal evalBinOpLL(ProgramStateRef state, BinaryOperator::Opcode op,
@@ -88,34 +86,6 @@ SValBuilder *ento::createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,
                                            ASTContext &context,
                                            ProgramStateManager &stateMgr) {
   return new SimpleSValBuilder(alloc, context, stateMgr);
-}
-
-//===----------------------------------------------------------------------===//
-// Transfer function for unary operators.
-//===----------------------------------------------------------------------===//
-
-SVal SimpleSValBuilder::evalMinus(NonLoc val) {
-  switch (val.getSubKind()) {
-  case nonloc::ConcreteIntKind:
-    return val.castAs<nonloc::ConcreteInt>().evalMinus(*this);
-  case nonloc::SymbolValKind:
-    return makeNonLoc(val.castAs<nonloc::SymbolVal>().getSymbol(), UO_Minus,
-                      val.getType(Context));
-  default:
-    return UnknownVal();
-  }
-}
-
-SVal SimpleSValBuilder::evalComplement(NonLoc X) {
-  switch (X.getSubKind()) {
-  case nonloc::ConcreteIntKind:
-    return X.castAs<nonloc::ConcreteInt>().evalComplement(*this);
-  case nonloc::SymbolValKind:
-    return makeNonLoc(X.castAs<nonloc::SymbolVal>().getSymbol(), UO_Not,
-                      X.getType(Context));
-  default:
-    return UnknownVal();
-  }
 }
 
 // Checks if the negation the value and flipping sign preserve

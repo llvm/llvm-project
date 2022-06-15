@@ -38,13 +38,13 @@ public:
     return llvm::StringLiteral("transform.test_transform_op");
   }
 
-  LogicalResult apply(transform::TransformResults &results,
-                      transform::TransformState &state) {
+  DiagnosedSilencableFailure apply(transform::TransformResults &results,
+                                   transform::TransformState &state) {
     InFlightDiagnostic remark = emitRemark() << "applying transformation";
     if (Attribute message = getMessage())
       remark << " " << message;
 
-    return success();
+    return DiagnosedSilencableFailure::success();
   }
 
   Attribute getMessage() { return getOperation()->getAttr("message"); }
@@ -91,9 +91,9 @@ public:
         "transform.test_transform_unrestricted_op_no_interface");
   }
 
-  LogicalResult apply(transform::TransformResults &results,
-                      transform::TransformState &state) {
-    return success();
+  DiagnosedSilencableFailure apply(transform::TransformResults &results,
+                                   transform::TransformState &state) {
+    return DiagnosedSilencableFailure::success();
   }
 
   // No side effects.
@@ -101,7 +101,8 @@ public:
 };
 } // namespace
 
-LogicalResult mlir::test::TestProduceParamOrForwardOperandOp::apply(
+DiagnosedSilencableFailure
+mlir::test::TestProduceParamOrForwardOperandOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   if (getOperation()->getNumOperands() != 0) {
     results.set(getResult().cast<OpResult>(),
@@ -110,7 +111,7 @@ LogicalResult mlir::test::TestProduceParamOrForwardOperandOp::apply(
     results.set(getResult().cast<OpResult>(),
                 reinterpret_cast<Operation *>(*getParameter()));
   }
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
 LogicalResult mlir::test::TestProduceParamOrForwardOperandOp::verify() {
@@ -119,48 +120,50 @@ LogicalResult mlir::test::TestProduceParamOrForwardOperandOp::verify() {
   return success();
 }
 
-LogicalResult
+DiagnosedSilencableFailure
 mlir::test::TestConsumeOperand::apply(transform::TransformResults &results,
                                       transform::TransformState &state) {
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
-LogicalResult mlir::test::TestConsumeOperandIfMatchesParamOrFail::apply(
+DiagnosedSilencableFailure
+mlir::test::TestConsumeOperandIfMatchesParamOrFail::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   ArrayRef<Operation *> payload = state.getPayloadOps(getOperand());
   assert(payload.size() == 1 && "expected a single target op");
   auto value = reinterpret_cast<intptr_t>(payload[0]);
   if (static_cast<uint64_t>(value) != getParameter()) {
-    return emitOpError() << "expected the operand to be associated with "
-                         << getParameter() << " got " << value;
+    return emitSilencableError()
+           << "op expected the operand to be associated with " << getParameter()
+           << " got " << value;
   }
 
   emitRemark() << "succeeded";
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
-LogicalResult mlir::test::TestPrintRemarkAtOperandOp::apply(
+DiagnosedSilencableFailure mlir::test::TestPrintRemarkAtOperandOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   ArrayRef<Operation *> payload = state.getPayloadOps(getOperand());
   for (Operation *op : payload)
     op->emitRemark() << getMessage();
 
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
-LogicalResult
+DiagnosedSilencableFailure
 mlir::test::TestAddTestExtensionOp::apply(transform::TransformResults &results,
                                           transform::TransformState &state) {
   state.addExtension<TestTransformStateExtension>(getMessageAttr());
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
-LogicalResult mlir::test::TestCheckIfTestExtensionPresentOp::apply(
+DiagnosedSilencableFailure mlir::test::TestCheckIfTestExtensionPresentOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   auto *extension = state.getExtension<TestTransformStateExtension>();
   if (!extension) {
     emitRemark() << "extension absent";
-    return success();
+    return DiagnosedSilencableFailure::success();
   }
 
   InFlightDiagnostic diag = emitRemark()
@@ -172,39 +175,55 @@ LogicalResult mlir::test::TestCheckIfTestExtensionPresentOp::apply(
            "operations");
   }
 
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
-LogicalResult mlir::test::TestRemapOperandPayloadToSelfOp::apply(
+DiagnosedSilencableFailure mlir::test::TestRemapOperandPayloadToSelfOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   auto *extension = state.getExtension<TestTransformStateExtension>();
-  if (!extension)
-    return emitError() << "TestTransformStateExtension missing";
+  if (!extension) {
+    emitError() << "TestTransformStateExtension missing";
+    return DiagnosedSilencableFailure::definiteFailure();
+  }
 
-  return extension->updateMapping(state.getPayloadOps(getOperand()).front(),
-                                  getOperation());
+  if (failed(extension->updateMapping(state.getPayloadOps(getOperand()).front(),
+                                      getOperation())))
+    return DiagnosedSilencableFailure::definiteFailure();
+  return DiagnosedSilencableFailure::success();
 }
 
-LogicalResult mlir::test::TestRemoveTestExtensionOp::apply(
+DiagnosedSilencableFailure mlir::test::TestRemoveTestExtensionOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   state.removeExtension<TestTransformStateExtension>();
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
-LogicalResult mlir::test::TestTransformOpWithRegions::apply(
+DiagnosedSilencableFailure mlir::test::TestTransformOpWithRegions::apply(
     transform::TransformResults &results, transform::TransformState &state) {
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
 void mlir::test::TestTransformOpWithRegions::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {}
 
-LogicalResult mlir::test::TestBranchingTransformOpTerminator::apply(
+DiagnosedSilencableFailure
+mlir::test::TestBranchingTransformOpTerminator::apply(
     transform::TransformResults &results, transform::TransformState &state) {
-  return success();
+  return DiagnosedSilencableFailure::success();
 }
 
 void mlir::test::TestBranchingTransformOpTerminator::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {}
+
+DiagnosedSilencableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  emitRemark() << getRemark();
+  for (Operation *op : state.getPayloadOps(getTarget()))
+    op->erase();
+
+  if (getFailAfterErase())
+    return emitSilencableError() << "silencable error";
+  return DiagnosedSilencableFailure::success();
+}
 
 namespace {
 /// Test extension of the Transform dialect. Registers additional ops and
