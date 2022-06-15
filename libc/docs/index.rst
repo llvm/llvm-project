@@ -66,3 +66,4 @@ Other Interesting Documentation
     strings
     runtimes_build
     stdio
+    math
