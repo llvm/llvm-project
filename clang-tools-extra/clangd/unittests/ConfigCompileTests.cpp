@@ -536,6 +536,14 @@ TEST_F(ConfigCompileTests, AllScopes) {
   EXPECT_TRUE(compileAndApply());
   EXPECT_TRUE(Conf.Completion.AllScopes);
 }
+
+TEST_F(ConfigCompileTests, Style) {
+  Frag = {};
+  Frag.Style.FullyQualifiedNamespaces.push_back(std::string("foo"));
+  Frag.Style.FullyQualifiedNamespaces.push_back(std::string("bar"));
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_THAT(Conf.Style.FullyQualifiedNamespaces, ElementsAre("foo", "bar"));
+}
 } // namespace
 } // namespace config
 } // namespace clangd

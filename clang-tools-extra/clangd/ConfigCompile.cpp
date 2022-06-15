@@ -197,6 +197,7 @@ struct FragmentCompiler {
     compile(std::move(F.Completion));
     compile(std::move(F.Hover));
     compile(std::move(F.InlayHints));
+    compile(std::move(F.Style));
   }
 
   void compile(Fragment::IfBlock &&F) {
