@@ -8221,19 +8221,6 @@ static void HandleLifetimeBoundAttr(TypeProcessingState &State,
   }
 }
 
-static bool isAddressSpaceKind(const ParsedAttr &attr) {
-  auto attrKind = attr.getKind();
-
-  return attrKind == ParsedAttr::AT_AddressSpace ||
-         attrKind == ParsedAttr::AT_OpenCLPrivateAddressSpace ||
-         attrKind == ParsedAttr::AT_OpenCLGlobalAddressSpace ||
-         attrKind == ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace ||
-         attrKind == ParsedAttr::AT_OpenCLGlobalHostAddressSpace ||
-         attrKind == ParsedAttr::AT_OpenCLLocalAddressSpace ||
-         attrKind == ParsedAttr::AT_OpenCLConstantAddressSpace ||
-         attrKind == ParsedAttr::AT_OpenCLGenericAddressSpace;
-}
-
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
                              const ParsedAttributesView &attrs) {
