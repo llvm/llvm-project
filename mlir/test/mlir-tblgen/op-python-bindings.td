@@ -179,6 +179,27 @@ def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
   let arguments = (ins I32, UnitAttr:$in, F32, OptionalAttr<F32Attr>:$is);
 }
 
+// CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK: class DefaultValuedAttrsOp(_ods_ir.OpView):
+// CHECK-LABEL: OPERATION_NAME = "test.default_valued_attrs"
+def DefaultValuedAttrsOp : TestOp<"default_valued_attrs"> {
+  // CHECK: def __init__(self, *, arr=None, unsupported=None, loc=None, ip=None):
+  // CHECK:   operands = []
+  // CHECK:   results = []
+  // CHECK:   attributes = {}
+  // CHECK:   regions = None
+  // CHECK:   attributes["arr"] = arr if arr is not None else _ods_ir.ArrayAttr.get([])
+  // CHECK:   unsupported is not None, "attribute unsupported must be specified"
+  // CHECK:   _ods_successors = None
+  // CHECK:   super().__init__(self.build_generic(
+  // CHECK:     attributes=attributes, results=results, operands=operands,
+  // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip))
+
+  let arguments = (ins DefaultValuedAttr<I64ArrayAttr, "{}">:$arr,
+                       DefaultValuedAttr<I64ArrayAttr, "dummy_func()">:$unsupported);
+  let results = (outs);
+}
+
 // CHECK-LABEL: OPERATION_NAME = "test.derive_result_types_op"
 def DeriveResultTypesOp : TestOp<"derive_result_types_op", [FirstAttrDerivedResultType]> {
   // CHECK: def __init__(self, type, *, loc=None, ip=None):
@@ -544,4 +565,3 @@ def WithSuccessorsOp : TestOp<"with_successors"> {
   let successors = (successor AnySuccessor:$successor,
                               VariadicSuccessor<AnySuccessor>:$successors);
 }
-
