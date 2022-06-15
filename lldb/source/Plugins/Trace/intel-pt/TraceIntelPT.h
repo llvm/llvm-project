@@ -37,7 +37,7 @@ public:
 
   static void Terminate();
 
-  /// Create an instance of this class.
+  /// Create an instance of this class from a trace bundle.
   ///
   /// \param[in] trace_session_file
   ///     The contents of the trace session file. See \a Trace::FindPlugin.
@@ -158,6 +158,8 @@ public:
   ///     The timer object for this trace.
   TaskTimer &GetTimer();
 
+  TraceIntelPTSP GetSharedPtr();
+
 private:
   friend class TraceIntelPTSessionFileParser;
 
@@ -174,9 +176,20 @@ private:
   /// \param[in] trace_threads
   ///     The threads traced in the live session. They must belong to the
   ///     processes mentioned above.
+  ///
+  /// \return
+  ///     A TraceIntelPT shared pointer instance.
+  /// \{
+  static TraceIntelPTSP CreateInstanceForPostmortemTrace(
+      JSONTraceSession &session,
+      llvm::ArrayRef<lldb::ProcessSP> traced_processes,
+      llvm::ArrayRef<lldb::ThreadPostMortemTraceSP> traced_threads);
+
+  /// This constructor is used by CreateInstanceForPostmortemTrace to get the
+  /// instance ready before using shared pointers, which is a limitation of C++.
   TraceIntelPT(JSONTraceSession &session,
-               llvm::ArrayRef<lldb::ProcessSP> traced_processes,
-               llvm::ArrayRef<lldb::ThreadPostMortemTraceSP> traced_threads);
+               llvm::ArrayRef<lldb::ProcessSP> traced_processes);
+  /// \}
 
   /// Constructor for live processes
   TraceIntelPT(Process &live_process) : Trace(live_process){};

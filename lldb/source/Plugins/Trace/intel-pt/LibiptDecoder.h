@@ -48,21 +48,24 @@ struct IntelPTThreadContinousExecution {
 void DecodeSingleTraceForThread(DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
                  llvm::ArrayRef<uint8_t> buffer);
 
-/// Decode a raw Intel PT trace for a single thread that was collected in a per cpu core basis.
+/// Decode a raw Intel PT trace for a single thread that was collected in a per
+/// cpu core basis.
 ///
-/// \param[in] decoded_thread
-///   All decoded instructions, errors and events will be appended to this object.
+/// \param[out] decoded_thread
+///   All decoded instructions, errors and events will be appended to this
+///   object.
 ///
 /// \param[in] trace_intel_pt
-///   The main Trace object that contains all the information related to the trace session.
+///   The main Trace object that contains all the information related to the
+///   trace session.
 ///
 /// \param[in] buffers
 ///   A map from cpu core id to raw intel pt buffers.
 ///
 /// \param[in] executions
-///   A list of chunks of timed executions of the same given thread. It is used to identify if
-///   some executions have missing intel pt data and also to determine in which core a certain
-///   part of the execution ocurred.
+///   A list of chunks of timed executions of the same given thread. It is used
+///   to identify if some executions have missing intel pt data and also to
+///   determine in which core a certain part of the execution ocurred.
 void DecodeSystemWideTraceForThread(
     DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
     const llvm::DenseMap<lldb::cpu_id_t, llvm::ArrayRef<uint8_t>> &buffers,

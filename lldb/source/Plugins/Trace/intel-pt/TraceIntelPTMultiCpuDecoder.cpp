@@ -17,13 +17,18 @@ using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
 
-TraceIntelPTMultiCpuDecoder::TraceIntelPTMultiCpuDecoder(TraceIntelPT &trace)
-    : m_trace(&trace) {
-  for (Process *proc : trace.GetAllProcesses()) {
+TraceIntelPTMultiCpuDecoder::TraceIntelPTMultiCpuDecoder(
+    TraceIntelPTSP trace_sp)
+    : m_trace_wp(trace_sp) {
+  for (Process *proc : trace_sp->GetAllProcesses()) {
     for (ThreadSP thread_sp : proc->GetThreadList().Threads()) {
       m_tids.insert(thread_sp->GetID());
     }
   }
+}
+
+TraceIntelPTSP TraceIntelPTMultiCpuDecoder::GetTrace() {
+  return m_trace_wp.lock();
 }
 
 bool TraceIntelPTMultiCpuDecoder::TracesThread(lldb::tid_t tid) const {
@@ -41,12 +46,14 @@ DecodedThreadSP TraceIntelPTMultiCpuDecoder::Decode(Thread &thread) {
   DecodedThreadSP decoded_thread_sp =
       std::make_shared<DecodedThread>(thread.shared_from_this());
 
-  Error err = m_trace->OnAllCpusBinaryDataRead(
+  TraceIntelPTSP trace_sp = GetTrace();
+
+  Error err = trace_sp->OnAllCpusBinaryDataRead(
       IntelPTDataKinds::kIptTrace,
       [&](const DenseMap<cpu_id_t, ArrayRef<uint8_t>> &buffers) -> Error {
         auto it = m_continuous_executions_per_thread->find(thread.GetID());
         if (it != m_continuous_executions_per_thread->end())
-          DecodeSystemWideTraceForThread(*decoded_thread_sp, *m_trace, buffers,
+          DecodeSystemWideTraceForThread(*decoded_thread_sp, *trace_sp, buffers,
                                          it->second);
 
         return Error::success();
@@ -81,9 +88,10 @@ Expected<DenseMap<lldb::tid_t, std::vector<IntelPTThreadContinousExecution>>>
 TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
   DenseMap<lldb::tid_t, std::vector<IntelPTThreadContinousExecution>>
       continuous_executions_per_thread;
+  TraceIntelPTSP trace_sp = GetTrace();
 
   Optional<LinuxPerfZeroTscConversion> conv_opt =
-      m_trace->GetPerfZeroTscConversion();
+      trace_sp->GetPerfZeroTscConversion();
   if (!conv_opt)
     return createStringError(
         inconvertibleErrorCode(),
@@ -91,9 +99,9 @@ TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
 
   LinuxPerfZeroTscConversion tsc_conversion = *conv_opt;
 
-  for (cpu_id_t cpu_id : m_trace->GetTracedCpus()) {
+  for (cpu_id_t cpu_id : trace_sp->GetTracedCpus()) {
     Expected<std::vector<IntelPTThreadSubtrace>> intel_pt_subtraces =
-        GetIntelPTSubtracesForCpu(*m_trace, cpu_id);
+        GetIntelPTSubtracesForCpu(*trace_sp, cpu_id);
     if (!intel_pt_subtraces)
       return intel_pt_subtraces.takeError();
 
@@ -116,7 +124,7 @@ TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
           continuous_executions_per_thread[thread_execution.tid].push_back(
               execution);
         };
-    Error err = m_trace->OnCpuBinaryDataRead(
+    Error err = trace_sp->OnCpuBinaryDataRead(
         cpu_id, IntelPTDataKinds::kPerfContextSwitchTrace,
         [&](ArrayRef<uint8_t> data) -> Error {
           Expected<std::vector<ThreadContinuousExecution>> executions =
@@ -145,7 +153,7 @@ Error TraceIntelPTMultiCpuDecoder::CorrelateContextSwitchesAndIntelPtTraces() {
   if (m_continuous_executions_per_thread)
     return Error::success();
 
-  Error err = m_trace->GetTimer().ForGlobal().TimeTask<Error>(
+  Error err = GetTrace()->GetTimer().ForGlobal().TimeTask<Error>(
       "Context switch and Intel PT traces correlation", [&]() -> Error {
         if (auto correlation = DoCorrelateContextSwitchesAndIntelPtTraces()) {
           m_continuous_executions_per_thread.emplace(std::move(*correlation));
