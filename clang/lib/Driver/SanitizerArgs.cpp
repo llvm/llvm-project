@@ -648,6 +648,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         options::OPT_fno_sanitize_memory_param_retval, MsanParamRetval);
     NeedPIE |= !(TC.getTriple().isOSLinux() &&
                  TC.getTriple().getArch() == llvm::Triple::x86_64);
+  } else if (AllAddedKinds & SanitizerKind::KernelMemory) {
+    MsanUseAfterDtor = false;
+    MsanParamRetval = Args.hasFlag(
+        options::OPT_fsanitize_memory_param_retval,
+        options::OPT_fno_sanitize_memory_param_retval, MsanParamRetval);
   } else {
     MsanUseAfterDtor = false;
     MsanParamRetval = false;
