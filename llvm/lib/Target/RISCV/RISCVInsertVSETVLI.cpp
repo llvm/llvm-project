@@ -1213,17 +1213,22 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
     if (RISCVII::hasSEWOp(TSFlags)) {
       if (RISCVII::hasVLOp(TSFlags)) {
         const auto Require = computeInfoForInstr(MI, TSFlags, MRI);
-        // If the AVL is the result of a previous vsetvli which has the
-        // same AVL and VLMAX as our current state, we can reuse the AVL
-        // from the current state for the new one.  This allows us to
-        // generate 'vsetvli x0, x0, vtype" or possible skip the transition
-        // entirely.
-        if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
-            Require.getAVLReg().isVirtual()) {
+        // Two cases involving an AVL resulting from a previous vsetvli.
+        // 1) If the AVL is the result of a previous vsetvli which has the
+        //    same AVL and VLMAX as our current state, we can reuse the AVL
+        //    from the current state for the new one.  This allows us to
+        //    generate 'vsetvli x0, x0, vtype" or possible skip the transition
+        //    entirely.
+        // 2) If AVL is defined by a vsetvli with the same VLMAX, we can
+        //    replace the AVL operand with the AVL of the defining vsetvli.
+        //    We avoid general register AVLs to avoid extending live ranges
+        //    without being sure we can kill the original source reg entirely.
+        if (Require.hasAVLReg() && Require.getAVLReg().isVirtual()) {
           if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
             if (isVectorConfigInstr(*DefMI)) {
               VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-              if (DefInfo.hasSameAVL(CurInfo) &&
+              // case 1
+              if (!CurInfo.isUnknown() && DefInfo.hasSameAVL(CurInfo) &&
                   DefInfo.hasSameVLMAX(CurInfo)) {
                 MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
                 if (CurInfo.hasAVLImm())
@@ -1235,19 +1240,7 @@ void RISCVInsertVSETVLI::doLocalPrepass(MachineBasicBlock &MBB) {
                 CurInfo = computeInfoForInstr(MI, TSFlags, MRI);
                 continue;
               }
-            }
-          }
-        }
-
-        // If AVL is defined by a vsetvli with the same VLMAX, we can
-        // replace the AVL operand with the AVL of the defining vsetvli.
-        // We avoid general register AVLs to avoid extending live ranges
-        // without being sure we can kill the original source reg entirely.
-        // TODO: We can ignore policy bits here, we only need VL to be the same.
-        if (Require.hasAVLReg() && Require.getAVLReg().isVirtual()) {
-          if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
-            if (isVectorConfigInstr(*DefMI)) {
-              VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+              // case 2
               if (DefInfo.hasSameVLMAX(Require) &&
                   (DefInfo.hasAVLImm() || DefInfo.getAVLReg() == RISCV::X0)) {
                 MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
