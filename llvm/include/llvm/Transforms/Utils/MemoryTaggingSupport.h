@@ -15,6 +15,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/Alignment.h"
 
 namespace llvm {
@@ -33,14 +34,15 @@ namespace memtag {
 // the caller should remove Ends to ensure that work done at the other
 // exits does not happen outside of the lifetime.
 bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
-                          const Instruction *Start,
+                          const LoopInfo &LI, const Instruction *Start,
                           const SmallVectorImpl<IntrinsicInst *> &Ends,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback);
 
 bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
                         const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
-                        const DominatorTree *DT, size_t MaxLifetimes);
+                        const DominatorTree *DT, const LoopInfo *LI,
+                        size_t MaxLifetimes);
 
 Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
 
