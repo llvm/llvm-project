@@ -8144,6 +8144,34 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     CurType = T;
 }
 
+static void HandleAnnotateTypeAttr(TypeProcessingState &State,
+                                   QualType &CurType, const ParsedAttr &PA) {
+  Sema &S = State.getSema();
+
+  if (PA.getNumArgs() < 1) {
+    S.Diag(PA.getLoc(), diag::err_attribute_too_few_arguments) << PA << 1;
+    return;
+  }
+
+  // Make sure that there is a string literal as the annotation's first
+  // argument.
+  StringRef Str;
+  if (!S.checkStringLiteralArgumentAttr(PA, 0, Str))
+    return;
+
+  llvm::SmallVector<Expr *, 4> Args;
+  Args.reserve(PA.getNumArgs() - 1);
+  for (unsigned Idx = 1; Idx < PA.getNumArgs(); Idx++) {
+    assert(!PA.isArgIdent(Idx));
+    Args.push_back(PA.getArgAsExpr(Idx));
+  }
+  if (!S.ConstantFoldAttrArgs(PA, Args))
+    return;
+  auto *AnnotateTypeAttr =
+      AnnotateTypeAttr::Create(S.Context, Str, Args.data(), Args.size(), PA);
+  CurType = State.getAttributedType(AnnotateTypeAttr, CurType, CurType);
+}
+
 static void HandleLifetimeBoundAttr(TypeProcessingState &State,
                                     QualType &CurType,
                                     ParsedAttr &Attr) {
@@ -8206,10 +8234,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
           if (!IsTypeAttr)
             continue;
         }
-      } else if (TAL != TAL_DeclChunk && !isAddressSpaceKind(attr)) {
+      } else if (TAL != TAL_DeclChunk && !isAddressSpaceKind(attr) &&
+                 attr.getKind() != ParsedAttr::AT_AnnotateType) {
         // Otherwise, only consider type processing for a C++11 attribute if
         // it's actually been applied to a type.
-        // We also allow C++11 address_space and
+        // We also allow C++11 address_space and annotate_type and
         // OpenCL language address space attributes to pass through.
         continue;
       }
@@ -8404,6 +8433,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       type = state.getAttributedType(
           AcquireHandleAttr::Create(state.getSema().Context, HandleType, attr),
           type, type);
+      attr.setUsedAsTypeAttr();
+      break;
+    }
+    case ParsedAttr::AT_AnnotateType: {
+      HandleAnnotateTypeAttr(state, type, attr);
       attr.setUsedAsTypeAttr();
       break;
     }

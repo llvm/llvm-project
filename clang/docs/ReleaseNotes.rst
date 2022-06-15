@@ -362,6 +362,9 @@ Attribute Changes in Clang
 - When the ``weak`` attribute is applied to a const qualified variable clang no longer
   tells the backend it is allowed to optimize based on initializer value.
 
+- Added the ``clang::annotate_type`` attribute, which can be used to add
+  annotations to types (see documentation for details).
+
 Windows Support
 ---------------
 

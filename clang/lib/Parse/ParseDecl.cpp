@@ -3176,10 +3176,23 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       if (!AttrsLastTime)
         ProhibitAttributes(attrs);
       else {
-        // Reject C++11 attributes that appertain to decl specifiers as
-        // we don't support any C++11 attributes that appertain to decl
-        // specifiers. This also conforms to what g++ 4.8 is doing.
-        ProhibitCXX11Attributes(attrs, diag::err_attribute_not_type_attr);
+        // Reject most C++11 / C2x attributes on the decl-specifier-seq, but
+        // allow `annotate_type` as a special case.
+        // FIXME: We should more generally allow type attributes to be placed
+        // on the decl-specifier-seq; https://reviews.llvm.org/D126061 will
+        // make this change.
+        for (const ParsedAttr &PA : attrs) {
+          if (!PA.isCXX11Attribute() && !PA.isC2xAttribute())
+            continue;
+          if (PA.getKind() == ParsedAttr::UnknownAttribute)
+            // We will warn about the unknown attribute elsewhere (in
+            // SemaDeclAttr.cpp)
+            continue;
+          if (PA.getKind() == ParsedAttr::AT_AnnotateType)
+            continue;
+          Diag(PA.getLoc(), diag::err_attribute_not_type_attr) << PA;
+          PA.setInvalid();
+        }
 
         DS.takeAttributesFrom(attrs);
       }
