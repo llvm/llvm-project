@@ -47,6 +47,12 @@ public:
 
   explicit Value(Kind ValKind) : ValKind(ValKind) {}
 
+  // Non-copyable because addresses of values are used as their identities
+  // throughout framework and user code. The framework is responsible for
+  // construction and destruction of values.
+  Value(const Value &) = delete;
+  Value &operator=(const Value &) = delete;
+
   virtual ~Value() = default;
 
   Kind getKind() const { return ValKind; }
