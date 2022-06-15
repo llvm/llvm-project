@@ -496,28 +496,28 @@ multiclass VPatWidenFPNegMulAccSDNode_VV_VF<string instruction_name> {
     defvar wti = vtiToWti.Wti;
     def : Pat<(fma (fneg (wti.Vector (riscv_fpextend_vl_oneuse
                                           (vti.Vector vti.RegClass:$rs1),
-                                          (vti.Mask true_mask), VLOpFrag))),
+                                          (vti.Mask true_mask), (XLenVT srcvalue)))),
                    (riscv_fpextend_vl_oneuse (vti.Vector vti.RegClass:$rs2),
-                                             (vti.Mask true_mask), VLOpFrag),
+                                             (vti.Mask true_mask), (XLenVT srcvalue)),
                    (fneg wti.RegClass:$rd)),
               (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX)
                  wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
                  vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(fma (riscv_fpextend_vl_oneuse
                         (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs1)),
-                        (vti.Mask true_mask), VLOpFrag),
+                        (vti.Mask true_mask), (XLenVT srcvalue)),
                    (fneg (wti.Vector (riscv_fpextend_vl_oneuse
                                           (vti.Vector vti.RegClass:$rs2),
-                                          (vti.Mask true_mask), VLOpFrag))),
+                                          (vti.Mask true_mask), (XLenVT srcvalue)))),
                    (fneg wti.RegClass:$rd)),
               (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                  wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
                  vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(fma (fneg (wti.Vector (riscv_fpextend_vl_oneuse
                                           (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs1)),
-                                          (vti.Mask true_mask), VLOpFrag))),
+                                          (vti.Mask true_mask), (XLenVT srcvalue)))),
                    (riscv_fpextend_vl_oneuse (vti.Vector vti.RegClass:$rs2),
-                                             (vti.Mask true_mask), VLOpFrag),
+                                             (vti.Mask true_mask), (XLenVT srcvalue)),
                    (fneg wti.RegClass:$rd)),
               (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                  wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
@@ -531,18 +531,18 @@ multiclass VPatWidenFPMulSacSDNode_VV_VF<string instruction_name> {
     defvar wti = vtiToWti.Wti;
     def : Pat<(fma (wti.Vector (riscv_fpextend_vl_oneuse
                                     (vti.Vector vti.RegClass:$rs1),
-                                    (vti.Mask true_mask), VLOpFrag)),
+                                    (vti.Mask true_mask), (XLenVT srcvalue))),
                    (riscv_fpextend_vl_oneuse (vti.Vector vti.RegClass:$rs2),
-                                             (vti.Mask true_mask), VLOpFrag),
+                                             (vti.Mask true_mask), (XLenVT srcvalue)),
                    (fneg wti.RegClass:$rd)),
               (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX)
                  wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
                  vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(fma (wti.Vector (riscv_fpextend_vl_oneuse
                                     (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs1)),
-                                    (vti.Mask true_mask), VLOpFrag)),
+                                    (vti.Mask true_mask), (XLenVT srcvalue))),
                    (riscv_fpextend_vl_oneuse (vti.Vector vti.RegClass:$rs2),
-                                             (vti.Mask true_mask), VLOpFrag),
+                                             (vti.Mask true_mask), (XLenVT srcvalue)),
                    (fneg wti.RegClass:$rd)),
               (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                  wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
@@ -556,28 +556,28 @@ multiclass VPatWidenFPNegMulSacSDNode_VV_VF<string instruction_name> {
     defvar wti = vtiToWti.Wti;
     def : Pat<(fma (fneg (wti.Vector (riscv_fpextend_vl_oneuse
                                           (vti.Vector vti.RegClass:$rs1),
-                                          (vti.Mask true_mask), VLOpFrag))),
+                                          (vti.Mask true_mask), (XLenVT srcvalue)))),
                    (riscv_fpextend_vl_oneuse (vti.Vector vti.RegClass:$rs2),
-                                             (vti.Mask true_mask), VLOpFrag),
+                                             (vti.Mask true_mask), (XLenVT srcvalue)),
                    wti.RegClass:$rd),
               (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX)
                  wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
                  vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(fma (wti.Vector (riscv_fpextend_vl_oneuse
                                     (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs1)),
-                                    (vti.Mask true_mask), VLOpFrag)),
+                                    (vti.Mask true_mask), (XLenVT srcvalue))),
                    (fneg (wti.Vector (riscv_fpextend_vl_oneuse
                                           (vti.Vector vti.RegClass:$rs2),
-                                          (vti.Mask true_mask), VLOpFrag))),
+                                          (vti.Mask true_mask), (XLenVT srcvalue)))),
                    wti.RegClass:$rd),
               (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                  wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
                  vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
     def : Pat<(fma (fneg (wti.Vector (riscv_fpextend_vl_oneuse
                                           (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs1)),
-                                          (vti.Mask true_mask), VLOpFrag))),
+                                          (vti.Mask true_mask), (XLenVT srcvalue)))),
                    (riscv_fpextend_vl_oneuse (vti.Vector vti.RegClass:$rs2),
-                                             (vti.Mask true_mask), VLOpFrag),
+                                             (vti.Mask true_mask), (XLenVT srcvalue)),
                    wti.RegClass:$rd),
               (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                  wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
