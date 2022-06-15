@@ -984,8 +984,8 @@ protected:
           thread->GetStackFrameAtIndex(m_options.m_frame_idx).get();
       if (frame == nullptr) {
         result.AppendErrorWithFormat(
-            "Frame index %u is out of range for thread %u.\n",
-            m_options.m_frame_idx, m_options.m_thread_idx);
+            "Frame index %u is out of range for thread id %" PRIu64 ".\n",
+            m_options.m_frame_idx, thread->GetID());
         return false;
       }
 
@@ -1002,9 +1002,8 @@ protected:
 
         if (line_table == nullptr) {
           result.AppendErrorWithFormat("Failed to resolve the line table for "
-                                       "frame %u of thread index %u.\n",
-                                       m_options.m_frame_idx,
-                                       m_options.m_thread_idx);
+                                       "frame %u of thread id %" PRIu64 ".\n",
+                                       m_options.m_frame_idx, thread->GetID());
           return false;
         }
 
@@ -1090,13 +1089,18 @@ protected:
           return false;
         }
       } else {
-        result.AppendErrorWithFormat(
-            "Frame index %u of thread %u has no debug information.\n",
-            m_options.m_frame_idx, m_options.m_thread_idx);
+        result.AppendErrorWithFormat("Frame index %u of thread id %" PRIu64
+                                     " has no debug information.\n",
+                                     m_options.m_frame_idx, thread->GetID());
         return false;
       }
 
-      process->GetThreadList().SetSelectedThreadByID(m_options.m_thread_idx);
+      if (!process->GetThreadList().SetSelectedThreadByID(thread->GetID())) {
+        result.AppendErrorWithFormat(
+            "Failed to set the selected thread to thread id %" PRIu64 ".\n",
+            thread->GetID());
+        return false;
+      }
 
       StreamString stream;
       Status error;
