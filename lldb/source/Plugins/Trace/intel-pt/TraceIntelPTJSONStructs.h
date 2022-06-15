@@ -25,7 +25,7 @@ namespace trace_intel_pt {
 struct JSONModule {
   std::string system_path;
   llvm::Optional<std::string> file;
-  uint64_t load_address;
+  JSONUINT64 load_address;
   llvm::Optional<std::string> uuid;
 };
 
