@@ -623,7 +623,8 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
     HI.Type =
         printType(VT->getTemplatedDecl()->getType(), VT->getASTContext(), PP);
   else if (const auto *TN = dyn_cast<TypedefNameDecl>(D))
-    HI.Type = printType(TN->getUnderlyingType(), TN->getASTContext(), PP);
+    HI.Type = printType(TN->getUnderlyingType().getDesugaredType(Ctx),
+                        TN->getASTContext(), PP);
   else if (const auto *TAT = dyn_cast<TypeAliasTemplateDecl>(D))
     HI.Type = printType(TAT->getTemplatedDecl()->getUnderlyingType(),
                         TAT->getASTContext(), PP);
