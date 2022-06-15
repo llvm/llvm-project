@@ -629,7 +629,7 @@ void IteratorModeling::handlePtrIncrOrDecr(CheckerContext &C,
                                            const Expr *Iterator,
                                            OverloadedOperatorKind OK,
                                            SVal Offset) const {
-  if (!Offset.getAs<DefinedSVal>())
+  if (!isa<DefinedSVal>(Offset))
     return;
 
   QualType PtrType = Iterator->getType();
@@ -799,8 +799,8 @@ ProgramStateRef relateSymbols(ProgramStateRef State, SymbolRef Sym1,
     SVB.evalBinOp(State, BO_EQ, nonloc::SymbolVal(Sym1),
                   nonloc::SymbolVal(Sym2), SVB.getConditionType());
 
-  assert(comparison.getAs<DefinedSVal>() &&
-    "Symbol comparison must be a `DefinedSVal`");
+  assert(isa<DefinedSVal>(comparison) &&
+         "Symbol comparison must be a `DefinedSVal`");
 
   auto NewState = State->assume(comparison.castAs<DefinedSVal>(), Equal);
   if (!NewState)
