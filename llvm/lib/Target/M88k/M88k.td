@@ -32,11 +32,20 @@ include "M88kCombine.td"
 include "M88kSchedule.td"
 
 //===----------------------------------------------------------------------===//
+// M88k subtarget features.
+//===----------------------------------------------------------------------===//
+
+def Proc88100      : SubtargetFeature<"mc88100", "M88kProc", "MC88100",
+                                      "Motorola 88100 processor", []>;
+def Proc88110      : SubtargetFeature<"mc88110", "M88kProc", "MC88110",
+                                      "Motorola 88110 processor", []>;
+
+//===----------------------------------------------------------------------===//
 // M88k processors supported.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"mc88100", M88100SchedModel, []>;
-def : ProcessorModel<"mc88110", M88110SchedModel, []>;
+def : ProcessorModel<"mc88100", M88100SchedModel, [Proc88100]>;
+def : ProcessorModel<"mc88110", M88110SchedModel, [Proc88110]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing
