@@ -254,7 +254,7 @@ class StdLibraryFunctionsChecker
         return State;
 
       DefinedOrUnknownSVal L = V.castAs<DefinedOrUnknownSVal>();
-      if (!L.getAs<Loc>())
+      if (!isa<Loc>(L))
         return State;
 
       return State->assume(L, CannotBeNull);

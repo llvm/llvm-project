@@ -214,7 +214,7 @@ void NSOrCFErrorDerefChecker::checkLocation(SVal loc, bool isLoad,
                                             CheckerContext &C) const {
   if (!isLoad)
     return;
-  if (loc.isUndef() || !loc.getAs<Loc>())
+  if (loc.isUndef() || !isa<Loc>(loc))
     return;
 
   ASTContext &Ctx = C.getASTContext();

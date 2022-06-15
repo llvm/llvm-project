@@ -227,7 +227,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   // Now check if oflags has O_CREAT set.
   const Expr *oflagsEx = CE->getArg(FlagsArgIndex);
   const SVal V = C.getSVal(oflagsEx);
-  if (!V.getAs<NonLoc>()) {
+  if (!isa<NonLoc>(V)) {
     // The case where 'V' can be a location can only be due to a bad header,
     // so in this case bail out.
     return;

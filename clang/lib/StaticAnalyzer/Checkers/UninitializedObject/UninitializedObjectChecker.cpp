@@ -330,7 +330,7 @@ bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,
 
     SVal V = State->getSVal(FieldVal);
 
-    if (isDereferencableType(T) || V.getAs<nonloc::LocAsInteger>()) {
+    if (isDereferencableType(T) || isa<nonloc::LocAsInteger>(V)) {
       if (isDereferencableUninit(FR, LocalChain))
         ContainsUninitField = true;
       continue;
