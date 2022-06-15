@@ -483,18 +483,12 @@ Error COFFObjectFile::getRvaPtr(uint32_t Addr, uintptr_t &Res,
       // fail, otherwise it will be impossible to use this object as debug info
       // in LLDB. Return SectionStrippedError here so that
       // COFFObjectFile::initialize can ignore the error.
-      if (Section->SizeOfRawData == 0)
-        return make_error<SectionStrippedError>();
+      // Somewhat common binaries may have RVAs pointing outside of the
+      // provided raw data. Instead of rejecting the binaries, just
+      // treat the section as stripped for these purposes.
       if (Section->SizeOfRawData < Section->VirtualSize &&
           Addr >= SectionStart + Section->SizeOfRawData) {
-        if (ErrorContext)
-          return createStringError(object_error::parse_failed,
-                                   "RVA 0x%" PRIx32
-                                   " for %s found but data is incomplete",
-                                   Addr, ErrorContext);
-        return createStringError(
-            object_error::parse_failed,
-            "RVA 0x%" PRIx32 " found but data is incomplete", Addr);
+        return make_error<SectionStrippedError>();
       }
       uint32_t Offset = Addr - SectionStart;
       Res = reinterpret_cast<uintptr_t>(base()) + Section->PointerToRawData +
