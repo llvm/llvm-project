@@ -60,10 +60,11 @@ add_header_library(
     arg_list.h
 )
 
-# Thread support is used by other support libraries. So, we add the "threads"
-# before other directories.
+add_subdirectory(FPUtil)
+add_subdirectory(OSUtil)
+
+# Thread support is used by other "File". So, we add the "threads"
+# before "File".
 add_subdirectory(threads)
 
 add_subdirectory(File)
-add_subdirectory(FPUtil)
-add_subdirectory(OSUtil)

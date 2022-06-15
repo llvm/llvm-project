@@ -4,6 +4,10 @@ add_header_library(
     futex_word.h
 )
 
+if(NOT TARGET libc.src.__support.OSUtil.osutil)
+  return()
+endif()
+
 add_header_library(
   mutex
   HDRS
