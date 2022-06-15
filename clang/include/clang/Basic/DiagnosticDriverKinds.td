@@ -36,6 +36,10 @@ def warn_drv_avr_mcu_not_specified : Warning<
   "no target microcontroller specified on command line, cannot "
   "link standard libraries, please pass -mmcu=<mcu name>">,
   InGroup<AVRRtlibLinkingQuirks>;
+def warn_drv_avr_gcc_not_found: Warning<
+  "no avr-gcc installation can be found on the system, "
+  "cannot link standard libraries">,
+  InGroup<AVRRtlibLinkingQuirks>;
 def warn_drv_avr_libc_not_found: Warning<
   "no avr-libc installation can be found on the system, "
   "cannot link standard libraries">,
