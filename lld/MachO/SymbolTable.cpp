@@ -345,35 +345,82 @@ static bool recoverFromUndefinedSymbol(const Undefined &sym) {
   return false;
 }
 
-static void printUndefinedDiagnostic(StringRef name, StringRef source) {
-  std::string message = "undefined symbol";
-  if (config->archMultiple)
-    message += (" for arch " + getArchitectureName(config->arch())).str();
-  message += (": " + name + "\n>>> referenced by " + source).str();
+namespace {
+struct UndefinedDiag {
+  struct SectionAndOffset {
+    const InputSection *isec;
+    uint64_t offset;
+  };
 
-  if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::error)
-    error(message);
-  else if (config->undefinedSymbolTreatment ==
-           UndefinedSymbolTreatment::warning)
-    warn(message);
-  else
-    assert(false && "diagnostics make sense for -undefined error|warning only");
+  std::vector<SectionAndOffset> codeReferences;
+  std::vector<std::string> otherReferences;
+};
+
+MapVector<const Undefined *, UndefinedDiag> undefs;
 }
 
-void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
-  if (recoverFromUndefinedSymbol(sym))
-    return;
-  printUndefinedDiagnostic(sym.getName(), source);
+void macho::reportPendingUndefinedSymbols() {
+  for (const auto &undef : undefs) {
+    const UndefinedDiag &locations = undef.second;
+
+    std::string message = "undefined symbol";
+    if (config->archMultiple)
+      message += (" for arch " + getArchitectureName(config->arch())).str();
+    message += ": " + toString(*undef.first);
+
+    const size_t maxUndefinedReferences = 3;
+    size_t i = 0;
+    for (const std::string &loc : locations.otherReferences) {
+      if (i >= maxUndefinedReferences)
+        break;
+      message += "\n>>> referenced by " + loc;
+      ++i;
+    }
+
+    for (const UndefinedDiag::SectionAndOffset &loc :
+         locations.codeReferences) {
+      if (i >= maxUndefinedReferences)
+        break;
+      // TODO: Get source file/line from debug information.
+      message += "\n>>> referenced by " + loc.isec->getLocation(loc.offset);
+      ++i;
+    }
+
+    size_t totalReferences =
+        locations.otherReferences.size() + locations.codeReferences.size();
+    if (totalReferences > i)
+      message +=
+          ("\n>>> referenced " + Twine(totalReferences - i) + " more times")
+              .str();
+
+    if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::error)
+      error(message);
+    else if (config->undefinedSymbolTreatment ==
+             UndefinedSymbolTreatment::warning)
+      warn(message);
+    else
+      assert(false &&
+             "diagnostics make sense for -undefined error|warning only");
+  }
+
+  // This function is called multiple times during execution. Clear the printed
+  // diagnostics to avoid printing the same things again the next time.
+  undefs.clear();
 }
 
-void lld::macho::treatUndefinedSymbol(const Undefined &sym,
-                                      const InputSection *isec,
-                                      uint64_t offset) {
+void macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
   if (recoverFromUndefinedSymbol(sym))
     return;
 
-  // TODO: Get source file/line from debug information.
-  printUndefinedDiagnostic(toString(sym), isec->getLocation(offset));
+  undefs[&sym].otherReferences.push_back(source.str());
+}
+
+void macho::treatUndefinedSymbol(const Undefined &sym, const InputSection *isec,
+                                 uint64_t offset) {
+  if (recoverFromUndefinedSymbol(sym))
+    return;
+
+  undefs[&sym].codeReferences.push_back({isec, offset});
 }
 
 std::unique_ptr<SymbolTable> macho::symtab;
