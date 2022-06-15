@@ -94,7 +94,6 @@ TEST(TraceGDBRemotePacketsTest, IntelPTGetStateResponseEmpty) {
   // portions of the JSON representation are unchanged.
   ASSERT_EQ(toJSON(response), toJSON(*deserialized_response));
   // Ensure that the tsc_conversion's are nullptr.
-  ASSERT_EQ(response.tsc_perf_zero_conversion, None);
-  ASSERT_EQ(response.tsc_perf_zero_conversion,
-            deserialized_response->tsc_perf_zero_conversion);
+  ASSERT_FALSE((bool)response.tsc_perf_zero_conversion);
+  ASSERT_FALSE((bool)deserialized_response->tsc_perf_zero_conversion);
 }
