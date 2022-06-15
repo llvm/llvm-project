@@ -138,11 +138,11 @@ void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode, bool) {
 
 #ifndef FORTRAN_NO_LONGER_NEEDS
 
-int32_t __kmpc_target_init_v1(IdentTy *Ident, int8_t Mode,
+int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
                               int8_t UseGenericStateMachine,
                               int8_t RequiresFullRuntime) {
   FunctionTracingRAII();
-  int32_t res = __kmpc_target_init(Ident, Mode, UseGenericStateMachine,
+  int32_t res = __kmpc_target_init(nullptr, Mode, UseGenericStateMachine,
                                    RequiresFullRuntime);
   if (Mode & OMP_TGT_EXEC_MODE_SPMD) {
 
@@ -175,7 +175,7 @@ int32_t __kmpc_target_init_v1(IdentTy *Ident, int8_t Mode,
   return res;
 }
 
-void __kmpc_target_deinit_v1(IdentTy *Ident, int8_t Mode,
+void __kmpc_target_deinit_v1(int64_t *, int8_t Mode,
                              int8_t RequiresFullRuntime) {
   FunctionTracingRAII();
   uint32_t TId = mapping::getThreadIdInBlock();
@@ -191,7 +191,7 @@ void __kmpc_target_deinit_v1(IdentTy *Ident, int8_t Mode,
   // otherwise the following assertions and the assumption in
   // __kmpc_target_deinit may not hold.
   synchronize::threadsAligned();
-  __kmpc_target_deinit(Ident, Mode, RequiresFullRuntime);
+  __kmpc_target_deinit(nullptr, Mode, RequiresFullRuntime);
 }
 
 #endif

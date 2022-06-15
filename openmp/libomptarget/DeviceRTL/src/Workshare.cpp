@@ -660,7 +660,7 @@ void __kmpc_distribute_static_fini(IdentTy *loc, int32_t global_tid) {
 }
 
 #ifndef FORTRAN_NO_LONGER_NEEDS
-void __kmpc_for_static_init_4_simple_spmd(IdentTy *loc, int32_t global_tid,
+void __kmpc_for_static_init_4_simple_spmd(int64_t *, int32_t global_tid,
                                           int32_t schedtype, int32_t *plastiter,
                                           int32_t *plower, int32_t *pupper,
                                           int32_t *pstride, int32_t incr,
@@ -672,7 +672,7 @@ void __kmpc_for_static_init_4_simple_spmd(IdentTy *loc, int32_t global_tid,
       /*IsSPMDExecutionMode=*/true);
 }
 
-void __kmpc_for_static_init_8_simple_spmd(IdentTy *loc, int32_t global_tid,
+void __kmpc_for_static_init_8_simple_spmd(int64_t *, int32_t global_tid,
                                           int32_t schedtype, int32_t *plastiter,
                                           int64_t *plower, int64_t *pupper,
                                           int64_t *pstride, int64_t incr,
