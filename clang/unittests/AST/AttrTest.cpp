@@ -102,13 +102,13 @@ TEST(Attr, AnnotateType) {
     AssertAnnotatedAs(PointerTL.getPointeeLoc(), "foo", PointerPointerTL,
                       &Annotate);
 
-    EXPECT_EQ(Annotate->args_size(), 2);
+    EXPECT_EQ(Annotate->args_size(), 2u);
     const auto *StringLit = selectFirst<StringLiteral>(
         "str", match(constantExpr(hasDescendant(stringLiteral().bind("str"))),
                      *Annotate->args_begin()[0], AST->getASTContext()));
     ASSERT_NE(StringLit, nullptr);
     EXPECT_EQ(StringLit->getString(), "arg1");
-    EXPECT_EQ(match(constantExpr(has(integerLiteral(equals(2)).bind("int"))),
+    EXPECT_EQ(match(constantExpr(has(integerLiteral(equals(2u)).bind("int"))),
                     *Annotate->args_begin()[1], AST->getASTContext())
                   .size(),
               1);
