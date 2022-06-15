@@ -170,7 +170,7 @@ def Transform_Dialect : Dialect {
     perform the required recovery steps thus succeeding themselves. On
     the other hand, they must propagate irrecoverable failures. For such
     failures, the diagnostics are emitted immediately whereas their emission is
-    postponed for recoverable faliures. Transformation container operations may
+    postponed for recoverable failures. Transformation container operations may
     also fail to recover from a theoretically recoverable failure, in which case
     they are expected to emit the diagnostic and turn the failure into an
     irrecoverable one. A recoverable failure produced by applying the top-level

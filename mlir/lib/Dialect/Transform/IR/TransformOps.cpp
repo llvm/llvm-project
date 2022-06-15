@@ -164,7 +164,7 @@ static void forwardTerminatorOperands(Block *block,
   }
 }
 
-DiagnosedSilencableFailure
+DiagnosedSilenceableFailure
 transform::AlternativesOp::apply(transform::TransformResults &results,
                                  transform::TransformState &state) {
   SmallVector<Operation *> originals;
@@ -178,7 +178,14 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
       InFlightDiagnostic diag =
           emitError() << "scope must not contain the transforms being applied";
       diag.attachNote(original->getLoc()) << "scope";
-      return DiagnosedSilencableFailure::definiteFailure();
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+    if (!original->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+      InFlightDiagnostic diag =
+          emitError()
+          << "only isolated-from-above ops can be alternative scopes";
+      diag.attachNote(original->getLoc()) << "scope";
+      return DiagnosedSilenceableFailure(std::move(diag));
     }
   }
 
@@ -190,18 +197,18 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
     auto scope = state.make_region_scope(reg);
     auto clones = llvm::to_vector(
         llvm::map_range(originals, [](Operation *op) { return op->clone(); }));
-    if (failed(state.mapBlockArguments(reg.front().getArgument(0), clones)))
-      return DiagnosedSilencableFailure::definiteFailure();
     auto deleteClones = llvm::make_scope_exit([&] {
       for (Operation *clone : clones)
         clone->erase();
     });
+    if (failed(state.mapBlockArguments(reg.front().getArgument(0), clones)))
+      return DiagnosedSilenceableFailure::definiteFailure();
 
     bool failed = false;
     for (Operation &transform : reg.front().without_terminator()) {
-      DiagnosedSilencableFailure result =
+      DiagnosedSilenceableFailure result =
           state.applyTransform(cast<TransformOpInterface>(transform));
-      if (result.isSilencableFailure()) {
+      if (result.isSilenceableFailure()) {
         LLVM_DEBUG(DBGS() << "alternative failed: " << result.getMessage()
                           << "\n");
         failed = true;
@@ -209,7 +216,7 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
       }
 
       if (::mlir::failed(result.silence()))
-        return DiagnosedSilencableFailure::definiteFailure();
+        return DiagnosedSilenceableFailure::definiteFailure();
     }
 
     // If all operations in the given alternative succeeded, no need to consider
@@ -227,10 +234,10 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
         rewriter.replaceOp(original, clone->getResults());
       }
       forwardTerminatorOperands(&reg.front(), state, results);
-      return DiagnosedSilencableFailure::success();
+      return DiagnosedSilenceableFailure::success();
     }
   }
-  return emitSilencableError() << "all alternatives failed";
+  return emitSilenceableError() << "all alternatives failed";
 }
 
 LogicalResult transform::AlternativesOp::verify() {
@@ -260,15 +267,15 @@ LogicalResult transform::AlternativesOp::verify() {
 // GetClosestIsolatedParentOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilencableFailure transform::GetClosestIsolatedParentOp::apply(
+DiagnosedSilenceableFailure transform::GetClosestIsolatedParentOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   SetVector<Operation *> parents;
   for (Operation *target : state.getPayloadOps(getTarget())) {
     Operation *parent =
         target->getParentWithTrait<OpTrait::IsIsolatedFromAbove>();
     if (!parent) {
-      DiagnosedSilencableFailure diag =
-          emitSilencableError()
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
           << "could not find an isolated-from-above parent op";
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
@@ -276,14 +283,14 @@ DiagnosedSilencableFailure transform::GetClosestIsolatedParentOp::apply(
     parents.insert(parent);
   }
   results.set(getResult().cast<OpResult>(), parents.getArrayRef());
-  return DiagnosedSilencableFailure::success();
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
 // PDLMatchOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilencableFailure
+DiagnosedSilenceableFailure
 transform::PDLMatchOp::apply(transform::TransformResults &results,
                              transform::TransformState &state) {
   auto *extension = state.getExtension<PatternApplicatorExtension>();
@@ -294,28 +301,28 @@ transform::PDLMatchOp::apply(transform::TransformResults &results,
     if (failed(extension->findAllMatches(
             getPatternName().getLeafReference().getValue(), root, targets))) {
       emitOpError() << "could not find pattern '" << getPatternName() << "'";
-      return DiagnosedSilencableFailure::definiteFailure();
+      return DiagnosedSilenceableFailure::definiteFailure();
     }
   }
   results.set(getResult().cast<OpResult>(), targets);
-  return DiagnosedSilencableFailure::success();
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
 // SequenceOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilencableFailure
+DiagnosedSilenceableFailure
 transform::SequenceOp::apply(transform::TransformResults &results,
                              transform::TransformState &state) {
   // Map the entry block argument to the list of operations.
   auto scope = state.make_region_scope(*getBodyBlock()->getParent());
   if (failed(mapBlockArguments(state)))
-    return DiagnosedSilencableFailure::definiteFailure();
+    return DiagnosedSilenceableFailure::definiteFailure();
 
   // Apply the sequenced ops one by one.
   for (Operation &transform : getBodyBlock()->without_terminator()) {
-    DiagnosedSilencableFailure result =
+    DiagnosedSilenceableFailure result =
         state.applyTransform(cast<TransformOpInterface>(transform));
     if (!result.succeeded())
       return result;
@@ -324,7 +331,7 @@ transform::SequenceOp::apply(transform::TransformResults &results,
   // Forward the operation mapping for values yielded from the sequence to the
   // values produced by the sequence op.
   forwardTerminatorOperands(getBodyBlock(), state, results);
-  return DiagnosedSilencableFailure::success();
+  return DiagnosedSilenceableFailure::success();
 }
 
 /// Returns `true` if the given op operand may be consuming the handle value in
@@ -486,7 +493,7 @@ void transform::SequenceOp::getRegionInvocationBounds(
 // WithPDLPatternsOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilencableFailure
+DiagnosedSilenceableFailure
 transform::WithPDLPatternsOp::apply(transform::TransformResults &results,
                                     transform::TransformState &state) {
   OwningOpRef<ModuleOp> pdlModuleOp =
@@ -505,7 +512,7 @@ transform::WithPDLPatternsOp::apply(transform::TransformResults &results,
 
   auto scope = state.make_region_scope(getBody());
   if (failed(mapBlockArguments(state)))
-    return DiagnosedSilencableFailure::definiteFailure();
+    return DiagnosedSilenceableFailure::definiteFailure();
   return state.applyTransform(transformOp);
 }
 

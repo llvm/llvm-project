@@ -42,7 +42,7 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
         special status object indicating whether the transformation succeeded
         or failed, and, if it failed, whether the failure is recoverable or not.
       }],
-      /*returnType=*/"::mlir::DiagnosedSilencableFailure",
+      /*returnType=*/"::mlir::DiagnosedSilenceableFailure",
       /*name=*/"apply",
       /*arguments=*/(ins
           "::mlir::transform::TransformResults &":$transformResults,
@@ -64,9 +64,9 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
 
     /// Creates the silencable failure object with a diagnostic located at the
     /// current operation.
-    DiagnosedSilencableFailure emitSilencableError() {
+    DiagnosedSilenceableFailure emitSilenceableError() {
       Diagnostic diag($_op->getLoc(), DiagnosticSeverity::Error);
-      return DiagnosedSilencableFailure::silencableFailure(std::move(diag));
+      return DiagnosedSilenceableFailure::silencableFailure(std::move(diag));
     }
   }];
 }
