@@ -1146,13 +1146,7 @@ uint32_t COFFObjectFile::getSymbolIndex(COFFSymbolRef Symbol) const {
 
 Expected<StringRef>
 COFFObjectFile::getSectionName(const coff_section *Sec) const {
-  StringRef Name;
-  if (Sec->Name[COFF::NameSize - 1] == 0)
-    // Null terminated, let ::strlen figure out the length.
-    Name = Sec->Name;
-  else
-    // Not null terminated, use all 8 bytes.
-    Name = StringRef(Sec->Name, COFF::NameSize);
+  StringRef Name = StringRef(Sec->Name, COFF::NameSize).split('\0').first;
 
   // Check for string table entry. First byte is '/'.
   if (Name.startswith("/")) {
@@ -1162,7 +1156,7 @@ COFFObjectFile::getSectionName(const coff_section *Sec) const {
         return createStringError(object_error::parse_failed,
                                  "invalid section name");
     } else {
-      if (Name.substr(1).consumeInteger(10, Offset))
+      if (Name.substr(1).getAsInteger(10, Offset))
         return createStringError(object_error::parse_failed,
                                  "invalid section name");
     }
