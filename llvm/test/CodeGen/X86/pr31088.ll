@@ -7,77 +7,68 @@
 define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 ; X86-LABEL: ir_fadd_v1f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $28, %esp
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll __gnu_h2f_ieee
+; X86-NEXT:    movl %esi, (%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __extendhfsf2
+; X86-NEXT:    calll __gnu_h2f_ieee
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    addss {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    calll __gnu_f2h_ieee
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ir_fadd_v1f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    subq $16, %rsp
+; X64-NEXT:    movl %edi, %ebx
+; X64-NEXT:    movzwl %si, %edi
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movaps %xmm1, %xmm0
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
-; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    addss (%rsp), %xmm0 # 4-byte Folded Reload
-; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    popq %rax
+; X64-NEXT:    movzwl %bx, %edi
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; X64-NEXT:    callq __gnu_f2h_ieee@PLT
+; X64-NEXT:    addq $16, %rsp
+; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
 ;
 ; F16C-LABEL: ir_fadd_v1f16:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vpextrw $0, %xmm1, %ecx
-; F16C-NEXT:    movzwl %cx, %ecx
-; F16C-NEXT:    vmovd %ecx, %xmm0
+; F16C-NEXT:    movzwl %si, %eax
+; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    movzwl %ax, %eax
+; F16C-NEXT:    movzwl %di, %eax
 ; F16C-NEXT:    vmovd %eax, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; F16C-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; F16C-NEXT:    # kill: def $ax killed $ax killed $eax
 ; F16C-NEXT:    retq
 ;
 ; F16C-O0-LABEL: ir_fadd_v1f16:
 ; F16C-O0:       # %bb.0:
-; F16C-O0-NEXT:    vpextrw $0, %xmm1, %eax
-; F16C-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; F16C-O0-NEXT:    movzwl %ax, %eax
-; F16C-O0-NEXT:    vmovd %eax, %xmm1
-; F16C-O0-NEXT:    vcvtph2ps %xmm1, %xmm1
-; F16C-O0-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-O0-NEXT:    # kill: def $ax killed $ax killed $eax
+; F16C-O0-NEXT:    movw %si, %cx
+; F16C-O0-NEXT:    movw %di, %ax
+; F16C-O0-NEXT:    movzwl %cx, %ecx
+; F16C-O0-NEXT:    vmovd %ecx, %xmm0
+; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm1
 ; F16C-O0-NEXT:    movzwl %ax, %eax
 ; F16C-O0-NEXT:    vmovd %eax, %xmm0
 ; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-O0-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; F16C-O0-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; F16C-O0-NEXT:    vmovd %xmm0, %eax
-; F16C-O0-NEXT:    movw %ax, %cx
-; F16C-O0-NEXT:    # implicit-def: $eax
-; F16C-O0-NEXT:    movw %cx, %ax
-; F16C-O0-NEXT:    # implicit-def: $xmm0
-; F16C-O0-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; F16C-O0-NEXT:    # kill: def $ax killed $ax killed $eax
 ; F16C-O0-NEXT:    retq
   %retval = fadd <1 x half> %arg0, %arg1
   ret <1 x half> %retval
@@ -86,148 +77,148 @@ define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 define <2 x half> @ir_fadd_v2f16(<2 x half> %arg0, <2 x half> %arg1) nounwind {
 ; X86-LABEL: ir_fadd_v2f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $80, %esp
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $64, %esp
+; X86-NEXT:    movzwl 8(%ebp), %esi
+; X86-NEXT:    movzwl 12(%ebp), %edi
+; X86-NEXT:    movzwl 20(%ebp), %ebx
+; X86-NEXT:    movzwl 16(%ebp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll __gnu_h2f_ieee
 ; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
+; X86-NEXT:    movl %ebx, (%esp)
+; X86-NEXT:    calll __gnu_h2f_ieee
 ; X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
+; X86-NEXT:    movl %edi, (%esp)
+; X86-NEXT:    calll __gnu_h2f_ieee
+; X86-NEXT:    movl %esi, (%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __extendhfsf2
+; X86-NEXT:    calll __gnu_h2f_ieee
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    addss {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    calll __gnu_f2h_ieee
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    addss {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    movaps %xmm0, %xmm1
-; X86-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; X86-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    addl $80, %esp
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __gnu_f2h_ieee
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movdqa {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    movd %xmm0, %eax
+; X86-NEXT:    pextrw $1, %xmm0, %edx
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    # kill: def $dx killed $dx killed $edx
+; X86-NEXT:    leal -12(%ebp), %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ir_fadd_v2f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    movss %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    pushq %r14
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    subq $32, %rsp
+; X64-NEXT:    movl %edx, %ebp
+; X64-NEXT:    movl %esi, %ebx
+; X64-NEXT:    movl %edi, %r14d
+; X64-NEXT:    movzwl %cx, %edi
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movaps %xmm2, %xmm0
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    callq __extendhfsf2@PLT
+; X64-NEXT:    movzwl %bx, %edi
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; X64-NEXT:    callq __truncsfhf2@PLT
+; X64-NEXT:    callq __gnu_f2h_ieee@PLT
+; X64-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
+; X64-NEXT:    movzwl %bp, %edi
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    callq __extendhfsf2@PLT
+; X64-NEXT:    movzwl %r14w, %edi
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    movaps %xmm0, %xmm1
-; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    addq $24, %rsp
+; X64-NEXT:    callq __gnu_f2h_ieee@PLT
+; X64-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
+; X64-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
+; X64-NEXT:    movd %xmm0, %eax
+; X64-NEXT:    pextrw $1, %xmm0, %edx
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    # kill: def $dx killed $dx killed $edx
+; X64-NEXT:    addq $32, %rsp
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %r14
+; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
 ;
 ; F16C-LABEL: ir_fadd_v2f16:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm1, %eax
-; F16C-NEXT:    vpextrw $0, %xmm3, %ecx
-; F16C-NEXT:    vpextrw $0, %xmm0, %edx
-; F16C-NEXT:    vpextrw $0, %xmm2, %esi
-; F16C-NEXT:    movzwl %si, %esi
-; F16C-NEXT:    vmovd %esi, %xmm0
+; F16C-NEXT:    movzwl %cx, %eax
+; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    movzwl %dx, %edx
-; F16C-NEXT:    vmovd %edx, %xmm1
+; F16C-NEXT:    movzwl %si, %eax
+; F16C-NEXT:    vmovd %eax, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; F16C-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %edx
-; F16C-NEXT:    vpinsrw $0, %edx, %xmm0, %xmm0
-; F16C-NEXT:    movzwl %cx, %ecx
-; F16C-NEXT:    vmovd %ecx, %xmm1
+; F16C-NEXT:    vpextrw $0, %xmm0, -{{[0-9]+}}(%rsp)
+; F16C-NEXT:    movzwl %dx, %eax
+; F16C-NEXT:    vmovd %eax, %xmm0
+; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-NEXT:    movzwl %di, %eax
+; F16C-NEXT:    vmovd %eax, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; F16C-NEXT:    movzwl %ax, %eax
-; F16C-NEXT:    vmovd %eax, %xmm2
-; F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
-; F16C-NEXT:    vaddss %xmm1, %xmm2, %xmm1
-; F16C-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; F16C-NEXT:    vmovd %xmm1, %eax
-; F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm1
+; F16C-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-NEXT:    vpextrw $0, %xmm0, -{{[0-9]+}}(%rsp)
+; F16C-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
+; F16C-NEXT:    vmovd %xmm0, %eax
+; F16C-NEXT:    vpextrw $1, %xmm0, %edx
+; F16C-NEXT:    # kill: def $ax killed $ax killed $eax
+; F16C-NEXT:    # kill: def $dx killed $dx killed $edx
 ; F16C-NEXT:    retq
 ;
 ; F16C-O0-LABEL: ir_fadd_v2f16:
 ; F16C-O0:       # %bb.0:
-; F16C-O0-NEXT:    vpextrw $0, %xmm2, %eax
+; F16C-O0-NEXT:    movl %esi, %eax
+; F16C-O0-NEXT:    # kill: def $cx killed $cx killed $ecx
+; F16C-O0-NEXT:    movw %dx, %si
 ; F16C-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; F16C-O0-NEXT:    movzwl %ax, %eax
-; F16C-O0-NEXT:    vmovd %eax, %xmm2
-; F16C-O0-NEXT:    vcvtph2ps %xmm2, %xmm2
-; F16C-O0-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-O0-NEXT:    # kill: def $ax killed $ax killed $eax
+; F16C-O0-NEXT:    movw %di, %dx
+; F16C-O0-NEXT:    movzwl %si, %esi
+; F16C-O0-NEXT:    vmovd %esi, %xmm0
+; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm1
+; F16C-O0-NEXT:    movzwl %dx, %edx
+; F16C-O0-NEXT:    vmovd %edx, %xmm0
+; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-O0-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; F16C-O0-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-O0-NEXT:    vpextrw $0, %xmm0, -{{[0-9]+}}(%rsp)
+; F16C-O0-NEXT:    movzwl %cx, %ecx
+; F16C-O0-NEXT:    vmovd %ecx, %xmm0
+; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm1
 ; F16C-O0-NEXT:    movzwl %ax, %eax
 ; F16C-O0-NEXT:    vmovd %eax, %xmm0
 ; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-O0-NEXT:    vaddss %xmm2, %xmm0, %xmm0
+; F16C-O0-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; F16C-O0-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-O0-NEXT:    vpextrw $0, %xmm0, -{{[0-9]+}}(%rsp)
+; F16C-O0-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
 ; F16C-O0-NEXT:    vmovd %xmm0, %eax
-; F16C-O0-NEXT:    movw %ax, %cx
-; F16C-O0-NEXT:    # implicit-def: $eax
-; F16C-O0-NEXT:    movw %cx, %ax
-; F16C-O0-NEXT:    # implicit-def: $xmm0
-; F16C-O0-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
-; F16C-O0-NEXT:    vpextrw $0, %xmm3, %eax
 ; F16C-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; F16C-O0-NEXT:    movzwl %ax, %eax
-; F16C-O0-NEXT:    vmovd %eax, %xmm2
-; F16C-O0-NEXT:    vcvtph2ps %xmm2, %xmm2
-; F16C-O0-NEXT:    vpextrw $0, %xmm1, %eax
-; F16C-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; F16C-O0-NEXT:    movzwl %ax, %eax
-; F16C-O0-NEXT:    vmovd %eax, %xmm1
-; F16C-O0-NEXT:    vcvtph2ps %xmm1, %xmm1
-; F16C-O0-NEXT:    vaddss %xmm2, %xmm1, %xmm1
-; F16C-O0-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; F16C-O0-NEXT:    vmovd %xmm1, %eax
-; F16C-O0-NEXT:    movw %ax, %cx
-; F16C-O0-NEXT:    # implicit-def: $eax
-; F16C-O0-NEXT:    movw %cx, %ax
-; F16C-O0-NEXT:    # implicit-def: $xmm1
-; F16C-O0-NEXT:    vpinsrw $0, %eax, %xmm1, %xmm1
+; F16C-O0-NEXT:    vpextrw $1, %xmm0, %ecx
+; F16C-O0-NEXT:    movw %cx, %dx
 ; F16C-O0-NEXT:    retq
   %retval = fadd <2 x half> %arg0, %arg1
   ret <2 x half> %retval

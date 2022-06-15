@@ -803,7 +803,7 @@ define <32 x half> @stack_fold_fnmsub312ph_maskz(<32 x half> %a0, <32 x half> %a
 
 define half @stack_fold_fmadd123sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmadd123sh:
-  ;CHECK:       vfmadd213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmadd213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call half @llvm.fma.f16(half %a0, half %a1, half %a2)
   ret half %2
@@ -812,7 +812,7 @@ declare half @llvm.fma.f16(half, half, half)
 
 define half @stack_fold_fmadd213sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmadd213sh:
-  ;CHECK:       vfmadd213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmadd213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call half @llvm.fma.f16(half %a1, half %a0, half %a2)
   ret half %2
@@ -820,7 +820,7 @@ define half @stack_fold_fmadd213sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fmadd231sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmadd231sh:
-  ;CHECK:       vfmadd231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmadd231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call half @llvm.fma.f16(half %a1, half %a2, half %a0)
   ret half %2
@@ -828,7 +828,7 @@ define half @stack_fold_fmadd231sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fmadd321sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmadd321sh:
-  ;CHECK:       vfmadd231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmadd231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call half @llvm.fma.f16(half %a2, half %a1, half %a0)
   ret half %2
@@ -836,7 +836,7 @@ define half @stack_fold_fmadd321sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fmadd132sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmadd132sh:
-  ;CHECK:       vfmadd132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmadd132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call half @llvm.fma.f16(half %a0, half %a2, half %a1)
   ret half %2
@@ -844,7 +844,7 @@ define half @stack_fold_fmadd132sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fmadd312sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmadd312sh:
-  ;CHECK:       vfmadd132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmadd132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = call half @llvm.fma.f16(half %a2, half %a0, half %a1)
   ret half %2
@@ -852,7 +852,7 @@ define half @stack_fold_fmadd312sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fmsub123sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmsub123sh:
-  ;CHECK:       vfmsub213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmsub213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a2
   %3 = call half @llvm.fma.f16(half %a0, half %a1, half %2)
@@ -861,7 +861,7 @@ define half @stack_fold_fmsub123sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fmsub213sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmsub213sh:
-  ;CHECK:       vfmsub213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmsub213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a2
   %3 = call half @llvm.fma.f16(half %a1, half %a0, half %2)
@@ -870,7 +870,7 @@ define half @stack_fold_fmsub213sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fmsub231sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmsub231sh:
-  ;CHECK:       vfmsub231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmsub231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a0
   %3 = call half @llvm.fma.f16(half %a1, half %a2, half %2)
@@ -879,7 +879,7 @@ define half @stack_fold_fmsub231sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fmsub321sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmsub321sh:
-  ;CHECK:       vfmsub231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmsub231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a0
   %3 = call half @llvm.fma.f16(half %a2, half %a1, half %2)
@@ -888,7 +888,7 @@ define half @stack_fold_fmsub321sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fmsub132sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmsub132sh:
-  ;CHECK:       vfmsub132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmsub132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a1
   %3 = call half @llvm.fma.f16(half %a0, half %a2, half %2)
@@ -897,7 +897,7 @@ define half @stack_fold_fmsub132sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fmsub312sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fmsub312sh:
-  ;CHECK:       vfmsub132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfmsub132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a1
   %3 = call half @llvm.fma.f16(half %a2, half %a0, half %2)
@@ -906,7 +906,7 @@ define half @stack_fold_fmsub312sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmadd123sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmadd123sh:
-  ;CHECK:       vfnmadd213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmadd213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a0
   %3 = call half @llvm.fma.f16(half %2, half %a1, half %a2)
@@ -915,7 +915,7 @@ define half @stack_fold_fnmadd123sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmadd213sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmadd213sh:
-  ;CHECK:       vfnmadd213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmadd213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a1
   %3 = call half @llvm.fma.f16(half %2, half %a0, half %a2)
@@ -924,7 +924,7 @@ define half @stack_fold_fnmadd213sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmadd231sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmadd231sh:
-  ;CHECK:       vfnmadd231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmadd231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a1
   %3 = call half @llvm.fma.f16(half %2, half %a2, half %a0)
@@ -933,7 +933,7 @@ define half @stack_fold_fnmadd231sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmadd321sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmadd321sh:
-  ;CHECK:       vfnmadd231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmadd231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a2
   %3 = call half @llvm.fma.f16(half %2, half %a1, half %a0)
@@ -942,7 +942,7 @@ define half @stack_fold_fnmadd321sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmadd132sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmadd132sh:
-  ;CHECK:       vfnmadd132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmadd132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a0
   %3 = call half @llvm.fma.f16(half %2, half %a2, half %a1)
@@ -951,7 +951,7 @@ define half @stack_fold_fnmadd132sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmadd312sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmadd312sh:
-  ;CHECK:       vfnmadd132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmadd132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a2
   %3 = call half @llvm.fma.f16(half %2, half %a0, half %a1)
@@ -960,7 +960,7 @@ define half @stack_fold_fnmadd312sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmsub123sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmsub123sh:
-  ;CHECK:       vfnmsub213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmsub213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a0
   %3 = fneg half %a2
@@ -970,7 +970,7 @@ define half @stack_fold_fnmsub123sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmsub213sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmsub213sh:
-  ;CHECK:       vfnmsub213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmsub213sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a1
   %3 = fneg half %a2
@@ -980,7 +980,7 @@ define half @stack_fold_fnmsub213sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmsub231sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmsub231sh:
-  ;CHECK:       vfnmsub231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmsub231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a1
   %3 = fneg half %a0
@@ -990,7 +990,7 @@ define half @stack_fold_fnmsub231sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmsub321sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmsub321sh:
-  ;CHECK:       vfnmsub231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmsub231sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a2
   %3 = fneg half %a0
@@ -1000,7 +1000,7 @@ define half @stack_fold_fnmsub321sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmsub132sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmsub132sh:
-  ;CHECK:       vfnmsub132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmsub132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a0
   %3 = fneg half %a1
@@ -1010,7 +1010,7 @@ define half @stack_fold_fnmsub132sh(half %a0, half %a1, half %a2) {
 
 define half @stack_fold_fnmsub312sh(half %a0, half %a1, half %a2) {
   ;CHECK-LABEL: stack_fold_fnmsub312sh:
-  ;CHECK:       vfnmsub132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
+  ;CHECK:       vfnmsub132sh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fneg half %a2
   %3 = fneg half %a1
