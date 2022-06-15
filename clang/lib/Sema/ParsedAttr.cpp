@@ -212,6 +212,39 @@ bool ParsedAttr::isSupportedByPragmaAttribute() const {
   return getInfo().IsSupportedByPragmaAttribute;
 }
 
+bool ParsedAttr::slidesFromDeclToDeclSpecLegacyBehavior() const {
+  assert(isStandardAttributeSyntax());
+
+  // We have historically allowed some type attributes with standard attribute
+  // syntax to slide to the decl-specifier-seq, so we have to keep supporting
+  // it. This property is consciously not defined as a flag in Attr.td because
+  // we don't want new attributes to specify it.
+  //
+  // Note: No new entries should be added to this list. Entries should be
+  // removed from this list after a suitable deprecation period, provided that
+  // there are no compatibility considerations with other compilers. If
+  // possible, we would like this list to go away entirely.
+  switch (getParsedKind()) {
+  case AT_AddressSpace:
+  case AT_OpenCLPrivateAddressSpace:
+  case AT_OpenCLGlobalAddressSpace:
+  case AT_OpenCLGlobalDeviceAddressSpace:
+  case AT_OpenCLGlobalHostAddressSpace:
+  case AT_OpenCLLocalAddressSpace:
+  case AT_OpenCLConstantAddressSpace:
+  case AT_OpenCLGenericAddressSpace:
+  case AT_NeonPolyVectorType:
+  case AT_NeonVectorType:
+  case AT_ArmMveStrictPolymorphism:
+  case AT_BTFTypeTag:
+  case AT_ObjCGC:
+  case AT_MatrixType:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool ParsedAttr::acceptsExprPack() const { return getInfo().AcceptsExprPack; }
 
 unsigned ParsedAttr::getSemanticSpelling() const {
@@ -264,4 +297,21 @@ bool ParsedAttr::checkAtMostNumArgs(Sema &S, unsigned Num) const {
   return checkAttributeNumArgsImpl(S, *this, Num,
                                    diag::err_attribute_too_many_arguments,
                                    std::greater<unsigned>());
+}
+
+void clang::takeAndConcatenateAttrs(ParsedAttributes &First,
+                                    ParsedAttributes &Second,
+                                    ParsedAttributes &Result) {
+  // Note that takeAllFrom() puts the attributes at the beginning of the list,
+  // so to obtain the correct ordering, we add `Second`, then `First`.
+  Result.takeAllFrom(Second);
+  Result.takeAllFrom(First);
+  if (First.Range.getBegin().isValid())
+    Result.Range.setBegin(First.Range.getBegin());
+  else
+    Result.Range.setBegin(Second.Range.getBegin());
+  if (Second.Range.getEnd().isValid())
+    Result.Range.setEnd(Second.Range.getEnd());
+  else
+    Result.Range.setEnd(First.Range.getEnd());
 }

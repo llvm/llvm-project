@@ -2,10 +2,7 @@
 
 struct S1 {
   void f() [[clang::annotate_type("foo")]];
-  // FIXME: We would want to prohibit the attribute in the following location.
-  // However, Clang currently generally doesn't prohibit type-only C++11
-  // attributes on declarations. This should be fixed more generally.
-  [[clang::annotate_type("foo")]] void g();
+  [[clang::annotate_type("foo")]] void g(); // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
 };
 
 template <typename T1, typename T2> struct is_same {
@@ -48,23 +45,21 @@ void f3() {
 
 // More error cases: Prohibit adding the attribute to declarations.
 // Different declarations hit different code paths, so they need separate tests.
-// FIXME: Clang currently generally doesn't prohibit type-only C++11
-// attributes on declarations.
-namespace [[clang::annotate_type("foo")]] my_namespace {}
-struct [[clang::annotate_type("foo")]] S3;
-struct [[clang::annotate_type("foo")]] S3{
-  [[clang::annotate_type("foo")]] int member;
+namespace [[clang::annotate_type("foo")]] my_namespace {} // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+struct [[clang::annotate_type("foo")]] S3; // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+struct [[clang::annotate_type("foo")]] S3{ // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+  [[clang::annotate_type("foo")]] int member; // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
 };
 void f4() {
-  for ([[clang::annotate_type("foo")]] int i = 0; i < 42; ++i) {}
-  for (; [[clang::annotate_type("foo")]] bool b = false;) {}
-  while ([[clang::annotate_type("foo")]] bool b = false) {}
-  if ([[clang::annotate_type("foo")]] bool b = false) {}
+  for ([[clang::annotate_type("foo")]] int i = 0; i < 42; ++i) {} // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+  for (; [[clang::annotate_type("foo")]] bool b = false;) {} // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+  while ([[clang::annotate_type("foo")]] bool b = false) {} // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+  if ([[clang::annotate_type("foo")]] bool b = false) {} // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
   try {
-  } catch ([[clang::annotate_type("foo")]] int i) {
+  } catch ([[clang::annotate_type("foo")]] int i) { // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
   }
 }
 template <class T>
-[[clang::annotate_type("foo")]] T var_template;
-[[clang::annotate_type("foo")]] extern "C" int extern_c_func();
-extern "C" [[clang::annotate_type("foo")]] int extern_c_func();
+[[clang::annotate_type("foo")]] T var_template; // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
+[[clang::annotate_type("foo")]] extern "C" int extern_c_func(); // expected-error {{an attribute list cannot appear here}}
+extern "C" [[clang::annotate_type("foo")]] int extern_c_func(); // expected-error {{'annotate_type' attribute cannot be applied to a declaration}}
