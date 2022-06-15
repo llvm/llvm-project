@@ -2631,4 +2631,22 @@ let TargetPrefix = "aarch64" in {
     [], [llvm_i32_ty, llvm_ptr_ty]>;
   def int_aarch64_sme_str : DefaultAttrsIntrinsic<
     [], [llvm_i32_ty, llvm_ptr_ty]>;
+
+  class SME_TileToVector_Intrinsic
+      : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+          [LLVMMatchType<0>, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_i64_ty, llvm_i32_ty]>;
+  class SME_VectorToTile_Intrinsic
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i64_ty, llvm_i32_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+           llvm_anyvector_ty]>;
+
+  def int_aarch64_sme_read_horiz  : SME_TileToVector_Intrinsic;
+  def int_aarch64_sme_read_vert   : SME_TileToVector_Intrinsic;
+  def int_aarch64_sme_write_horiz : SME_VectorToTile_Intrinsic;
+  def int_aarch64_sme_write_vert  : SME_VectorToTile_Intrinsic;
+
+  def int_aarch64_sme_readq_horiz  : SME_TileToVector_Intrinsic;
+  def int_aarch64_sme_readq_vert   : SME_TileToVector_Intrinsic;
+  def int_aarch64_sme_writeq_horiz : SME_VectorToTile_Intrinsic;
+  def int_aarch64_sme_writeq_vert  : SME_VectorToTile_Intrinsic;
 }
