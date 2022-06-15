@@ -54,6 +54,8 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
   // units.
   CI.getFrontendOpts().Inputs.clear();
   CI.getFrontendOpts().OutputFile.clear();
+  // FIXME: a build system may want to provide a new path.
+  CI.getFrontendOpts().IndexUnitOutputPath.clear();
   CI.getCodeGenOpts().MainFileName.clear();
   CI.getCodeGenOpts().DwarfDebugFlags.clear();
 
