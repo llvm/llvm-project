@@ -218,6 +218,8 @@ private:
       const parser::OmpObjectList &, const llvm::omp::Clause);
   void GetSymbolsInObjectList(const parser::OmpObjectList &, SymbolSourceMap &);
   void CheckDefinableObjects(SymbolSourceMap &, const llvm::omp::Clause);
+  void CheckCopyingPolymorphicAllocatable(
+      SymbolSourceMap &, const llvm::omp::Clause);
   void CheckPrivateSymbolsInOuterCxt(
       SymbolSourceMap &, DirectivesClauseTriple &, const llvm::omp::Clause);
   const parser::Name GetLoopIndex(const parser::DoConstruct *x);
