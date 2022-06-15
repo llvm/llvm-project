@@ -34,7 +34,7 @@ json::Value toJSON(const JSONModule &module) {
   json_module["systemPath"] = module.system_path;
   if (module.file)
     json_module["file"] = *module.file;
-  json_module["loadAddress"] = module.load_address;
+  json_module["loadAddress"] = toJSON(module.load_address, true);
   if (module.uuid)
     json_module["uuid"] = *module.uuid;
   return std::move(json_module);

@@ -142,7 +142,7 @@ llvm::Error IntelPTMultiCoreTrace::TraceStart(lldb::tid_t tid) {
 Error IntelPTMultiCoreTrace::TraceStop(lldb::tid_t tid) {
   return createStringError(inconvertibleErrorCode(),
                            "Can't stop tracing an individual thread when "
-                           "per-core process tracing is enabled.");
+                           "per-cpu process tracing is enabled.");
 }
 
 Expected<Optional<std::vector<uint8_t>>>

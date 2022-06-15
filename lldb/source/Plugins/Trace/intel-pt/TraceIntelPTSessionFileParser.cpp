@@ -52,7 +52,7 @@ Error TraceIntelPTSessionFileParser::ParseModule(Target &target,
       return error.ToError();
 
     bool load_addr_changed = false;
-    module_sp->SetLoadAddress(target, module.load_address, false,
+    module_sp->SetLoadAddress(target, module.load_address.value, false,
                               load_addr_changed);
     return Error::success();
   };
@@ -185,7 +185,7 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
               // Original path of the module at runtime.
           "file"?: string,
               // Path to a copy of the file if not available at "systemPath".
-          "loadAddress": integer,
+          "loadAddress": integer | string decimal | hex string,
               // Lowest address of the sections of the module loaded on memory.
           "uuid"?: string,
               // Build UUID for the file for sanity checks.
@@ -212,7 +212,7 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
 
     "timeMult": integer,
     "timeShift": integer,
-    "timeZero": integer,
+    "timeZero": integer | string decimal | hex string,
   }
 }
 

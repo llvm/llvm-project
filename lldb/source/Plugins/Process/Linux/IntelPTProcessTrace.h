@@ -16,7 +16,7 @@
 namespace lldb_private {
 namespace process_linux {
 
-/// Interface to be implemented by each 'process trace' strategy (per core, per
+/// Interface to be implemented by each 'process trace' strategy (per cpu, per
 /// thread, etc).
 class IntelPTProcessTrace {
 public:

@@ -59,6 +59,21 @@ bool fromJSON(const llvm::json::Value &value, TraceIntelPTStartRequest &packet,
 llvm::json::Value toJSON(const TraceIntelPTStartRequest &packet);
 /// \}
 
+/// Helper structure to help parse long numbers that can't
+/// be easily represented by a JSON number that is compatible with
+/// Javascript (52 bits) or that can also be represented as hex.
+///
+/// \{
+struct JSONUINT64 {
+  uint64_t value;
+};
+
+llvm::json::Value toJSON(const JSONUINT64 &uint64, bool hex);
+
+bool fromJSON(const llvm::json::Value &value, JSONUINT64 &uint64,
+              llvm::json::Path path);
+/// \}
+
 /// jLLDBTraceGetState gdb-remote packet
 /// \{
 
@@ -86,7 +101,7 @@ struct LinuxPerfZeroTscConversion {
 
   uint32_t time_mult;
   uint16_t time_shift;
-  uint64_t time_zero;
+  JSONUINT64 time_zero;
 };
 
 struct TraceIntelPTGetStateResponse : TraceGetStateResponse {

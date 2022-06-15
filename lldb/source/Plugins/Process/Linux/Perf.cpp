@@ -45,7 +45,7 @@ lldb_private::process_linux::LoadPerfTscConversionParameters() {
   perf_event_mmap_page &mmap_metada = perf_event->GetMetadataPage();
   if (mmap_metada.cap_user_time && mmap_metada.cap_user_time_zero) {
     return LinuxPerfZeroTscConversion{
-        mmap_metada.time_mult, mmap_metada.time_shift, mmap_metada.time_zero};
+        mmap_metada.time_mult, mmap_metada.time_shift, {mmap_metada.time_zero}};
   } else {
     auto err_cap =
         !mmap_metada.cap_user_time ? "cap_user_time" : "cap_user_time_zero";

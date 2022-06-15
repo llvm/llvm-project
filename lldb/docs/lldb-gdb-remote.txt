@@ -299,14 +299,14 @@ read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAA
 //  intel-pt supports both "thread tracing" and "process tracing".
 //
 //  "Process tracing" is implemented in two different ways. If the
-//  "perCoreTracing" option is false, then each thread is traced individually
+//  "perCpuTracing" option is false, then each thread is traced individually
 //  but managed by the same "process trace" instance. This means that the
 //  amount of trace buffers used is proportional to the number of running
 //  threads. This is the recommended option unless the number of threads is
-//  huge. If "perCoreTracing" is true, then each cpu core is traced invidually
+//  huge. If "perCpuTracing" is true, then each cpu core is traced invidually
 //  instead of each thread, which uses a fixed number of trace buffers, but
 //  might result in less data available for less frequent threads. See
-//  "perCoreTracing" below for more information.
+//  "perCpuTracing" below for more information.
 //
 //  Each actual intel pt trace buffer, either from "process tracing" or "thread
 //  tracing", is stored in an in-memory circular buffer, which keeps the most
@@ -352,7 +352,7 @@ read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAA
 //          0 if supported.
 //
 //     /* process tracing only */
-//     "perCoreTracing": <boolean>
+//     "perCpuTracing": <boolean>
 //         Instead of having an individual trace buffer per thread, this option
 //         triggers the collection on a per cpu core basis. This effectively
 //         traces the entire activity on all cores. At decoding time, in order
@@ -374,13 +374,13 @@ read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAA
 //         buffers for the current process, excluding the ones started with
 //         "thread tracing".
 //
-//         If "perCoreTracing" is false, whenever a thread is attempted to be
+//         If "perCpuTracing" is false, whenever a thread is attempted to be
 //         traced due to "process tracing" and the limit would be reached, the
 //         process is stopped with a "tracing" reason along with a meaningful
 //         description, so that the user can retrace the process if needed.
 //
-//         If "perCoreTracing" is true, then starting the system-wide trace
-//         session fails if all the individual per-core trace buffers require
+//         If "perCpuTracing" is true, then starting the system-wide trace
+//         session fails if all the individual per-cpu trace buffers require
 //         in total more memory that the limit impossed by this parameter.
 //   }
 //
