@@ -10389,6 +10389,13 @@ public:
   void AddAnnotationAttr(Decl *D, const AttributeCommonInfo &CI,
                          StringRef Annot, MutableArrayRef<Expr *> Args);
 
+  /// ConstantFoldAttrArgs - Folds attribute arguments into ConstantExprs
+  /// (unless they are value dependent or type dependent). Returns false
+  /// and emits a diagnostic if one or more of the arguments could not be
+  /// folded into a constant.
+  bool ConstantFoldAttrArgs(const AttributeCommonInfo &CI,
+                            MutableArrayRef<Expr *> Args);
+
   /// AddLaunchBoundsAttr - Adds a launch_bounds attribute to a particular
   /// declaration.
   void AddLaunchBoundsAttr(Decl *D, const AttributeCommonInfo &CI,
