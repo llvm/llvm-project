@@ -39,6 +39,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
+#include <list>
 #include <map>
 #include <set>
 #include <shared_mutex>
@@ -641,6 +642,10 @@ public:
   /// special linux kernel sections
   std::unordered_map<uint64_t, std::vector<LKInstructionMarkerInfo>> LKMarkers;
 
+  /// List of external addresses in the code that are not a function start
+  /// and are referenced from BinaryFunction.
+  std::list<std::pair<BinaryFunction *, uint64_t>> InterproceduralReferences;
+
   /// PseudoProbe decoder
   MCPseudoProbeDecoder ProbeDecoder;
 
@@ -884,8 +889,23 @@ public:
   bool registerFragment(BinaryFunction &TargetFunction,
                         BinaryFunction &Function) const;
 
-  /// Resolve inter-procedural dependencies from \p Function.
-  void processInterproceduralReferences(BinaryFunction &Function);
+  /// Add unterprocedural reference for \p Function to \p Address
+  void addInterproceduralReference(BinaryFunction *Function, uint64_t Address) {
+    InterproceduralReferences.push_back({Function, Address});
+  }
+
+  /// Used to fix the target of linker-generated AArch64 adrp + add
+  /// sequence with no relocation info.
+  void addAdrpAddRelocAArch64(BinaryFunction &BF, MCInst &LoadLowBits,
+                              MCInst &LoadHiBits, uint64_t Target);
+
+  /// Return true if AARch64 veneer was successfully matched at a given
+  /// \p Address and register veneer binary function if \p MatchOnly
+  /// argument is false.
+  bool handleAArch64Veneer(uint64_t Address, bool MatchOnly = false);
+
+  /// Resolve inter-procedural dependencies from
+  void processInterproceduralReferences();
 
   /// Skip functions with all parent and child fragments transitively.
   void skipMarkedFragments();
