@@ -1,3 +1,5 @@
+# UNSUPPORTED: system-windows
+
 # RUN: %lldb -o 'script quit' | FileCheck %s --check-prefix SILENT
 # RUN: %lldb -o 'script quit()' | FileCheck %s --check-prefix SILENT
 
