@@ -130,9 +130,9 @@ size_t File::write_unlocked_fbf(const void *data, size_t len) {
 size_t File::write_unlocked_lbf(const void *data, size_t len) {
   constexpr char NEWLINE_CHAR = '\n';
   size_t last_newline = len;
-  for (size_t i = len - 1; i > 0; --i) {
-    if (static_cast<const char *>(data)[i] == NEWLINE_CHAR) {
-      last_newline = i;
+  for (size_t i = len; i > 1; --i) {
+    if (static_cast<const char *>(data)[i - 1] == NEWLINE_CHAR) {
+      last_newline = i - 1;
       break;
     }
   }

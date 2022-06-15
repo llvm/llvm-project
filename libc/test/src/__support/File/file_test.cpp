@@ -458,3 +458,30 @@ TEST(LlvmLibcFileTest, ZeroLengthBuffer) {
   ASSERT_EQ(f_lbf->close(), 0);
   ASSERT_EQ(f_nbf->close(), 0);
 }
+
+TEST(LlvmLibcFileTest, WriteNothing) {
+  const char WRITE_DATA[] = "";
+  constexpr size_t WRITE_SIZE = 0;
+  constexpr size_t FILE_BUFFER_SIZE = 5;
+  char file_buffer_fbf[FILE_BUFFER_SIZE];
+  char file_buffer_lbf[FILE_BUFFER_SIZE];
+  char file_buffer_nbf[FILE_BUFFER_SIZE];
+  StringFile *f_fbf =
+      new_string_file(file_buffer_fbf, FILE_BUFFER_SIZE, _IOFBF, false, "w");
+  StringFile *f_lbf =
+      new_string_file(file_buffer_lbf, FILE_BUFFER_SIZE, _IOLBF, false, "w");
+  StringFile *f_nbf =
+      new_string_file(file_buffer_nbf, FILE_BUFFER_SIZE, _IONBF, false, "w");
+
+  ASSERT_EQ(WRITE_SIZE, f_fbf->write(WRITE_DATA, WRITE_SIZE));
+  ASSERT_EQ(WRITE_SIZE, f_lbf->write(WRITE_DATA, WRITE_SIZE));
+  ASSERT_EQ(WRITE_SIZE, f_nbf->write(WRITE_DATA, WRITE_SIZE));
+
+  ASSERT_FALSE(f_fbf->error_unlocked());
+  ASSERT_FALSE(f_lbf->error_unlocked());
+  ASSERT_FALSE(f_nbf->error_unlocked());
+
+  ASSERT_EQ(f_fbf->close(), 0);
+  ASSERT_EQ(f_lbf->close(), 0);
+  ASSERT_EQ(f_nbf->close(), 0);
+}
