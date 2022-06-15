@@ -86,11 +86,10 @@ static void ReportGlobal(const Global &g, const char *prefix) {
       "odr_indicator=%p\n",
       prefix, (void *)&g, (void *)g.beg, g.size, g.size_with_redzone, g.name,
       g.module_name, g.has_dynamic_init, (void *)g.odr_indicator);
-
-  DataInfo info;
-  Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info);
-  if (info.line != 0) {
-    Report("  location: name=%s, %d\n", info.file, info.line);
+  if (g.location) {
+    Report("  location (%p): name=%s[%p], %d %d\n", (void *)g.location,
+           g.location->filename, (void *)g.location->filename,
+           g.location->line_no, g.location->column_no);
   }
 }
 
@@ -296,15 +295,19 @@ void PrintGlobalNameIfASCII(InternalScopedString *str, const __asan_global &g) {
               (char *)g.beg);
 }
 
-void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
-  DataInfo info;
-  Symbolizer::GetOrInit()->SymbolizeData(g.beg, &info);
+static const char *GlobalFilename(const __asan_global &g) {
+  const char *res = g.module_name;
+  // Prefer the filename from source location, if is available.
+  if (g.location) res = g.location->filename;
+  CHECK(res);
+  return res;
+}
 
-  if (info.line != 0) {
-    str->append("%s:%d", info.file, info.line);
-  } else {
-    str->append("%s", g.module_name);
-  }
+void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g) {
+  str->append("%s", GlobalFilename(g));
+  if (!g.location) return;
+  if (g.location->line_no) str->append(":%d", g.location->line_no);
+  if (g.location->column_no) str->append(":%d", g.location->column_no);
 }
 
 } // namespace __asan
