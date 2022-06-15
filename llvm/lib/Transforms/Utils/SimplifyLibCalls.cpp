@@ -1233,10 +1233,6 @@ Value *LibCallSimplifier::optimizeMemCmpBCmpCommon(CallInst *CI,
   if (!LenC)
     return nullptr;
 
-  // memcmp(d,s,0) -> 0
-  if (LenC->getZExtValue() == 0)
-    return Constant::getNullValue(CI->getType());
-
   if (Value *Res =
           optimizeMemCmpConstantSize(CI, LHS, RHS, LenC->getZExtValue(), B, DL))
     return Res;
