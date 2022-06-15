@@ -69,9 +69,15 @@ void moveScalarUniformCode(WarpExecuteOnLane0Op op);
 void populatePropagateWarpVectorDistributionPatterns(
     RewritePatternSet &pattern);
 
-/// Collect patterns to distribute vector reduction ops using GPU warp shuffle
-/// ops.
-void populateReductionToGPUWarpShufflePatterns(RewritePatternSet &pattern);
+/// Lambda signature to compute a reduction of a distributed value for the given
+/// reduction kind and size.
+using DistributedReductionFn =
+    std::function<Value(Location, OpBuilder &, Value, CombiningKind, uint32_t)>;
+
+/// Collect patterns to distribute vector reduction ops using given lamdba to
+/// distribute reduction op.
+void populateDistributeReduction(RewritePatternSet &pattern,
+                                 DistributedReductionFn distributedReductionFn);
 
 } // namespace vector
 } // namespace mlir
