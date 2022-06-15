@@ -468,6 +468,54 @@ struct ForOpInterface
     return true;
   }
 
+  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
+                                 const AnalysisState &state) const {
+    auto bufferizableOp = cast<BufferizableOpInterface>(op);
+    if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
+      return failure();
+
+    if (!state.getOptions().enforceAliasingInvariants)
+      return success();
+
+    // According to the `getAliasing...` implementations, a bufferized OpResult
+    // may alias only with the corresponding bufferized init_arg and with no
+    // other buffers. I.e., the i-th OpResult may alias with the i-th init_arg;
+    // but not with any other OpOperand. If a corresponding OpResult/init_arg
+    // pair bufferizes to equivalent buffers, this aliasing requirement is
+    // satisfied. Otherwise, we cannot be sure and must yield a new buffer copy.
+    // (New buffer copies do not alias with any buffer.)
+    auto forOp = cast<scf::ForOp>(op);
+    auto yieldOp =
+        cast<scf::YieldOp>(forOp.getLoopBody().front().getTerminator());
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(yieldOp);
+
+    // Indices of all iter_args that have tensor type. These are the ones that
+    // are bufferized.
+    DenseSet<int64_t> indices = getTensorIndices(forOp.getInitArgs());
+    // For every yielded value, is the value equivalent to its corresponding
+    // bbArg?
+    DenseSet<int64_t> equivalentYields = getEquivalentBuffers(
+        forOp.getRegionIterArgs(), yieldOp.getResults(), state);
+    SmallVector<Value> yieldValues;
+    for (int64_t idx = 0;
+         idx < static_cast<int64_t>(yieldOp.getResults().size()); ++idx) {
+      Value value = yieldOp.getResults()[idx];
+      if (!indices.contains(idx) || equivalentYields.contains(idx)) {
+        yieldValues.push_back(value);
+        continue;
+      }
+      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
+          yieldOp.getLoc(), value.getType().cast<RankedTensorType>(),
+          /*dynamicSizes=*/ValueRange(), value, /*escape=*/true);
+      yieldValues.push_back(alloc);
+    }
+
+    rewriter.updateRootInPlace(
+        yieldOp, [&]() { yieldOp.getResultsMutable().assign(yieldValues); });
+    return success();
+  }
+
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto forOp = cast<scf::ForOp>(op);
@@ -630,6 +678,82 @@ struct WhileOpInterface
     //   2. Or the matching iter operand is bufferized inplace and bbArg just
     //      bufferizes to that too.
     return true;
+  }
+
+  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
+                                 const AnalysisState &state) const {
+    auto bufferizableOp = cast<BufferizableOpInterface>(op);
+    if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
+      return failure();
+
+    if (!state.getOptions().enforceAliasingInvariants)
+      return success();
+
+    // According to the `getAliasing...` implementations, a bufferized OpResult
+    // may alias only with the corresponding bufferized init_arg and with no
+    // other buffers. I.e., the i-th OpResult may alias with the i-th init_arg;
+    // but not with any other OpOperand. If a corresponding OpResult/init_arg
+    // pair bufferizes to equivalent buffers, this aliasing requirement is
+    // satisfied. Otherwise, we cannot be sure and must yield a new buffer copy.
+    // (New buffer copies do not alias with any buffer.)
+    OpBuilder::InsertionGuard g(rewriter);
+    auto whileOp = cast<scf::WhileOp>(op);
+    auto conditionOp = whileOp.getConditionOp();
+    auto yieldOp = whileOp.getYieldOp();
+
+    // Indices of all bbArgs that have tensor type. These are the ones that
+    // are bufferized. The "before" and "after" regions may have different args.
+    DenseSet<int64_t> indicesBefore = getTensorIndices(whileOp.getInits());
+    DenseSet<int64_t> indicesAfter =
+        getTensorIndices(whileOp.getAfterArguments());
+
+    // For every yielded value, is the value equivalent to its corresponding
+    // bbArg?
+    DenseSet<int64_t> equivalentYieldsBefore = getEquivalentBuffers(
+        whileOp.getBeforeArguments(), conditionOp.getArgs(), state);
+    DenseSet<int64_t> equivalentYieldsAfter = getEquivalentBuffers(
+        whileOp.getAfterArguments(), whileOp.getYieldOp().getResults(), state);
+
+    // Update "before" region.
+    rewriter.setInsertionPoint(conditionOp);
+    SmallVector<Value> beforeYieldValues;
+    for (int64_t idx = 0;
+         idx < static_cast<int64_t>(conditionOp.getArgs().size()); ++idx) {
+      Value value = conditionOp.getArgs()[idx];
+      if (!indicesBefore.contains(idx) ||
+          equivalentYieldsBefore.contains(idx)) {
+        beforeYieldValues.push_back(value);
+        continue;
+      }
+      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
+          conditionOp.getLoc(), value.getType().cast<RankedTensorType>(),
+          /*dynamicSizes=*/ValueRange(), value, /*escape=*/true);
+      beforeYieldValues.push_back(alloc);
+    }
+    rewriter.updateRootInPlace(conditionOp, [&]() {
+      conditionOp.getArgsMutable().assign(beforeYieldValues);
+    });
+
+    // Update "after" region.
+    rewriter.setInsertionPoint(yieldOp);
+    SmallVector<Value> afterYieldValues;
+    for (int64_t idx = 0;
+         idx < static_cast<int64_t>(yieldOp.getResults().size()); ++idx) {
+      Value value = yieldOp.getResults()[idx];
+      if (!indicesAfter.contains(idx) || equivalentYieldsAfter.contains(idx)) {
+        afterYieldValues.push_back(value);
+        continue;
+      }
+      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
+          yieldOp.getLoc(), value.getType().cast<RankedTensorType>(),
+          /*dynamicSizes=*/ValueRange(), value, /*escape=*/true);
+      afterYieldValues.push_back(alloc);
+    }
+    rewriter.updateRootInPlace(yieldOp, [&]() {
+      yieldOp.getResultsMutable().assign(afterYieldValues);
+    });
+
+    return success();
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -855,6 +979,42 @@ struct ForeachThreadOpInterface
     return BufferRelation::Equivalent;
   }
 
+  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
+                                 const AnalysisState &state) const {
+    auto bufferizableOp = cast<BufferizableOpInterface>(op);
+    if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
+      return failure();
+
+    OpBuilder::InsertionGuard g(rewriter);
+    auto foreachThreadOp = cast<ForeachThreadOp>(op);
+    for (OpResult opResult : foreachThreadOp->getOpResults()) {
+      SmallVector<OpOperand *> destOperands =
+          state.getAliasingOpOperand(opResult);
+      assert(destOperands.size() == 1 &&
+             "expected exactly one aliasing OpOperand");
+      assert(isa<ParallelInsertSliceOp>(destOperands.front()->getOwner()) &&
+             "expected ParallelInsertSliceOp");
+
+      // Nothing to do if there is no conflict.
+      if (state.isInPlace(*destOperands.front()))
+        continue;
+
+      // Create AllocTensorOp.
+      bool isYielded = state.isTensorYielded(opResult);
+      auto resultType = opResult.getType().cast<RankedTensorType>();
+      Value alloc = rewriter.create<bufferization::AllocTensorOp>(
+          op->getLoc(), resultType, /*dynamicDims=*/ValueRange(),
+          /*copy=*/destOperands.front()->get(),
+          /*escape=*/isYielded);
+
+      // Update terminator operand.
+      rewriter.updateRootInPlace(destOperands.front()->getOwner(),
+                                 [&]() { destOperands.front()->set(alloc); });
+    }
+
+    return success();
+  }
+
   LogicalResult bufferize(Operation *op, RewriterBase &b,
                           BufferizationState &state) const {
     OpBuilder::InsertionGuard g(b);
@@ -1008,6 +1168,11 @@ struct ParallelInsertSliceOpInterface
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
                                 const AnalysisState &state) const {
     return BufferRelation::Equivalent;
+  }
+
+  LogicalResult resolveConflicts(Operation *op, RewriterBase &rewriter,
+                                 const AnalysisState &state) const {
+    return success();
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &b,
