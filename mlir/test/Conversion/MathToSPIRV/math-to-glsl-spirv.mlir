@@ -64,20 +64,6 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   return
 }
 
-// CHECK-LABEL: @float32_binary_scalar
-func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
-  // CHECK: spv.GLSL.Pow %{{.*}}: f32
-  %0 = math.powf %lhs, %rhs : f32
-  return
-}
-
-// CHECK-LABEL: @float32_binary_vector
-func.func @float32_binary_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) {
-  // CHECK: spv.GLSL.Pow %{{.*}}: vector<4xf32>
-  %0 = math.powf %lhs, %rhs : vector<4xf32>
-  return
-}
-
 // CHECK-LABEL: @float32_ternary_scalar
 func.func @float32_ternary_scalar(%a: f32, %b: f32, %c: f32) {
   // CHECK: spv.GLSL.Fma %{{.*}}: f32
@@ -131,6 +117,31 @@ func.func @ctlz_vector2(%val: vector<2xi32>) -> vector<2xi32> {
   // CHECK: return %[[R]]
   %0 = math.ctlz %val : vector<2xi32>
   return %0 : vector<2xi32>
+}
+
+// CHECK-LABEL: @powf_scalar
+//  CHECK-SAME: (%[[LHS:.+]]: f32, %[[RHS:.+]]: f32)
+func.func @powf_scalar(%lhs: f32, %rhs: f32) -> f32 {
+  // CHECK: %[[F0:.+]] = spv.Constant 0.000000e+00 : f32
+  // CHECK: %[[LT:.+]] = spv.FOrdLessThan %[[LHS]], %[[F0]] : f32
+  // CHECK: %[[ABS:.+]] = spv.GLSL.FAbs %[[LHS]] : f32
+  // CHECK: %[[POW:.+]] = spv.GLSL.Pow %[[ABS]], %[[RHS]] : f32
+  // CHECK: %[[NEG:.+]] = spv.FNegate %[[POW]] : f32
+  // CHECK: %[[SEL:.+]] = spv.Select %[[LT]], %[[NEG]], %[[POW]] : i1, f32
+  %0 = math.powf %lhs, %rhs : f32
+  // CHECK: return %[[SEL]]
+  return %0: f32
+}
+
+// CHECK-LABEL: @powf_vector
+func.func @powf_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: spv.FOrdLessThan
+  // CHEKC: spv.GLSL.FAbs
+  // CHECK: spv.GLSL.Pow %{{.*}}: vector<4xf32>
+  // CHECK: spv.FNegate
+  // CHECK: spv.Select
+  %0 = math.powf %lhs, %rhs : vector<4xf32>
+  return %0: vector<4xf32>
 }
 
 } // end module
