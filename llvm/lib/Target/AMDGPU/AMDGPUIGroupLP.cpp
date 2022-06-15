@@ -269,10 +269,10 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   // present ordering, we will try to make each VMEMRead instruction
   // a predecessor of each DSRead instruction, and so on.
   SmallVector<SchedGroup, 4> PipelineOrderGroups = {
-      SchedGroup(&isVMEMSGMember, VMEMGroupMaxSize, DAG),
-      SchedGroup(&isDSReadSGMember, LDRGroupMaxSize, DAG),
-      SchedGroup(&isMFMASGMember, MFMAGroupMaxSize, DAG),
-      SchedGroup(&isDSWriteSGMember, LDWGroupMaxSize, DAG)};
+      SchedGroup(isVMEMSGMember, VMEMGroupMaxSize, DAG),
+      SchedGroup(isDSReadSGMember, LDRGroupMaxSize, DAG),
+      SchedGroup(isMFMASGMember, MFMAGroupMaxSize, DAG),
+      SchedGroup(isDSWriteSGMember, LDWGroupMaxSize, DAG)};
 
   for (SUnit &SU : DAG->SUnits) {
     LLVM_DEBUG(dbgs() << "Checking Node"; DAG->dumpNode(SU));
