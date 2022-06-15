@@ -75,8 +75,10 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
   Operation *op = getOperation();
   SmallVector<OpOperand *> outOfPlaceOpOperands;
   DenseSet<OpOperand *> copiedOpOperands;
+  DenseSet<OpOperand *> escapingOpOperandCopies;
   SmallVector<OpResult> outOfPlaceOpResults;
   DenseSet<OpResult> copiedOpResults;
+  DenseSet<OpResult> escapingOpResultCopies;
 
   // Find all out-of-place OpOperands.
   for (OpOperand &opOperand : op->getOpOperands()) {
@@ -90,6 +92,14 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
 
     SmallVector<OpResult> aliasingOpResults =
         state.getAliasingOpResult(opOperand);
+    // Is the result yielded from a block? Or are deallocations turned off
+    // entirely? In either case, mark the allocation as "escaping", so that it
+    // will not be deallocated.
+    bool escape = !state.getOptions().createDeallocs ||
+                  llvm::any_of(aliasingOpResults, [&](Value v) {
+                    return state.isTensorYielded(v);
+                  });
+
     if (aliasingOpResults.size() == 1 &&
         !state.bufferizesToMemoryWrite(opOperand) &&
         state.getAliasingOpOperand(aliasingOpResults.front()).size() == 1) {
@@ -100,23 +110,24 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
       outOfPlaceOpResults.push_back(aliasingOpResults.front());
       if (!state.canOmitTensorCopy(opOperand))
         copiedOpResults.insert(aliasingOpResults.front());
+      if (escape)
+        escapingOpResultCopies.insert(aliasingOpResults.front());
     } else {
       // In all other cases, make a copy of the OpOperand.
       outOfPlaceOpOperands.push_back(&opOperand);
       if (!state.canOmitTensorCopy(opOperand))
         copiedOpOperands.insert(&opOperand);
+      if (escape)
+        escapingOpOperandCopies.insert(&opOperand);
     }
   }
 
   // Insert copies of OpOperands.
   rewriter.setInsertionPoint(op);
   for (OpOperand *opOperand : outOfPlaceOpOperands) {
-    SmallVector<OpResult> aliasingOpResults =
-        state.getAliasingOpResult(*opOperand);
-    bool escape = llvm::any_of(
-        aliasingOpResults, [&](Value v) { return state.isTensorYielded(v); });
     Value copy = allocateTensorForShapedValue(
-        rewriter, op->getLoc(), opOperand->get(), escape,
+        rewriter, op->getLoc(), opOperand->get(),
+        escapingOpOperandCopies.contains(opOperand),
         copiedOpOperands.contains(opOperand));
     rewriter.updateRootInPlace(op, [&]() { opOperand->set(copy); });
   }
@@ -124,9 +135,9 @@ LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
   // Insert copies of OpResults.
   rewriter.setInsertionPointAfter(op);
   for (OpResult opResult : outOfPlaceOpResults) {
-    bool escape = state.isTensorYielded(opResult);
     Value copy =
-        allocateTensorForShapedValue(rewriter, op->getLoc(), opResult, escape,
+        allocateTensorForShapedValue(rewriter, op->getLoc(), opResult,
+                                     escapingOpResultCopies.contains(opResult),
                                      copiedOpResults.count(opResult));
     SmallVector<OpOperand *> uses = llvm::to_vector(llvm::map_range(
         opResult.getUses(), [](OpOperand &use) { return &use; }));
@@ -392,7 +403,45 @@ bool AnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
 
 bool AnalysisState::isTensorYielded(Value tensor) const {
   // In the absence of analysis information, the conservative answer is "true".
-  return true;
+  if (!tensor.getDefiningOp<AllocTensorOp>())
+    return true;
+
+  // For AllocTensorOp results, we can do better: They do not alias with any
+  // preceding value, so we can follow SSA use-def chains and do a simple
+  // analysis.
+  SmallVector<OpOperand *> worklist;
+  for (OpOperand &use : tensor.getUses())
+    worklist.push_back(&use);
+
+  while (!worklist.empty()) {
+    OpOperand *operand = worklist.pop_back_val();
+    Operation *op = operand->getOwner();
+
+    // If the op is not bufferizable, we can safely assume that the value is not
+    // yielded. (When bufferizing that op, it must handle such cases.)
+    if (!options.dynCastBufferizableOp(op))
+      continue;
+
+    // We cannot analyze through ToMemrefOps, so we have to conservatively
+    // assume that the value is yielded.
+    if (isa<ToMemrefOp>(op))
+      return true;
+
+    // Check if the op is returning/yielding.
+    if (isRegionReturnLike(op))
+      return true;
+
+    // Add all aliasing OpResults to the worklist.
+    // Note: In the absence of detailed analysis information (e.g., there may be
+    // no function call analysis information), this `getAliasingOpResult` is
+    // conservative and may report additional OpResults as potentially aliasing.
+    for (OpResult opResult : getAliasingOpResult(*operand))
+      for (OpOperand &use : opResult.getUses())
+        worklist.push_back(&use);
+  }
+
+  // No ReturnLike op found: The value is not yielded.
+  return false;
 }
 
 // bufferization.to_memref is not allowed to change the rank.
