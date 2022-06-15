@@ -9,7 +9,7 @@ Search,find_first_of,Nikolas Klauser,`D126529 <https://llvm.org/D126529>`_,✅
 Search,adjacent_find,Nikolas Klauser,`D126610 <https://llvm.org/D126610>`_,✅
 Search,mismatch,Nikolas Klauser,`D117817 <https://llvm.org/D117817>`_,✅
 Search,equal,Nikolas Klauser,`D123681 <https://llvm.org/D123681>`_,✅
-Search,lexicographical_compare,Nikolas Klauser,`D127130 <https://llvm.org/D127130>`_,Under review
+Search,lexicographical_compare,Nikolas Klauser,`D127130 <https://llvm.org/D127130>`_,✅
 Search,partition_point,Christopher Di Bella,`D105794 <https://llvm.org/D105794>`_,Under review
 Search,lower_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
 Search,upper_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅

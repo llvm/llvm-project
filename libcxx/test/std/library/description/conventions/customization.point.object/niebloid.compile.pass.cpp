@@ -93,7 +93,7 @@ static_assert(test(std::ranges::is_partitioned, a, odd));
 //static_assert(test(std::ranges::is_permutation, a, a));
 static_assert(test(std::ranges::is_sorted, a));
 static_assert(test(std::ranges::is_sorted_until, a));
-//static_assert(test(std::ranges::lexicographical_compare, a, a));
+static_assert(test(std::ranges::lexicographical_compare, a, a));
 static_assert(test(std::ranges::lower_bound, a, 42));
 //static_assert(test(std::ranges::make_heap, a));
 static_assert(test(std::ranges::max, a));
