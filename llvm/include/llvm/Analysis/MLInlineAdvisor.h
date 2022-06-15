@@ -31,7 +31,7 @@ public:
 
   virtual ~MLInlineAdvisor() = default;
 
-  void onPassEntry() override;
+  void onPassEntry(LazyCallGraph::SCC *SCC) override;
   void onPassExit(LazyCallGraph::SCC *SCC) override;
 
   int64_t getIRSize(Function &F) const {
@@ -79,7 +79,7 @@ private:
   std::map<const LazyCallGraph::Node *, unsigned> FunctionLevels;
   const int32_t InitialIRSize = 0;
   int32_t CurrentIRSize = 0;
-  std::deque<const LazyCallGraph::Node *> NodesInLastSCC;
+  llvm::SmallPtrSet<const LazyCallGraph::Node *, 1> NodesInLastSCC;
   DenseSet<const LazyCallGraph::Node *> AllNodes;
   bool ForceStop = false;
 };
