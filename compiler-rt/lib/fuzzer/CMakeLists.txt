@@ -138,15 +138,15 @@ if(OS_NAME MATCHES "Linux|Fuchsia" AND
    COMPILER_RT_LIBCXX_PATH AND
    COMPILER_RT_LIBCXXABI_PATH)
   macro(partially_link_libcxx name dir arch)
-    if(${arch} MATCHES "i386")
-      set(EMULATION_ARGUMENT "-m" "elf_i386")
-    else()
-      set(EMULATION_ARGUMENT "")
+    get_target_flags_for_arch(${arch} target_cflags)
+    if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
+      get_compiler_rt_target(${arch} target)
+      set(target_cflags "--target=${target} ${target_cflags}")
     endif()
     set(cxx_${arch}_merge_dir "${CMAKE_CURRENT_BINARY_DIR}/cxx_${arch}_merge.dir")
     file(MAKE_DIRECTORY ${cxx_${arch}_merge_dir})
     add_custom_command(TARGET clang_rt.${name}-${arch} POST_BUILD
-      COMMAND ${CMAKE_LINKER} ${EMULATION_ARGUMENT} --whole-archive "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" --no-whole-archive ${dir}/lib/libc++.a -r -o ${name}.o
+      COMMAND ${CMAKE_CXX_COMPILER} ${target_cflags} -Wl,--whole-archive "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" -Wl,--no-whole-archive ${dir}/lib/libc++.a -r -o ${name}.o
       COMMAND ${CMAKE_OBJCOPY} --localize-hidden ${name}.o
       COMMAND ${CMAKE_COMMAND} -E remove "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>"
       COMMAND ${CMAKE_AR} qcs "$<TARGET_LINKER_FILE:clang_rt.${name}-${arch}>" ${name}.o
