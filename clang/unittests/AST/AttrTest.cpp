@@ -111,7 +111,7 @@ TEST(Attr, AnnotateType) {
     EXPECT_EQ(match(constantExpr(has(integerLiteral(equals(2u)).bind("int"))),
                     *Annotate->args_begin()[1], AST->getASTContext())
                   .size(),
-              1);
+              1u);
 
     // Second parameter.
     BuiltinTypeLoc IntTL;
