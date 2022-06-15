@@ -151,8 +151,6 @@ public:
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const;
   void checkPostStmt(const UnaryOperator *UO, CheckerContext &C) const;
   void checkPostStmt(const BinaryOperator *BO, CheckerContext &C) const;
-  void checkPostStmt(const CXXConstructExpr *CCE, CheckerContext &C) const;
-  void checkPostStmt(const DeclStmt *DS, CheckerContext &C) const;
   void checkPostStmt(const MaterializeTemporaryExpr *MTE,
                      CheckerContext &C) const;
   void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SR) const;
