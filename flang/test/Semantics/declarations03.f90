@@ -5,17 +5,17 @@ module m
 
   integer :: x, y, z, w, i, j, k
 
-  !ERROR: Two symbols have the same BIND(C) name 'aa'
+  !ERROR: Two entities have the same BIND(C) name 'aa'
   common /blk1/ x, /blk2/ y
   bind(c, name="aa") :: /blk1/, /blk2/
 
   integer :: t
-  !ERROR: Two symbols have the same BIND(C) name 'bb'
+  !ERROR: Two entities have the same BIND(C) name 'bb'
   common /blk3/ z
   bind(c, name="bb") :: /blk3/, t
 
   integer :: t2
-  !ERROR: Two symbols have the same BIND(C) name 'cc'
+  !ERROR: Two entities have the same BIND(C) name 'cc'
   common /blk4/ w
   bind(c, name="cc") :: t2, /blk4/
 
@@ -24,7 +24,7 @@ module m
   bind(c, name="dd") :: /blk5/
   bind(c, name="ee") :: /blk5/
 
-  !ERROR: Two symbols have the same BIND(C) name 'ff'
+  !ERROR: Two entities have the same BIND(C) name 'ff'
   common /blk6/ j, /blk7/ k
   bind(c, name="ff") :: /blk6/
   bind(c, name="ff") :: /blk7/
@@ -34,7 +34,7 @@ module m
   bind(c, name="gg") :: s1
   bind(c, name="hh") :: s1
 
-  !ERROR: Two symbols have the same BIND(C) name 'ii'
+  !ERROR: Two entities have the same BIND(C) name 'ii'
   integer :: s2, s3
   bind(c, name="ii") :: s2
   bind(c, name="ii") :: s3
@@ -66,6 +66,6 @@ module a
 end module
 
 module b
-  !ERROR: Two symbols have the same BIND(C) name 'int'
+  !ERROR: Two entities have the same BIND(C) name 'int'
   integer, bind(c, name="int") :: i
 end module

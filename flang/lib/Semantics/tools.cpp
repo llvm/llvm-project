@@ -1091,7 +1091,9 @@ const Symbol *FindSeparateModuleSubprogramInterface(const Symbol *proc) {
 
 ProcedureDefinitionClass ClassifyProcedure(const Symbol &symbol) { // 15.2.2
   const Symbol &ultimate{symbol.GetUltimate()};
-  if (ultimate.attrs().test(Attr::INTRINSIC)) {
+  if (!IsProcedure(ultimate)) {
+    return ProcedureDefinitionClass::None;
+  } else if (ultimate.attrs().test(Attr::INTRINSIC)) {
     return ProcedureDefinitionClass::Intrinsic;
   } else if (ultimate.attrs().test(Attr::EXTERNAL)) {
     return ProcedureDefinitionClass::External;
