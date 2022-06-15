@@ -5251,7 +5251,7 @@ void DeclarationVisitor::CheckSaveStmts() {
     } else if (specPartState_.saveInfo.saveAll) {
       // C889 - note that pgi, ifort, xlf do not enforce this constraint
       Say2(name,
-          "Explicit SAVE of '%s' is redundant due to global SAVE statement"_err_en_US,
+          "Explicit SAVE of '%s' is redundant due to global SAVE statement"_warn_en_US,
           *specPartState_.saveInfo.saveAll, "Global SAVE statement"_en_US);
     } else if (auto msg{CheckSaveAttr(*symbol)}) {
       Say(name, std::move(*msg));
