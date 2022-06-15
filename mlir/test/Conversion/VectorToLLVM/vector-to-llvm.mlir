@@ -2140,3 +2140,25 @@ func.func @splat(%a: vector<4xf32>, %b: f32) -> vector<4xf32> {
 // CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
 // CHECK-NEXT: %[[SCALE:[0-9]+]] = arith.mulf %[[A]], %[[SPLAT]] : vector<4xf32>
 // CHECK-NEXT: return %[[SCALE]] : vector<4xf32>
+
+// -----
+
+// CHECK-LABEL: @vector_scalable_insert
+// CHECK-SAME: %[[SUB:.*]]: vector<4xf32>, %[[SV:.*]]: vector<[4]xf32>
+func.func @vector_scalable_insert(%sub: vector<4xf32>, %dsv: vector<[4]xf32>) -> vector<[4]xf32> {
+  // CHECK-NEXT: %[[TMP:.*]] = llvm.intr.vector.insert %[[SUB]], %[[SV]][0] : vector<4xf32> into vector<[4]xf32>
+  %0 = vector.scalable.insert %sub, %dsv[0] : vector<4xf32> into vector<[4]xf32>
+  // CHECK-NEXT: llvm.intr.vector.insert %[[SUB]], %[[TMP]][4] : vector<4xf32> into vector<[4]xf32>
+  %1 = vector.scalable.insert %sub, %0[4] : vector<4xf32> into vector<[4]xf32>
+  return %1 : vector<[4]xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_scalable_extract
+// CHECK-SAME: %[[VEC:.*]]: vector<[4]xf32>
+func.func @vector_scalable_extract(%vec: vector<[4]xf32>) -> vector<8xf32> {
+  // CHECK-NEXT: %{{.*}} = llvm.intr.vector.extract %[[VEC]][0] : vector<8xf32> from vector<[4]xf32>
+  %0 = vector.scalable.extract %vec[0] : vector<8xf32> from vector<[4]xf32>
+  return %0 : vector<8xf32>
+}
