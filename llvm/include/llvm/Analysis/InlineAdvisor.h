@@ -181,7 +181,7 @@ public:
   /// This must be called when the Inliner pass is entered, to allow the
   /// InlineAdvisor update internal state, as result of function passes run
   /// between Inliner pass runs (for the same module).
-  virtual void onPassEntry() {}
+  virtual void onPassEntry(LazyCallGraph::SCC *SCC = nullptr) {}
 
   /// This must be called when the Inliner pass is exited, as function passes
   /// may be run subsequently. This allows an implementation of InlineAdvisor
