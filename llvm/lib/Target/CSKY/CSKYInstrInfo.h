@@ -79,7 +79,7 @@ public:
 
   // Materializes the given integer Val into DstReg.
   Register movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                  const DebugLoc &DL, int64_t Val,
+                  const DebugLoc &DL, uint64_t Val,
                   MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
 };
 
