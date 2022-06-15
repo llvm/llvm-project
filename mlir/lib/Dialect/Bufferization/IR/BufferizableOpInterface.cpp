@@ -393,7 +393,7 @@ bool AnalysisState::areEquivalentBufferizedValues(Value v1, Value v2) const {
 bool AnalysisState::areAliasingBufferizedValues(Value v1, Value v2) const {
   // In the absence of analysis information, we do not know if the values may be
   // aliasing. The conservative answer is "true".
-  return false;
+  return true;
 }
 
 bool AnalysisState::hasUndefinedContents(OpOperand *opOperand) const {
