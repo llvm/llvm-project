@@ -28,7 +28,7 @@ mv *.profraw basic.profraw
 # Collect memprof profile.
 clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
       -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer \
-      -fno-optimize-sibling-calls -m64 -Wl,-build-id -Wl,-no-pie \
+      -fno-optimize-sibling-calls -m64 -Wl,-build-id -no-pie \
       source.c -o basic.memprofexe
 
 env MEMPROF_OPTIONS=log_path=stdout ./basic.memprofexe > basic.memprofraw
