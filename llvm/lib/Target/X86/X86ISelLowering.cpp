@@ -52398,8 +52398,6 @@ static bool needCarryOrOverflowFlag(SDValue Flags) {
       CC = (X86::CondCode)User->getConstantOperandVal(0);
       break;
     case X86ISD::BRCOND:
-      CC = (X86::CondCode)User->getConstantOperandVal(2);
-      break;
     case X86ISD::CMOV:
       CC = (X86::CondCode)User->getConstantOperandVal(2);
       break;
@@ -52428,10 +52426,14 @@ static bool onlyZeroFlagUsed(SDValue Flags) {
     default:
       // Be conservative.
       return false;
-    case X86ISD::SETCC:       CCOpNo = 0; break;
-    case X86ISD::SETCC_CARRY: CCOpNo = 0; break;
-    case X86ISD::BRCOND:      CCOpNo = 2; break;
-    case X86ISD::CMOV:        CCOpNo = 2; break;
+    case X86ISD::SETCC:
+    case X86ISD::SETCC_CARRY:
+      CCOpNo = 0;
+      break;
+    case X86ISD::BRCOND:
+    case X86ISD::CMOV:
+      CCOpNo = 2;
+      break;
     }
 
     X86::CondCode CC = (X86::CondCode)User->getConstantOperandVal(CCOpNo);
