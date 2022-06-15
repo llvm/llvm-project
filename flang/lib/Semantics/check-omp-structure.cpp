@@ -1772,7 +1772,6 @@ CHECK_SIMPLE_CLAUSE(AtomicDefaultMemOrder, OMPC_atomic_default_mem_order)
 CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
 CHECK_SIMPLE_CLAUSE(Allocate, OMPC_allocate)
 CHECK_SIMPLE_CLAUSE(Capture, OMPC_capture)
-CHECK_SIMPLE_CLAUSE(Copyin, OMPC_copyin)
 CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
 CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
 CHECK_SIMPLE_CLAUSE(Destroy, OMPC_destroy)
@@ -2094,6 +2093,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
 
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
+  CheckCopyingPolymorphicAllocatable(
+      currSymbols, llvm::omp::Clause::OMPC_firstprivate);
 
   DirectivesClauseTriple dirClauseTriple;
   // Check firstprivate variables in worksharing constructs
@@ -2356,9 +2357,28 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
   }
 }
 
+void OmpStructureChecker::CheckCopyingPolymorphicAllocatable(
+    SymbolSourceMap &symbols, const llvm::omp::Clause clause) {
+  for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
+    const auto *symbol{it->first};
+    const auto source{it->second};
+    if (IsPolymorphicAllocatable(*symbol)) {
+      context_.Say(source,
+          "If a polymorphic variable with allocatable attribute '%s' is in "
+          "%s clause, the behavior is unspecified"_port_en_US,
+          symbol->name(),
+          parser::ToUpperCaseLetters(getClauseName(clause).str()));
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_copyprivate);
   CheckIntentInPointer(x.v, llvm::omp::Clause::OMPC_copyprivate);
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(x.v, currSymbols);
+  CheckCopyingPolymorphicAllocatable(
+      currSymbols, llvm::omp::Clause::OMPC_copyprivate);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
@@ -2368,6 +2388,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
   CheckDefinableObjects(currSymbols, GetClauseKindForParserClass(x));
+  CheckCopyingPolymorphicAllocatable(
+      currSymbols, llvm::omp::Clause::OMPC_lastprivate);
 
   // Check lastprivate variables in worksharing constructs
   dirClauseTriple.emplace(llvm::omp::Directive::OMPD_do,
@@ -2379,6 +2401,15 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
 
   CheckPrivateSymbolsInOuterCxt(
       currSymbols, dirClauseTriple, GetClauseKindForParserClass(x));
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_copyin);
+
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(x.v, currSymbols);
+  CheckCopyingPolymorphicAllocatable(
+      currSymbols, llvm::omp::Clause::OMPC_copyin);
 }
 
 llvm::StringRef OmpStructureChecker::getClauseName(llvm::omp::Clause clause) {
