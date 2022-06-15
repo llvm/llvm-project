@@ -193,6 +193,7 @@ static_library("builtins") {
     "subvsi3.c",
     "subvti3.c",
     "trampoline_setup.c",
+    "truncdfbf2.c",
     "truncdfhf2.c",
     "truncdfsf2.c",
     "truncsfhf2.c",
