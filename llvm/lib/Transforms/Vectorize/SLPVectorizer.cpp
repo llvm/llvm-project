@@ -3717,10 +3717,7 @@ void BoUpSLP::reorderTopToBottom() {
                      EI.UserTE->isAltShuffle() && EI.UserTE->Idx != 0;
             }))
           return;
-        if (UserTE->UserTreeIndices.empty())
-          UserTE = nullptr;
-        else
-          UserTE = UserTE->UserTreeIndices.back().UserTE;
+        UserTE = UserTE->UserTreeIndices.back().UserTE;
         ++Cnt;
       }
       VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
@@ -3885,15 +3882,17 @@ bool BoUpSLP::canReorderOperands(
     }
     ArrayRef<Value *> VL = UserTE->getOperand(I);
     TreeEntry *Gather = nullptr;
-    if (count_if(ReorderableGathers, [VL, &Gather](TreeEntry *TE) {
-          assert(TE->State != TreeEntry::Vectorize &&
-                 "Only non-vectorized nodes are expected.");
-          if (TE->isSame(VL)) {
-            Gather = TE;
-            return true;
-          }
-          return false;
-        }) > 1)
+    if (count_if(ReorderableGathers,
+                 [VL, &Gather](TreeEntry *TE) {
+                   assert(TE->State != TreeEntry::Vectorize &&
+                          "Only non-vectorized nodes are expected.");
+                   if (TE->isSame(VL)) {
+                     Gather = TE;
+                     return true;
+                   }
+                   return false;
+                 }) > 1 &&
+        !all_of(VL, isConstant))
       return false;
     if (Gather)
       GatherOps.push_back(Gather);
