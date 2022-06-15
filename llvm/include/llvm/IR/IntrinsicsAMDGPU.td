@@ -220,12 +220,21 @@ def int_amdgcn_wave_barrier : GCCBuiltin<"__builtin_amdgcn_wave_barrier">,
 
 // The 1st parameter is a mask for the types of instructions that may be allowed
 // to cross the SCHED_BARRIER during scheduling.
-//     MASK = 0: No instructions may be scheduled across SCHED_BARRIER.
-//     MASK = 1: Non-memory, non-side-effect producing instructions may be
-//               scheduled across SCHED_BARRIER, i.e. allow ALU instructions to pass.
+//     MASK = 0x0000 0000: No instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0001: ALL, non-memory, non-side-effect producing instructions may be
+//                         scheduled across SCHED_BARRIER, i.e. allow ALU instructions to pass.
+//     MASK = 0x0000 0002: VALU instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0004: SALU instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0008: MFMA instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0010: ALL VMEM instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0020: VMEM read instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0040: VMEM write instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0080: ALL DS instructions may be scheduled across SCHED_BARRIER.
+//     MASK = 0x0000 0100: ALL DS read instructions may be scheduled accoss SCHED_BARRIER.
+//     MASK = 0x0000 0200: ALL DS write instructions may be scheduled across SCHED_BARRIER.
 def int_amdgcn_sched_barrier : GCCBuiltin<"__builtin_amdgcn_sched_barrier">,
-  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
-                                IntrHasSideEffects, IntrConvergent, IntrWillReturn]>;
+  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
+                                IntrWillReturn]>;
 
 def int_amdgcn_s_waitcnt : GCCBuiltin<"__builtin_amdgcn_s_waitcnt">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn]>;
