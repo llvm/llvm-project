@@ -70,7 +70,6 @@ PackConstructorInitializers: NextLine
 
 PenaltyIndentedWhitespace: 61
 
----
 Language: Cpp
 Standard: c++20
 SpacesInAngles: Leave
@@ -88,4 +87,3 @@ IndentPPDirectives: AfterHash
 
 # libc++ has some long names so we need more than the 80 column limit imposed by LLVM style, for sensible formatting
 ColumnLimit: 120
----
