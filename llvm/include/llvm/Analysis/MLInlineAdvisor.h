@@ -65,7 +65,8 @@ protected:
 
 private:
   int64_t getModuleIRSize() const;
-
+  std::unique_ptr<InlineAdvice>
+  getSkipAdviceIfUnreachableCallsite(CallBase &CB);
   void print(raw_ostream &OS) const override;
 
   mutable DenseMap<const Function *, FunctionPropertiesInfo> FPICache;
