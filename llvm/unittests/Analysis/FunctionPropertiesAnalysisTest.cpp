@@ -636,10 +636,16 @@ cond.true:                                        ; preds = %entry
 
 cond.false:                                       ; preds = %entry
   %call3 = call noundef i64 @f2()
+  br label %extra
+
+extra:
+  br label %extra2
+
+extra2:
   br label %cond.end
 
 cond.end:                                         ; preds = %cond.false, %cond.true
-  %cond = phi i64 [ %conv2, %cond.true ], [ %call3, %cond.false ]
+  %cond = phi i64 [ %conv2, %cond.true ], [ %call3, %extra ]
   ret i64 %cond
 }
 
@@ -657,8 +663,8 @@ declare void @llvm.trap()
   EXPECT_NE(CB, nullptr);
 
   FunctionPropertiesInfo ExpectedInitial;
-  ExpectedInitial.BasicBlockCount = 4;
-  ExpectedInitial.TotalInstructionCount = 7;
+  ExpectedInitial.BasicBlockCount = 6;
+  ExpectedInitial.TotalInstructionCount = 9;
   ExpectedInitial.BlocksReachedFromConditionalInstruction = 2;
   ExpectedInitial.Uses = 1;
   ExpectedInitial.DirectCallsToDefinedFunctions = 1;
@@ -680,4 +686,63 @@ declare void @llvm.trap()
   EXPECT_EQ(FPI, ExpectedFinal);
 }
 
+TEST_F(FunctionPropertiesAnalysisTest, InvokeSkipLP) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = makeLLVMModule(C,
+                                             R"IR(
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+define i64 @f1(i32 noundef %value) {
+entry:
+  invoke fastcc void @f2() to label %cont unwind label %lpad
+cont:
+  ret i64 1
+lpad:
+  %lp = landingpad i32 cleanup
+  br label %ehcleanup
+ehcleanup:
+  resume i32 0
+}
+define void @f2() {
+  invoke noundef void @f3() to label %exit unwind label %lpad
+exit:
+  ret void
+lpad:
+  %lp = landingpad i32 cleanup
+  resume i32 %lp
+}
+declare void @f3()
+)IR");
+
+  // The outcome of inlining will be that lpad becomes unreachable. The landing
+  // pad of the invoke inherited from f2 will land on a new bb which will branch
+  // to a bb containing the body of lpad.
+  Function *F1 = M->getFunction("f1");
+  CallBase *CB = findCall(*F1);
+  EXPECT_NE(CB, nullptr);
+
+  FunctionPropertiesInfo ExpectedInitial;
+  ExpectedInitial.BasicBlockCount = 4;
+  ExpectedInitial.TotalInstructionCount = 5;
+  ExpectedInitial.BlocksReachedFromConditionalInstruction = 0;
+  ExpectedInitial.Uses = 1;
+  ExpectedInitial.DirectCallsToDefinedFunctions = 1;
+
+  FunctionPropertiesInfo ExpectedFinal = ExpectedInitial;
+  ExpectedFinal.BasicBlockCount = 6;
+  ExpectedFinal.DirectCallsToDefinedFunctions = 0;
+  ExpectedFinal.TotalInstructionCount = 8;
+
+  auto FPI = buildFPI(*F1);
+  EXPECT_EQ(FPI, ExpectedInitial);
+
+  FunctionPropertiesUpdater FPU(FPI, *CB);
+  InlineFunctionInfo IFI;
+  auto IR = llvm::InlineFunction(*CB, IFI);
+  EXPECT_TRUE(IR.isSuccess());
+  invalidate(*F1);
+  FPU.finish(FAM);
+  EXPECT_EQ(FPI, ExpectedFinal);
+}
 } // end anonymous namespace
