@@ -1892,7 +1892,10 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
     auto pair{bindC_.emplace(*name, symbol)};
     if (!pair.second) {
       const Symbol &other{*pair.first->second};
-      if (DefinesBindCName(other) && !context_.HasError(other)) {
+      // Two common blocks with the same name can have the same BIND(C) name.
+      if ((!symbol.has<CommonBlockDetails>() ||
+              symbol.name() != other.name()) &&
+          DefinesBindCName(other) && !context_.HasError(other)) {
         if (auto *msg{messages_.Say(symbol.name(),
                 "Two symbols have the same BIND(C) name '%s'"_err_en_US,
                 *name)}) {
