@@ -31,6 +31,11 @@ multiclass B_disable<string name, string help1, string help2> {
   def disable_ # NAME: Flag<["--", "-"], "disable-" # name>, HelpText<help2>;
 }
 
+multiclass B_enable_disable<string name, string help1, string help2> {
+  def enable_ # NAME: Flag<["--", "-"], "enable-" # name>, HelpText<help1>;
+  def disable_ # NAME: Flag<["--", "-"], "disable-" # name>, HelpText<help2>;
+}
+
 def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Add a directory to the library search path">;
 defm allow_multiple_definition: B<"allow-multiple-definition",
@@ -98,6 +103,8 @@ def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 defm out_implib: Eq<"out-implib", "Import library name">;
 defm output_def: Eq<"output-def", "Output def file">;
+defm reloc_section: B_enable_disable<"reloc-section",
+     "Enable base relocations", "Disable base relocations">;
 defm section_alignment: Eq<"section-alignment", "Set section alignment">;
 def shared: F<"shared">, HelpText<"Build a shared object">;
 defm subs: Eq<"subsystem", "Specify subsystem">;
