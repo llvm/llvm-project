@@ -100,3 +100,16 @@ define void @store_constant(ptr %pc) {
   store bfloat 1.0, ptr %pc
   ret void
 }
+
+define void @fold_ext_trunc(ptr %pa, ptr %pc) {
+; CHECK-LABEL: fold_ext_trunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl (%rdi), %eax
+; CHECK-NEXT:    movw %ax, (%rsi)
+; CHECK-NEXT:    retq
+  %a = load bfloat, ptr %pa
+  %ext = fpext bfloat %a to float
+  %trunc = fptrunc float %ext to bfloat
+  store bfloat %trunc, ptr %pc
+  ret void
+}
