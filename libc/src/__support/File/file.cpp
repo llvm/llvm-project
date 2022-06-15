@@ -128,9 +128,6 @@ size_t File::write_unlocked_fbf(const void *data, size_t len) {
 }
 
 size_t File::write_unlocked_lbf(const void *data, size_t len) {
-  const size_t init_pos = pos;
-  const size_t bufspace = bufsize - pos;
-
   constexpr char NEWLINE_CHAR = '\n';
   size_t last_newline = len;
   for (size_t i = len - 1; i > 0; --i) {
@@ -169,7 +166,7 @@ size_t File::write_unlocked_lbf(const void *data, size_t len) {
   flush_unlocked();
 
   written += write_unlocked_fbf(remainder.data(), remainder.size());
-  if (written < primary.size() + remainder.size()) {
+  if (written < len) {
     err = true;
     return written;
   }
