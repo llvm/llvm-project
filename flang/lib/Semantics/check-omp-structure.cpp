@@ -1543,46 +1543,28 @@ void OmpStructureChecker::CheckAtomicUpdateAssignmentStmt(
 }
 
 void OmpStructureChecker::CheckAtomicMemoryOrderClause(
-    const parser::OmpAtomicClauseList &clauseList) {
+    const parser::OmpAtomicClauseList *leftHandClauseList,
+    const parser::OmpAtomicClauseList *rightHandClauseList) {
   int numMemoryOrderClause = 0;
-  for (const auto &clause : clauseList.v) {
-    if (std::get_if<Fortran::parser::OmpMemoryOrderClause>(&clause.u)) {
-      numMemoryOrderClause++;
-      if (numMemoryOrderClause > 1) {
-        context_.Say(clause.source,
-            "More than one memory order clause not allowed on OpenMP "
-            "Atomic construct"_err_en_US);
-        return;
-      }
-    }
+  auto checkForValidMemoryOrderClause =
+      [&](const parser::OmpAtomicClauseList *clauseList) {
+        for (const auto &clause : clauseList->v) {
+          if (std::get_if<Fortran::parser::OmpMemoryOrderClause>(&clause.u)) {
+            numMemoryOrderClause++;
+            if (numMemoryOrderClause > 1) {
+              context_.Say(clause.source,
+                  "More than one memory order clause not allowed on "
+                  "OpenMP Atomic construct"_err_en_US);
+              return;
+            }
+          }
+        }
+      };
+  if (leftHandClauseList) {
+    checkForValidMemoryOrderClause(leftHandClauseList);
   }
-}
-
-void OmpStructureChecker::CheckAtomicMemoryOrderClause(
-    const parser::OmpAtomicClauseList &leftHandClauseList,
-    const parser::OmpAtomicClauseList &rightHandClauseList) {
-  int numMemoryOrderClause = 0;
-  for (const auto &clause : leftHandClauseList.v) {
-    if (std::get_if<Fortran::parser::OmpMemoryOrderClause>(&clause.u)) {
-      numMemoryOrderClause++;
-      if (numMemoryOrderClause > 1) {
-        context_.Say(clause.source,
-            "More than one memory order clause not allowed on "
-            "OpenMP Atomic construct"_err_en_US);
-        return;
-      }
-    }
-  }
-  for (const auto &clause : rightHandClauseList.v) {
-    if (std::get_if<Fortran::parser::OmpMemoryOrderClause>(&clause.u)) {
-      numMemoryOrderClause++;
-      if (numMemoryOrderClause > 1) {
-        context_.Say(clause.source,
-            "More than one memory order clause not "
-            "allowed on OpenMP Atomic construct"_err_en_US);
-        return;
-      }
-    }
+  if (rightHandClauseList) {
+    checkForValidMemoryOrderClause(rightHandClauseList);
   }
 }
 
@@ -1598,25 +1580,26 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
                     atomicConstruct.t)
                     .statement);
             CheckAtomicMemoryOrderClause(
-                std::get<parser::OmpAtomicClauseList>(atomicConstruct.t));
+                &std::get<parser::OmpAtomicClauseList>(atomicConstruct.t),
+                nullptr);
           },
-          [&](const parser::OmpAtomicUpdate &atomicConstruct) {
-            const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};
+          [&](const parser::OmpAtomicUpdate &atomicUpdate) {
+            const auto &dir{std::get<parser::Verbatim>(atomicUpdate.t)};
             PushContextAndClauseSets(
                 dir.source, llvm::omp::Directive::OMPD_atomic);
             CheckAtomicUpdateAssignmentStmt(
                 std::get<parser::Statement<parser::AssignmentStmt>>(
-                    atomicConstruct.t)
+                    atomicUpdate.t)
                     .statement);
             CheckAtomicMemoryOrderClause(
-                std::get<0>(atomicConstruct.t), std::get<2>(atomicConstruct.t));
+                &std::get<0>(atomicUpdate.t), &std::get<2>(atomicUpdate.t));
           },
           [&](const auto &atomicConstruct) {
             const auto &dir{std::get<parser::Verbatim>(atomicConstruct.t)};
             PushContextAndClauseSets(
                 dir.source, llvm::omp::Directive::OMPD_atomic);
-            CheckAtomicMemoryOrderClause(
-                std::get<0>(atomicConstruct.t), std::get<2>(atomicConstruct.t));
+            CheckAtomicMemoryOrderClause(&std::get<0>(atomicConstruct.t),
+                &std::get<2>(atomicConstruct.t));
           },
       },
       x.u);
