@@ -355,10 +355,9 @@ define <32 x i64> @vwmulu_v32i64(<32 x i32>* %x, <32 x i32>* %y) {
 define <2 x i32> @vwmulu_v2i32_v2i8(<2 x i8>* %x, <2 x i8>* %y) {
 ; CHECK-LABEL: vwmulu_v2i32_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vzext.vf2 v11, v9
 ; CHECK-NEXT:    vwmulu.vv v8, v11, v10
@@ -374,10 +373,9 @@ define <2 x i32> @vwmulu_v2i32_v2i8(<2 x i8>* %x, <2 x i8>* %y) {
 define <4 x i32> @vwmulu_v4i32_v4i8_v4i16(<4 x i8>* %x, <4 x i16>* %y) {
 ; CHECK-LABEL: vwmulu_v4i32_v4i8_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vwmulu.vv v8, v10, v9
 ; CHECK-NEXT:    ret
@@ -670,10 +668,9 @@ define <8 x i16> @vwmulu_vx_v8i16_i8(<8 x i8>* %x, i8* %y) {
 define <8 x i16> @vwmulu_vx_v8i16_i16(<8 x i8>* %x, i16* %y) {
 ; CHECK-LABEL: vwmulu_vx_v8i16_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    lh a0, 0(a1)
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vzext.vf2 v9, v8
 ; CHECK-NEXT:    vmul.vx v8, v9, a0
 ; CHECK-NEXT:    ret
@@ -725,10 +722,9 @@ define <4 x i32> @vwmulu_vx_v4i32_i16(<4 x i16>* %x, i16* %y) {
 define <4 x i32> @vwmulu_vx_v4i32_i32(<4 x i16>* %x, i32* %y) {
 ; CHECK-LABEL: vwmulu_vx_v4i32_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    lw a0, 0(a1)
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vzext.vf2 v9, v8
 ; CHECK-NEXT:    vmul.vx v8, v9, a0
 ; CHECK-NEXT:    ret
