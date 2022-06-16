@@ -120,6 +120,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/FunctionComparator.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -224,6 +225,9 @@ private:
   /// A work queue of functions that may have been modified and should be
   /// analyzed again.
   std::vector<WeakTrackingVH> Deferred;
+
+  /// Set of values marked as used in llvm.used and llvm.compiler.used.
+  SmallPtrSet<GlobalValue *, 4> Used;
 
 #ifndef NDEBUG
   /// Checks the rules of order relation introduced among functions set.
@@ -407,6 +411,11 @@ static bool isEligibleForMerging(Function &F) {
 bool MergeFunctions::runOnModule(Module &M) {
   bool Changed = false;
 
+  SmallVector<GlobalValue *, 4> UsedV;
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
+  Used.insert(UsedV.begin(), UsedV.end());
+
   // All functions in the module, ordered by hash. Functions with a unique
   // hash value are easily eliminated.
   std::vector<std::pair<FunctionComparator::FunctionHash, Function *>>
@@ -453,6 +462,7 @@ bool MergeFunctions::runOnModule(Module &M) {
   FnTree.clear();
   FNodesInTree.clear();
   GlobalNumbers.clear();
+  Used.clear();
 
   return Changed;
 }
@@ -825,7 +835,10 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // For better debugability, under MergeFunctionsPDI, we do not modify G's
     // call sites to point to F even when within the same translation unit.
     if (!G->isInterposable() && !MergeFunctionsPDI) {
-      if (G->hasGlobalUnnamedAddr()) {
+      // Functions referred to by llvm.used/llvm.compiler.used are special:
+      // there are uses of the symbol name that are not visible to LLVM,
+      // usually from inline asm.
+      if (G->hasGlobalUnnamedAddr() && !Used.contains(G)) {
         // G might have been a key in our GlobalNumberState, and it's illegal
         // to replace a key in ValueMap<GlobalValue *> with a non-global.
         GlobalNumbers.erase(G);
