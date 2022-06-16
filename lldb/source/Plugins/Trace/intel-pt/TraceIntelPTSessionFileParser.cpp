@@ -88,7 +88,7 @@ Expected<TraceIntelPTSessionFileParser::ParsedProcess>
 TraceIntelPTSessionFileParser::ParseProcess(const JSONProcess &process) {
   TargetSP target_sp;
   Status error = m_debugger.GetTargetList().CreateTarget(
-      m_debugger, /*user_exe_path*/ StringRef(), process.triple,
+      m_debugger, /*user_exe_path*/ StringRef(), process.triple.getValueOr(""),
       eLoadDependentsNo,
       /*platform_options*/ nullptr, target_sp);
 
@@ -161,8 +161,8 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
   "processes": [
     {
       "pid": integer,
-      "triple": string,
-          // clang/llvm target triple.
+      "triple"?: string,
+          // Optional clang/llvm target triple.
       "threads": [
         {
           "tid": integer,
