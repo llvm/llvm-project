@@ -2722,6 +2722,9 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     llvm_unreachable("Unknown constant value to lower!");
   }
 
+  // The constant expression opcodes are limited to those that are necessary
+  // to represent relocations on supported targets. Expressions involving only
+  // constant addresses are constant folded instead.
   switch (CE->getOpcode()) {
   case Instruction::AddrSpaceCast: {
     const Constant *Op = CE->getOperand(0);
@@ -2839,34 +2842,17 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
         return RelocExpr;
       }
     }
-  }
-  // else fallthrough
-  LLVM_FALLTHROUGH;
 
-  // The MC library also has a right-shift operator, but it isn't consistently
-  // signed or unsigned between different targets.
-  case Instruction::Add:
-  case Instruction::Mul:
-  case Instruction::SDiv:
-  case Instruction::SRem:
-  case Instruction::Shl:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor: {
     const MCExpr *LHS = lowerConstant(CE->getOperand(0));
     const MCExpr *RHS = lowerConstant(CE->getOperand(1));
-    switch (CE->getOpcode()) {
-    default: llvm_unreachable("Unknown binary operator constant cast expr");
-    case Instruction::Add: return MCBinaryExpr::createAdd(LHS, RHS, Ctx);
-    case Instruction::Sub: return MCBinaryExpr::createSub(LHS, RHS, Ctx);
-    case Instruction::Mul: return MCBinaryExpr::createMul(LHS, RHS, Ctx);
-    case Instruction::SDiv: return MCBinaryExpr::createDiv(LHS, RHS, Ctx);
-    case Instruction::SRem: return MCBinaryExpr::createMod(LHS, RHS, Ctx);
-    case Instruction::Shl: return MCBinaryExpr::createShl(LHS, RHS, Ctx);
-    case Instruction::And: return MCBinaryExpr::createAnd(LHS, RHS, Ctx);
-    case Instruction::Or:  return MCBinaryExpr::createOr (LHS, RHS, Ctx);
-    case Instruction::Xor: return MCBinaryExpr::createXor(LHS, RHS, Ctx);
-    }
+    return MCBinaryExpr::createSub(LHS, RHS, Ctx);
+    break;
+  }
+
+  case Instruction::Add: {
+    const MCExpr *LHS = lowerConstant(CE->getOperand(0));
+    const MCExpr *RHS = lowerConstant(CE->getOperand(1));
+    return MCBinaryExpr::createAdd(LHS, RHS, Ctx);
   }
   }
 }
