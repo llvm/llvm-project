@@ -203,26 +203,28 @@ def nxv1bf16 : ValueType<16,  162>;  // n x  1 x bf16 vector value
 def nxv2bf16 : ValueType<32,  163>;  // n x  2 x bf16 vector value
 def nxv4bf16 : ValueType<64,  164>;  // n x  4 x bf16 vector value
 def nxv8bf16 : ValueType<128, 165>;  // n x  8 x bf16 vector value
+def nxv16bf16 : ValueType<256, 166>;  // n x 16 x bf16 vector value
+def nxv32bf16 : ValueType<512, 167>;  // n x 32 x bf16 vector value
 
-def nxv1f32  : ValueType<32,  166>;  // n x  1 x  f32 vector value
-def nxv2f32  : ValueType<64,  167>;  // n x  2 x  f32 vector value
-def nxv4f32  : ValueType<128, 168>;  // n x  4 x  f32 vector value
-def nxv8f32  : ValueType<256, 169>;  // n x  8 x  f32 vector value
-def nxv16f32 : ValueType<512, 170>;  // n x 16 x  f32 vector value
+def nxv1f32  : ValueType<32,  168>;  // n x  1 x  f32 vector value
+def nxv2f32  : ValueType<64,  169>;  // n x  2 x  f32 vector value
+def nxv4f32  : ValueType<128, 170>;  // n x  4 x  f32 vector value
+def nxv8f32  : ValueType<256, 171>;  // n x  8 x  f32 vector value
+def nxv16f32 : ValueType<512, 172>;  // n x 16 x  f32 vector value
 
-def nxv1f64  : ValueType<64,  171>;  // n x  1 x  f64 vector value
-def nxv2f64  : ValueType<128, 172>;  // n x  2 x  f64 vector value
-def nxv4f64  : ValueType<256, 173>;  // n x  4 x  f64 vector value
-def nxv8f64  : ValueType<512, 174>;  // n x  8 x  f64 vector value
+def nxv1f64  : ValueType<64,  173>;  // n x  1 x  f64 vector value
+def nxv2f64  : ValueType<128, 174>;  // n x  2 x  f64 vector value
+def nxv4f64  : ValueType<256, 175>;  // n x  4 x  f64 vector value
+def nxv8f64  : ValueType<512, 176>;  // n x  8 x  f64 vector value
 
-def x86mmx    : ValueType<64,   175>;  // X86 MMX value
-def FlagVT    : ValueType<0,    176>;  // Pre-RA sched glue
-def isVoid    : ValueType<0,    177>;  // Produces no value
-def untyped   : ValueType<8,    178>;  // Produces an untyped value
-def funcref   : ValueType<0,    179>;  // WebAssembly's funcref type
-def externref : ValueType<0,    180>;  // WebAssembly's externref type
-def x86amx    : ValueType<8192, 181>;  // X86 AMX value
-def i64x8     : ValueType<512,  182>;  // 8 Consecutive GPRs (AArch64)
+def x86mmx    : ValueType<64,   177>;  // X86 MMX value
+def FlagVT    : ValueType<0,    178>;  // Pre-RA sched glue
+def isVoid    : ValueType<0,    179>;  // Produces no value
+def untyped   : ValueType<8,    180>;  // Produces an untyped value
+def funcref   : ValueType<0,    181>;  // WebAssembly's funcref type
+def externref : ValueType<0,    182>;  // WebAssembly's externref type
+def x86amx    : ValueType<8192, 183>;  // X86 AMX value
+def i64x8     : ValueType<512,  184>;  // 8 Consecutive GPRs (AArch64)
 
 def token      : ValueType<0, 248>;  // TokenTy
 def MetadataVT : ValueType<0, 249>;  // Metadata
