@@ -47,6 +47,9 @@ enum NodeType : unsigned {
   // Get the Hi 20 bits from an address. Selected to LUI.
   HI,
 
+  // Represents an AUIPC+ADDI pair. Selected to PseudoLLA.
+  LLA,
+
   // Multiply high for signedxunsigned.
   MULHSU,
   // RV64I shifts, directly matching the semantics of the named RISC-V
