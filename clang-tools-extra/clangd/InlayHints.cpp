@@ -14,6 +14,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ScopeExit.h"
 
@@ -400,8 +401,9 @@ private:
     NameVec ParameterNames = chooseParameterNames(Callee, ArgCount);
 
     // Exclude setters (i.e. functions with one argument whose name begins with
-    // "set"), as their parameter name is also not likely to be interesting.
-    if (isSetter(Callee, ParameterNames))
+    // "set"), and builtins like std::move/forward/... as their parameter name
+    // is also not likely to be interesting.
+    if (isSetter(Callee, ParameterNames) || isSimpleBuiltin(Callee))
       return;
 
     for (size_t I = 0; I < ArgCount; ++I) {
@@ -438,6 +440,21 @@ private:
     // `sloppy_equals` which ignores case and also skips underscores.
     StringRef WhatItIsSetting = Name.substr(3).ltrim("_");
     return WhatItIsSetting.equals_insensitive(ParamNames[0]);
+  }
+
+  // Checks if the callee is one of the builtins
+  // addressof, as_const, forward, move(_if_noexcept)
+  static bool isSimpleBuiltin(const FunctionDecl *Callee) {
+    switch (Callee->getBuiltinID()) {
+    case Builtin::BIaddressof:
+    case Builtin::BIas_const:
+    case Builtin::BIforward:
+    case Builtin::BImove:
+    case Builtin::BImove_if_noexcept:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool shouldHintName(const Expr *Arg, StringRef ParamName) {
