@@ -15613,7 +15613,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     RangeErrMsg += llvm::to_string(ValidMaxValue) + "]";
 
     // Issue error if third argument is not within the valid range.
-    if (ConstArg < 0 or ConstArg > ValidMaxValue)
+    if (ConstArg < 0 || ConstArg > ValidMaxValue)
       CGM.Error(E->getExprLoc(), RangeErrMsg);
 
     // Input to vec_replace_elt is an element index, convert to byte index.
