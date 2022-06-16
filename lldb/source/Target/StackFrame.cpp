@@ -552,7 +552,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 
   if (!var_sp && (options & eExpressionPathOptionsAllowDirectIVarAccess)) {
     // Check for direct ivars access which helps us with implicit access to
-    // ivars with the "this->" or "self->"
+    // ivars using "this" or "self".
     GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
     lldb::LanguageType method_language = eLanguageTypeUnknown;
     bool is_instance_method = false;
@@ -563,7 +563,13 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         var_sp = variable_list->FindVariable(method_object_name);
         if (var_sp) {
           separator_idx = 0;
-          var_expr_storage = "->";
+          if (Type *var_type = var_sp->GetType())
+            if (auto compiler_type = var_type->GetForwardCompilerType())
+              if (!compiler_type.IsPointerType())
+                var_expr_storage = ".";
+
+          if (var_expr_storage.empty())
+            var_expr_storage = "->";
           var_expr_storage += var_expr;
           var_expr = var_expr_storage;
           synthetically_added_instance_object = true;
