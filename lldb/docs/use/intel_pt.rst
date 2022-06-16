@@ -196,7 +196,7 @@ For example
         "threads": [
           {
             "tid": 815455,
-            "traceBuffer": "trace.file" # raw thread-specific trace from the AUX buffer
+            "iptTrace": "trace.file" # raw thread-specific trace from the AUX buffer
           }
         ],
         "modules": [ # this are all the shared libraries + the main executable

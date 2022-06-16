@@ -1,4 +1,4 @@
-//===-- TraceIntelPTMultiCoreDecoder.h --------------------------*- C++ -*-===//
+//===-- TraceIntelPTMultiCpuDecoder.h ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTMULTICOREDECODER_H
-#define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTMULTICOREDECODER_H
+#ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTMULTICPUDECODER_H
+#define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTMULTICPUDECODER_H
 
 #include "LibiptDecoder.h"
 #include "PerfContextSwitchDecoder.h"
@@ -16,9 +16,9 @@
 namespace lldb_private {
 namespace trace_intel_pt {
 
-/// Class used to decode a multi-core Intel PT trace. It assumes that each
-/// thread could have potentially been executed on different cores. It uses a
-/// context switch trace per CPU with timestamps to identify which thread owns
+/// Class used to decode a multi-cpu Intel PT trace. It assumes that each
+/// thread could have potentially been executed on different cpu cores. It uses
+/// a context switch trace per CPU with timestamps to identify which thread owns
 /// each Intel PT decoded instruction and in which order. It also assumes that
 /// the Intel PT data and context switches might have gaps in their traces due
 /// to contention or race conditions. Finally, it assumes that a tid is not
@@ -27,11 +27,11 @@ namespace trace_intel_pt {
 ///
 /// This object should be recreated after every stop in the case of live
 /// processes.
-class TraceIntelPTMultiCoreDecoder {
+class TraceIntelPTMultiCpuDecoder {
 public:
   /// \param[in] TraceIntelPT
   ///   The trace object to be decoded
-  TraceIntelPTMultiCoreDecoder(TraceIntelPT &trace);
+  TraceIntelPTMultiCpuDecoder(TraceIntelPT &trace);
 
   /// \return
   ///   A \a DecodedThread for the \p thread by decoding its instructions on all
@@ -52,8 +52,9 @@ public:
   size_t GetTotalContinuousExecutionsCount() const;
 
 private:
-  /// Traverse the context switch traces and the basic intel pt continuous subtraces
-  /// and produce a list of continuous executions for each process and thread.
+  /// Traverse the context switch traces and the basic intel pt continuous
+  /// subtraces and produce a list of continuous executions for each process and
+  /// thread.
   ///
   /// See \a DoCorrelateContextSwitchesAndIntelPtTraces.
   ///
@@ -81,4 +82,4 @@ private:
 } // namespace trace_intel_pt
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTMULTICOREDECODER_H
+#endif // LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTMULTICPUDECODER_H

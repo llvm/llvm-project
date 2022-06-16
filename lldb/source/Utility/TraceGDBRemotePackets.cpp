@@ -100,14 +100,13 @@ bool fromJSON(const json::Value &value, TraceGetStateResponse &packet,
   ObjectMapper o(value, path);
   return o && o.map("tracedThreads", packet.traced_threads) &&
          o.map("processBinaryData", packet.process_binary_data) &&
-         o.map("cores", packet.cores) &&
-         o.map("warnings", packet.warnings);
+         o.map("cpus", packet.cpus) && o.map("warnings", packet.warnings);
 }
 
 json::Value toJSON(const TraceGetStateResponse &packet) {
   return json::Value(Object{{"tracedThreads", packet.traced_threads},
                             {"processBinaryData", packet.process_binary_data},
-                            {"cores", packet.cores},
+                            {"cpus", packet.cpus},
                             {"warnings", packet.warnings}});
 }
 
@@ -117,20 +116,19 @@ void TraceGetStateResponse::AddWarning(StringRef warning) {
   warnings->push_back(warning.data());
 }
 
-bool fromJSON(const json::Value &value, TraceCoreState &packet,
+bool fromJSON(const json::Value &value, TraceCpuState &packet,
               json::Path path) {
   ObjectMapper o(value, path);
-  uint64_t core_id;
-  if (!(o && o.map("coreId", core_id) &&
-        o.map("binaryData", packet.binary_data)))
+  uint64_t cpu_id;
+  if (!(o && o.map("id", cpu_id) && o.map("binaryData", packet.binary_data)))
     return false;
-  packet.core_id = static_cast<lldb::core_id_t>(core_id);
+  packet.id = static_cast<lldb::cpu_id_t>(cpu_id);
   return true;
 }
 
-json::Value toJSON(const TraceCoreState &packet) {
+json::Value toJSON(const TraceCpuState &packet) {
   return json::Value(
-      Object{{"coreId", packet.core_id}, {"binaryData", packet.binary_data}});
+      Object{{"id", packet.id}, {"binaryData", packet.binary_data}});
 }
 /// \}
 
@@ -140,19 +138,19 @@ json::Value toJSON(const TraceGetBinaryDataRequest &packet) {
   return json::Value(Object{{"type", packet.type},
                             {"kind", packet.kind},
                             {"tid", packet.tid},
-                            {"coreId", packet.core_id}});
+                            {"cpuId", packet.cpu_id}});
 }
 
 bool fromJSON(const json::Value &value, TraceGetBinaryDataRequest &packet,
               Path path) {
   ObjectMapper o(value, path);
-  Optional<uint64_t> core_id;
+  Optional<uint64_t> cpu_id;
   if (!(o && o.map("type", packet.type) && o.map("kind", packet.kind) &&
-        o.map("tid", packet.tid) && o.map("coreId", core_id)))
+        o.map("tid", packet.tid) && o.map("cpuId", cpu_id)))
     return false;
 
-  if (core_id)
-    packet.core_id = static_cast<lldb::core_id_t>(*core_id);
+  if (cpu_id)
+    packet.cpu_id = static_cast<lldb::cpu_id_t>(*cpu_id);
   return true;
 }
 /// \}

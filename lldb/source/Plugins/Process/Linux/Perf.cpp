@@ -73,7 +73,7 @@ void resource_handle::FileDescriptorDeleter::operator()(long *ptr) {
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
                                           Optional<lldb::pid_t> pid,
-                                          Optional<lldb::core_id_t> cpu,
+                                          Optional<lldb::cpu_id_t> cpu,
                                           Optional<long> group_fd,
                                           unsigned long flags) {
   errno = 0;
@@ -89,7 +89,7 @@ llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
                                           Optional<lldb::pid_t> pid,
-                                          Optional<lldb::core_id_t> cpu) {
+                                          Optional<lldb::cpu_id_t> cpu) {
   return Init(attr, pid, cpu, -1, 0);
 }
 
@@ -306,7 +306,7 @@ size_t PerfEvent::GetEffectiveDataBufferSize() const {
 
 Expected<PerfEvent>
 lldb_private::process_linux::CreateContextSwitchTracePerfEvent(
-    lldb::core_id_t core_id, const PerfEvent *parent_perf_event) {
+    lldb::cpu_id_t cpu_id, const PerfEvent *parent_perf_event) {
   Log *log = GetLog(POSIXLog::Trace);
 #ifndef PERF_ATTR_SIZE_VER5
   return createStringError(inconvertibleErrorCode(),
@@ -342,7 +342,7 @@ lldb_private::process_linux::CreateContextSwitchTracePerfEvent(
     group_fd = parent_perf_event->GetFd();
 
   if (Expected<PerfEvent> perf_event =
-          PerfEvent::Init(attr, /*pid=*/None, core_id, group_fd, /*flags=*/0)) {
+          PerfEvent::Init(attr, /*pid=*/None, cpu_id, group_fd, /*flags=*/0)) {
     if (Error mmap_err = perf_event->MmapMetadataAndBuffers(
             data_buffer_numpages, 0, /*data_buffer_write=*/false)) {
       return std::move(mmap_err);

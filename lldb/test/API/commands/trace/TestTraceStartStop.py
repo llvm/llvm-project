@@ -35,18 +35,18 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("r")
 
         self.traceStartThread(
-            error=True, traceBufferSize=2000,
-            substrs=["The trace buffer size must be a power of 2", "It was 2000"])
+            error=True, iptTraceSize=2000,
+            substrs=["The intel pt trace size must be a power of 2", "It was 2000"])
 
         self.traceStartThread(
-            error=True, traceBufferSize=5000,
-            substrs=["The trace buffer size must be a power of 2", "It was 5000"])
+            error=True, iptTraceSize=5000,
+            substrs=["The intel pt trace size must be a power of 2", "It was 5000"])
 
         self.traceStartThread(
-            error=True, traceBufferSize=0,
-            substrs=["The trace buffer size must be a power of 2", "It was 0"])
+            error=True, iptTraceSize=0,
+            substrs=["The intel pt trace size must be a power of 2", "It was 0"])
 
-        self.traceStartThread(traceBufferSize=1048576)
+        self.traceStartThread(iptTraceSize=1048576)
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     def testSBAPIHelp(self):
@@ -55,7 +55,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("r")
 
         help = self.getTraceOrCreate().GetStartConfigurationHelp()
-        self.assertIn("traceBufferSize", help)
+        self.assertIn("iptTraceSize", help)
         self.assertIn("processBufferSizeLimit", help)
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))

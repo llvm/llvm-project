@@ -27,7 +27,8 @@ public:
   bool TracesThread(lldb::tid_t tid) const;
 
   /// \return
-  ///   The total sum of the trace buffer sizes used by this collection.
+  ///   The total sum of the intel pt trace buffer sizes used by this
+  ///   collection.
   size_t GetTotalBufferSize() const;
 
   /// Execute the provided callback on each thread that is being traced.

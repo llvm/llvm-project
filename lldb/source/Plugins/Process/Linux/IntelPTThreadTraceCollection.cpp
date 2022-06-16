@@ -22,7 +22,7 @@ Error IntelPTThreadTraceCollection::TraceStop(lldb::tid_t tid) {
   if (it == m_thread_traces.end())
     return createStringError(inconvertibleErrorCode(),
                              "Thread %" PRIu64 " not currently traced", tid);
-  m_total_buffer_size -= it->second.GetTraceBufferSize();
+  m_total_buffer_size -= it->second.GetIptTraceSize();
   m_thread_traces.erase(tid);
   return Error::success();
 }
@@ -38,7 +38,7 @@ Error IntelPTThreadTraceCollection::TraceStart(
   if (!trace)
     return trace.takeError();
 
-  m_total_buffer_size += trace->GetTraceBufferSize();
+  m_total_buffer_size += trace->GetIptTraceSize();
   m_thread_traces.try_emplace(tid, std::move(*trace));
   return Error::success();
 }
@@ -77,7 +77,7 @@ IntelPTThreadTraceCollection::TryGetBinaryData(
     const TraceGetBinaryDataRequest &request) {
   if (!request.tid)
     return None;
-  if (request.kind != IntelPTDataKinds::kTraceBuffer)
+  if (request.kind != IntelPTDataKinds::kIptTrace)
     return None;
 
   if (!TracesThread(*request.tid))
@@ -85,7 +85,7 @@ IntelPTThreadTraceCollection::TryGetBinaryData(
 
   if (Expected<IntelPTSingleBufferTrace &> trace =
           GetTracedThread(*request.tid))
-    return trace->GetTraceBuffer();
+    return trace->GetIptTrace();
   else
     return trace.takeError();
 }

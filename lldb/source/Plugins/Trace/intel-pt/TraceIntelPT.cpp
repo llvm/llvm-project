@@ -77,21 +77,21 @@ Expected<TraceSP> TraceIntelPT::CreateInstanceForLiveProcess(Process &process) {
 TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
                            ArrayRef<ProcessSP> traced_processes,
                            ArrayRef<ThreadPostMortemTraceSP> traced_threads)
-    : Trace(traced_processes, session.GetCoreIds()),
+    : Trace(traced_processes, session.GetCpuIds()),
       m_cpu_info(session.cpu_info) {
   m_storage.tsc_conversion = session.tsc_perf_zero_conversion;
 
-  if (session.cores) {
-    std::vector<core_id_t> cores;
+  if (session.cpus) {
+    std::vector<cpu_id_t> cpus;
 
-    for (const JSONCore &core : *session.cores) {
-      SetPostMortemCoreDataFile(core.core_id, IntelPTDataKinds::kTraceBuffer,
-                                FileSpec(core.trace_buffer));
+    for (const JSONCpu &cpu : *session.cpus) {
+      SetPostMortemCpuDataFile(cpu.id, IntelPTDataKinds::kIptTrace,
+                               FileSpec(cpu.ipt_trace));
 
-      SetPostMortemCoreDataFile(core.core_id,
-                                IntelPTDataKinds::kPerfContextSwitchTrace,
-                                FileSpec(core.context_switch_trace));
-      cores.push_back(core.core_id);
+      SetPostMortemCpuDataFile(cpu.id,
+                               IntelPTDataKinds::kPerfContextSwitchTrace,
+                               FileSpec(cpu.context_switch_trace));
+      cpus.push_back(cpu.id);
     }
 
     std::vector<tid_t> tids;
@@ -99,14 +99,14 @@ TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
       for (const JSONThread &thread : process.threads)
         tids.push_back(thread.tid);
 
-    m_storage.multicore_decoder.emplace(*this);
+    m_storage.multicpu_decoder.emplace(*this);
   } else {
     for (const ThreadPostMortemTraceSP &thread : traced_threads) {
       m_storage.thread_decoders.try_emplace(
           thread->GetID(), std::make_unique<ThreadDecoder>(thread, *this));
       if (const Optional<FileSpec> &trace_file = thread->GetTraceFile()) {
-        SetPostMortemThreadDataFile(
-            thread->GetID(), IntelPTDataKinds::kTraceBuffer, *trace_file);
+        SetPostMortemThreadDataFile(thread->GetID(),
+                                    IntelPTDataKinds::kIptTrace, *trace_file);
       }
     }
   }
@@ -119,8 +119,8 @@ DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
         createStringError(inconvertibleErrorCode(), error));
 
   Storage &storage = GetUpdatedStorage();
-  if (storage.multicore_decoder)
-    return storage.multicore_decoder->Decode(thread);
+  if (storage.multicpu_decoder)
+    return storage.multicpu_decoder->Decode(thread);
 
   auto it = storage.thread_decoders.find(thread.GetID());
   if (it == storage.thread_decoders.end())
@@ -204,14 +204,13 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
     }
   }
 
-  // Multicode decoding stats
-  if (storage.multicore_decoder) {
-    s << "\n  Multi-core decoding:\n";
+  if (storage.multicpu_decoder) {
+    s << "\n  Multi-cpu decoding:\n";
     s.Format("    Total number of continuous executions found: {0}\n",
-             storage.multicore_decoder->GetTotalContinuousExecutionsCount());
+             storage.multicpu_decoder->GetTotalContinuousExecutionsCount());
     s.Format(
         "    Number of continuous executions for this thread: {0}\n",
-        storage.multicore_decoder->GetNumContinuousExecutionsForThread(tid));
+        storage.multicpu_decoder->GetNumContinuousExecutionsForThread(tid));
   }
 
   // Errors
@@ -231,12 +230,12 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
 
 llvm::Expected<Optional<uint64_t>>
 TraceIntelPT::GetRawTraceSize(Thread &thread) {
-  if (GetUpdatedStorage().multicore_decoder)
+  if (GetUpdatedStorage().multicpu_decoder)
     return None; // TODO: calculate the amount of intel pt raw trace associated
                  // with the given thread.
   if (GetLiveProcess())
     return GetLiveThreadBinaryDataSize(thread.GetID(),
-                                       IntelPTDataKinds::kTraceBuffer);
+                                       IntelPTDataKinds::kIptTrace);
   uint64_t size;
   auto callback = [&](llvm::ArrayRef<uint8_t> data) {
     size = data.size();
@@ -333,7 +332,7 @@ Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
 
   m_storage.tsc_conversion = intelpt_state->tsc_perf_zero_conversion;
 
-  if (!intelpt_state->cores) {
+  if (!intelpt_state->cpus) {
     for (const TraceThreadState &thread_state : state.traced_threads) {
       ThreadSP thread_sp =
           GetLiveProcess()->GetThreadList().FindThreadByID(thread_state.tid);
@@ -341,9 +340,9 @@ Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
           thread_state.tid, std::make_unique<ThreadDecoder>(thread_sp, *this));
     }
   } else {
-    std::vector<core_id_t> cores;
-    for (const TraceCoreState &core : *intelpt_state->cores)
-      cores.push_back(core.core_id);
+    std::vector<cpu_id_t> cpus;
+    for (const TraceCpuState &cpu : *intelpt_state->cpus)
+      cpus.push_back(cpu.id);
 
     std::vector<tid_t> tids;
     for (const TraceThreadState &thread : intelpt_state->traced_threads)
@@ -352,7 +351,7 @@ Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
     if (!intelpt_state->tsc_perf_zero_conversion)
       return createStringError(inconvertibleErrorCode(),
                                "Missing perf time_zero conversion values");
-    m_storage.multicore_decoder.emplace(*this);
+    m_storage.multicpu_decoder.emplace(*this);
   }
 
   if (m_storage.tsc_conversion) {
@@ -364,8 +363,8 @@ Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
 
 bool TraceIntelPT::IsTraced(lldb::tid_t tid) {
   Storage &storage = GetUpdatedStorage();
-  if (storage.multicore_decoder)
-    return storage.multicore_decoder->TracesThread(tid);
+  if (storage.multicpu_decoder)
+    return storage.multicpu_decoder->TracesThread(tid);
   return storage.thread_decoders.count(tid);
 }
 
@@ -381,7 +380,7 @@ const char *TraceIntelPT::GetStartConfigurationHelp() {
   See the jLLDBTraceStart section in lldb/docs/lldb-gdb-remote.txt for a
   description of each parameter below.
 
-  - int traceBufferSize (defaults to {0} bytes):
+  - int iptTraceSize (defaults to {0} bytes):
     [process and thread tracing]
 
   - boolean enableTsc (default to {1}):
@@ -390,62 +389,61 @@ const char *TraceIntelPT::GetStartConfigurationHelp() {
   - int psbPeriod (defaults to {2}):
     [process and thread tracing]
 
-  - boolean perCoreTracing (default to {3}):
+  - boolean perCpuTracing (default to {3}):
     [process tracing only]
 
   - int processBufferSizeLimit (defaults to {4} MiB):
     [process tracing only])",
-                            kDefaultTraceBufferSize, kDefaultEnableTscValue,
-                            kDefaultPsbPeriod, kDefaultPerCoreTracing,
+                            kDefaultIptTraceSize, kDefaultEnableTscValue,
+                            kDefaultPsbPeriod, kDefaultPerCpuTracing,
                             kDefaultProcessBufferSizeLimit / 1024 / 1024));
   }
   return message->c_str();
 }
 
-Error TraceIntelPT::Start(uint64_t trace_buffer_size,
+Error TraceIntelPT::Start(uint64_t ipt_trace_size,
                           uint64_t total_buffer_size_limit, bool enable_tsc,
-                          Optional<uint64_t> psb_period,
-                          bool per_core_tracing) {
+                          Optional<uint64_t> psb_period, bool per_cpu_tracing) {
   TraceIntelPTStartRequest request;
-  request.trace_buffer_size = trace_buffer_size;
+  request.ipt_trace_size = ipt_trace_size;
   request.process_buffer_size_limit = total_buffer_size_limit;
   request.enable_tsc = enable_tsc;
   request.psb_period = psb_period;
   request.type = GetPluginName().str();
-  request.per_core_tracing = per_core_tracing;
+  request.per_cpu_tracing = per_cpu_tracing;
   return Trace::Start(toJSON(request));
 }
 
 Error TraceIntelPT::Start(StructuredData::ObjectSP configuration) {
-  uint64_t trace_buffer_size = kDefaultTraceBufferSize;
+  uint64_t ipt_trace_size = kDefaultIptTraceSize;
   uint64_t process_buffer_size_limit = kDefaultProcessBufferSizeLimit;
   bool enable_tsc = kDefaultEnableTscValue;
   Optional<uint64_t> psb_period = kDefaultPsbPeriod;
-  bool per_core_tracing = kDefaultPerCoreTracing;
+  bool per_cpu_tracing = kDefaultPerCpuTracing;
 
   if (configuration) {
     if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {
-      dict->GetValueForKeyAsInteger("traceBufferSize", trace_buffer_size);
+      dict->GetValueForKeyAsInteger("iptTraceSize", ipt_trace_size);
       dict->GetValueForKeyAsInteger("processBufferSizeLimit",
                                     process_buffer_size_limit);
       dict->GetValueForKeyAsBoolean("enableTsc", enable_tsc);
       dict->GetValueForKeyAsInteger("psbPeriod", psb_period);
-      dict->GetValueForKeyAsBoolean("perCoreTracing", per_core_tracing);
+      dict->GetValueForKeyAsBoolean("perCpuTracing", per_cpu_tracing);
     } else {
       return createStringError(inconvertibleErrorCode(),
                                "configuration object is not a dictionary");
     }
   }
 
-  return Start(trace_buffer_size, process_buffer_size_limit, enable_tsc,
-               psb_period, per_core_tracing);
+  return Start(ipt_trace_size, process_buffer_size_limit, enable_tsc,
+               psb_period, per_cpu_tracing);
 }
 
 llvm::Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
-                                uint64_t trace_buffer_size, bool enable_tsc,
+                                uint64_t ipt_trace_size, bool enable_tsc,
                                 Optional<uint64_t> psb_period) {
   TraceIntelPTStartRequest request;
-  request.trace_buffer_size = trace_buffer_size;
+  request.ipt_trace_size = ipt_trace_size;
   request.enable_tsc = enable_tsc;
   request.psb_period = psb_period;
   request.type = GetPluginName().str();
@@ -457,13 +455,13 @@ llvm::Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
 
 Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
                           StructuredData::ObjectSP configuration) {
-  uint64_t trace_buffer_size = kDefaultTraceBufferSize;
+  uint64_t ipt_trace_size = kDefaultIptTraceSize;
   bool enable_tsc = kDefaultEnableTscValue;
   Optional<uint64_t> psb_period = kDefaultPsbPeriod;
 
   if (configuration) {
     if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {
-      dict->GetValueForKeyAsInteger("traceBufferSize", trace_buffer_size);
+      dict->GetValueForKeyAsInteger("iptTraceSize", ipt_trace_size);
       dict->GetValueForKeyAsBoolean("enableTsc", enable_tsc);
       dict->GetValueForKeyAsInteger("psbPeriod", psb_period);
     } else {
@@ -472,12 +470,12 @@ Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
     }
   }
 
-  return Start(tids, trace_buffer_size, enable_tsc, psb_period);
+  return Start(tids, ipt_trace_size, enable_tsc, psb_period);
 }
 
 Error TraceIntelPT::OnThreadBufferRead(lldb::tid_t tid,
                                        OnBinaryDataReadCallback callback) {
-  return OnThreadBinaryDataRead(tid, IntelPTDataKinds::kTraceBuffer, callback);
+  return OnThreadBinaryDataRead(tid, IntelPTDataKinds::kIptTrace, callback);
 }
 
 TaskTimer &TraceIntelPT::GetTimer() { return GetUpdatedStorage().task_timer; }

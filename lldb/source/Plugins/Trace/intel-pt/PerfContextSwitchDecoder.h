@@ -21,8 +21,6 @@ namespace trace_intel_pt {
 
 /// This class indicates the time interval in which a thread was running
 /// continuously on a cpu core.
-///
-/// Note: we use the terms CPU and cores interchangeably.
 struct ThreadContinuousExecution {
 
   /// In most cases both the start and end of a continuous execution can be
@@ -35,15 +33,15 @@ struct ThreadContinuousExecution {
     /// Both endpoints are known.
     Complete,
     /// The end is known and we have a lower bound for the start, i.e. the
-    /// previous execution in the same core happens strictly before the hinted
+    /// previous execution in the same cpu happens strictly before the hinted
     /// start.
     HintedStart,
     /// The start is known and we have an upper bound for the end, i.e. the next
-    /// execution  in the same core happens strictly after the hinted end.
+    /// execution in the same cpu happens strictly after the hinted end.
     HintedEnd,
-    /// We only know the start. This might be the last entry of a core trace.
+    /// We only know the start. This might be the last entry of a cpu trace.
     OnlyStart,
-    /// We only know the end. This might be the first entry or a core trace.
+    /// We only know the end. This might be the first entry or a cpu trace.
     OnlyEnd,
   } variant;
 
@@ -64,25 +62,26 @@ struct ThreadContinuousExecution {
   ///
   /// \{
   static ThreadContinuousExecution
-  CreateCompleteExecution(lldb::core_id_t core_id, lldb::tid_t tid,
+  CreateCompleteExecution(lldb::cpu_id_t cpu_id, lldb::tid_t tid,
                           lldb::pid_t pid, uint64_t start, uint64_t end);
 
   static ThreadContinuousExecution
-  CreateHintedStartExecution(lldb::core_id_t core_id, lldb::tid_t tid,
+  CreateHintedStartExecution(lldb::cpu_id_t cpu_id, lldb::tid_t tid,
                              lldb::pid_t pid, uint64_t hinted_start,
                              uint64_t end);
 
   static ThreadContinuousExecution
-  CreateHintedEndExecution(lldb::core_id_t core_id, lldb::tid_t tid,
+  CreateHintedEndExecution(lldb::cpu_id_t cpu_id, lldb::tid_t tid,
                            lldb::pid_t pid, uint64_t start,
                            uint64_t hinted_end);
 
-  static ThreadContinuousExecution
-  CreateOnlyEndExecution(lldb::core_id_t core_id, lldb::tid_t tid,
-                         lldb::pid_t pid, uint64_t end);
+  static ThreadContinuousExecution CreateOnlyEndExecution(lldb::cpu_id_t cpu_id,
+                                                          lldb::tid_t tid,
+                                                          lldb::pid_t pid,
+                                                          uint64_t end);
 
   static ThreadContinuousExecution
-  CreateOnlyStartExecution(lldb::core_id_t core_id, lldb::tid_t tid,
+  CreateOnlyStartExecution(lldb::cpu_id_t cpu_id, lldb::tid_t tid,
                            lldb::pid_t pid, uint64_t start);
   /// \}
 
@@ -109,16 +108,16 @@ struct ThreadContinuousExecution {
     } hinted_end;
   } tscs;
 
-  lldb::core_id_t core_id;
+  lldb::cpu_id_t cpu_id;
   lldb::tid_t tid;
   lldb::pid_t pid;
 
 private:
   /// We keep this constructor private to force the usage of the static named
   /// constructors.
-  ThreadContinuousExecution(lldb::core_id_t core_id, lldb::tid_t tid,
+  ThreadContinuousExecution(lldb::cpu_id_t cpu_id, lldb::tid_t tid,
                             lldb::pid_t pid)
-      : core_id(core_id), tid(tid), pid(pid) {}
+      : cpu_id(cpu_id), tid(tid), pid(pid) {}
 };
 
 /// Decodes a context switch trace collected with perf_event_open.
@@ -126,8 +125,8 @@ private:
 /// \param[in] data
 ///   The context switch trace in binary format.
 ///
-/// \param[i] core_id
-///   The core_id where the trace were gotten from.
+/// \param[i] cpu_id
+///   The cpu_id where the trace were gotten from.
 ///
 /// \param[in] tsc_conversion
 ///   The conversion values used to confert nanoseconds to TSC.
@@ -137,7 +136,7 @@ private:
 ///   time, or an \a llvm::Error if the data is malformed.
 llvm::Expected<std::vector<ThreadContinuousExecution>>
 DecodePerfContextSwitchTrace(llvm::ArrayRef<uint8_t> data,
-                             lldb::core_id_t core_id,
+                             lldb::cpu_id_t cpu_id,
                              const LinuxPerfZeroTscConversion &tsc_conversion);
 
 } // namespace trace_intel_pt
