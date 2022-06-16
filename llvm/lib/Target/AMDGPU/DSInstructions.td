@@ -1112,6 +1112,34 @@ def : Pat <
   (DS_ORDERED_COUNT $value, (as_i16imm $offset))
 >;
 
+def : GCNPat <
+  (i64 (int_amdgcn_ds_add_gs_reg_rtn i32:$src, timm:$offset32)),
+  (DS_ADD_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32))
+>;
+
+def : GCNPat <
+  (i32 (int_amdgcn_ds_add_gs_reg_rtn i32:$src, timm:$offset32)),
+  (EXTRACT_SUBREG
+    (i64 (COPY_TO_REGCLASS
+      (DS_ADD_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32)),
+      VReg_64)),
+    sub0)
+>;
+
+def : GCNPat <
+  (i64 (int_amdgcn_ds_sub_gs_reg_rtn i32:$src, timm:$offset32)),
+  (DS_SUB_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32))
+>;
+
+def : GCNPat <
+  (i32 (int_amdgcn_ds_sub_gs_reg_rtn i32:$src, timm:$offset32)),
+  (EXTRACT_SUBREG
+    (i64 (COPY_TO_REGCLASS
+      (DS_SUB_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32)),
+      VReg_64)),
+    sub0)
+>;
+
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
