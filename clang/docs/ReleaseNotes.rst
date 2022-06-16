@@ -498,6 +498,13 @@ X86 Support in Clang
 DWARF Support in Clang
 ----------------------
 
+- clang now adds DWARF information for inline strings in C/C++ programs,
+  allowing ``line:column`` symbolization of strings. Some debugging programs may
+  require updating, as this takes advantage of DWARF ``DW_TAG_variable``
+  structures *without* a ``DW_AT_name`` field, which is valid DWARF, but may be
+  handled incorrectly by some software (e.g. new failures with incorrect
+  assertions).
+
 Arm and AArch64 Support in Clang
 --------------------------------
 
