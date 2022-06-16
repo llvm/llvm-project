@@ -2652,6 +2652,29 @@ let TargetPrefix = "aarch64" in {
 
   def int_aarch64_sme_zero : DefaultAttrsIntrinsic<[], [llvm_i64_ty]>;
 
+  class SME_OuterProduct_Intrinsic
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i64_ty,
+           LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+           LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+           LLVMMatchType<0>,
+           llvm_anyvector_ty]>;
+
+  def int_aarch64_sme_mopa : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_mops : SME_OuterProduct_Intrinsic;
+
+  def int_aarch64_sme_mopa_wide : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_mops_wide : SME_OuterProduct_Intrinsic;
+
+  def int_aarch64_sme_smopa_wide  : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_smops_wide  : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_umopa_wide  : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_umops_wide  : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_sumopa_wide : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_sumops_wide : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_usmopa_wide : SME_OuterProduct_Intrinsic;
+  def int_aarch64_sme_usmops_wide : SME_OuterProduct_Intrinsic;
+
   //
   // Counting elements
   //

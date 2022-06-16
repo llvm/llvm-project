@@ -28,6 +28,14 @@ def am_sme_indexed_b4 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0,15>",
 // SME Outer Products
 //===----------------------------------------------------------------------===//
 
+class sme_outer_product_pseudo<ZPRRegOp zpr_ty>
+    : Pseudo<(outs), (ins i64imm:$tile, PPR3bAny:$pn, PPR3bAny:$pm,
+                          zpr_ty:$zn, zpr_ty:$zm), []>,
+      Sched<[]> {
+  // Translated to the actual instructions in AArch64ISelLowering.cpp
+  let usesCustomInserter = 1;
+}
+
 class sme_fp_outer_product_inst<bit S, bit sz, MatrixTileOperand za_ty,
                                 ZPRRegOp zpr_ty, string mnemonic>
     : I<(outs za_ty:$ZAda),
@@ -52,17 +60,31 @@ class sme_fp_outer_product_inst<bit S, bit sz, MatrixTileOperand za_ty,
   let Constraints = "$ZAda = $_ZAda";
 }
 
-class sme_outer_product_fp32<bit S, string mnemonic>
-    : sme_fp_outer_product_inst<S, 0b0, TileOp32, ZPR32, mnemonic> {
-  bits<2> ZAda;
-  let Inst{1-0} = ZAda;
-  let Inst{2}   = 0b0;
+multiclass sme_outer_product_fp32<bit S, string mnemonic, SDPatternOperator op> {
+  def NAME : sme_fp_outer_product_inst<S, 0b0, TileOp32, ZPR32, mnemonic> {
+    bits<2> ZAda;
+    let Inst{1-0} = ZAda;
+    let Inst{2}   = 0b0;
+  }
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR32>;
+
+  def : Pat<(op imm0_3:$tile, (nxv4i1 PPR3bAny:$pn), (nxv4i1 PPR3bAny:$pm),
+                (nxv4f32 ZPR32:$zn), (nxv4f32 ZPR32:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
-class sme_outer_product_fp64<bit S, string mnemonic>
-    : sme_fp_outer_product_inst<S, 0b1, TileOp64, ZPR64, mnemonic> {
-  bits<3> ZAda;
-  let Inst{2-0} = ZAda;
+multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> {
+  def NAME : sme_fp_outer_product_inst<S, 0b1, TileOp64, ZPR64, mnemonic> {
+    bits<3> ZAda;
+    let Inst{2-0} = ZAda;
+  }
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR64>;
+
+  def : Pat<(op imm0_7:$tile, (nxv2i1 PPR3bAny:$pn), (nxv2i1 PPR3bAny:$pm),
+                (nxv2f64 ZPR64:$zn), (nxv2f64 ZPR64:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_7:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 class sme_int_outer_product_inst<bit u0, bit u1, bit S, bit sz,
@@ -92,19 +114,35 @@ class sme_int_outer_product_inst<bit u0, bit u1, bit S, bit sz,
   let Constraints = "$ZAda = $_ZAda";
 }
 
-class sme_int_outer_product_i32<bits<3> opc, string mnemonic>
-    : sme_int_outer_product_inst<opc{2}, opc{1}, opc{0}, 0b0, TileOp32, ZPR8,
-                                 mnemonic> {
-  bits<2> ZAda;
-  let Inst{1-0} = ZAda;
-  let Inst{2}   = 0b0;
+multiclass sme_int_outer_product_i32<bits<3> opc, string mnemonic,
+                                     SDPatternOperator op> {
+  def NAME : sme_int_outer_product_inst<opc{2}, opc{1}, opc{0}, 0b0, TileOp32,
+                                        ZPR8, mnemonic> {
+    bits<2> ZAda;
+    let Inst{1-0} = ZAda;
+    let Inst{2}   = 0b0;
+  }
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR8>;
+
+  def : Pat<(op imm0_3:$tile, (nxv16i1 PPR3bAny:$pn), (nxv16i1 PPR3bAny:$pm),
+                (nxv16i8 ZPR8:$zn), (nxv16i8 ZPR8:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
-class sme_int_outer_product_i64<bits<3> opc, string mnemonic>
-    : sme_int_outer_product_inst<opc{2}, opc{1}, opc{0}, 0b1, TileOp64, ZPR16,
-                                 mnemonic> {
-  bits<3> ZAda;
-  let Inst{2-0} = ZAda;
+multiclass sme_int_outer_product_i64<bits<3> opc, string mnemonic,
+                                     SDPatternOperator op> {
+  def NAME : sme_int_outer_product_inst<opc{2}, opc{1}, opc{0}, 0b1, TileOp64,
+                                        ZPR16, mnemonic> {
+    bits<3> ZAda;
+    let Inst{2-0} = ZAda;
+  }
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16>;
+
+  def : Pat<(op imm0_7:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
+                (nxv8i16 ZPR16:$zn), (nxv8i16 ZPR16:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_7:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 class sme_outer_product_widening_inst<bit op, bit S, string mnemonic>
@@ -131,12 +169,24 @@ class sme_outer_product_widening_inst<bit op, bit S, string mnemonic>
   let Constraints = "$ZAda = $_ZAda";
 }
 
-multiclass sme_bf16_outer_product<bit S, string mnemonic> {
-  def : sme_outer_product_widening_inst<0b0, S, mnemonic>;
+multiclass sme_bf16_outer_product<bit S, string mnemonic, SDPatternOperator op> {
+  def NAME : sme_outer_product_widening_inst<0b0, S, mnemonic>;
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16>;
+
+  def : Pat<(op imm0_3:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
+                (nxv8bf16 ZPR16:$zn), (nxv8bf16 ZPR16:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
-multiclass sme_f16_outer_product<bit S, string mnemonic> {
-  def : sme_outer_product_widening_inst<0b1, S, mnemonic>;
+multiclass sme_f16_outer_product<bit S, string mnemonic, SDPatternOperator op> {
+  def NAME : sme_outer_product_widening_inst<0b1, S, mnemonic>;
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16>;
+
+  def : Pat<(op imm0_3:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
+                (nxv8f16 ZPR16:$zn), (nxv8f16 ZPR16:$zm)),
+            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 //===----------------------------------------------------------------------===//
