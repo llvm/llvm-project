@@ -581,12 +581,11 @@ namespace ZeroInitialization {
   }
 
   void testArrayNew() {
-    // FIXME: Pending proper implementation of constructors for 'new[]'.
     raw_pair *p = new raw_pair[2]();
-    clang_analyzer_eval(p[0].p1 == 0); // expected-warning{{UNKNOWN}}
-    clang_analyzer_eval(p[0].p2 == 0); // expected-warning{{UNKNOWN}}
-    clang_analyzer_eval(p[1].p1 == 0); // expected-warning{{UNKNOWN}}
-    clang_analyzer_eval(p[1].p2 == 0); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(p[0].p1 == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(p[0].p2 == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(p[1].p1 == 0); // expected-warning{{TRUE}}
+    clang_analyzer_eval(p[1].p2 == 0); // expected-warning{{TRUE}}
   }
 
   struct initializing_pair {
