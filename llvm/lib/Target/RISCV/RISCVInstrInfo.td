@@ -83,6 +83,10 @@ def riscv_read_cycle_wide : SDNode<"RISCVISD::READ_CYCLE_WIDE",
                                    SDT_RISCVReadCycleWide,
                                    [SDNPHasChain, SDNPSideEffect]>;
 
+def riscv_add_lo : SDNode<"RISCVISD::ADD_LO", SDTIntBinOp>;
+def riscv_hi : SDNode<"RISCVISD::HI", SDTIntUnaryOp>;
+def riscv_lla : SDNode<"RISCVISD::LLA", SDTIntUnaryOp>;
+
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -1207,6 +1211,22 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 def : Pat<(FrameAddrRegImm GPR:$rs1, simm12:$imm12),
           (ADDI GPR:$rs1, simm12:$imm12)>;
 
+// HI and ADD_LO address nodes.
+
+def : Pat<(riscv_hi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
+def : Pat<(riscv_hi tblockaddress:$in), (LUI tblockaddress:$in)>;
+def : Pat<(riscv_hi tjumptable:$in), (LUI tjumptable:$in)>;
+def : Pat<(riscv_hi tconstpool:$in), (LUI tconstpool:$in)>;
+
+def : Pat<(riscv_add_lo GPR:$hi, tglobaladdr:$lo),
+          (ADDI GPR:$hi, tglobaladdr:$lo)>;
+def : Pat<(riscv_add_lo GPR:$hi, tblockaddress:$lo),
+          (ADDI GPR:$hi, tblockaddress:$lo)>;
+def : Pat<(riscv_add_lo GPR:$hi, tjumptable:$lo),
+          (ADDI GPR:$hi, tjumptable:$lo)>;
+def : Pat<(riscv_add_lo GPR:$hi, tconstpool:$lo),
+          (ADDI GPR:$hi, tconstpool:$lo)>;
+
 /// Setcc
 
 def : PatGprGpr<setlt, SLT>;
@@ -1356,6 +1376,11 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                        "lla", "$dst, $src">;
+
+def : Pat<(riscv_lla tglobaladdr:$in), (PseudoLLA tglobaladdr:$in)>;
+def : Pat<(riscv_lla tblockaddress:$in), (PseudoLLA tblockaddress:$in)>;
+def : Pat<(riscv_lla tjumptable:$in), (PseudoLLA tjumptable:$in)>;
+def : Pat<(riscv_lla tconstpool:$in), (PseudoLLA tconstpool:$in)>;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
