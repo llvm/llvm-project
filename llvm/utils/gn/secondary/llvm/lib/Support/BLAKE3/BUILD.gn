@@ -1,5 +1,6 @@
 static_library("BLAKE3") {
   output_name = "LLVMSupportBlake3"
+  deps = [ "//llvm/include/llvm/Config:llvm-config" ]
   sources = [
     "blake3.c",
     "blake3_dispatch.c",
