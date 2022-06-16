@@ -122,13 +122,13 @@ typedef LLVMOrcCSymbolFlagsMapPair *LLVMOrcCSymbolFlagsMapPairs;
 typedef struct {
   LLVMOrcSymbolStringPoolEntryRef Name;
   LLVMJITEvaluatedSymbol Sym;
-} LLVMJITCSymbolMapPair;
+} LLVMOrcCSymbolMapPair;
 
 /**
  * Represents a list of (SymbolStringPtr, JITEvaluatedSymbol) pairs that can be
  * used to construct a SymbolMap.
  */
-typedef LLVMJITCSymbolMapPair *LLVMOrcCSymbolMapPairs;
+typedef LLVMOrcCSymbolMapPair *LLVMOrcCSymbolMapPairs;
 
 /**
  * Represents a SymbolAliasMapEntry

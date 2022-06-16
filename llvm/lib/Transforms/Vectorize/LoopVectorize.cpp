@@ -515,8 +515,8 @@ public:
   void setDebugLocFromInst(const Value *V,
                            Optional<IRBuilderBase *> CustomBuilder = None);
 
-  /// Fix the non-induction PHIs in the OrigPHIsToFix vector.
-  void fixNonInductionPHIs(VPTransformState &State);
+  /// Fix the non-induction PHIs in \p Plan.
+  void fixNonInductionPHIs(VPlan &Plan, VPTransformState &State);
 
   /// Returns true if the reordering of FP operations is not allowed, but we are
   /// able to vectorize with strict in-order reductions for the given RdxDesc.
@@ -740,10 +740,6 @@ protected:
   // Holds the end values for each induction variable. We save the end values
   // so we can later fix-up the external users of the induction variables.
   DenseMap<PHINode *, Value *> IVEndValues;
-
-  // Vector of original scalar PHIs whose corresponding widened PHIs need to be
-  // fixed up at the end of vector code generation.
-  SmallVector<PHINode *, 8> OrigPHIsToFix;
 
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
@@ -1657,15 +1653,10 @@ private:
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
   /// This is a helper function of computeFeasibleMaxVF.
-  /// FIXME: MaxSafeVF is currently passed by reference to avoid some obscure
-  /// issue that occurred on one of the buildbots which cannot be reproduced
-  /// without having access to the properietary compiler (see comments on
-  /// D98509). The issue is currently under investigation and this workaround
-  /// will be removed as soon as possible.
   ElementCount getMaximizedVFForTarget(unsigned ConstTripCount,
                                        unsigned SmallestType,
                                        unsigned WidestType,
-                                       const ElementCount &MaxSafeVF,
+                                       ElementCount MaxSafeVF,
                                        bool FoldTailByMasking);
 
   /// \return the maximum legal scalable VF, based on the safe max number
@@ -3671,11 +3662,8 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
     truncateToMinimalBitwidths(State);
 
   // Fix widened non-induction PHIs by setting up the PHI operands.
-  if (OrigPHIsToFix.size()) {
-    assert(EnableVPlanNativePath &&
-           "Unexpected non-induction PHIs for fixup in non VPlan-native path");
-    fixNonInductionPHIs(State);
-  }
+  if (EnableVPlanNativePath)
+    fixNonInductionPHIs(Plan, State);
 
   // At this point every instruction in the original loop is widened to a
   // vector form. Now we need to fix the recurrences in the loop. These PHI
@@ -4171,17 +4159,23 @@ void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
   } while (Changed);
 }
 
-void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
-  for (PHINode *OrigPhi : OrigPHIsToFix) {
-    VPWidenPHIRecipe *VPPhi =
-        cast<VPWidenPHIRecipe>(State.Plan->getVPValue(OrigPhi));
-    PHINode *NewPhi = cast<PHINode>(State.get(VPPhi, 0));
-    // Make sure the builder has a valid insert point.
-    Builder.SetInsertPoint(NewPhi);
-    for (unsigned i = 0; i < VPPhi->getNumOperands(); ++i) {
-      VPValue *Inc = VPPhi->getIncomingValue(i);
-      VPBasicBlock *VPBB = VPPhi->getIncomingBlock(i);
-      NewPhi->addIncoming(State.get(Inc, 0), State.CFG.VPBB2IRBB[VPBB]);
+void InnerLoopVectorizer::fixNonInductionPHIs(VPlan &Plan,
+                                              VPTransformState &State) {
+  auto Iter = depth_first(
+      VPBlockRecursiveTraversalWrapper<VPBlockBase *>(Plan.getEntry()));
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
+    for (VPRecipeBase &P : VPBB->phis()) {
+      VPWidenPHIRecipe *VPPhi = dyn_cast<VPWidenPHIRecipe>(&P);
+      if (!VPPhi)
+        continue;
+      PHINode *NewPhi = cast<PHINode>(State.get(VPPhi, 0));
+      // Make sure the builder has a valid insert point.
+      Builder.SetInsertPoint(NewPhi);
+      for (unsigned i = 0; i < VPPhi->getNumOperands(); ++i) {
+        VPValue *Inc = VPPhi->getIncomingValue(i);
+        VPBasicBlock *VPBB = VPPhi->getIncomingBlock(i);
+        NewPhi->addIncoming(State.get(Inc, 0), State.CFG.VPBB2IRBB[VPBB]);
+      }
     }
   }
 }
@@ -4205,7 +4199,6 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
                     : VectorType::get(PN->getType(), State.VF);
   Value *VecPhi = Builder.CreatePHI(VecTy, PN->getNumOperands(), "vec.phi");
   State.set(PhiR, VecPhi, 0);
-  OrigPHIsToFix.push_back(cast<PHINode>(PN));
 }
 
 /// A helper function for checking whether an integer division-related
@@ -5166,7 +5159,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
 ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     unsigned ConstTripCount, unsigned SmallestType, unsigned WidestType,
-    const ElementCount &MaxSafeVF, bool FoldTailByMasking) {
+    ElementCount MaxSafeVF, bool FoldTailByMasking) {
   bool ComputeScalableMaxVF = MaxSafeVF.isScalable();
   TypeSize WidestRegister = TTI.getRegisterBitWidth(
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector

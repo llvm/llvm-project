@@ -67,7 +67,8 @@ struct M128 {
   using T = char __attribute__((__vector_size__(SIZE)));
   static uint16_t mask(T value) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm_movemask_epi8(__llvm_libc::bit_cast<__m128i>(value));
+    return static_cast<uint16_t>(
+        _mm_movemask_epi8(__llvm_libc::bit_cast<__m128i>(value)));
   }
   static uint16_t not_equal_mask(T a, T b) { return mask(a != b); }
   static T load(const char *ptr) {

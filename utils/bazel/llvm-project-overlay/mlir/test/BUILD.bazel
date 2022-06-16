@@ -294,6 +294,28 @@ cc_library(
 )
 
 cc_library(
+    name = "TestTilingInterface",
+    srcs = glob(["lib/Interfaces/TilingInterface/*.cpp"]),
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        "//llvm:Support",
+        "//mlir:Affine",
+        "//mlir:ArithmeticDialect",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:LinalgDialect",
+        "//mlir:LinalgTransforms",
+        "//mlir:MemRefDialect",
+        "//mlir:Pass",
+        "//mlir:SCFDialect",
+        "//mlir:SCFTransforms",
+        "//mlir:TensorDialect",
+        "//mlir:TilingInterface",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_library(
     name = "TestPass",
     srcs = glob(["lib/Pass/*.cpp"]),
     deps = [
