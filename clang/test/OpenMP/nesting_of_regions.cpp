@@ -69,6 +69,11 @@ void foo() {
     bar();
   }
 #pragma omp parallel
+#pragma omp parallel masked
+  {
+    bar();
+  }
+#pragma omp parallel
 #pragma omp task
   {
     bar();
@@ -315,6 +320,13 @@ void foo() {
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
 #pragma omp parallel master // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+    {
+      bar();
+    }
+  }
+#pragma omp simd
+  for (int i = 0; i < 10; ++i) {
+#pragma omp parallel masked // expected-error {{OpenMP constructs may not be nested inside a simd region}}
     {
       bar();
     }
@@ -595,6 +607,13 @@ void foo() {
   }
 #pragma omp for
   for (int i = 0; i < 10; ++i) {
+#pragma omp parallel masked
+    {
+      bar();
+    }
+  }
+#pragma omp for
+  for (int i = 0; i < 10; ++i) {
 #pragma omp parallel sections
     {
       bar();
@@ -853,6 +872,13 @@ void foo() {
   }
 #pragma omp for simd
   for (int i = 0; i < 10; ++i) {
+#pragma omp parallel masked // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+    {
+      bar();
+    }
+  }
+#pragma omp for simd
+  for (int i = 0; i < 10; ++i) {
 #pragma omp parallel sections // expected-error {{OpenMP constructs may not be nested inside a simd region}}
     {
       bar();
@@ -1095,6 +1121,13 @@ void foo() {
 #pragma omp sections
   {
 #pragma omp parallel master
+    {
+      bar();
+    }
+  }
+#pragma omp sections
+  {
+#pragma omp parallel masked
     {
       bar();
     }
@@ -1382,6 +1415,16 @@ void foo() {
 #pragma omp section
     {
 #pragma omp parallel master
+      bar();
+#pragma omp critical
+      bar();
+    }
+  }
+#pragma omp sections
+  {
+#pragma omp section
+    {
+#pragma omp parallel masked
       bar();
 #pragma omp critical
       bar();
@@ -1712,6 +1755,13 @@ void foo() {
 #pragma omp single
   {
 #pragma omp parallel master
+    {
+      bar();
+    }
+  }
+#pragma omp single
+  {
+#pragma omp parallel masked
     {
       bar();
     }
@@ -2293,6 +2343,13 @@ void foo() {
 #pragma omp critical
   {
 #pragma omp parallel master
+    {
+      bar();
+    }
+  }
+#pragma omp critical
+  {
+#pragma omp parallel masked
     {
       bar();
     }
@@ -3327,6 +3384,285 @@ void foo() {
       ;
   }
 
+// PARALLEL MASKED DIRECTIVE
+#pragma omp parallel masked
+  {
+#pragma omp for // expected-error {{region cannot be closely nested inside 'parallel masked' region; perhaps you forget to enclose 'omp for' directive into a parallel region?}}
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel masked
+  {
+#pragma omp simd
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel masked
+  {
+#pragma omp for simd // expected-error {{region cannot be closely nested inside 'parallel masked' region; perhaps you forget to enclose 'omp for simd' directive into a parallel region?}}
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel masked
+  {
+#pragma omp parallel
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel masked
+  {
+#pragma omp single // expected-error {{region cannot be closely nested inside 'parallel masked' region; perhaps you forget to enclose 'omp single' directive into a parallel region?}}
+    {
+      bar();
+    }
+  }
+#pragma omp parallel masked
+  {
+#pragma omp master // OK, though second 'master' is redundant
+    {
+      bar();
+    }
+  }
+#pragma omp parallel masked
+  {
+#pragma omp critical
+    {
+      bar();
+    }
+  }
+#pragma omp parallel masked
+  {
+#pragma omp sections // expected-error {{region cannot be closely nested inside 'parallel masked' region; perhaps you forget to enclose 'omp sections' directive into a parallel region?}}
+    {
+      bar();
+    }
+  }
+#pragma omp parallel master
+  {
+#pragma omp parallel
+    {
+#pragma omp parallel master // OK
+      {
+        bar();
+      }
+#pragma omp for // OK
+      for (int i = 0; i < 10; ++i)
+        ;
+#pragma omp for simd // OK
+      for (int i = 0; i < 10; ++i)
+        ;
+#pragma omp sections // OK
+      {
+        bar();
+      }
+    }
+  }
+#pragma omp parallel master
+  {
+#pragma omp parallel master // OK
+      {
+        bar();
+      }
+#pragma omp parallel
+    {
+#pragma omp for // OK
+      for (int i = 0; i < 10; ++i)
+        ;
+#pragma omp for simd // OK
+      for (int i = 0; i < 10; ++i)
+        ;
+#pragma omp sections // OK
+      {
+        bar();
+      }
+    }
+  }
+#pragma omp parallel master
+  {
+#pragma omp parallel for
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp parallel for simd
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp parallel sections
+    {
+      bar();
+    }
+  }
+#pragma omp parallel master
+  {
+#pragma omp task
+    {
+      bar();
+    }
+  }
+#pragma omp parallel master
+  {
+#pragma omp taskyield
+    bar();
+  }
+#pragma omp parallel master
+  {
+#pragma omp barrier // expected-error {{region cannot be closely nested inside 'parallel master' region}}
+    bar();
+  }
+#pragma omp parallel master
+  {
+#pragma omp scan // expected-error {{region cannot be closely nested inside 'parallel master' region}}
+    bar();
+  }
+#pragma omp parallel master
+  {
+#pragma omp taskwait
+    bar();
+  }
+#pragma omp parallel master
+  {
+#pragma omp flush
+    bar();
+  }
+#pragma omp parallel master
+  {
+#pragma omp ordered // expected-error {{region cannot be closely nested inside 'parallel master' region; perhaps you forget to enclose 'omp ordered' directive into a for or a parallel for region with 'ordered' clause?}}
+    bar();
+  }
+#pragma omp parallel master
+  {
+#pragma omp atomic
+    ++a;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target
+    ++a;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target parallel
+    ++a;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target parallel for
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target enter data map(to: a)
+    ++a;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target exit data map(from: a)
+    ++a;
+  }
+#pragma omp parallel master
+  {
+#pragma omp teams // expected-error {{region cannot be closely nested inside 'parallel master' region; perhaps you forget to enclose 'omp teams' directive into a target region?}}
+    ++a;
+  }
+#pragma omp parallel master
+  {
+#pragma omp taskloop
+  for (int i = 0; i < 10; ++i)
+    ++a;
+  }
+#pragma omp parallel master
+  {
+#pragma omp distribute // expected-error {{region cannot be closely nested inside 'parallel master' region; perhaps you forget to enclose 'omp distribute' directive into a teams region?}}
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target update to(a)
+    bar();
+  }
+#pragma omp parallel master
+  {
+#pragma omp distribute parallel for // expected-error {{region cannot be closely nested inside 'parallel master' region; perhaps you forget to enclose 'omp distribute parallel for' directive into a teams region?}}
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp distribute parallel for simd // expected-error {{region cannot be closely nested inside 'parallel master' region; perhaps you forget to enclose 'omp distribute parallel for simd' directive into a teams region?}}
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp distribute simd // expected-error {{region cannot be closely nested inside 'parallel master' region; perhaps you forget to enclose 'omp distribute simd' directive into a teams region?}}
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target simd // OK
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp teams distribute // expected-error {{region cannot be closely nested inside 'parallel master' region; perhaps you forget to enclose 'omp teams distribute' directive into a target region?}}
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp teams distribute simd // expected-error {{region cannot be closely nested inside 'parallel master' region; perhaps you forget to enclose 'omp teams distribute simd' directive into a target region?}}
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp teams distribute parallel for simd // expected-error {{region cannot be closely nested inside 'parallel master' region; perhaps you forget to enclose 'omp teams distribute parallel for simd' directive into a target region?}}
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp teams distribute parallel for // expected-error {{region cannot be closely nested inside 'parallel master' region; perhaps you forget to enclose 'omp teams distribute parallel for' directive into a target region?}}
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target teams // OK
+    a++;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target teams distribute // OK
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target teams distribute parallel for // OK
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target teams distribute parallel for simd // OK
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
+#pragma omp parallel master
+  {
+#pragma omp target teams distribute simd // OK
+    for (int i = 0; i < 10; ++i)
+      ;
+  }
 // PARALLEL SECTIONS DIRECTIVE
 #pragma omp parallel sections
   {
@@ -4162,6 +4498,15 @@ void foo() {
   // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
   // expected-note@+1 {{expected an expression statement}}
   {
+#pragma omp parallel masked // expected-error {{OpenMP constructs may not be nested inside an atomic region}}
+    {
+      bar();
+    }
+  }
+#pragma omp atomic
+  // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an lvalue expression with scalar type}}
+  // expected-note@+1 {{expected an expression statement}}
+  {
 #pragma omp critical // expected-error {{OpenMP constructs may not be nested inside an atomic region}}
     {
       bar();
@@ -4691,6 +5036,11 @@ void foo() {
   }
 #pragma omp target
 #pragma omp parallel master
+  {
+    bar();
+  }
+#pragma omp target
+#pragma omp parallel masked
   {
     bar();
   }
@@ -9590,6 +9940,8 @@ void foo() {
 #pragma omp master
   bar();
 #pragma omp parallel master
+  bar();
+#pragma omp parallel masked
   bar();
 #pragma omp parallel
 #pragma omp critical

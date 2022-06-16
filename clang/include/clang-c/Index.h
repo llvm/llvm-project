@@ -2626,7 +2626,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPTargetParallelGenericLoopDirective = 299,
 
-  CXCursor_LastStmt = CXCursor_OMPTargetParallelGenericLoopDirective,
+  /** OpenMP parallel masked directive.
+   */
+  CXCursor_OMPParallelMaskedDirective = 300,
+
+  CXCursor_LastStmt = CXCursor_OMPParallelMaskedDirective,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -2634,7 +2638,7 @@ enum CXCursorKind {
    * The translation unit cursor exists primarily to act as the root
    * cursor for traversing the contents of a translation unit.
    */
-  CXCursor_TranslationUnit = 300,
+  CXCursor_TranslationUnit = 350,
 
   /* Attributes */
   CXCursor_FirstAttr = 400,

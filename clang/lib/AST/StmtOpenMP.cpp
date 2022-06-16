@@ -682,6 +682,22 @@ OMPParallelMasterDirective::CreateEmpty(const ASTContext &C,
       C, NumClauses, /*HasAssociatedStmt=*/true, /*NumChildren=*/1);
 }
 
+OMPParallelMaskedDirective *OMPParallelMaskedDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt, Expr *TaskRedRef) {
+  auto *Dir = createDirective<OMPParallelMaskedDirective>(
+      C, Clauses, AssociatedStmt, /*NumChildren=*/1, StartLoc, EndLoc);
+  Dir->setTaskReductionRefExpr(TaskRedRef);
+  return Dir;
+}
+
+OMPParallelMaskedDirective *
+OMPParallelMaskedDirective::CreateEmpty(const ASTContext &C,
+                                        unsigned NumClauses, EmptyShell) {
+  return createEmptyDirective<OMPParallelMaskedDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, /*NumChildren=*/1);
+}
+
 OMPParallelSectionsDirective *OMPParallelSectionsDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt, Expr *TaskRedRef,
