@@ -18,14 +18,14 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRBufferizationPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRBufferization
+  MLIRBufferizationDialect
   MLIRControlFlowInterfaces
-  MLIRFunc
+  MLIRFuncDialect
   MLIRInferTypeOpInterface
   MLIRIR
-  MLIRMemRef
+  MLIRMemRefDialect
   MLIRPass
-  MLIRTensor
+  MLIRTensorDialect
   MLIRTransforms
 )
 
