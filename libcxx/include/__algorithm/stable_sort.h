@@ -210,7 +210,10 @@ stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compar
     unique_ptr<value_type, __return_temporary_buffer> __h;
     if (__len > static_cast<difference_type>(__stable_sort_switch<value_type>::value))
     {
+// TODO: Remove the use of std::get_temporary_buffer
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
         __buf = _VSTD::get_temporary_buffer<value_type>(__len);
+_LIBCPP_SUPPRESS_DEPRECATED_POP
         __h.reset(__buf.first);
     }
     typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
