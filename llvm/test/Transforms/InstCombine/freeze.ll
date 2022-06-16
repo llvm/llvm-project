@@ -743,11 +743,11 @@ exit:                                             ; preds = %loop
 define void @fold_phi_drop_flags(i32 %init, i32 %n) {
 ; CHECK-LABEL: @fold_phi_drop_flags(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT_FR:%.*]] = freeze i32 [[INIT:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_FR:%.*]] = freeze i32 [[I]]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I_FR]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT_FR]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -824,12 +824,12 @@ exit:                                             ; preds = %loop
 define void @fold_phi_multiple_insts(i32 %init, i32 %n) {
 ; CHECK-LABEL: @fold_phi_multiple_insts(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT_FR:%.*]] = freeze i32 [[INIT:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_FR:%.*]] = freeze i32 [[I]]
-; CHECK-NEXT:    [[I_SQ:%.*]] = mul nuw nsw i32 [[I_FR]], [[I_FR]]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I_SQ]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT_FR]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_SQ:%.*]] = mul i32 [[I]], [[I]]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I_SQ]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -853,15 +853,15 @@ exit:                                             ; preds = %loop
 define void @fold_phi_multiple_back_edges(i32 %init, i32 %n) {
 ; CHECK-LABEL: @fold_phi_multiple_back_edges(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT_FR:%.*]] = freeze i32 [[INIT:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ], [ [[I_NEXT2:%.*]], [[LOOP_LATCH2:%.*]] ]
-; CHECK-NEXT:    [[I_FR:%.*]] = freeze i32 [[I]]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I_FR]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT_FR]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ], [ [[I_NEXT2:%.*]], [[LOOP_LATCH2:%.*]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[LOOP_LATCH2]]
 ; CHECK:       loop.latch2:
-; CHECK-NEXT:    [[I_NEXT2]] = add nuw nsw i32 [[I_FR]], 2
+; CHECK-NEXT:    [[I_NEXT2]] = add i32 [[I]], 2
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -961,8 +961,7 @@ define void @fold_phi_invoke_noundef_start_value(i32 %n) personality i8* undef {
 ; CHECK-NEXT:    to label [[LOOP:%.*]] unwind label [[UNWIND:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_FR:%.*]] = freeze i32 [[I]]
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I_FR]], 1
+; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       unwind:
