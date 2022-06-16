@@ -100,13 +100,15 @@ bool fromJSON(const json::Value &value, TraceGetStateResponse &packet,
   ObjectMapper o(value, path);
   return o && o.map("tracedThreads", packet.traced_threads) &&
          o.map("processBinaryData", packet.process_binary_data) &&
-         o.map("cores", packet.cores);
+         o.map("cores", packet.cores) &&
+         o.mapOptional("warnings", packet.warnings);
 }
 
 json::Value toJSON(const TraceGetStateResponse &packet) {
   return json::Value(Object{{"tracedThreads", packet.traced_threads},
                             {"processBinaryData", packet.process_binary_data},
-                            {"cores", packet.cores}});
+                            {"cores", packet.cores},
+                            {"warnings", packet.warnings}});
 }
 
 bool fromJSON(const json::Value &value, TraceCoreState &packet,

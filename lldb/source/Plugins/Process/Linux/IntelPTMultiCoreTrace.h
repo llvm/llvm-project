@@ -72,7 +72,7 @@ public:
 
   void ProcessWillResume() override;
 
-  TraceGetStateResponse GetState() override;
+  TraceIntelPTGetStateResponse GetState() override;
 
   bool TracesThread(lldb::tid_t tid) const override;
 
