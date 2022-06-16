@@ -82,6 +82,26 @@ private:
   void *m_baton;
 };
 
+class RotatingLogHandler : public LogHandler {
+public:
+  RotatingLogHandler(size_t size);
+
+  void Emit(llvm::StringRef message) override;
+  void Dump(llvm::raw_ostream &stream) const;
+
+  static std::shared_ptr<RotatingLogHandler> Create(size_t size);
+
+private:
+  size_t NormalizeIndex(size_t i) const;
+  size_t GetNumMessages() const;
+  size_t GetFirstMessageIndex() const;
+
+  std::unique_ptr<std::string[]> m_messages;
+  const size_t m_size = 0;
+  size_t m_next_index = 0;
+  size_t m_total_count = 0;
+};
+
 class Log final {
 public:
   /// The underlying type of all log channel enums. Declare them as:

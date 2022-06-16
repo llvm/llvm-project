@@ -365,3 +365,37 @@ std::shared_ptr<CallbackLogHandler>
 CallbackLogHandler::Create(lldb::LogOutputCallback callback, void *baton) {
   return std::make_shared<CallbackLogHandler>(callback, baton);
 }
+
+RotatingLogHandler::RotatingLogHandler(size_t size)
+    : m_messages(std::make_unique<std::string[]>(size)), m_size(size) {}
+
+void RotatingLogHandler::Emit(llvm::StringRef message) {
+  ++m_total_count;
+  const size_t index = m_next_index;
+  m_next_index = NormalizeIndex(index + 1);
+  m_messages[index] = message.str();
+}
+
+size_t RotatingLogHandler::NormalizeIndex(size_t i) const { return i % m_size; }
+
+size_t RotatingLogHandler::GetNumMessages() const {
+  return m_total_count < m_size ? m_total_count : m_size;
+}
+
+size_t RotatingLogHandler::GetFirstMessageIndex() const {
+  return m_total_count < m_size ? 0 : m_next_index;
+}
+
+void RotatingLogHandler::Dump(llvm::raw_ostream &stream) const {
+  const size_t start_idx = GetFirstMessageIndex();
+  const size_t stop_idx = start_idx + GetNumMessages();
+  for (size_t i = start_idx; i < stop_idx; ++i) {
+    const size_t idx = NormalizeIndex(i);
+    stream << m_messages[idx];
+  }
+  stream.flush();
+}
+
+std::shared_ptr<RotatingLogHandler> RotatingLogHandler::Create(size_t size) {
+  return std::make_shared<RotatingLogHandler>(size);
+}
