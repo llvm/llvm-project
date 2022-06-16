@@ -562,15 +562,6 @@ public:
       if (SEW == Require.SEW)
         return true;
 
-    // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
-    // So it's compatible when we could make sure that both VL be the same
-    // situation.
-    if (isScalarMoveInstr(MI) && Require.hasAVLImm() &&
-        ((hasNonZeroAVL() && Require.hasNonZeroAVL()) ||
-         (hasZeroAVL() && Require.hasZeroAVL())) &&
-        hasSameSEW(Require) && hasSamePolicy(Require))
-      return true;
-
     // The AVL must match.
     if (!hasSameAVL(Require))
       return false;
@@ -991,6 +982,22 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
 
   if (CurInfo.isCompatible(MI, Require))
     return false;
+
+  // For vmv.s.x and vfmv.s.f, there is only two behaviors, VL = 0 and VL > 0.
+  // So it's compatible when we could make sure that both VL be the same
+  // situation.  Additionally, if writing to an implicit_def operand, we
+  // don't need to preserve any other bits and are thus compatible with any
+  // larger etype, and can disregard policy bits.
+  if (isScalarMoveInstr(MI) &&
+      ((CurInfo.hasNonZeroAVL() && Require.hasNonZeroAVL()) ||
+       (CurInfo.hasZeroAVL() && Require.hasZeroAVL()))) {
+    auto *VRegDef = MRI->getVRegDef(MI.getOperand(1).getReg());
+    if (VRegDef && VRegDef->isImplicitDef() &&
+        CurInfo.getSEW() >= Require.getSEW())
+      return false;
+    if (CurInfo.hasSameSEW(Require) && CurInfo.hasSamePolicy(Require))
+      return false;
+  }
 
   // We didn't find a compatible value. If our AVL is a virtual register,
   // it might be defined by a VSET(I)VLI. If it has the same VLMAX we need
