@@ -432,7 +432,9 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   llvm::Optional<unsigned> SectionAddressData = GetMCUSectionAddressData(CPU);
 
   // Compute the linker program path, and use GNU "avr-ld" as default.
-  std::string Linker = getToolChain().GetLinkerPath(nullptr);
+  const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
+  std::string Linker = A ? getToolChain().GetLinkerPath(nullptr)
+                         : getToolChain().GetProgramPath(getShortName());
 
   ArgStringList CmdArgs;
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
