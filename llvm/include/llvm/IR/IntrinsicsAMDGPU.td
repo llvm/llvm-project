@@ -1954,6 +1954,49 @@ def int_amdgcn_fdot2 :
     [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<3>>]
   >;
 
+// f16 %r = llvm.amdgcn.fdot2.f16.f16(v2f16 %a, v2f16 %b, f16 %c)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %c
+def int_amdgcn_fdot2_f16_f16 :
+  GCCBuiltin<"__builtin_amdgcn_fdot2_f16_f16">,
+  Intrinsic<
+    [llvm_half_ty],  // %r
+    [
+      llvm_v2f16_ty, // %a
+      llvm_v2f16_ty, // %b
+      llvm_half_ty   // %c
+    ],
+    [IntrNoMem, IntrSpeculatable, IntrWillReturn]
+  >;
+
+// bf16 %r = llvm.amdgcn.fdot2.bf16.bf16(v2bf16 %a, v2bf16 %b, bf16 %c)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %c
+def int_amdgcn_fdot2_bf16_bf16 :
+  GCCBuiltin<"__builtin_amdgcn_fdot2_bf16_bf16">,
+  Intrinsic<
+    [llvm_i16_ty],   // %r
+    [
+      llvm_v2i16_ty, // %a
+      llvm_v2i16_ty, // %b
+      llvm_i16_ty    // %c
+    ],
+    [IntrNoMem, IntrSpeculatable, IntrWillReturn]
+  >;
+
+// f32 %r = llvm.amdgcn.fdot2.f32.bf16(v2bf16 %a, v2bf16 %b, f32 %c, i1 %clamp)
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %c
+def int_amdgcn_fdot2_f32_bf16 :
+  GCCBuiltin<"__builtin_amdgcn_fdot2_f32_bf16">,
+  Intrinsic<
+    [llvm_float_ty], // %r
+    [
+      llvm_v2i16_ty, // %a
+      llvm_v2i16_ty, // %b
+      llvm_float_ty, // %c
+      llvm_i1_ty     // %clamp
+    ],
+    [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<3>>]
+  >;
+
 // i32 %r = llvm.amdgcn.sdot2(v2i16 %a, v2i16 %b, i32 %c, i1 %clamp)
 //   %r = %a[0] * %b[0] + %a[1] * %b[1] + %c
 def int_amdgcn_sdot2 :
@@ -2014,6 +2057,27 @@ def int_amdgcn_udot4 :
     [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<3>>]
   >;
 
+// i32 %r = llvm.amdgcn.sudot4(i1 %a_sign, v4i8 (as i32) %a, i1 %b_sign, v4i8 (as i32) %b, i32 %c, i1 %clamp)
+// Treat input as signed (_sign = 1) or unsigned (_sign = 0).
+// a[i in 0. . . 3] = (%a_sign ? a.i8[i] : promoteToSigned(a.u8[i]));
+// b[i in 0. . . 3] = (%b_sign ? b.i8[i] : promoteToSigned(b.u8[i]));
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %a[2] * %b[2] + %a[3] * %b[3] + %c
+def int_amdgcn_sudot4 :
+  GCCBuiltin<"__builtin_amdgcn_sudot4">,
+  Intrinsic<
+    [llvm_i32_ty], // %r
+    [
+      llvm_i1_ty,  // %a_sign
+      llvm_i32_ty, // %a
+      llvm_i1_ty,  // %b_sign
+      llvm_i32_ty, // %b
+      llvm_i32_ty, // %c
+      llvm_i1_ty   // %clamp
+    ],
+    [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+     ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]
+  >;
+
 // i32 %r = llvm.amdgcn.sdot8(v8i4 (as i32) %a, v8i4 (as i32) %b, i32 %c, i1 %clamp)
 //   %r = %a[0] * %b[0] + %a[1] * %b[1] + %a[2] * %b[2] + %a[3] * %b[3] +
 //        %a[4] * %b[4] + %a[5] * %b[5] + %a[6] * %b[6] + %a[7] * %b[7] + %c
@@ -2044,6 +2108,28 @@ def int_amdgcn_udot8 :
       llvm_i1_ty   // %clamp
     ],
     [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<3>>]
+  >;
+
+// i32 %r = llvm.amdgcn.sudot8(i1 %a_sign, v8i4 (as i32) %a, i1 %b_sign, v8i4 (as i32) %b, i32 %c, i1 %clamp)
+// Treat input as signed (_sign = 1) or unsigned (_sign = 0).
+// a[i in 0. . . 7] = (%a_sign ? a.i4[i] : promoteToSigned(a.u4[i]));
+// b[i in 0. . . 7] = (%b_sign ? b.i4[i] : promoteToSigned(b.u4[i]));
+//   %r = %a[0] * %b[0] + %a[1] * %b[1] + %a[2] * %b[2] + %a[3] * %b[3] +
+//        %a[4] * %b[4] + %a[5] * %b[5] + %a[6] * %b[6] + %a[7] * %b[7] + %c
+  def int_amdgcn_sudot8 :
+  GCCBuiltin<"__builtin_amdgcn_sudot8">,
+  Intrinsic<
+    [llvm_i32_ty], // %r
+    [
+      llvm_i1_ty,  // %a_sign
+      llvm_i32_ty, // %a
+      llvm_i1_ty,  // %b_sign
+      llvm_i32_ty, // %b
+      llvm_i32_ty, // %c
+      llvm_i1_ty   // %clamp
+    ],
+    [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+     ImmArg<ArgIndex<0>>,  ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]
   >;
 
 //===----------------------------------------------------------------------===//
