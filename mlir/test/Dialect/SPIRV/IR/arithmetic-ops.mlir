@@ -151,6 +151,58 @@ func.func @isub_scalar(%arg: i32) -> i32 {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spv.ISubBorrow
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @isub_borrow_scalar
+func.func @isub_borrow_scalar(%arg: i32) -> !spv.struct<(i32, i32)> {
+  // CHECK: spv.ISubBorrow %{{.+}}, %{{.+}} : !spv.struct<(i32, i32)>
+  %0 = spv.ISubBorrow %arg, %arg : !spv.struct<(i32, i32)>
+  return %0 : !spv.struct<(i32, i32)>
+}
+
+// CHECK-LABEL: @isub_borrow_vector
+func.func @isub_borrow_vector(%arg: vector<3xi32>) -> !spv.struct<(vector<3xi32>, vector<3xi32>)> {
+  // CHECK: spv.ISubBorrow %{{.+}}, %{{.+}} : !spv.struct<(vector<3xi32>, vector<3xi32>)>
+  %0 = spv.ISubBorrow %arg, %arg : !spv.struct<(vector<3xi32>, vector<3xi32>)>
+  return %0 : !spv.struct<(vector<3xi32>, vector<3xi32>)>
+}
+
+// -----
+
+func.func @isub_borrow(%arg: i32) -> !spv.struct<(i32, i32, i32)> {
+  // expected-error @+1 {{expected spv.struct type with two members}}
+  %0 = spv.ISubBorrow %arg, %arg : !spv.struct<(i32, i32, i32)>
+  return %0 : !spv.struct<(i32, i32, i32)>
+}
+
+// -----
+
+func.func @isub_borrow(%arg: i32) -> !spv.struct<(i32)> {
+  // expected-error @+1 {{expected result struct type containing two members}}
+  %0 = "spv.ISubBorrow"(%arg, %arg): (i32, i32) -> !spv.struct<(i32)>
+  return %0 : !spv.struct<(i32)>
+}
+
+// -----
+
+func.func @isub_borrow(%arg: i32) -> !spv.struct<(i32, i64)> {
+  // expected-error @+1 {{expected all operand types and struct member types are the same}}
+  %0 = "spv.ISubBorrow"(%arg, %arg): (i32, i32) -> !spv.struct<(i32, i64)>
+  return %0 : !spv.struct<(i32, i64)>
+}
+
+// -----
+
+func.func @isub_borrow(%arg: i64) -> !spv.struct<(i32, i32)> {
+  // expected-error @+1 {{expected all operand types and struct member types are the same}}
+  %0 = "spv.ISubBorrow"(%arg, %arg): (i64, i64) -> !spv.struct<(i32, i32)>
+  return %0 : !spv.struct<(i32, i32)>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spv.SDiv
 //===----------------------------------------------------------------------===//
 
