@@ -334,8 +334,9 @@ config("compiler_defaults") {
       "goma needs a sysroot: run `llvm/utils/sysroot.py make-fake --out-dir=sysroot` and add `sysroot = \"//sysroot\"` to your args.gn")
 
   if (use_ubsan) {
-    assert(is_clang && current_os == "linux",
-           "ubsan only supported on Linux/Clang")
+    assert(is_clang && (current_os == "ios" || current_os == "linux" ||
+                            current_os == "mac"),
+           "ubsan only supported on iOS/Clang, Linux/Clang, or macOS/Clang")
     cflags += [
       "-fsanitize=undefined",
       "-fno-sanitize-recover=all",
@@ -346,7 +347,7 @@ config("compiler_defaults") {
   if (use_asan) {
     assert(is_clang && (current_os == "ios" || current_os == "linux" ||
                             current_os == "mac"),
-           "asan only supported on iOS/Clang, Linux/Clang, and macOS/Clang")
+           "asan only supported on iOS/Clang, Linux/Clang, or macOS/Clang")
     cflags += [ "-fsanitize=address" ]
     ldflags += [ "-fsanitize=address" ]
   }
