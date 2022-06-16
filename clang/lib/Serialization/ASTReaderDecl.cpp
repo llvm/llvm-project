@@ -3300,6 +3300,13 @@ void ASTDeclReader::mergeInheritableAttributes(ASTReader &Reader, Decl *D,
     NewAttr->setInherited(true);
     D->addAttr(NewAttr);
   }
+
+  const auto *AA = Previous->getAttr<AvailabilityAttr>();
+  if (AA && !D->hasAttr<AvailabilityAttr>()) {
+    NewAttr = AA->clone(Context);
+    NewAttr->setInherited(true);
+    D->addAttr(NewAttr);
+  }
 }
 
 template<typename DeclT>
