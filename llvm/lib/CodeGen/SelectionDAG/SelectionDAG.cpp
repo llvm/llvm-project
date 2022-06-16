@@ -4979,9 +4979,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::CTTZ_ZERO_UNDEF:
       return getConstant(Val.countTrailingZeros(), DL, VT, C->isTargetOpcode(),
                          C->isOpaque());
-    case ISD::FP16_TO_FP: {
+    case ISD::FP16_TO_FP:
+    case ISD::BF16_TO_FP: {
       bool Ignored;
-      APFloat FPV(APFloat::IEEEhalf(),
+      APFloat FPV(Opcode == ISD::FP16_TO_FP ? APFloat::IEEEhalf()
+                                            : APFloat::BFloat(),
                   (Val.getBitWidth() == 16) ? Val : Val.trunc(16));
 
       // This can return overflow, underflow, or inexact; we don't care.
@@ -5055,11 +5057,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       if (VT == MVT::i64 && C->getValueType(0) == MVT::f64)
         return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
       break;
-    case ISD::FP_TO_FP16: {
+    case ISD::FP_TO_FP16:
+    case ISD::FP_TO_BF16: {
       bool Ignored;
       // This can return overflow, underflow, or inexact; we don't care.
       // FIXME need to be more flexible about rounding mode.
-      (void)V.convert(APFloat::IEEEhalf(),
+      (void)V.convert(Opcode == ISD::FP_TO_FP16 ? APFloat::IEEEhalf()
+                                                : APFloat::BFloat(),
                       APFloat::rmNearestTiesToEven, &Ignored);
       return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
     }
