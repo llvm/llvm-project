@@ -2251,6 +2251,13 @@ public:
              DeclAsWritten->getCanonicalDecl()->isDefaulted());
   }
 
+  bool isIneligibleOrNotSelected() const {
+    return FunctionDeclBits.IsIneligibleOrNotSelected;
+  }
+  void setIneligibleOrNotSelected(bool II) {
+    FunctionDeclBits.IsIneligibleOrNotSelected = II;
+  }
+
   /// Whether falling off this function implicitly returns null/zero.
   /// If a more specific implicit return value is required, front-ends
   /// should synthesize the appropriate return statements.

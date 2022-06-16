@@ -446,6 +446,10 @@ C++20 Feature Support
   that can be used for such compatibility. The demangler now demangles
   symbols with named module attachment.
 
+- As per "Conditionally Trivial Special Member Functions" (P0848), it is
+  now possible to overload destructors using concepts. Note that the rest
+  of the paper about other special member functions is not yet implemented.
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

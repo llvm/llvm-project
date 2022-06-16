@@ -1422,6 +1422,19 @@ public:
     return isLiteral() && data().StructuralIfLiteral;
   }
 
+  /// Notify the class that this destructor is now selected.
+  /// 
+  /// Important properties of the class depend on destructor properties. Since
+  /// C++20, it is possible to have multiple destructor declarations in a class
+  /// out of which one will be selected at the end.
+  /// This is called separately from addedMember because it has to be deferred
+  /// to the completion of the class.
+  void addedSelectedDestructor(CXXDestructorDecl *DD);
+
+  /// Notify the class that an eligible SMF has been added.
+  /// This updates triviality and destructor based properties of the class accordingly.
+  void addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD, unsigned SMKind);
+
   /// If this record is an instantiation of a member class,
   /// retrieves the member class from which it was instantiated.
   ///
