@@ -1324,6 +1324,12 @@ ContractionOpToMatmulOpLowering::matchAndRewrite(vector::ContractionOp op,
   if (!elementType.isIntOrFloat())
     return failure();
 
+  Type dstElementType = op.getType();
+  if (auto vecType = dstElementType.dyn_cast<VectorType>())
+    dstElementType = vecType.getElementType();
+  if (elementType != dstElementType)
+    return failure();
+
   // Perform lhs + rhs transpositions to conform to matmul row-major semantics.
   // Bail out if the contraction cannot be put in this form.
   MLIRContext *ctx = op.getContext();
@@ -1416,11 +1422,29 @@ struct UnrolledOuterProductGenerator
     return builder.create<vector::TransposeOp>(loc, v, perm);
   }
 
+  Value promote(Value v, Type dstElementType) {
+    Type elementType = v.getType();
+    auto vecType = elementType.dyn_cast<VectorType>();
+    if (vecType)
+      elementType = vecType.getElementType();
+    if (elementType == dstElementType)
+      return v;
+    Type promotedType = dstElementType;
+    if (vecType)
+      promotedType = VectorType::get(vecType.getShape(), promotedType);
+    if (dstElementType.isa<FloatType>())
+      return builder.create<arith::ExtFOp>(loc, promotedType, v);
+    return builder.create<arith::ExtSIOp>(loc, promotedType, v);
+  }
+
   Value outerProd(Value lhs, Value rhs, Value res, int reductionSize) {
     assert(reductionSize > 0);
+    Type resElementType = res.getType().cast<VectorType>().getElementType();
     for (int64_t k = 0; k < reductionSize; ++k) {
       Value a = builder.create<vector::ExtractOp>(loc, lhs, k);
       Value b = builder.create<vector::ExtractOp>(loc, rhs, k);
+      a = promote(a, resElementType);
+      b = promote(b, resElementType);
       res = builder.create<vector::OuterProductOp>(loc, res.getType(), a, b,
                                                    res, kind);
     }
