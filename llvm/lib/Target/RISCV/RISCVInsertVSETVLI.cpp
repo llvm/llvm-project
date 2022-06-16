@@ -1404,7 +1404,66 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
     Res.MaskPolicy = true;
   }
 
+  // Loads and stores with implicit EEW do not demand SEW or LMUL directly.
+  // They instead demand the ratio of the two which is used in computing
+  // EMUL, but which allows us the flexibility to change SEW and LMUL
+  // provided we don't change the ratio.
+  if (getEEWForLoadStore(MI)) {
+    Res.SEW = false;
+    Res.LMUL = false;
+  }
+
   return Res;
+}
+
+// Return true if we can mutate PrevMI's VTYPE to match MI's
+// without changing any the fields which have been used.
+// TODO: Restructure code to allow code reuse between this and isCompatible
+// above.
+static bool canMutatePriorConfig(const MachineInstr &PrevMI,
+                                 const MachineInstr &MI,
+                                 const DemandedFields &Used) {
+  // TODO: Extend this to handle cases where VL does change, but VL
+  // has not been used.  (e.g. over a vmv.x.s)
+  if (!isVLPreservingConfig(MI))
+    // Note: `vsetvli x0, x0, vtype' is the canonical instruction
+    // for this case.  If you find yourself wanting to add other forms
+    // to this "unused VTYPE" case, we're probably missing a
+    // canonicalization earlier.
+    return false;
+
+  if (!PrevMI.getOperand(2).isImm() || !MI.getOperand(2).isImm())
+    return false;
+
+  auto PriorVType = PrevMI.getOperand(2).getImm();
+  auto VType = MI.getOperand(2).getImm();
+
+  if (Used.SEW &&
+      RISCVVType::getSEW(VType) != RISCVVType::getSEW(PriorVType))
+    return false;
+
+  if (Used.LMUL &&
+      RISCVVType::getVLMUL(VType) != RISCVVType::getVLMUL(PriorVType))
+    return false;
+
+  if (Used.SEWLMULRatio) {
+    auto PriorRatio =
+      VSETVLIInfo::getSEWLMULRatio(RISCVVType::getSEW(PriorVType),
+                                   RISCVVType::getVLMUL(PriorVType));
+    auto Ratio =
+      VSETVLIInfo::getSEWLMULRatio(RISCVVType::getSEW(VType),
+                                   RISCVVType::getVLMUL(VType));
+    if (PriorRatio != Ratio)
+      return false;
+  }
+
+  if (Used.TailPolicy &&
+      RISCVVType::isTailAgnostic(VType) != RISCVVType::isTailAgnostic(PriorVType))
+    return false;
+  if (Used.MaskPolicy &&
+      RISCVVType::isMaskAgnostic(VType) != RISCVVType::isMaskAgnostic(PriorVType))
+    return false;
+  return true;
 }
 
 void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
@@ -1423,14 +1482,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
       if (!Used.VL && !Used.usedVTYPE()) {
         ToDelete.push_back(PrevMI);
         // fallthrough
-      } else if (!Used.usedVTYPE() && isVLPreservingConfig(MI)) {
-        // Note: `vsetvli x0, x0, vtype' is the canonical instruction
-        // for this case.  If you find yourself wanting to add other forms
-        // to this "unused VTYPE" case, we're probably missing a
-        // canonicalization earlier.
-        // Note: We don't need to explicitly check vtype compatibility
-        // here because this form is only legal (per ISA) when not
-        // changing VL.
+      } else if (canMutatePriorConfig(*PrevMI, MI, Used)) {
         PrevMI->getOperand(2).setImm(MI.getOperand(2).getImm());
         ToDelete.push_back(&MI);
         // Leave PrevMI unchanged

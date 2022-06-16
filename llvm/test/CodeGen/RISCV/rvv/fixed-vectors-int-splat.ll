@@ -732,7 +732,7 @@ define void @vadd_vx_v16i64(<16 x i64>* %a, i64 %b, <16 x i64>* %c) {
 ; LMULMAX1-RV32-LABEL: vadd_vx_v16i64:
 ; LMULMAX1-RV32:       # %bb.0:
 ; LMULMAX1-RV32-NEXT:    addi a4, a0, 96
-; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; LMULMAX1-RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
 ; LMULMAX1-RV32-NEXT:    vle64.v v8, (a4)
 ; LMULMAX1-RV32-NEXT:    addi a4, a0, 112
 ; LMULMAX1-RV32-NEXT:    vle64.v v9, (a4)
@@ -748,7 +748,6 @@ define void @vadd_vx_v16i64(<16 x i64>* %a, i64 %b, <16 x i64>* %c) {
 ; LMULMAX1-RV32-NEXT:    addi a0, a0, 16
 ; LMULMAX1-RV32-NEXT:    vle64.v v15, (a0)
 ; LMULMAX1-RV32-NEXT:    li a0, 5
-; LMULMAX1-RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
 ; LMULMAX1-RV32-NEXT:    vmv.s.x v0, a0
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-RV32-NEXT:    vmv.v.x v16, a2

@@ -85,9 +85,8 @@ define <4 x double> @vrgather_permute_shuffle_vu_v4f64(<4 x double> %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, %hi(.LCPI4_0)
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI4_0)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV32-NEXT:    vle16.v v12, (a0)
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    ret
@@ -110,9 +109,8 @@ define <4 x double> @vrgather_permute_shuffle_uv_v4f64(<4 x double> %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, %hi(.LCPI5_0)
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI5_0)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV32-NEXT:    vle16.v v12, (a0)
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    ret
@@ -135,9 +133,8 @@ define <4 x double> @vrgather_shuffle_vv_v4f64(<4 x double> %x, <4 x double> %y)
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, %hi(.LCPI6_0)
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI6_0)
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV32-NEXT:    vle16.v v14, (a0)
-; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; RV32-NEXT:    vrgatherei16.vv v12, v8, v14
 ; RV32-NEXT:    li a0, 8
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
