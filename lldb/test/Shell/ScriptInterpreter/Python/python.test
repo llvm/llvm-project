@@ -5,6 +5,7 @@
 # RUN: %lldb -o 'script -lpython -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
 # RUN: %lldb -o 'script --language python -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
 # RUN: %lldb -o 'script --language=python -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
+# RUN: %lldb -o 'script -lpython -- if True: print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s
 # CHECK: 1111
 
 # RUN: %lldb -o 'script --language invalid -- print("{}".format(1000+100+10+1))' 2>&1 | FileCheck %s --check-prefix INVALID
