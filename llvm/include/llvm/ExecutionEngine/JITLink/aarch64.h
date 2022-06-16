@@ -266,6 +266,7 @@ public:
     case aarch64::TLVPageOffset12: {
       KindToSet = aarch64::PageOffset12;
       uint32_t RawInstr = *(const support::ulittle32_t *)FixupPtr;
+      (void)RawInstr;
       assert(E.getAddend() == 0 &&
              "GOTPageOffset12/TLVPageOffset12 with non-zero addend");
       assert((RawInstr & 0xfffffc00) == 0xf9400000 &&
