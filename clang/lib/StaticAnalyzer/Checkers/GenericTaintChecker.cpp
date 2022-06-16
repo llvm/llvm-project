@@ -176,15 +176,6 @@ public:
 
   bool isEmpty() const { return DiscreteArgs.empty() && !VariadicIndex; }
 
-  ArgVecTy ArgsUpTo(ArgIdxTy LastArgIdx) const {
-    ArgVecTy Args;
-    for (ArgIdxTy I = ReturnValueIndex; I <= LastArgIdx; ++I) {
-      if (contains(I))
-        Args.push_back(I);
-    }
-    return Args;
-  }
-
 private:
   ArgVecTy DiscreteArgs;
   Optional<ArgIdxTy> VariadicIndex;
@@ -340,11 +331,6 @@ private:
 
 class GenericTaintChecker : public Checker<check::PreCall, check::PostCall> {
 public:
-  static void *getTag() {
-    static int Tag;
-    return &Tag;
-  }
-
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
 

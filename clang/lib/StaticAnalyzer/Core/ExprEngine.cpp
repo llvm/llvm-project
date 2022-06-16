@@ -118,17 +118,9 @@ namespace {
 /// the construction context was present and contained references to these
 /// AST nodes.
 class ConstructedObjectKey {
-  typedef std::pair<ConstructionContextItem, const LocationContext *>
-      ConstructedObjectKeyImpl;
-
+  using ConstructedObjectKeyImpl =
+      std::pair<ConstructionContextItem, const LocationContext *>;
   const ConstructedObjectKeyImpl Impl;
-
-  const void *getAnyASTNodePtr() const {
-    if (const Stmt *S = getItem().getStmtOrNull())
-      return S;
-    else
-      return getItem().getCXXCtorInitializer();
-  }
 
 public:
   explicit ConstructedObjectKey(const ConstructionContextItem &Item,

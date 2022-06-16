@@ -49,7 +49,6 @@ class MoveChecker
     : public Checker<check::PreCall, check::PostCall,
                      check::DeadSymbols, check::RegionChanges> {
 public:
-  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void checkPreCall(const CallEvent &MC, CheckerContext &C) const;
   void checkPostCall(const CallEvent &MC, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;

@@ -347,10 +347,6 @@ public:
   CFNumberChecker() : ICreate(nullptr), IGetValue(nullptr) {}
 
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
-
-private:
-  void EmitError(const TypedRegion* R, const Expr *Ex,
-                uint64_t SourceSize, uint64_t TargetSize, uint64_t NumberKind);
 };
 } // end anonymous namespace
 
