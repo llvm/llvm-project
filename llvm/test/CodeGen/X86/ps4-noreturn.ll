@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-scei-ps4 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-sie-ps5  | FileCheck %s
 
 declare i32 @personality(...)
 
