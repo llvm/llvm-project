@@ -1,5 +1,13 @@
 ; RUN: llc --mtriple=loongarch64 < %s | FileCheck %s
 
+define i64 @imm0() {
+; CHECK-LABEL: imm0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    move $a0, $zero
+; CHECK-NEXT:    jirl $zero, $ra, 0
+  ret i64 0
+}
+
 define i64 @imm7ff0000000000000() {
 ; CHECK-LABEL: imm7ff0000000000000:
 ; CHECK:       # %bb.0:
