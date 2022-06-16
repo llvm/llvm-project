@@ -277,6 +277,9 @@ FunctionPropertiesInfo &MLInlineAdvisor::getCachedFPI(Function &F) const {
 }
 
 std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
+  if (auto Skip = getSkipAdviceIfUnreachableCallsite(CB))
+    return Skip;
+
   auto &Caller = *CB.getCaller();
   auto &Callee = *CB.getCalledFunction();
 
@@ -376,9 +379,19 @@ MLInlineAdvisor::getAdviceFromModel(CallBase &CB,
       this, CB, ORE, static_cast<bool>(ModelRunner->evaluate<int64_t>()));
 }
 
+std::unique_ptr<InlineAdvice>
+MLInlineAdvisor::getSkipAdviceIfUnreachableCallsite(CallBase &CB) {
+  if (!FAM.getResult<DominatorTreeAnalysis>(*CB.getCaller())
+           .isReachableFromEntry(CB.getParent()))
+    return std::make_unique<InlineAdvice>(this, CB, getCallerORE(CB), false);
+  return nullptr;
+}
+
 std::unique_ptr<InlineAdvice> MLInlineAdvisor::getMandatoryAdvice(CallBase &CB,
                                                                   bool Advice) {
   // Make sure we track inlinings in all cases - mandatory or not.
+  if (auto Skip = getSkipAdviceIfUnreachableCallsite(CB))
+    return Skip;
   if (Advice && !ForceStop)
     return getMandatoryAdviceImpl(CB);
 
