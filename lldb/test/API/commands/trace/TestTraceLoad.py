@@ -9,6 +9,42 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    def testLoadMultiCoreTrace(self):
+        src_dir = self.getSourceDir()
+        trace_definition_file = os.path.join(src_dir, "intelpt-multi-core-trace", "trace.json")
+        self.expect("trace load -v " + trace_definition_file, substrs=["intel-pt"])
+        self.expect("thread trace dump instructions 2 -t",
+          substrs=["19521: [tsc=0x008fb5211c143fd8] error: expected tracing enabled event",
+                   "m.out`foo() + 65 at multi_thread.cpp:12:21",
+                   "19520: [tsc=0x008fb5211bfbc69e] 0x0000000000400ba7    jg     0x400bb3"])
+        self.expect("thread trace dump instructions 3 -t",
+          substrs=["67910: [tsc=0x008fb5211bfdf270] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+                   "m.out`bar() + 26 at multi_thread.cpp:20:6"])
+
+    def testLoadMultiCoreTraceWithStringNumbers(self):
+        src_dir = self.getSourceDir()
+        trace_definition_file = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_with_string_numbers.json")
+        self.expect("trace load -v " + trace_definition_file, substrs=["intel-pt"])
+        self.expect("thread trace dump instructions 2 -t",
+          substrs=["19521: [tsc=0x008fb5211c143fd8] error: expected tracing enabled event",
+                   "m.out`foo() + 65 at multi_thread.cpp:12:21",
+                   "19520: [tsc=0x008fb5211bfbc69e] 0x0000000000400ba7    jg     0x400bb3"])
+        self.expect("thread trace dump instructions 3 -t",
+          substrs=["67910: [tsc=0x008fb5211bfdf270] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+                   "m.out`bar() + 26 at multi_thread.cpp:20:6"])
+
+    def testLoadMultiCoreTraceWithMissingThreads(self):
+        src_dir = self.getSourceDir()
+        trace_definition_file = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_missing_threads.json")
+        self.expect("trace load -v " + trace_definition_file, substrs=["intel-pt"])
+        self.expect("thread trace dump instructions 3 -t",
+          substrs=["19521: [tsc=0x008fb5211c143fd8] error: expected tracing enabled event",
+                   "m.out`foo() + 65 at multi_thread.cpp:12:21",
+                   "19520: [tsc=0x008fb5211bfbc69e] 0x0000000000400ba7    jg     0x400bb3"])
+        self.expect("thread trace dump instructions 2 -t",
+          substrs=["67910: [tsc=0x008fb5211bfdf270] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+                   "m.out`bar() + 26 at multi_thread.cpp:20:6"])
+
     def testLoadTrace(self):
         src_dir = self.getSourceDir()
         trace_definition_file = os.path.join(src_dir, "intelpt-trace", "trace.json")
@@ -43,8 +79,8 @@ thread #1: tid = 3842849
     Total approximate memory usage (excluding raw trace): 1.27 KiB
     Average memory usage per instruction (excluding raw trace): 61.76 bytes
 
-  Timing:
-    Decoding instructions: ''', '''s
+  Timing for this thread:
+    Decoding instructions: ''', '''
 
   Events:
     Number of instructions with events: 1
@@ -82,9 +118,9 @@ Schema:
     "stepping": integer
   },'''])
 
-        # Now we test a missing field in the global session file
+        # Now we test a wrong cpu family field in the global session file
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad2.json"), error=True,
-            substrs=['error: missing value at traceSession.processes[1].triple', "Context", "Schema"])
+            substrs=['error: expected uint64_t at traceSession.cpuInfo.family', "Context", "Schema"])
 
         # Now we test a missing field in the intel-pt settings
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad4.json"), error=True,

@@ -84,14 +84,14 @@ uint32_t Log::GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &
   return flags;
 }
 
-void Log::Enable(const std::shared_ptr<llvm::raw_ostream> &stream_sp,
+void Log::Enable(const std::shared_ptr<LogHandler> &handler_sp,
                  uint32_t options, uint32_t flags) {
   llvm::sys::ScopedWriter lock(m_mutex);
 
   MaskType mask = m_mask.fetch_or(flags, std::memory_order_relaxed);
   if (mask | flags) {
     m_options.store(options, std::memory_order_relaxed);
-    m_stream_sp = stream_sp;
+    m_handler = handler_sp;
     m_channel.log_ptr.store(this, std::memory_order_relaxed);
   }
 }
@@ -101,7 +101,7 @@ void Log::Disable(uint32_t flags) {
 
   MaskType mask = m_mask.fetch_and(~flags, std::memory_order_relaxed);
   if (!(mask & ~flags)) {
-    m_stream_sp.reset();
+    m_handler.reset();
     m_channel.log_ptr.store(nullptr, std::memory_order_relaxed);
   }
 }
@@ -191,10 +191,10 @@ void Log::Unregister(llvm::StringRef name) {
   g_channel_map->erase(iter);
 }
 
-bool Log::EnableLogChannel(
-    const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
-    uint32_t log_options, llvm::StringRef channel,
-    llvm::ArrayRef<const char *> categories, llvm::raw_ostream &error_stream) {
+bool Log::EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
+                           uint32_t log_options, llvm::StringRef channel,
+                           llvm::ArrayRef<const char *> categories,
+                           llvm::raw_ostream &error_stream) {
   auto iter = g_channel_map->find(channel);
   if (iter == g_channel_map->end()) {
     error_stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
@@ -203,7 +203,7 @@ bool Log::EnableLogChannel(
   uint32_t flags = categories.empty()
                        ? iter->second.m_channel.default_flags
                        : GetFlags(error_stream, *iter, categories);
-  iter->second.Enable(log_stream_sp, log_options, flags);
+  iter->second.Enable(log_handler_sp, log_options, flags);
   return true;
 }
 
@@ -314,20 +314,15 @@ void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
 void Log::WriteMessage(const std::string &message) {
   // Make a copy of our stream shared pointer in case someone disables our log
   // while we are logging and releases the stream
-  auto stream_sp = GetStream();
-  if (!stream_sp)
+  auto handler_sp = GetHandler();
+  if (!handler_sp)
     return;
 
   Flags options = GetOptions();
-  if (options.Test(LLDB_LOG_OPTION_THREADSAFE)) {
-    static std::recursive_mutex g_LogThreadedMutex;
-    std::lock_guard<std::recursive_mutex> guard(g_LogThreadedMutex);
-    *stream_sp << message;
-    stream_sp->flush();
-  } else {
-    *stream_sp << message;
-    stream_sp->flush();
-  }
+  if (options.Test(LLDB_LOG_OPTION_THREADSAFE))
+    handler_sp->EmitThreadSafe(message);
+  else
+    handler_sp->Emit(message);
 }
 
 void Log::Format(llvm::StringRef file, llvm::StringRef function,
@@ -337,4 +332,36 @@ void Log::Format(llvm::StringRef file, llvm::StringRef function,
   WriteHeader(message, file, function);
   message << payload << "\n";
   WriteMessage(message.str());
+}
+
+void LogHandler::EmitThreadSafe(llvm::StringRef message) {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  Emit(message);
+}
+
+StreamLogHandler::StreamLogHandler(int fd, bool should_close, bool unbuffered)
+    : m_stream(fd, should_close, unbuffered) {}
+
+void StreamLogHandler::Emit(llvm::StringRef message) {
+  m_stream << message;
+  m_stream.flush();
+}
+
+std::shared_ptr<StreamLogHandler> StreamLogHandler::Create(int fd,
+                                                           bool should_close) {
+  constexpr const bool unbuffered = true;
+  return std::make_shared<StreamLogHandler>(fd, should_close, unbuffered);
+}
+
+CallbackLogHandler::CallbackLogHandler(lldb::LogOutputCallback callback,
+                                       void *baton)
+    : m_callback(callback), m_baton(baton) {}
+
+void CallbackLogHandler::Emit(llvm::StringRef message) {
+  m_callback(message.data(), m_baton);
+}
+
+std::shared_ptr<CallbackLogHandler>
+CallbackLogHandler::Create(lldb::LogOutputCallback callback, void *baton) {
+  return std::make_shared<CallbackLogHandler>(callback, baton);
 }

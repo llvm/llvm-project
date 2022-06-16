@@ -13,7 +13,7 @@
       "threads": [
         {
           "tid": 815455,
-          "traceBuffer": "multi-file.trace"
+          "iptTrace": "multi-file.trace"
         }
       ],
       "modules": [
