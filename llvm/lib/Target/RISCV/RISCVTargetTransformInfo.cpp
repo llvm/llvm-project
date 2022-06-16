@@ -342,35 +342,35 @@ RISCVTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
 }
 
 InstructionCost
-RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *VTy,
+RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                          Optional<FastMathFlags> FMF,
                                          TTI::TargetCostKind CostKind) {
   // FIXME: Only supporting fixed vectors for now.
-  if (!isa<FixedVectorType>(VTy))
-    return BaseT::getArithmeticReductionCost(Opcode, VTy, FMF, CostKind);
+  if (!isa<FixedVectorType>(Ty))
+    return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
   if (!ST->useRVVForFixedLengthVectors())
-    return BaseT::getArithmeticReductionCost(Opcode, VTy, FMF, CostKind);
+    return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
-  // Skip if scalar size of VTy is bigger than ELEN.
-  if (VTy->getScalarSizeInBits() > ST->getELEN())
-    return BaseT::getArithmeticReductionCost(Opcode, VTy, FMF, CostKind);
+  // Skip if scalar size of Ty is bigger than ELEN.
+  if (Ty->getScalarSizeInBits() > ST->getELEN())
+    return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
   if (ISD != ISD::ADD && ISD != ISD::OR && ISD != ISD::XOR && ISD != ISD::AND &&
       ISD != ISD::FADD)
-    return BaseT::getArithmeticReductionCost(Opcode, VTy, FMF, CostKind);
+    return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, VTy);
-  if (VTy->getElementType()->isIntegerTy(1))
+  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  if (Ty->getElementType()->isIntegerTy(1))
     // vcpop sequences, see vreduction-mask.ll
     return (LT.first - 1) + (ISD == ISD::AND ? 3 : 2);
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
   InstructionCost BaseCost = 2;
-  unsigned VL = cast<FixedVectorType>(VTy)->getNumElements();
+  unsigned VL = cast<FixedVectorType>(Ty)->getNumElements();
   if (TTI::requiresOrderedReduction(FMF))
     return (LT.first - 1) + BaseCost + VL;
   return (LT.first - 1) + BaseCost + Log2_32_Ceil(VL);
