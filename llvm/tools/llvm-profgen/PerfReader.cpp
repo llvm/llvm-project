@@ -467,9 +467,9 @@ static std::string getContextKeyStr(ContextKey *K,
       if (OContextStr.str().size())
         OContextStr << " @ ";
       OContextStr << "0x"
-                  << to_hexString(
+                  << utohexstr(
                          Binary->virtualAddrToOffset(CtxKey->Context[I]),
-                         false);
+                         /*LowerCase=*/true);
     }
     return OContextStr.str();
   } else {
