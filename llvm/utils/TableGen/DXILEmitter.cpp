@@ -11,10 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/MapVector.h"
+#include "SequenceToOffsetTable.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
@@ -191,7 +192,7 @@ static void emitDXILEnums(std::vector<DXILOperationData> &DXILOps,
 }
 
 // Emit map from llvm intrinsic to DXIL operation.
-static void EmitDXILIntrinsicMap(std::vector<DXILOperationData> &DXILOps,
+static void emitDXILIntrinsicMap(std::vector<DXILOperationData> &DXILOps,
                                  raw_ostream &OS) {
   OS << "\n";
   // FIXME: use array instead of SmallDenseMap.
@@ -206,6 +207,141 @@ static void EmitDXILIntrinsicMap(std::vector<DXILOperationData> &DXILOps,
   }
   OS << "};\n";
   OS << "\n";
+}
+
+static std::string emitDXILOperationFnAttr(StringRef FnAttr) {
+  return StringSwitch<std::string>(FnAttr)
+      .Case("rn", "Attribute::ReadNone")
+      .Case("ro", "Attribute::ReadOnly")
+      .Default("Attribute::None");
+}
+
+static std::string getOverloadKind(StringRef Overload) {
+  return StringSwitch<std::string>(Overload)
+      .Case("half", "OverloadKind::HALF")
+      .Case("float", "OverloadKind::FLOAT")
+      .Case("double", "OverloadKind::DOUBLE")
+      .Case("i1", "OverloadKind::I1")
+      .Case("i16", "OverloadKind::I16")
+      .Case("i32", "OverloadKind::I32")
+      .Case("i64", "OverloadKind::I64")
+      .Case("udt", "OverloadKind::UserDefineType")
+      .Case("obj", "OverloadKind::ObjectType")
+      .Default("OverloadKind::VOID");
+}
+
+static std::string getDXILOperationOverload(StringRef Overloads) {
+  SmallVector<StringRef> OverloadStrs;
+  Overloads.split(OverloadStrs, ';', /*MaxSplit*/ -1, /*KeepEmpty*/ false);
+  // Format is: OverloadKind::FLOAT | OverloadKind::HALF
+  assert(!OverloadStrs.empty() && "Invalid overloads");
+  auto It = OverloadStrs.begin();
+  std::string Result;
+  raw_string_ostream OS(Result);
+  OS << getOverloadKind(*It);
+  for (++It; It != OverloadStrs.end(); ++It) {
+    OS << " | " << getOverloadKind(*It);
+  }
+  return OS.str();
+}
+
+static std::string lowerFirstLetter(StringRef Name) {
+  if (Name.empty())
+    return "";
+
+  std::string LowerName = Name.str();
+  LowerName[0] = llvm::toLower(Name[0]);
+  return LowerName;
+}
+
+static std::string getDXILOpClassName(StringRef DXILOpClass) {
+  // Lower first letter expect for special case.
+  return StringSwitch<std::string>(DXILOpClass)
+      .Case("CBufferLoad", "cbufferLoad")
+      .Case("CBufferLoadLegacy", "cbufferLoadLegacy")
+      .Case("GSInstanceID", "gsInstanceID")
+      .Default(lowerFirstLetter(DXILOpClass));
+}
+
+static void emitDXILOperationTable(std::vector<DXILOperationData> &DXILOps,
+                                   raw_ostream &OS) {
+  // Sort by DXILOpID.
+  std::sort(DXILOps.begin(), DXILOps.end(),
+            [](DXILOperationData &A, DXILOperationData &B) {
+              return A.DXILOpID < B.DXILOpID;
+            });
+
+  // Collect Names.
+  SequenceToOffsetTable<std::string> OpClassStrings;
+  SequenceToOffsetTable<std::string> OpStrings;
+
+  StringSet<> ClassSet;
+  StringRef PrevCategory = "";
+  for (auto &DXILOp : DXILOps) {
+    OpStrings.add(DXILOp.DXILOp.str());
+
+    if (ClassSet.find(DXILOp.DXILClass) != ClassSet.end())
+      continue;
+    ClassSet.insert(DXILOp.DXILClass);
+    OpClassStrings.add(getDXILOpClassName(DXILOp.DXILClass));
+  }
+
+  // Layout names.
+  OpStrings.layout();
+  OpClassStrings.layout();
+
+  // Emit the DXIL operation table.
+  //{DXIL::OpCode::Sin, OpCodeNameIndex, OpCodeClass::Unary,
+  // OpCodeClassNameIndex,
+  // OverloadKind::FLOAT | OverloadKind::HALF, Attribute::AttrKind::ReadNone},
+  OS << "static const OpCodeProperty *getOpCodeProperty(DXIL::OpCode DXILOp) "
+        "{\n";
+
+  OS << "  static const OpCodeProperty OpCodeProps[] = {\n";
+  for (auto &DXILOp : DXILOps) {
+    OS << "  { DXIL::OpCode::" << DXILOp.DXILOp << ", "
+       << OpStrings.get(DXILOp.DXILOp.str())
+       << ", OpCodeClass::" << DXILOp.DXILClass << ", "
+       << OpClassStrings.get(getDXILOpClassName(DXILOp.DXILClass)) << ", "
+       << getDXILOperationOverload(DXILOp.OverloadTypes) << ", "
+       << emitDXILOperationFnAttr(DXILOp.FnAttr) << " },\n";
+  }
+  OS << "  };\n";
+
+  OS << "  // FIXME: change search to indexing with\n";
+  OS << "  // DXILOp once all DXIL op is added.\n";
+  OS << "  OpCodeProperty TmpProp;\n";
+  OS << "  TmpProp.OpCode = DXILOp;\n";
+  OS << "  const OpCodeProperty *Prop =\n";
+  OS << "      llvm::lower_bound(OpCodeProps, TmpProp,\n";
+  OS << "                        [](const OpCodeProperty &A, const "
+        "OpCodeProperty &B) {\n";
+  OS << "                          return A.OpCode < B.OpCode;\n";
+  OS << "                        });\n";
+  OS << "  assert(Prop && \"fail to find OpCodeProperty\");\n";
+  OS << "  return Prop;\n";
+  OS << "}\n\n";
+
+  // Emit the string tables.
+  OS << "static const char *getOpCodeName(DXIL::OpCode DXILOp) {\n\n";
+
+  OpStrings.emitStringLiteralDef(OS,
+                                 "  static const char DXILOpCodeNameTable[]");
+
+  OS << "  auto *Prop = getOpCodeProperty(DXILOp);\n";
+  OS << "  unsigned Index = Prop->OpCodeNameOffset;\n";
+  OS << "  return DXILOpCodeNameTable + Index;\n";
+  OS << "}\n\n";
+
+  OS << "static const char *getOpCodeClassName(const OpCodeProperty &Prop) "
+        "{\n\n";
+
+  OpClassStrings.emitStringLiteralDef(
+      OS, "  static const char DXILOpCodeClassNameTable[]");
+
+  OS << "  unsigned Index = Prop.OpCodeClassNameOffset;\n";
+  OS << "  return DXILOpCodeClassNameTable + Index;\n";
+  OS << "}\n ";
 }
 
 namespace llvm {
@@ -226,9 +362,12 @@ void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif\n\n";
 
   OS << "#ifdef DXIL_OP_INTRINSIC_MAP\n";
-  EmitDXILIntrinsicMap(DXILOps, OS);
+  emitDXILIntrinsicMap(DXILOps, OS);
   OS << "#endif\n\n";
 
+  OS << "#ifdef DXIL_OP_OPERATION_TABLE\n";
+  emitDXILOperationTable(DXILOps, OS);
+  OS << "#endif\n\n";
 
   OS << "\n";
 }
