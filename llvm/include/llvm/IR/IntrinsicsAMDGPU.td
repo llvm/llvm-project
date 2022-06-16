@@ -1925,6 +1925,16 @@ def int_amdgcn_permlane64 :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn]>;
 
+def int_amdgcn_ds_add_gs_reg_rtn :
+  GCCBuiltin<"__builtin_amdgcn_ds_add_gs_reg_rtn">,
+  Intrinsic<[llvm_anyint_ty], [llvm_i32_ty, llvm_i32_ty],
+            [ImmArg<ArgIndex<1>>, IntrHasSideEffects, IntrWillReturn]>;
+
+def int_amdgcn_ds_sub_gs_reg_rtn :
+  GCCBuiltin<"__builtin_amdgcn_ds_sub_gs_reg_rtn">,
+  Intrinsic<[llvm_anyint_ty], [llvm_i32_ty, llvm_i32_ty],
+            [ImmArg<ArgIndex<1>>, IntrHasSideEffects, IntrWillReturn]>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
