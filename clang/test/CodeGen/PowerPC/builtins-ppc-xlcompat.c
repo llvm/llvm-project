@@ -1,18 +1,18 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
 // RUN:   -triple powerpc64-unknown-linux-gnu -emit-llvm %s -o - \
 // RUN:   -D__XL_COMPAT_ALTIVEC__ -target-cpu pwr7 | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
 // RUN:   -triple powerpc64le-unknown-linux-gnu -emit-llvm %s -o - \
 // RUN:   -D__XL_COMPAT_ALTIVEC__ -target-cpu pwr8 | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +altivec -target-feature +vsx \
 // RUN:   -triple powerpc64le-unknown-linux-gnu -emit-llvm %s -o - \
 // RUN:   -U__XL_COMPAT_ALTIVEC__ -target-cpu pwr8 | FileCheck \
 // RUN:   --check-prefix=NOCOMPAT %s
 #include <altivec.h>
 vector double vd = { 3.4e22, 1.8e-3 };
-vector signed long long vsll = { -12345678999ll, 12345678999 };
-vector unsigned long long vull = { 11547229456923630743llu, 18014402265226391llu };
+vector signed long long res_vsll, vsll = { -12345678999ll, 12345678999 };
+vector unsigned long long res_vull, vull = { 11547229456923630743llu, 18014402265226391llu };
 vector float res_vf;
 vector double res_vd;
 vector signed int res_vsi;
@@ -34,15 +34,16 @@ void test() {
 // CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.ppc.vsx.xvcvuxdsp(<2 x i64> [[TMP2]])
 // CHECK-NEXT:    fmul <4 x float> [[TMP3]], <float 6.250000e-02, float 6.250000e-02, float 6.250000e-02, float 6.250000e-02>
 
-  res_vsi = vec_cts(vd, 4);
+  res_vsll = vec_cts(vd, 4);
 // CHECK:         [[TMP4:%.*]] = load <2 x double>, <2 x double>* @vd, align 16
 // CHECK-NEXT:    fmul <2 x double> [[TMP4]], <double 1.600000e+01, double 1.600000e+01>
 // CHECK:         call <4 x i32> @llvm.ppc.vsx.xvcvdpsxws(<2 x double>
 
-  res_vui = vec_ctu(vd, 4);
+  res_vull = vec_ctu(vd, 4);
 // CHECK:         [[TMP8:%.*]] = load <2 x double>, <2 x double>* @vd, align 16
 // CHECK-NEXT:    fmul <2 x double> [[TMP8]], <double 1.600000e+01, double 1.600000e+01>
 // CHECK:         call <4 x i32> @llvm.ppc.vsx.xvcvdpuxws(<2 x double>
+// NONCOMPAT:         call <4 x i32> @llvm.ppc.vsx.xvcvdpuxws(<2 x double>
 
   res_vd = vec_round(vd);
 // CHECK:         call double @llvm.ppc.readflm()

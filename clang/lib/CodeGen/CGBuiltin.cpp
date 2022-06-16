@@ -15575,65 +15575,65 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::cttz, ResultType);
     return Builder.CreateCall(F, {X, Undef});
   }
-  case PPC::BI__builtin_altivec_vec_replace_elt:
-  case PPC::BI__builtin_altivec_vec_replace_unaligned: {
+  case PPC::BI__builtin_altivec_vinsd:
+  case PPC::BI__builtin_altivec_vinsw:
+  case PPC::BI__builtin_altivec_vinsd_elt:
+  case PPC::BI__builtin_altivec_vinsw_elt: {
+    llvm::Type *ResultType = ConvertType(E->getType());
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Op2 = EmitScalarExpr(E->getArg(2));
-    // The third argument of vec_replace_elt and vec_replace_unaligned must
-    // be a compile time constant and will be emitted either to the vinsw
-    // or vinsd instruction.
+
+    bool IsUnaligned = (BuiltinID == PPC::BI__builtin_altivec_vinsw ||
+                        BuiltinID == PPC::BI__builtin_altivec_vinsd);
+
+    bool Is32bit = (BuiltinID == PPC::BI__builtin_altivec_vinsw ||
+                    BuiltinID == PPC::BI__builtin_altivec_vinsw_elt);
+
+    // The third argument must be a compile time constant.
     ConstantInt *ArgCI = dyn_cast<ConstantInt>(Op2);
     assert(ArgCI &&
            "Third Arg to vinsw/vinsd intrinsic must be a constant integer!");
-    llvm::Type *ResultType = ConvertType(E->getType());
-    llvm::Function *F = nullptr;
-    Value *Call = nullptr;
+
+    // Valid value for the third argument is dependent on the input type and
+    // builtin called.
+    int ValidMaxValue = 0;
+    if (IsUnaligned)
+      ValidMaxValue = (Is32bit) ? 12 : 8;
+    else
+      ValidMaxValue = (Is32bit) ? 3 : 1;
+
+    // Get value of third argument.
     int64_t ConstArg = ArgCI->getSExtValue();
-    unsigned ArgWidth = Op1->getType()->getPrimitiveSizeInBits();
-    bool Is32Bit = false;
-    assert((ArgWidth == 32 || ArgWidth == 64) && "Invalid argument width");
-    // The input to vec_replace_elt is an element index, not a byte index.
-    if (BuiltinID == PPC::BI__builtin_altivec_vec_replace_elt)
-      ConstArg *= ArgWidth / 8;
-    if (ArgWidth == 32) {
-      Is32Bit = true;
-      // When the second argument is 32 bits, it can either be an integer or
-      // a float. The vinsw intrinsic is used in this case.
-      F = CGM.getIntrinsic(Intrinsic::ppc_altivec_vinsw);
+
+    // Compose range checking error message.
+    std::string RangeErrMsg = IsUnaligned ? "byte" : "element";
+    RangeErrMsg += " number " + llvm::to_string(ConstArg);
+    RangeErrMsg += " is outside of the valid range [0, ";
+    RangeErrMsg += llvm::to_string(ValidMaxValue) + "]";
+
+    // Issue error if third argument is not within the valid range.
+    if (ConstArg < 0 or ConstArg > ValidMaxValue)
+      CGM.Error(E->getExprLoc(), RangeErrMsg);
+
+    // Input to vec_replace_elt is an element index, convert to byte index.
+    if (!IsUnaligned) {
+      ConstArg *= Is32bit ? 4 : 8;
       // Fix the constant according to endianess.
       if (getTarget().isLittleEndian())
-        ConstArg = 12 - ConstArg;
-    } else {
-      // When the second argument is 64 bits, it can either be a long long or
-      // a double. The vinsd intrinsic is used in this case.
-      F = CGM.getIntrinsic(Intrinsic::ppc_altivec_vinsd);
-      // Fix the constant for little endian.
-      if (getTarget().isLittleEndian())
-        ConstArg = 8 - ConstArg;
+        ConstArg = (Is32bit ? 12 : 8) - ConstArg;
     }
+
+    ID = Is32bit ? Intrinsic::ppc_altivec_vinsw : Intrinsic::ppc_altivec_vinsd;
     Op2 = ConstantInt::getSigned(Int32Ty, ConstArg);
-    // Depending on ArgWidth, the input vector could be a float or a double.
-    // If the input vector is a float type, bitcast the inputs to integers. Or,
-    // if the input vector is a double, bitcast the inputs to 64-bit integers.
-    if (!Op1->getType()->isIntegerTy(ArgWidth)) {
-      Op0 = Builder.CreateBitCast(
-          Op0, Is32Bit ? llvm::FixedVectorType::get(Int32Ty, 4)
-                       : llvm::FixedVectorType::get(Int64Ty, 2));
-      Op1 = Builder.CreateBitCast(Op1, Is32Bit ? Int32Ty : Int64Ty);
-    }
-    // Emit the call to vinsw or vinsd.
-    Call = Builder.CreateCall(F, {Op0, Op1, Op2});
-    // Depending on the builtin, bitcast to the approriate result type.
-    if (BuiltinID == PPC::BI__builtin_altivec_vec_replace_elt &&
-        !Op1->getType()->isIntegerTy())
-      return Builder.CreateBitCast(Call, ResultType);
-    else if (BuiltinID == PPC::BI__builtin_altivec_vec_replace_elt &&
-             Op1->getType()->isIntegerTy())
-      return Call;
-    else
-      return Builder.CreateBitCast(Call,
-                                   llvm::FixedVectorType::get(Int8Ty, 16));
+    // Casting input to vector int as per intrinsic definition.
+    Op0 =
+        Is32bit
+            ? Builder.CreateBitCast(Op0, llvm::FixedVectorType::get(Int32Ty, 4))
+            : Builder.CreateBitCast(Op0,
+                                    llvm::FixedVectorType::get(Int64Ty, 2));
+    return Builder.CreateBitCast(
+        Builder.CreateCall(CGM.getIntrinsic(ID), {Op0, Op1, Op2}), ResultType);
   }
   case PPC::BI__builtin_altivec_vpopcntb:
   case PPC::BI__builtin_altivec_vpopcnth:
@@ -15655,6 +15655,51 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       return Builder.CreateAdd(Op0, Op1, "vadduqm");
     else
       return Builder.CreateSub(Op0, Op1, "vsubuqm");
+  }
+  case PPC::BI__builtin_altivec_vaddcuq_c:
+  case PPC::BI__builtin_altivec_vsubcuq_c: {
+    SmallVector<Value *, 2> Ops;
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    llvm::Type *V1I128Ty = llvm::FixedVectorType::get(
+        llvm::IntegerType::get(getLLVMContext(), 128), 1);
+    Ops.push_back(Builder.CreateBitCast(Op0, V1I128Ty));
+    Ops.push_back(Builder.CreateBitCast(Op1, V1I128Ty));
+    ID = (BuiltinID == PPC::BI__builtin_altivec_vaddcuq_c)
+             ? Intrinsic::ppc_altivec_vaddcuq
+             : Intrinsic::ppc_altivec_vsubcuq;
+    return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+  }
+  case PPC::BI__builtin_altivec_vaddeuqm_c:
+  case PPC::BI__builtin_altivec_vaddecuq_c:
+  case PPC::BI__builtin_altivec_vsubeuqm_c:
+  case PPC::BI__builtin_altivec_vsubecuq_c: {
+    SmallVector<Value *, 3> Ops;
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    llvm::Type *V1I128Ty = llvm::FixedVectorType::get(
+        llvm::IntegerType::get(getLLVMContext(), 128), 1);
+    Ops.push_back(Builder.CreateBitCast(Op0, V1I128Ty));
+    Ops.push_back(Builder.CreateBitCast(Op1, V1I128Ty));
+    Ops.push_back(Builder.CreateBitCast(Op2, V1I128Ty));
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("Unsupported intrinsic!");
+    case PPC::BI__builtin_altivec_vaddeuqm_c:
+      ID = Intrinsic::ppc_altivec_vaddeuqm;
+      break;
+    case PPC::BI__builtin_altivec_vaddecuq_c:
+      ID = Intrinsic::ppc_altivec_vaddecuq;
+      break;
+    case PPC::BI__builtin_altivec_vsubeuqm_c:
+      ID = Intrinsic::ppc_altivec_vsubeuqm;
+      break;
+    case PPC::BI__builtin_altivec_vsubecuq_c:
+      ID = Intrinsic::ppc_altivec_vsubecuq;
+      break;
+    }
+    return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
   }
   // Rotate and insert under mask operation.
   // __rldimi(rs, is, shift, mask)

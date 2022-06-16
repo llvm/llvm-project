@@ -10,24 +10,21 @@
 // RUN: -flax-vector-conversions=integer \
 // RUN: -Wall -Werror -verify %s
 
-// FIXME: Fix <altivec.h> so this test also passes under
-// -flax-vector-conversions=none (this last test exists to produce an error if
-// we change the default to that without fixing <altivec.h>).
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector \
-// RUN:   -triple powerpc64-unknown-unknown -fsyntax-only   \
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -target-feature +power9-vector \
+// RUN: -triple powerpc64-unknown-unknown -fsyntax-only   \
 // RUN: -Wall -Werror -verify %s
 
 #include <altivec.h>
 
 extern vector signed int vsi;
-extern vector signed int vui;
+extern vector unsigned int vui;
 extern vector float vf;
 extern vector unsigned char vuc;
 extern vector signed __int128 vsllli;
 
 void testInsertWord(void) {
   int index = 5;
-  vector unsigned char v1 = vec_insert4b(vsi, vuc, index); // expected-error {{argument to '__builtin_vsx_insertword' must be a constant integer}}
+  vector unsigned char v1 = vec_insert4b(vui, vuc, index); // expected-error {{argument to '__builtin_vsx_insertword' must be a constant integer}}
   vector unsigned long long v2 = vec_extract4b(vuc, index);   // expected-error {{argument to '__builtin_vsx_extractuword' must be a constant integer}}
 }
 

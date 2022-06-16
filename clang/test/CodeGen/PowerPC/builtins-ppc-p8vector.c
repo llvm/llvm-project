@@ -1,6 +1,6 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +power8-vector -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +power8-vector -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-LE
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -target-feature +power8-vector -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -target-feature +power8-vector -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-LE
 // RUN: not %clang_cc1 -target-feature +altivec -target-feature +vsx -triple powerpc64-unknown-unknown -emit-llvm %s -o - 2>&1 | FileCheck %s -check-prefix=CHECK-PPC
 // Added -target-feature +vsx above to avoid errors about "vector double" and to
 // generate the correct errors for functions that are only overloaded with VSX
@@ -240,7 +240,7 @@ void test1() {
 // CHECK-LE: bitcast <4 x i32> [[T3]] to <16 x i8>
 // CHECK-PPC: error: assigning to
 
-  res_vsc =  vec_eqv(vbc, vbc);
+  res_vbc =  vec_eqv(vbc, vbc);
 // CHECK: [[T1:%.+]] = bitcast <16 x i8> {{.+}} to <4 x i32>
 // CHECK: [[T2:%.+]] = bitcast <16 x i8> {{.+}} to <4 x i32>
 // CHECK: [[T3:%.+]] = call <4 x i32> @llvm.ppc.vsx.xxleqv(<4 x i32> [[T1]], <4 x i32> [[T2]])
@@ -273,7 +273,7 @@ void test1() {
 // CHECK-LE: bitcast <4 x i32> [[T3]] to <8 x i16>
 // CHECK-PPC: error: assigning to
 
-  res_vss =  vec_eqv(vbs, vbs);
+  res_vbs =  vec_eqv(vbs, vbs);
 // CHECK: [[T1:%.+]] = bitcast <8 x i16> {{.+}} to <4 x i32>
 // CHECK: [[T2:%.+]] = bitcast <8 x i16> {{.+}} to <4 x i32>
 // CHECK: [[T3:%.+]] = call <4 x i32> @llvm.ppc.vsx.xxleqv(<4 x i32> [[T1]], <4 x i32> [[T2]])
@@ -300,7 +300,7 @@ void test1() {
 // CHECK-LE: call <4 x i32> @llvm.ppc.vsx.xxleqv(<4 x i32> {{.*}}, <4 x i32> {{.+}})
 // CHECK-PPC: error: assigning to
 
-  res_vsi =  vec_eqv(vbi, vbi);
+  res_vbi =  vec_eqv(vbi, vbi);
 // CHECK: call <4 x i32> @llvm.ppc.vsx.xxleqv(<4 x i32> {{.*}}, <4 x i32> {{.+}})
 // CHECK-LE: call <4 x i32> @llvm.ppc.vsx.xxleqv(<4 x i32> {{.*}}, <4 x i32> {{.+}})
 // CHECK-PPC: error: assigning to
@@ -321,7 +321,7 @@ void test1() {
 // CHECK-LE: bitcast <4 x i32> [[T3]] to <2 x i64>
 // CHECK-PPC: error: assigning to
 
-  res_vsll =  vec_eqv(vbll, vbll);
+  res_vbll =  vec_eqv(vbll, vbll);
 // CHECK: [[T1:%.+]] = bitcast <2 x i64> {{.+}} to <4 x i32>
 // CHECK: [[T2:%.+]] = bitcast <2 x i64> {{.+}} to <4 x i32>
 // CHECK: [[T3:%.+]] = call <4 x i32> @llvm.ppc.vsx.xxleqv(<4 x i32> [[T1]], <4 x i32> [[T2]])
@@ -847,7 +847,7 @@ void test1() {
 // CHECK-LE: xor <16 x i8> [[T1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 // CHECK-PPC: error: call to undeclared function 'vec_nand'
 
-  res_vsc = vec_nand(vbc, vbc);
+  res_vbc = vec_nand(vbc, vbc);
 // CHECK: [[T1:%.+]] = and <16 x i8>
 // CHECK: xor <16 x i8> [[T1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 // CHECK-LE: [[T1:%.+]] = and <16 x i8>
@@ -865,7 +865,7 @@ void test1() {
 // CHECK-LE: [[T1:%.+]] = and <8 x i16>
 // CHECK-LE: xor <8 x i16> [[T1]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
 
-  res_vss = vec_nand(vbs, vbs);
+  res_vbs = vec_nand(vbs, vbs);
 // CHECK: [[T1:%.+]] = and <8 x i16>
 // CHECK: xor <8 x i16> [[T1]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
 // CHECK-LE: [[T1:%.+]] = and <8 x i16>
@@ -883,7 +883,7 @@ void test1() {
 // CHECK-LE: [[T1:%.+]] = and <4 x i32>
 // CHECK-LE: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
 
-  res_vsi = vec_nand(vbi, vbi);
+  res_vbi = vec_nand(vbi, vbi);
 // CHECK: [[T1:%.+]] = and <4 x i32>
 // CHECK: xor <4 x i32> [[T1]], <i32 -1, i32 -1, i32 -1, i32 -1>
 // CHECK-LE: [[T1:%.+]] = and <4 x i32>
@@ -907,7 +907,7 @@ void test1() {
 // CHECK-LE: [[T1:%.+]] = and <2 x i64>
 // CHECK-LE: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
 
-  res_vsll = vec_nand(vbll, vbll);
+  res_vbll = vec_nand(vbll, vbll);
 // CHECK: [[T1:%.+]] = and <2 x i64>
 // CHECK: xor <2 x i64> [[T1]], <i64 -1, i64 -1>
 // CHECK-LE: [[T1:%.+]] = and <2 x i64>
@@ -1163,7 +1163,7 @@ void test1() {
 // CHECK: llvm.ppc.altivec.vbpermq
 // CHECK-LE: llvm.ppc.altivec.vbpermq
 
-  res_vull = vec_vbpermq(vuc, vuc);
+  res_vsll = vec_vbpermq(vuc, vuc);
 // CHECK: llvm.ppc.altivec.vbpermq
 // CHECK-LE: llvm.ppc.altivec.vbpermq
 // CHECK-PPC: error: call to undeclared function 'vec_vbpermq'
@@ -1195,7 +1195,7 @@ void test1() {
   // CHECK: llvm.ppc.altivec.vbpermq
   // CHECK-LE: llvm.ppc.altivec.vbpermq
 
-  res_vull = vec_bperm(vuc, vuc);
+  res_vuc = vec_bperm(vuc, vuc);
   // CHECK: llvm.ppc.altivec.vbpermq
   // CHECK-LE: llvm.ppc.altivec.vbpermq
 
