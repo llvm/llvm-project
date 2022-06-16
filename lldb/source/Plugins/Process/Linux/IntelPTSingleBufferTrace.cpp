@@ -183,11 +183,8 @@ CreateIntelPTPerfEventConfiguration(bool enable_tsc,
   memset(&attr, 0, sizeof(attr));
   attr.size = sizeof(attr);
   attr.exclude_kernel = 1;
-  attr.sample_type = PERF_SAMPLE_TIME;
-  attr.sample_id_all = 1;
   attr.exclude_hv = 1;
   attr.exclude_idle = 1;
-  attr.mmap = 1;
 
   if (Expected<uint64_t> config_value =
           GeneratePerfEventConfigValue(enable_tsc, psb_period))
@@ -297,7 +294,7 @@ Expected<IntelPTSingleBufferTraceUP> IntelPTSingleBufferTrace::Start(
         request.trace_buffer_size);
   }
   uint64_t page_size = getpagesize();
-  uint64_t buffer_numpages = static_cast<uint64_t>(llvm::PowerOf2Floor(
+  uint64_t aux_buffer_numpages = static_cast<uint64_t>(llvm::PowerOf2Floor(
       (request.trace_buffer_size + page_size - 1) / page_size));
 
   Expected<perf_event_attr> attr = CreateIntelPTPerfEventConfiguration(
@@ -312,8 +309,8 @@ Expected<IntelPTSingleBufferTraceUP> IntelPTSingleBufferTrace::Start(
            request.trace_buffer_size);
 
   if (Expected<PerfEvent> perf_event = PerfEvent::Init(*attr, tid, core_id)) {
-    if (Error mmap_err = perf_event->MmapMetadataAndBuffers(buffer_numpages,
-                                                            buffer_numpages)) {
+    if (Error mmap_err = perf_event->MmapMetadataAndBuffers(
+            /*num_data_pages=*/0, aux_buffer_numpages)) {
       return std::move(mmap_err);
     }
     IntelPTSingleBufferTraceUP trace_up(
