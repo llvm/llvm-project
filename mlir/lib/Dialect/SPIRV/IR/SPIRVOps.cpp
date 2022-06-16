@@ -28,6 +28,7 @@
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 
@@ -2837,6 +2838,58 @@ ParseResult spirv::GroupNonUniformUMinOp::parse(OpAsmParser &parser,
 }
 void spirv::GroupNonUniformUMinOp::print(OpAsmPrinter &p) {
   printGroupNonUniformArithmeticOp(*this, p);
+}
+
+//===----------------------------------------------------------------------===//
+// spv.ISubBorrowOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::ISubBorrowOp::verify() {
+  auto resultType = getType().cast<spirv::StructType>();
+  if (resultType.getNumElements() != 2)
+    return emitOpError("expected result struct type containing two members");
+
+  SmallVector<Type, 4> types;
+  types.push_back(operand1().getType());
+  types.push_back(operand2().getType());
+  types.push_back(resultType.getElementType(0));
+  types.push_back(resultType.getElementType(1));
+  if (!llvm::is_splat(types))
+    return emitOpError(
+        "expected all operand types and struct member types are the same");
+
+  return success();
+}
+
+ParseResult spirv::ISubBorrowOp::parse(OpAsmParser &parser,
+                                       OperationState &state) {
+  SmallVector<OpAsmParser::UnresolvedOperand, 2> operands;
+  if (parser.parseOptionalAttrDict(state.attributes) ||
+      parser.parseOperandList(operands) || parser.parseColon())
+    return failure();
+
+  Type resultType;
+  auto loc = parser.getCurrentLocation();
+  if (parser.parseType(resultType))
+    return failure();
+
+  auto structType = resultType.dyn_cast<spirv::StructType>();
+  if (!structType || structType.getNumElements() != 2)
+    return parser.emitError(loc, "expected spv.struct type with two members");
+
+  SmallVector<Type, 2> operandTypes(2, structType.getElementType(0));
+  if (parser.resolveOperands(operands, operandTypes, loc, state.operands))
+    return failure();
+
+  state.addTypes(resultType);
+  return success();
+}
+
+void spirv::ISubBorrowOp::print(OpAsmPrinter &printer) {
+  printer << ' ';
+  printer.printOptionalAttrDict((*this)->getAttrs());
+  printer.printOperands((*this)->getOperands());
+  printer << " : " << getType();
 }
 
 //===----------------------------------------------------------------------===//

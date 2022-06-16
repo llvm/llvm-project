@@ -90,7 +90,7 @@ static OpList getMatching(Operation *root, IntRangeAnalysis &analysis) {
 }
 
 template <typename T, typename U>
-static void rewriteOp(Operation *op, OpBuilder &b) {
+static bool rewriteOp(Operation *op, OpBuilder &b) {
   if (isa<T>(op)) {
     OpBuilder::InsertionGuard guard(b);
     b.setInsertionPoint(op);
@@ -98,28 +98,31 @@ static void rewriteOp(Operation *op, OpBuilder &b) {
                                    op->getOperands(), op->getAttrs());
     op->replaceAllUsesWith(newOp->getResults());
     op->erase();
+    return true;
   }
+  return false;
 }
 
-static void rewriteCmpI(Operation *op, OpBuilder &b) {
+static bool rewriteCmpI(Operation *op, OpBuilder &b) {
   if (auto cmpOp = dyn_cast<CmpIOp>(op)) {
     cmpOp.setPredicateAttr(CmpIPredicateAttr::get(
         b.getContext(), toUnsignedPred(cmpOp.getPredicate())));
+    return true;
   }
+  return false;
 }
 
 static void rewrite(Operation *root, const OpList &toReplace) {
   OpBuilder b(root->getContext());
   b.setInsertionPoint(root);
   for (Operation *op : toReplace) {
-    rewriteOp<DivSIOp, DivUIOp>(op, b);
-    rewriteOp<CeilDivSIOp, CeilDivUIOp>(op, b);
-    rewriteOp<FloorDivSIOp, DivUIOp>(op, b);
-    rewriteOp<RemSIOp, RemUIOp>(op, b);
-    rewriteOp<MinSIOp, MinUIOp>(op, b);
-    rewriteOp<MaxSIOp, MaxUIOp>(op, b);
-    rewriteOp<ExtSIOp, ExtUIOp>(op, b);
-    rewriteCmpI(op, b);
+    rewriteOp<DivSIOp, DivUIOp>(op, b) ||
+        rewriteOp<CeilDivSIOp, CeilDivUIOp>(op, b) ||
+        rewriteOp<FloorDivSIOp, DivUIOp>(op, b) ||
+        rewriteOp<RemSIOp, RemUIOp>(op, b) ||
+        rewriteOp<MinSIOp, MinUIOp>(op, b) ||
+        rewriteOp<MaxSIOp, MaxUIOp>(op, b) ||
+        rewriteOp<ExtSIOp, ExtUIOp>(op, b) || rewriteCmpI(op, b);
   }
 }
 

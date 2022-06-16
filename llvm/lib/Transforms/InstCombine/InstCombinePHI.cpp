@@ -1125,7 +1125,7 @@ Instruction *InstCombinerImpl::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
     // extract the value within that BB because we cannot insert any non-PHI
     // instructions in the BB.
     for (auto *Pred : PN->blocks())
-      if (isa<CatchSwitchInst>(Pred->getFirstNonPHI()))
+      if (Pred->getFirstInsertionPt() == Pred->end())
         return nullptr;
 
     for (User *U : PN->users()) {

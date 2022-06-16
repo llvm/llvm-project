@@ -59,8 +59,12 @@ public:
 
   size_t GetTracedThreadsCount() const;
 
+  /// \copydoc IntelPTProcessTrace::TryGetBinaryData()
+  llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+  TryGetBinaryData(const TraceGetBinaryDataRequest &request);
+
 private:
-  llvm::DenseMap<lldb::tid_t, IntelPTSingleBufferTraceUP> m_thread_traces;
+  llvm::DenseMap<lldb::tid_t, IntelPTSingleBufferTrace> m_thread_traces;
   /// Total actual thread buffer size in bytes
   size_t m_total_buffer_size = 0;
 };

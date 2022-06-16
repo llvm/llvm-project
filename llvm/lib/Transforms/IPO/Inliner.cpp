@@ -753,7 +753,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           .getManager();
 
   InlineAdvisor &Advisor = getAdvisor(MAMProxy, FAM, M);
-  Advisor.onPassEntry();
+  Advisor.onPassEntry(&InitialC);
 
   auto AdvisorOnExit = make_scope_exit([&] { Advisor.onPassExit(&InitialC); });
 

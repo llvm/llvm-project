@@ -352,7 +352,6 @@ public:
 
 private:
   void storeTopLevelDecls(DeclGroupRef DG);
-  std::string getFunctionName(const Decl *D);
 
   /// Check if we should skip (not analyze) the given function.
   AnalysisMode getModeForDecl(Decl *D, AnalysisMode Mode);

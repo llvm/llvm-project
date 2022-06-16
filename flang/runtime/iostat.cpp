@@ -103,6 +103,10 @@ const char *IostatErrorString(int iostat) {
     return "WAIT(ID=nonzero) for an ID value that is not a pending operation";
   case IostatTooManyAsyncOps:
     return "Too many asynchronous operations pending on unit";
+  case IostatBadBackspaceUnit:
+    return "BACKSPACE on unconnected unit";
+  case IostatBadUnitNumber:
+    return "Negative unit number is not allowed";
   default:
     return nullptr;
   }

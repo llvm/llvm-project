@@ -16,7 +16,6 @@
 #include "AMDGPUInstrInfo.h"
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"

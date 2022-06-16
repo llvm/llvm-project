@@ -804,6 +804,21 @@ static Value allocateGlobalSharedMemory(Location loc, OpBuilder &builder,
   return builder.create<memref::GetGlobalOp>(loc, memrefType, symbolName);
 }
 
+static Value warpReduction(Location loc, OpBuilder &builder, Value input,
+                           CombiningKind kind, uint32_t size) {
+  Value laneVal = input;
+  // Parallel reduction using butterfly shuffles.
+  for (uint64_t i = 1; i < size; i <<= 1) {
+    Value shuffled = builder
+                         .create<gpu::ShuffleOp>(loc, laneVal, i,
+                                                 /*width=*/size,
+                                                 /*mode=*/gpu::ShuffleMode::XOR)
+                         .result();
+    laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
+  }
+  return laneVal;
+}
+
 struct TestVectorDistribution
     : public PassWrapper<TestVectorDistribution, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestVectorDistribution)
@@ -869,7 +884,7 @@ struct TestVectorDistribution
     if (propagateDistribution) {
       RewritePatternSet patterns(ctx);
       vector::populatePropagateWarpVectorDistributionPatterns(patterns);
-      vector::populateReductionToGPUWarpShufflePatterns(patterns);
+      vector::populateDistributeReduction(patterns, warpReduction);
       (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     }
     WarpExecuteOnLane0LoweringOptions options;

@@ -8,14 +8,13 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP1]] to <4 x i8>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i8>, <4 x i8>* [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <4 x i32> zeroinitializer, [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw <4 x i32> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw <4 x i32> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub nsw <4 x i32> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> [[TMP11]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> [[TMP11]], <4 x i32> <i32 1, i32 4, i32 3, i32 6>
 ; CHECK-NEXT:    [[TMP13:%.*]] = add nsw <4 x i32> zeroinitializer, [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub nsw <4 x i32> zeroinitializer, [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> [[TMP14]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>

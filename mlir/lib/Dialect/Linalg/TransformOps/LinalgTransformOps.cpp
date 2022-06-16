@@ -164,7 +164,7 @@ static ParseResult parseTileLikeOp(OpAsmParser &parser, OperationState &result,
   return success();
 }
 
-DiagnosedSilencableFailure
+DiagnosedSilenceableFailure
 transform::FuseOp::apply(mlir::transform::TransformResults &transformResults,
                          mlir::transform::TransformState &state) {
   LinalgTilingAndFusionOptions fusionOptions;
@@ -188,8 +188,8 @@ transform::FuseOp::apply(mlir::transform::TransformResults &transformResults,
                                tileLoopNest->getLoopOps().end()};
         return tiledLinalgOp;
       });
-  return failed(result) ? DiagnosedSilencableFailure::definiteFailure()
-                        : DiagnosedSilencableFailure::success();
+  return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
+                        : DiagnosedSilenceableFailure::success();
 }
 
 ParseResult transform::FuseOp::parse(OpAsmParser &parser,
@@ -398,7 +398,7 @@ FailureOr<LinalgOp> transform::ScalarizeOp::applyToOne(LinalgOp target) {
 // TileOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilencableFailure
+DiagnosedSilenceableFailure
 transform::TileOp::apply(TransformResults &transformResults,
                          TransformState &state) {
   LinalgTilingOptions tilingOptions;
@@ -415,7 +415,7 @@ transform::TileOp::apply(TransformResults &transformResults,
         SimpleRewriter rewriter(linalgOp.getContext());
         return pattern.returningMatchAndRewrite(linalgOp, rewriter);
       });
-  return DiagnosedSilencableFailure(result);
+  return DiagnosedSilenceableFailure(result);
 }
 
 ParseResult transform::TileOp::parse(OpAsmParser &parser,

@@ -413,6 +413,23 @@ TEST(CompletionTest, Accessible) {
   )cpp");
   EXPECT_THAT(External.Completions,
               AllOf(has("pub"), Not(has("prot")), Not(has("priv"))));
+
+  auto Results = completions(R"cpp(
+      struct Foo {
+        public: void pub();
+        protected: void prot();
+        private: void priv();
+      };
+      struct Bar : public Foo {
+        private: using Foo::pub;
+      };
+      void test() {
+        Bar B;
+        B.^
+      }
+  )cpp");
+  EXPECT_THAT(Results.Completions,
+              AllOf(Not(has("priv")), Not(has("prot")), Not(has("pub"))));
 }
 
 TEST(CompletionTest, Qualifiers) {
@@ -3148,6 +3165,20 @@ TEST(CompletionTest, ObjectiveCMethodDeclarationFromMiddle) {
   EXPECT_THAT(C, ElementsAre(named("secondArgument:")));
   EXPECT_THAT(C, ElementsAre(kind(CompletionItemKind::Method)));
   EXPECT_THAT(C, ElementsAre(signature("(id)object")));
+}
+
+TEST(CompletionTest, ObjectiveCProtocolFromIndex) {
+  Symbol FoodClass = objcClass("FoodClass");
+  Symbol SymFood = objcProtocol("Food");
+  Symbol SymFooey = objcProtocol("Fooey");
+  auto Results = completions(R"objc(
+      id<Foo^>
+    )objc",
+                             {SymFood, FoodClass, SymFooey},
+                             /*Opts=*/{}, "Foo.m");
+
+  auto C = Results.Completions;
+  EXPECT_THAT(C, UnorderedElementsAre(named("Food"), named("Fooey")));
 }
 
 TEST(CompletionTest, CursorInSnippets) {

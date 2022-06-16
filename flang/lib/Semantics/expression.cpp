@@ -2210,6 +2210,7 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
     // Create a renaming USE of the specific procedure.
     auto rename{context_.SaveTempName(
         used->symbol().owner().GetName().value().ToString() + "$" +
+        specific.owner().GetName().value().ToString() + "$" +
         specific.name().ToString())};
     return *const_cast<semantics::Scope &>(scope)
                 .try_emplace(rename, specific.attrs(),

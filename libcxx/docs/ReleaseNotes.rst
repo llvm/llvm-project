@@ -99,6 +99,7 @@ API Changes
     - ``<chrono>``
     - ``<exception>``
     - ``<functional>``
+    - ``<iterator>``
     - ``<new>``
     - ``<typeinfo>``
     - ``<utility>``
@@ -135,6 +136,11 @@ API Changes
   users of libc++. Instead, users not wishing to take a dependency on libc++ should link
   against the static version of libc++, which will result in no dependency being
   taken against the shared library.
+
+- The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION`` macro has been added to allow
+  re-enabling the ``allocator<void>`` specialization. When used in conjuction with
+  ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS``, this ensures that the members of
+  ``allocator<void>`` removed in C++20 can be accessed.
 
 ABI Changes
 -----------

@@ -561,6 +561,10 @@ public:
                                   MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitFill(MachineInstr &MI, MachineBasicBlock *BB) const;
 
+  MachineBasicBlock *EmitInsertVectorToTile(unsigned Opc, unsigned BaseReg,
+                                            MachineInstr &MI,
+                                            MachineBasicBlock *BB) const;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;

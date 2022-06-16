@@ -24,6 +24,7 @@ exports_files([
     "LICENSE.TXT",
     "include/mlir/Dialect/LLVMIR/LLVMOps.td",
     "run_lit.sh",
+    "utils/textmate/mlir.json",
 ])
 
 filegroup(
@@ -3133,7 +3134,6 @@ cc_library(
         ":BufferizationTransforms",
         ":DialectUtils",
         ":FuncDialect",
-        ":GPUDialect",
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",
@@ -7898,6 +7898,7 @@ cc_library(
         "lib/Conversion/TosaToTensor",
     ],
     deps = [
+        ":ArithmeticDialect",
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":IR",

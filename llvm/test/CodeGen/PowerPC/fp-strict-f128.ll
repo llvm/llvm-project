@@ -157,12 +157,14 @@ define fp128 @fmsub_f128(fp128 %f0, fp128 %f1, fp128 %f2) #0 {
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    xxswapd vs0, v4
 ; CHECK-P8-NEXT:    addi r3, r1, 32
-; CHECK-P8-NEXT:    stvx v4, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    lbz r4, 47(r1)
 ; CHECK-P8-NEXT:    xori r4, r4, 128
 ; CHECK-P8-NEXT:    stb r4, 47(r1)
-; CHECK-P8-NEXT:    lvx v4, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v4, vs0
 ; CHECK-P8-NEXT:    bl fmaf128
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 48
@@ -193,12 +195,14 @@ define fp128 @fnmadd_f128(fp128 %f0, fp128 %f1, fp128 %f2) #0 {
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    bl fmaf128
 ; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    addi r3, r1, 32
-; CHECK-P8-NEXT:    stvx v2, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    lbz r4, 47(r1)
 ; CHECK-P8-NEXT:    xori r4, r4, 128
 ; CHECK-P8-NEXT:    stb r4, 47(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
@@ -225,20 +229,24 @@ define fp128 @fnmsub_f128(fp128 %f0, fp128 %f1, fp128 %f2) #0 {
 ; CHECK-P8-NEXT:    stdu r1, -64(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    xxswapd vs0, v4
 ; CHECK-P8-NEXT:    addi r3, r1, 32
-; CHECK-P8-NEXT:    stvx v4, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    lbz r4, 47(r1)
 ; CHECK-P8-NEXT:    xori r4, r4, 128
 ; CHECK-P8-NEXT:    stb r4, 47(r1)
-; CHECK-P8-NEXT:    lvx v4, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v4, vs0
 ; CHECK-P8-NEXT:    bl fmaf128
 ; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    addi r3, r1, 48
-; CHECK-P8-NEXT:    stvx v2, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    lbz r4, 63(r1)
 ; CHECK-P8-NEXT:    xori r4, r4, 128
 ; CHECK-P8-NEXT:    stb r4, 63(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    addi r1, r1, 64
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0

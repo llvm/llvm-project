@@ -1733,10 +1733,10 @@ define dso_local void @testGlob11PtrPlus0() {
 ; CHECK-P8-LE:       # %bb.0: # %entry
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobLd11@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobLd11@toc@l
-; CHECK-P8-LE-NEXT:    lvx v2, 0, r3
+; CHECK-P8-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobSt11@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobSt11@toc@l
-; CHECK-P8-LE-NEXT:    stvx v2, 0, r3
+; CHECK-P8-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-LE-NEXT:    blr
 ;
 ; CHECK-P8-BE-LABEL: testGlob11PtrPlus0:
@@ -1788,10 +1788,10 @@ define dso_local void @testGlob11PtrPlus3() {
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobLd11@toc@ha
 ; CHECK-P8-LE-NEXT:    li r4, 3
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobLd11@toc@l
-; CHECK-P8-LE-NEXT:    lvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    lxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobSt11@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobSt11@toc@l
-; CHECK-P8-LE-NEXT:    stvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    blr
 ;
 ; CHECK-P8-BE-LABEL: testGlob11PtrPlus3:
@@ -1844,10 +1844,10 @@ define dso_local void @testGlob11PtrPlus4() {
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobLd11@toc@ha
 ; CHECK-P8-LE-NEXT:    li r4, 4
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobLd11@toc@l
-; CHECK-P8-LE-NEXT:    lvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    lxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobSt11@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobSt11@toc@l
-; CHECK-P8-LE-NEXT:    stvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    blr
 ;
 ; CHECK-P8-BE-LABEL: testGlob11PtrPlus4:
@@ -1899,10 +1899,10 @@ define dso_local void @testGlob11PtrPlus16() {
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobLd11@toc@ha
 ; CHECK-P8-LE-NEXT:    li r4, 16
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobLd11@toc@l
-; CHECK-P8-LE-NEXT:    lvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    lxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobSt11@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobSt11@toc@l
-; CHECK-P8-LE-NEXT:    stvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    blr
 ;
 ; CHECK-P8-BE-LABEL: testGlob11PtrPlus16:
@@ -1959,10 +1959,10 @@ define dso_local void @testGlob11PtrPlusVar(i64 %Idx) {
 ; CHECK-P8-LE-NEXT:    addis r4, r2, GlobLd11@toc@ha
 ; CHECK-P8-LE-NEXT:    sldi r3, r3, 4
 ; CHECK-P8-LE-NEXT:    addi r4, r4, GlobLd11@toc@l
-; CHECK-P8-LE-NEXT:    lvx v2, r4, r3
+; CHECK-P8-LE-NEXT:    lxvd2x vs0, r4, r3
 ; CHECK-P8-LE-NEXT:    addis r4, r2, GlobSt11@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r4, r4, GlobSt11@toc@l
-; CHECK-P8-LE-NEXT:    stvx v2, r4, r3
+; CHECK-P8-LE-NEXT:    stxvd2x vs0, r4, r3
 ; CHECK-P8-LE-NEXT:    blr
 ;
 ; CHECK-P8-BE-LABEL: testGlob11PtrPlusVar:
@@ -2015,10 +2015,10 @@ define dso_local void @testGlob12PtrPlus0() {
 ; CHECK-P8-LE:       # %bb.0: # %entry
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobLd12@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobLd12@toc@l
-; CHECK-P8-LE-NEXT:    lvx v2, 0, r3
+; CHECK-P8-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobSt12@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobSt12@toc@l
-; CHECK-P8-LE-NEXT:    stvx v2, 0, r3
+; CHECK-P8-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-LE-NEXT:    blr
 ;
 ; CHECK-P8-BE-LABEL: testGlob12PtrPlus0:
@@ -2070,10 +2070,10 @@ define dso_local void @testGlob12PtrPlus3() {
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobLd12@toc@ha
 ; CHECK-P8-LE-NEXT:    li r4, 3
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobLd12@toc@l
-; CHECK-P8-LE-NEXT:    lvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    lxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobSt12@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobSt12@toc@l
-; CHECK-P8-LE-NEXT:    stvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    blr
 ;
 ; CHECK-P8-BE-LABEL: testGlob12PtrPlus3:
@@ -2126,10 +2126,10 @@ define dso_local void @testGlob12PtrPlus4() {
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobLd12@toc@ha
 ; CHECK-P8-LE-NEXT:    li r4, 4
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobLd12@toc@l
-; CHECK-P8-LE-NEXT:    lvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    lxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobSt12@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobSt12@toc@l
-; CHECK-P8-LE-NEXT:    stvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    blr
 ;
 ; CHECK-P8-BE-LABEL: testGlob12PtrPlus4:
@@ -2181,10 +2181,10 @@ define dso_local void @testGlob12PtrPlus16() {
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobLd12@toc@ha
 ; CHECK-P8-LE-NEXT:    li r4, 16
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobLd12@toc@l
-; CHECK-P8-LE-NEXT:    lvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    lxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    addis r3, r2, GlobSt12@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r3, r3, GlobSt12@toc@l
-; CHECK-P8-LE-NEXT:    stvx v2, r3, r4
+; CHECK-P8-LE-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    blr
 ;
 ; CHECK-P8-BE-LABEL: testGlob12PtrPlus16:
@@ -2241,10 +2241,10 @@ define dso_local void @testGlob12PtrPlusVar(i64 %Idx) {
 ; CHECK-P8-LE-NEXT:    addis r4, r2, GlobLd12@toc@ha
 ; CHECK-P8-LE-NEXT:    sldi r3, r3, 4
 ; CHECK-P8-LE-NEXT:    addi r4, r4, GlobLd12@toc@l
-; CHECK-P8-LE-NEXT:    lvx v2, r4, r3
+; CHECK-P8-LE-NEXT:    lxvd2x vs0, r4, r3
 ; CHECK-P8-LE-NEXT:    addis r4, r2, GlobSt12@toc@ha
 ; CHECK-P8-LE-NEXT:    addi r4, r4, GlobSt12@toc@l
-; CHECK-P8-LE-NEXT:    stvx v2, r4, r3
+; CHECK-P8-LE-NEXT:    stxvd2x vs0, r4, r3
 ; CHECK-P8-LE-NEXT:    blr
 ;
 ; CHECK-P8-BE-LABEL: testGlob12PtrPlusVar:

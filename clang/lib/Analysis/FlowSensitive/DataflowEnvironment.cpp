@@ -53,7 +53,7 @@ llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
 static bool areEquivalentIndirectionValues(Value *Val1, Value *Val2) {
   if (auto *IndVal1 = dyn_cast<ReferenceValue>(Val1)) {
     auto *IndVal2 = cast<ReferenceValue>(Val2);
-    return &IndVal1->getPointeeLoc() == &IndVal2->getPointeeLoc();
+    return &IndVal1->getReferentLoc() == &IndVal2->getReferentLoc();
   }
   if (auto *IndVal1 = dyn_cast<PointerValue>(Val1)) {
     auto *IndVal2 = cast<PointerValue>(Val2);
@@ -522,7 +522,7 @@ StorageLocation &Environment::skip(StorageLocation &Loc, SkipPast SP) const {
     // References cannot be chained so we only need to skip past one level of
     // indirection.
     if (auto *Val = dyn_cast_or_null<ReferenceValue>(getValue(Loc)))
-      return Val->getPointeeLoc();
+      return Val->getReferentLoc();
     return Loc;
   case SkipPast::ReferenceThenPointer:
     StorageLocation &LocPastRef = skip(Loc, SkipPast::Reference);

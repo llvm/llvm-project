@@ -141,12 +141,20 @@ class CountLeadingZerosPattern final
       return failure();
 
     Location loc = countOp.getLoc();
+    Value allOneBits = getScalarOrVectorI32Constant(type, -1, rewriter, loc);
+    Value val32 = getScalarOrVectorI32Constant(type, 32, rewriter, loc);
     Value val31 = getScalarOrVectorI32Constant(type, 31, rewriter, loc);
     Value msb =
         rewriter.create<spirv::GLSLFindUMsbOp>(loc, adaptor.getOperand());
     // We need to subtract from 31 given that the index is from the least
     // significant bit.
-    rewriter.replaceOpWithNewOp<spirv::ISubOp>(countOp, val31, msb);
+    Value sub = rewriter.create<spirv::ISubOp>(loc, val31, msb);
+    // If the integer has all zero bits, GLSL FindUMsb would return -1. So
+    // theoretically (31 - FindUMsb) should still give the correct result.
+    // However, certain Vulkan implementations have driver bugs regarding it.
+    // So handle the corner case explicity to workaround it.
+    Value cmp = rewriter.create<spirv::IEqualOp>(loc, msb, allOneBits);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(countOp, cmp, val32, sub);
     return success();
   }
 };
@@ -193,6 +201,33 @@ struct Log1pOpPattern final : public OpConversionPattern<math::Log1pOp> {
     return success();
   }
 };
+
+/// Converts math.powf to SPIRV-Ops.
+struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(math::PowFOp powfOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = getTypeConverter()->convertType(powfOp.getType());
+    if (!dstType)
+      return failure();
+
+    // Per GLSL Pow extended instruction spec:
+    // "Result is undefined if x < 0. Result is undefined if x = 0 and y <= 0."
+    Location loc = powfOp.getLoc();
+    Value zero =
+        spirv::ConstantOp::getZero(adaptor.getLhs().getType(), loc, rewriter);
+    Value lessThan =
+        rewriter.create<spirv::FOrdLessThanOp>(loc, adaptor.getLhs(), zero);
+    Value abs = rewriter.create<spirv::GLSLFAbsOp>(loc, adaptor.getLhs());
+    Value pow = rewriter.create<spirv::GLSLPowOp>(loc, abs, adaptor.getRhs());
+    Value negate = rewriter.create<spirv::FNegateOp>(loc, pow);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(powfOp, lessThan, negate, pow);
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -208,7 +243,7 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
   // GLSL patterns
   patterns
       .add<CountLeadingZerosPattern, Log1pOpPattern<spirv::GLSLLogOp>,
-           ExpM1OpPattern<spirv::GLSLExpOp>,
+           ExpM1OpPattern<spirv::GLSLExpOp>, PowFOpPattern,
            spirv::ElementwiseOpPattern<math::AbsOp, spirv::GLSLFAbsOp>,
            spirv::ElementwiseOpPattern<math::CeilOp, spirv::GLSLCeilOp>,
            spirv::ElementwiseOpPattern<math::CosOp, spirv::GLSLCosOp>,
@@ -216,7 +251,6 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
            spirv::ElementwiseOpPattern<math::FloorOp, spirv::GLSLFloorOp>,
            spirv::ElementwiseOpPattern<math::FmaOp, spirv::GLSLFmaOp>,
            spirv::ElementwiseOpPattern<math::LogOp, spirv::GLSLLogOp>,
-           spirv::ElementwiseOpPattern<math::PowFOp, spirv::GLSLPowOp>,
            spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::GLSLInverseSqrtOp>,
            spirv::ElementwiseOpPattern<math::SinOp, spirv::GLSLSinOp>,
            spirv::ElementwiseOpPattern<math::SqrtOp, spirv::GLSLSqrtOp>,
