@@ -898,6 +898,8 @@ Status NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid {0}", GetID());
 
+  NotifyTracersProcessWillResume();
+
   bool software_single_step = !SupportHardwareSingleStepping();
 
   if (software_single_step) {
@@ -1665,9 +1667,12 @@ void NativeProcessLinux::StopTrackingThread(NativeThreadLinux &thread) {
   SignalIfAllThreadsStopped();
 }
 
-void NativeProcessLinux::NotifyTracersProcessStateChanged(
-    lldb::StateType state) {
-  m_intel_pt_collector.OnProcessStateChanged(state);
+void NativeProcessLinux::NotifyTracersProcessDidStop() {
+  m_intel_pt_collector.ProcessDidStop();
+}
+
+void NativeProcessLinux::NotifyTracersProcessWillResume() {
+  m_intel_pt_collector.ProcessWillResume();
 }
 
 Status NativeProcessLinux::NotifyTracersOfNewThread(lldb::tid_t tid) {

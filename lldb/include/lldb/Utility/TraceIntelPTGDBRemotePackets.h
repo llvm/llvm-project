@@ -25,6 +25,7 @@ namespace lldb_private {
 struct IntelPTDataKinds {
   static const char *kProcFsCpuInfo;
   static const char *kTraceBuffer;
+  static const char *kPerfContextSwitchTrace;
 };
 
 /// jLLDBTraceStart gdb-remote packet

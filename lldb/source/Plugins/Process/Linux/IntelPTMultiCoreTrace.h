@@ -24,6 +24,8 @@ namespace lldb_private {
 namespace process_linux {
 
 class IntelPTMultiCoreTrace : public IntelPTProcessTrace {
+  using ContextSwitchTrace = PerfEvent;
+
 public:
   /// Start tracing all CPU cores.
   ///
@@ -51,7 +53,24 @@ public:
                                       IntelPTSingleBufferTrace &core_trace)>
                        callback);
 
-  void OnProcessStateChanged(lldb::StateType state) override;
+  /// Execute the provided callback on each core that is being traced.
+  ///
+  /// \param[in] callback.core_id
+  ///   The core id that is being traced.
+  ///
+  /// \param[in] callback.intelpt_trace
+  ///   The single-buffer intel pt trace instance for the given core.
+  ///
+  /// \param[in] callback.context_switch_trace
+  ///   The perf event collecting context switches for the given core.
+  void ForEachCore(std::function<void(lldb::core_id_t core_id,
+                                      IntelPTSingleBufferTrace &intelpt_trace,
+                                      PerfEvent &context_switch_trace)>
+                       callback);
+
+  void ProcessDidStop() override;
+
+  void ProcessWillResume() override;
 
   TraceGetStateResponse GetState() override;
 
@@ -65,17 +84,18 @@ public:
   GetBinaryData(const TraceGetBinaryDataRequest &request) override;
 
 private:
+  /// This assumes that all underlying perf_events for each core are part of the
+  /// same perf event group.
   IntelPTMultiCoreTrace(
-      llvm::DenseMap<lldb::core_id_t, IntelPTSingleBufferTraceUP>
+      llvm::DenseMap<lldb::core_id_t,
+                     std::pair<IntelPTSingleBufferTrace, ContextSwitchTrace>>
           &&traces_per_core,
       NativeProcessProtocol &process)
       : m_traces_per_core(std::move(traces_per_core)), m_process(process) {}
 
-  llvm::DenseMap<lldb::core_id_t, IntelPTSingleBufferTraceUP> m_traces_per_core;
-
-  /// The initial state is stopped because tracing can only start when the
-  /// process is paused.
-  lldb::StateType m_process_state = lldb::StateType::eStateStopped;
+  llvm::DenseMap<lldb::core_id_t,
+                 std::pair<IntelPTSingleBufferTrace, ContextSwitchTrace>>
+      m_traces_per_core;
 
   /// The target process.
   NativeProcessProtocol &m_process;
