@@ -3334,13 +3334,13 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   return true;
 }
 
+/// Try to delinearize \p SrcAccessFn and \p DstAccessFn if the underlying
+/// arrays accessed are fixed-size arrays. Return true if delinearization was
+/// successful.
 bool DependenceInfo::tryDelinearizeFixedSize(
     Instruction *Src, Instruction *Dst, const SCEV *SrcAccessFn,
     const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
     SmallVectorImpl<const SCEV *> &DstSubscripts) {
-
-  Value *SrcPtr = getLoadStorePointerOperand(Src);
-  Value *DstPtr = getLoadStorePointerOperand(Dst);
   const SCEVUnknown *SrcBase =
       dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
   const SCEVUnknown *DstBase =
@@ -3348,41 +3348,29 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   assert(SrcBase && DstBase && SrcBase == DstBase &&
          "expected src and dst scev unknowns to be equal");
 
-  // Check the simple case where the array dimensions are fixed size.
-  auto *SrcGEP = dyn_cast<GetElementPtrInst>(SrcPtr);
-  auto *DstGEP = dyn_cast<GetElementPtrInst>(DstPtr);
-  if (!SrcGEP || !DstGEP)
+  SmallVector<int, 4> SrcSizes;
+  SmallVector<int, 4> DstSizes;
+  if (!tryDelinearizeFixedSizeImpl(SE, Src, SrcAccessFn, SrcSubscripts,
+                                   SrcSizes) ||
+      !tryDelinearizeFixedSizeImpl(SE, Dst, DstAccessFn, DstSubscripts,
+                                   DstSizes))
     return false;
-
-  SmallVector<int, 4> SrcSizes, DstSizes;
-  getIndexExpressionsFromGEP(*SE, SrcGEP, SrcSubscripts, SrcSizes);
-  getIndexExpressionsFromGEP(*SE, DstGEP, DstSubscripts, DstSizes);
 
   // Check that the two size arrays are non-empty and equal in length and
   // value.
-  if (SrcSizes.empty() || SrcSubscripts.size() <= 1 ||
-      SrcSizes.size() != DstSizes.size() ||
+  if (SrcSizes.size() != DstSizes.size() ||
       !std::equal(SrcSizes.begin(), SrcSizes.end(), DstSizes.begin())) {
     SrcSubscripts.clear();
     DstSubscripts.clear();
     return false;
   }
 
-  Value *SrcBasePtr = SrcGEP->getOperand(0)->stripPointerCasts();
-  Value *DstBasePtr = DstGEP->getOperand(0)->stripPointerCasts();
-
-  // Check that for identical base pointers we do not miss index offsets
-  // that have been added before this GEP is applied.
-  if (SrcBasePtr != SrcBase->getValue() || DstBasePtr != DstBase->getValue()) {
-    SrcSubscripts.clear();
-    DstSubscripts.clear();
-    return false;
-  }
-
   assert(SrcSubscripts.size() == DstSubscripts.size() &&
-         SrcSubscripts.size() == SrcSizes.size() + 1 &&
-         "Expected equal number of entries in the list of sizes and "
-         "subscripts.");
+         "Expected equal number of entries in the list of SrcSubscripts and "
+         "DstSubscripts.");
+
+  Value *SrcPtr = getLoadStorePointerOperand(Src);
+  Value *DstPtr = getLoadStorePointerOperand(Dst);
 
   // In general we cannot safely assume that the subscripts recovered from GEPs
   // are in the range of values defined for their corresponding array
@@ -3418,8 +3406,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   }
   LLVM_DEBUG({
     dbgs() << "Delinearized subscripts of fixed-size array\n"
-           << "SrcGEP:" << *SrcGEP << "\n"
-           << "DstGEP:" << *DstGEP << "\n";
+           << "SrcGEP:" << *SrcPtr << "\n"
+           << "DstGEP:" << *DstPtr << "\n";
   });
   return true;
 }
