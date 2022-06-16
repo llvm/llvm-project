@@ -3,6 +3,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GFX68 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -mattr=-enable-prt-strict-null -verify-machineinstrs < %s | FileCheck -check-prefix=NOPRT %s
+; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 
 define amdgpu_ps float @load_1d_f32_x(<8 x i32> inreg %rsrc, i32 %s) {
 ; GFX68-LABEL: load_1d_f32_x:

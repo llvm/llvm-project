@@ -4963,6 +4963,10 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     //
     // SIShrinkInstructions will convert NSA encodings to non-NSA after register
     // allocation when possible.
+    //
+    // TODO: we can actually allow partial NSA where the final register is a
+    // contiguous set of the remaining addresses.
+    // This could help where there are more addresses than supported.
     const bool UseNSA = ST.hasNSAEncoding() && CorrectedNumVAddrs >= 3 &&
                         CorrectedNumVAddrs <= ST.getNSAMaxSize();
 
@@ -5343,6 +5347,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   MachineRegisterInfo &MRI = *B.getMRI();
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
+  const LLT V2S16 = LLT::fixed_vector(2, 16);
+  const LLT V3S32 = LLT::fixed_vector(3, 32);
 
   Register DstReg = MI.getOperand(0).getReg();
   Register NodePtr = MI.getOperand(2).getReg();
@@ -5360,61 +5366,98 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     return false;
   }
 
+  const bool IsGFX11Plus = AMDGPU::isGFX11Plus(ST);
   const bool IsA16 = MRI.getType(RayDir).getElementType().getSizeInBits() == 16;
   const bool Is64 = MRI.getType(NodePtr).getSizeInBits() == 64;
   const unsigned NumVDataDwords = 4;
   const unsigned NumVAddrDwords = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
-  const bool UseNSA =
-      ST.hasNSAEncoding() && NumVAddrDwords <= ST.getNSAMaxSize();
+  const unsigned NumVAddrs = IsGFX11Plus ? (IsA16 ? 4 : 5) : NumVAddrDwords;
+  const bool UseNSA = ST.hasNSAEncoding() && NumVAddrs <= ST.getNSAMaxSize();
   const unsigned BaseOpcodes[2][2] = {
       {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
       {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
        AMDGPU::IMAGE_BVH64_INTERSECT_RAY_a16}};
   int Opcode;
   if (UseNSA) {
-    Opcode =
-        AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16], AMDGPU::MIMGEncGfx10NSA,
-                              NumVDataDwords, NumVAddrDwords);
-  } else {
     Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                   AMDGPU::MIMGEncGfx10Default, NumVDataDwords,
-                                   PowerOf2Ceil(NumVAddrDwords));
+                                   IsGFX11Plus ? AMDGPU::MIMGEncGfx11NSA
+                                               : AMDGPU::MIMGEncGfx10NSA,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else {
+    Opcode = AMDGPU::getMIMGOpcode(
+        BaseOpcodes[Is64][IsA16],
+        IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default : AMDGPU::MIMGEncGfx10Default,
+        NumVDataDwords, PowerOf2Ceil(NumVAddrDwords));
   }
   assert(Opcode != -1);
 
   SmallVector<Register, 12> Ops;
-  if (Is64) {
-    auto Unmerge = B.buildUnmerge({S32, S32}, NodePtr);
-    Ops.push_back(Unmerge.getReg(0));
-    Ops.push_back(Unmerge.getReg(1));
-  } else {
+  if (UseNSA && IsGFX11Plus) {
+    auto packLanes = [&Ops, &S32, &V3S32, &B](Register Src) {
+      auto Unmerge = B.buildUnmerge({S32, S32, S32}, Src);
+      auto Merged = B.buildMerge(
+          V3S32, {Unmerge.getReg(0), Unmerge.getReg(1), Unmerge.getReg(2)});
+      Ops.push_back(Merged.getReg(0));
+    };
+
     Ops.push_back(NodePtr);
-  }
-  Ops.push_back(RayExtent);
+    Ops.push_back(RayExtent);
+    packLanes(RayOrigin);
 
-  auto packLanes = [&Ops, &S32, &B](Register Src) {
-    auto Unmerge = B.buildUnmerge({S32, S32, S32}, Src);
-    Ops.push_back(Unmerge.getReg(0));
-    Ops.push_back(Unmerge.getReg(1));
-    Ops.push_back(Unmerge.getReg(2));
-  };
-
-  packLanes(RayOrigin);
-  if (IsA16) {
-    auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16}, RayDir);
-    auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16}, RayInvDir);
-    Register R1 = MRI.createGenericVirtualRegister(S32);
-    Register R2 = MRI.createGenericVirtualRegister(S32);
-    Register R3 = MRI.createGenericVirtualRegister(S32);
-    B.buildMerge(R1, {UnmergeRayDir.getReg(0), UnmergeRayDir.getReg(1)});
-    B.buildMerge(R2, {UnmergeRayDir.getReg(2), UnmergeRayInvDir.getReg(0)});
-    B.buildMerge(R3, {UnmergeRayInvDir.getReg(1), UnmergeRayInvDir.getReg(2)});
-    Ops.push_back(R1);
-    Ops.push_back(R2);
-    Ops.push_back(R3);
+    if (IsA16) {
+      auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16}, RayDir);
+      auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16}, RayInvDir);
+      auto MergedDir = B.buildMerge(
+          V3S32,
+          {B.buildBitcast(S32, B.buildMerge(V2S16, {UnmergeRayInvDir.getReg(0),
+                                                    UnmergeRayDir.getReg(0)}))
+               .getReg(0),
+           B.buildBitcast(S32, B.buildMerge(V2S16, {UnmergeRayInvDir.getReg(1),
+                                                    UnmergeRayDir.getReg(1)}))
+               .getReg(0),
+           B.buildBitcast(S32, B.buildMerge(V2S16, {UnmergeRayInvDir.getReg(2),
+                                                    UnmergeRayDir.getReg(2)}))
+               .getReg(0)});
+      Ops.push_back(MergedDir.getReg(0));
+    } else {
+      packLanes(RayDir);
+      packLanes(RayInvDir);
+    }
   } else {
-    packLanes(RayDir);
-    packLanes(RayInvDir);
+    if (Is64) {
+      auto Unmerge = B.buildUnmerge({S32, S32}, NodePtr);
+      Ops.push_back(Unmerge.getReg(0));
+      Ops.push_back(Unmerge.getReg(1));
+    } else {
+      Ops.push_back(NodePtr);
+    }
+    Ops.push_back(RayExtent);
+
+    auto packLanes = [&Ops, &S32, &B](Register Src) {
+      auto Unmerge = B.buildUnmerge({S32, S32, S32}, Src);
+      Ops.push_back(Unmerge.getReg(0));
+      Ops.push_back(Unmerge.getReg(1));
+      Ops.push_back(Unmerge.getReg(2));
+    };
+
+    packLanes(RayOrigin);
+    if (IsA16) {
+      auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16}, RayDir);
+      auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16}, RayInvDir);
+      Register R1 = MRI.createGenericVirtualRegister(S32);
+      Register R2 = MRI.createGenericVirtualRegister(S32);
+      Register R3 = MRI.createGenericVirtualRegister(S32);
+      B.buildMerge(R1, {UnmergeRayDir.getReg(0), UnmergeRayDir.getReg(1)});
+      B.buildMerge(R2, {UnmergeRayDir.getReg(2), UnmergeRayInvDir.getReg(0)});
+      B.buildMerge(R3,
+                   {UnmergeRayInvDir.getReg(1), UnmergeRayInvDir.getReg(2)});
+      Ops.push_back(R1);
+      Ops.push_back(R2);
+      Ops.push_back(R3);
+    } else {
+      packLanes(RayDir);
+      packLanes(RayInvDir);
+    }
   }
 
   if (!UseNSA) {
