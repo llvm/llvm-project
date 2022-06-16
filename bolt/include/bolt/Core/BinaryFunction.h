@@ -701,6 +701,28 @@ private:
     IsInjected = true;
   }
 
+  /// Create a basic block at a given \p Offset in the function and append it
+  /// to the end of list of blocks. Used during CFG construction only.
+  BinaryBasicBlock *addBasicBlockAt(uint64_t Offset, MCSymbol *Label) {
+    assert(CurrentState == State::Disassembled &&
+           "Cannot add block with an offset in non-disassembled state.");
+    assert(!getBasicBlockAtOffset(Offset) &&
+           "Basic block already exists at the offset.");
+
+    BasicBlocks.emplace_back(createBasicBlock(Label).release());
+    BinaryBasicBlock *BB = BasicBlocks.back();
+
+    BB->setIndex(BasicBlocks.size() - 1);
+    BB->setOffset(Offset);
+
+    BasicBlockOffsets.emplace_back(Offset, BB);
+    assert(std::is_sorted(BasicBlockOffsets.begin(), BasicBlockOffsets.end(),
+                          CompareBasicBlockOffsets()) &&
+           std::is_sorted(begin(), end()));
+
+    return BB;
+  }
+
   /// Clear state of the function that could not be disassembled or if its
   /// disassembled state was later invalidated.
   void clearDisasmState();
@@ -1531,62 +1553,34 @@ public:
     return Address <= PC && PC < Address + Size;
   }
 
-  /// Create a basic block at a given \p Offset in the
-  /// function.
-  /// If \p DeriveAlignment is true, set the alignment of the block based
-  /// on the alignment of the existing offset.
-  /// The new block is not inserted into the CFG.  The client must
-  /// use insertBasicBlocks to add any new blocks to the CFG.
+  /// Create a basic block in the function. The new block is *NOT* inserted
+  /// into the CFG. The caller must use insertBasicBlocks() to add any new
+  /// blocks to the CFG.
   std::unique_ptr<BinaryBasicBlock>
-  createBasicBlock(uint64_t Offset, MCSymbol *Label = nullptr,
-                   bool DeriveAlignment = false) {
-    assert(BC.Ctx && "cannot be called with empty context");
+  createBasicBlock(MCSymbol *Label = nullptr) {
     if (!Label) {
       std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
       Label = BC.Ctx->createNamedTempSymbol("BB");
     }
-    auto BB = std::unique_ptr<BinaryBasicBlock>(
-        new BinaryBasicBlock(this, Label, Offset));
-
-    if (DeriveAlignment) {
-      uint64_t DerivedAlignment = Offset & (1 + ~Offset);
-      BB->setAlignment(std::min(DerivedAlignment, uint64_t(32)));
-    }
+    auto BB =
+        std::unique_ptr<BinaryBasicBlock>(new BinaryBasicBlock(this, Label));
 
     LabelToBB[Label] = BB.get();
 
     return BB;
   }
 
-  /// Create a basic block at a given \p Offset in the
-  /// function and append it to the end of list of blocks.
-  /// If \p DeriveAlignment is true, set the alignment of the block based
-  /// on the alignment of the existing offset.
-  ///
-  /// Returns NULL if basic block already exists at the \p Offset.
-  BinaryBasicBlock *addBasicBlock(uint64_t Offset, MCSymbol *Label = nullptr,
-                                  bool DeriveAlignment = false) {
-    assert((CurrentState == State::CFG || !getBasicBlockAtOffset(Offset)) &&
-           "basic block already exists in pre-CFG state");
+  /// Create a new basic block with an optional \p Label and add it to the list
+  /// of basic blocks of this function.
+  BinaryBasicBlock *addBasicBlock(MCSymbol *Label = nullptr) {
+    assert(CurrentState == State::CFG && "Can only add blocks in CFG state");
 
-    std::unique_ptr<BinaryBasicBlock> BBPtr =
-        createBasicBlock(Offset, Label, DeriveAlignment);
-    BasicBlocks.emplace_back(BBPtr.release());
-
+    BasicBlocks.emplace_back(createBasicBlock(Label).release());
     BinaryBasicBlock *BB = BasicBlocks.back();
+
     BB->setIndex(BasicBlocks.size() - 1);
-
-    if (CurrentState == State::Disassembled) {
-      BasicBlockOffsets.emplace_back(Offset, BB);
-    } else if (CurrentState == State::CFG) {
-      BB->setLayoutIndex(layout_size());
-      BasicBlocksLayout.emplace_back(BB);
-    }
-
-    assert(CurrentState == State::CFG ||
-           (std::is_sorted(BasicBlockOffsets.begin(), BasicBlockOffsets.end(),
-                           CompareBasicBlockOffsets()) &&
-            std::is_sorted(begin(), end())));
+    BB->setLayoutIndex(layout_size());
+    BasicBlocksLayout.emplace_back(BB);
 
     return BB;
   }

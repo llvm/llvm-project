@@ -1760,8 +1760,8 @@ void SpecializeMemcpy1::runOnFunctions(BinaryContext &BC) {
           assert(NextBB && "unexpected call to memcpy() with no return");
         }
 
-        BinaryBasicBlock *MemcpyBB =
-            Function.addBasicBlock(CurBB->getInputOffset());
+        BinaryBasicBlock *MemcpyBB = Function.addBasicBlock();
+        MemcpyBB->setOffset(CurBB->getInputOffset());
         InstructionListType CmpJCC =
             BC.MIB->createCmpJE(BC.MIB->getIntArgRegister(2), 1,
                                 OneByteMemcpyBB->getLabel(), BC.Ctx.get());

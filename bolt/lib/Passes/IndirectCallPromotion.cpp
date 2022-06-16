@@ -764,8 +764,8 @@ IndirectCallPromotion::rewriteCall(
     MCSymbol *&Sym = Itr->first;
     InstructionListType &Insts = Itr->second;
     assert(Sym);
-    std::unique_ptr<BinaryBasicBlock> TBB =
-        Function.createBasicBlock(OrigOffset, Sym);
+    std::unique_ptr<BinaryBasicBlock> TBB = Function.createBasicBlock(Sym);
+    TBB->setOffset(OrigOffset);
     for (MCInst &Inst : Insts) // sanitize new instructions.
       if (MIB->isCall(Inst))
         MIB->removeAnnotation(Inst, "CallProfile");
