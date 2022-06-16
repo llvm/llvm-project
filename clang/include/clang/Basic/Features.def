@@ -49,6 +49,8 @@ FEATURE(memtag_stack,
         LangOpts.Sanitize.has(SanitizerKind::MemtagStack))
 FEATURE(memtag_heap,
         LangOpts.Sanitize.has(SanitizerKind::MemtagHeap))
+FEATURE(memtag_globals,
+        LangOpts.Sanitize.has(SanitizerKind::MemtagGlobals))
 FEATURE(xray_instrument, LangOpts.XRayInstrument)
 FEATURE(undefined_behavior_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Undefined))
