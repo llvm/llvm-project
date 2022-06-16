@@ -44,6 +44,7 @@ def non_default_op_name(I=TensorDef(T, S.N), O=TensorDef(T, S.N, output=True)):
 with Context() as ctx, Location.unknown():
   module = Module.create()
   f32 = F32Type.get()
+  c32 = ComplexType.get(f32)
   i32 = IntegerType.get_signless(32)
   with InsertionPoint(module.body):
 
@@ -127,6 +128,16 @@ with Context() as ctx, Location.unknown():
     @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
     def test_f32_elemwise_neg(input, init_result):
+      return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.negf)
+
+    # CHECK-LABEL: @test_c32_elemwise_neg
+    # CHECK:      ^{{.*}}(%[[IN:.+]]: complex<f32>, %[[OUT:.+]]: complex<f32>)
+    # CHECK-NEXT:   %[[EXP:.+]] = complex.neg %[[IN]] : complex<f32>
+    # CHECK-NEXT:   linalg.yield %[[EXP]] : complex<f32>
+    # CHECK-NEXT: -> tensor<4x16xcomplex<f32>>
+    @func.FuncOp.from_py_func(
+        RankedTensorType.get((4, 16), c32), RankedTensorType.get((4, 16), c32))
+    def test_c32_elemwise_neg(input, init_result):
       return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.negf)
 
     # Just check that we don't assert out on name mismatch.
