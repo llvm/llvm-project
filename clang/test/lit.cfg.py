@@ -111,7 +111,7 @@ llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(
     ('%hmaptool', "'%s' %s" % (config.python_executable,
-                             os.path.join(config.clang_tools_dir, 'hmaptool'))))
+                             os.path.join(config.clang_src_dir, 'utils', 'hmaptool', 'hmaptool'))))
 
 config.substitutions.append(
     ('%deps-to-rsp',
