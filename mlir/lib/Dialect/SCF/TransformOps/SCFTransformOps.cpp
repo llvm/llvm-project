@@ -31,7 +31,7 @@ public:
 // GetParentForOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilencableFailure
+DiagnosedSilenceableFailure
 transform::GetParentForOp::apply(transform::TransformResults &results,
                                  transform::TransformState &state) {
   SetVector<Operation *> parents;
@@ -41,10 +41,10 @@ transform::GetParentForOp::apply(transform::TransformResults &results,
     for (unsigned i = 0, e = getNumLoops(); i < e; ++i) {
       loop = current->getParentOfType<scf::ForOp>();
       if (!loop) {
-        DiagnosedSilencableFailure diag = emitSilencableError()
-                                          << "could not find an '"
-                                          << scf::ForOp::getOperationName()
-                                          << "' parent";
+        DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                           << "could not find an '"
+                                           << scf::ForOp::getOperationName()
+                                           << "' parent";
         diag.attachNote(target->getLoc()) << "target op";
         return diag;
       }
@@ -53,7 +53,7 @@ transform::GetParentForOp::apply(transform::TransformResults &results,
     parents.insert(loop);
   }
   results.set(getResult().cast<OpResult>(), parents.getArrayRef());
-  return DiagnosedSilencableFailure::success();
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -85,7 +85,7 @@ static scf::ExecuteRegionOp wrapInExecuteRegion(RewriterBase &b,
   return executeRegionOp;
 }
 
-DiagnosedSilencableFailure
+DiagnosedSilenceableFailure
 transform::LoopOutlineOp::apply(transform::TransformResults &results,
                                 transform::TransformState &state) {
   SmallVector<Operation *> transformed;
@@ -96,8 +96,8 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
     SimpleRewriter rewriter(getContext());
     scf::ExecuteRegionOp exec = wrapInExecuteRegion(rewriter, target);
     if (!exec) {
-      DiagnosedSilencableFailure diag = emitSilencableError()
-                                        << "failed to outline";
+      DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                         << "failed to outline";
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
     }
@@ -107,7 +107,7 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
 
     if (failed(outlined)) {
       (void)reportUnknownTransformError(target);
-      return DiagnosedSilencableFailure::definiteFailure();
+      return DiagnosedSilenceableFailure::definiteFailure();
     }
 
     if (symbolTableOp) {
@@ -120,7 +120,7 @@ transform::LoopOutlineOp::apply(transform::TransformResults &results,
     transformed.push_back(*outlined);
   }
   results.set(getTransformed().cast<OpResult>(), transformed);
-  return DiagnosedSilencableFailure::success();
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -44,13 +44,14 @@ def AlternativesOp : TransformDialectOp<"alternatives",
     The single operand of this operation is the scope in which the alternative
     transformation sequences are attempted, that is, an operation in the payload
     IR that contains all the other operations that may be modified by the
-    transformations. There is no check that the transforms are indeed scoped
-    as their "apply" methods can be arbitrarily complex. Therefore it is the
-    responsibility of the user to ensure that the transforms are scoped
-    correctly, or to produce an irrecoverable error and thus abort the execution
-    without attempting the remaining alternatives. Note that the payload IR
-    outside of the given scope is not necessarily in the valid state, or even
-    accessible to the tranfsormation.
+    transformations. The scope operation must be isolated from above. There is
+    no check that the transforms are indeed scoped as their "apply" methods can
+    be arbitrarily complex. Therefore it is the responsibility of the user to
+    ensure that the transforms are scoped correctly, or to produce an
+    irrecoverable error and thus abort the execution without attempting the
+    remaining alternatives. Note that the payload IR outside of the given scope
+    is not necessarily in the valid state, or even accessible to the
+    tranfsormation.
     
     The changes to the IR within the scope performed by transforms in the failed
     alternative region are reverted before attempting the next region.
@@ -72,8 +73,8 @@ def AlternativesOp : TransformDialectOp<"alternatives",
     ```mlir
     %result = transform.alternatives %scope {
     ^bb0(%arg0: !pdl.operation):
-      // Try a failible transformation.
-      %0 = transform.failible %arg0 // ...
+      // Try a fallible transformation.
+      %0 = transform.fallible %arg0 // ...
       // If succeeded, yield the the result of the transformation.
       transform.yield %0 : !pdl.operation
     }, {

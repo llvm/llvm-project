@@ -188,16 +188,16 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
   return success();
 }
 
-DiagnosedSilencableFailure
+DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
   LLVM_DEBUG(DBGS() << "applying: " << transform << "\n");
   if (options.getExpensiveChecksEnabled() &&
       failed(checkAndRecordHandleInvalidation(transform))) {
-    return DiagnosedSilencableFailure::definiteFailure();
+    return DiagnosedSilenceableFailure::definiteFailure();
   }
 
   transform::TransformResults results(transform->getNumResults());
-  DiagnosedSilencableFailure result(transform.apply(results, *this));
+  DiagnosedSilenceableFailure result(transform.apply(results, *this));
   if (!result.succeeded())
     return result;
 
@@ -223,10 +223,10 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
            "payload IR association for a value other than the result of the "
            "current transform op");
     if (failed(setPayloadOps(result, results.get(result.getResultNumber()))))
-      return DiagnosedSilencableFailure::definiteFailure();
+      return DiagnosedSilenceableFailure::definiteFailure();
   }
 
-  return DiagnosedSilencableFailure::success();
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -277,15 +277,14 @@ transform::TransformResults::get(unsigned resultNumber) const {
 //===----------------------------------------------------------------------===//
 
 LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
-    TransformState &state, Operation *op, unsigned region) {
+    TransformState &state, Operation *op, Region &region) {
   SmallVector<Operation *> targets;
   if (op->getNumOperands() != 0)
     llvm::append_range(targets, state.getPayloadOps(op->getOperand(0)));
   else
     targets.push_back(state.getTopLevel());
 
-  return state.mapBlockArguments(op->getRegion(region).front().getArgument(0),
-                                 targets);
+  return state.mapBlockArguments(region.front().getArgument(0), targets);
 }
 
 LogicalResult

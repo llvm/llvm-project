@@ -348,3 +348,33 @@ module {
   }
 }
 
+// -----
+
+func.func @foo(%arg0: index, %arg1: index, %arg2: index) {
+  // expected-note @below {{scope}}
+  scf.for %i = %arg0 to %arg1 step %arg2 {
+    %0 = arith.constant 0 : i32
+  }
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @match_const : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "arith.constant"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+
+  sequence %arg0 {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = transform.pdl_match @match_const in %arg1
+    %1 = transform.loop.get_parent_for %0
+    // expected-error @below {{only isolated-from-above ops can be alternative scopes}}
+    alternatives %1 {
+    ^bb2(%arg2: !pdl.operation):
+    }
+  }
+}
