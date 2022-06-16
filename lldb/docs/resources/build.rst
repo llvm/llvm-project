@@ -391,10 +391,9 @@ Building the Documentation
 If you wish to build the optional (reference) documentation, additional
 dependencies are required:
 
-* Sphinx (for the website)
+* Sphinx (for the website and the Python API reference)
 * Graphviz (for the 'dot' tool)
 * doxygen (if you wish to build the C++ API reference)
-* epydoc (if you wish to build the Python API reference)
 
 To install the prerequisites for building the documentation (on Debian/Ubuntu)
 do:
@@ -402,7 +401,6 @@ do:
 ::
 
   $ sudo apt-get install doxygen graphviz python3-sphinx
-  $ sudo pip install epydoc
 
 To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build the desired target(s).
 
@@ -411,7 +409,6 @@ To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build t
   $ ninja docs-lldb-html
   $ ninja docs-lldb-man
   $ ninja lldb-cpp-doc
-  $ ninja lldb-python-doc
 
 Cross-compiling LLDB
 --------------------
