@@ -159,17 +159,15 @@ define void @sdiv_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: sdiv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    ptrue p1.s, vl32
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    sunpklo z1.h, z1.b
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sdiv z0.s, p1/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1b { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, <32 x i8>* %a
   %op2 = load <32 x i8>, <32 x i8>* %b
@@ -182,17 +180,15 @@ define void @sdiv_v64i8(<64 x i8>* %a, <64 x i8>* %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: sdiv_v64i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
-; CHECK-NEXT:    ptrue p1.s, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    sunpklo z1.h, z1.b
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sdiv z0.s, p1/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1b { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <64 x i8>, <64 x i8>* %a
   %op2 = load <64 x i8>, <64 x i8>* %b
@@ -205,20 +201,20 @@ define void @sdiv_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: sdiv_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
-; CHECK-NEXT:    ptrue p1.s, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    sunpklo z1.h, z1.b
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpkhi z2.s, z1.h
 ; CHECK-NEXT:    sunpkhi z3.s, z0.h
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sdivr z2.s, p1/m, z2.s, z3.s
-; CHECK-NEXT:    sdiv z0.s, p1/m, z0.s, z1.s
+; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
+; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl128
+; CHECK-NEXT:    st1b { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <128 x i8>, <128 x i8>* %a
   %op2 = load <128 x i8>, <128 x i8>* %b
@@ -394,14 +390,13 @@ define void @sdiv_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; VBITS_GE_512-LABEL: sdiv_v16i16:
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_512-NEXT:    ptrue p1.s, vl16
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    sunpklo z1.s, z1.h
 ; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
-; VBITS_GE_512-NEXT:    sdiv z0.s, p1/m, z0.s, z1.s
-; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
+; VBITS_GE_512-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; VBITS_GE_512-NEXT:    st1h { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %op2 = load <16 x i16>, <16 x i16>* %b
@@ -414,14 +409,13 @@ define void @sdiv_v32i16(<32 x i16>* %a, <32 x i16>* %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: sdiv_v32i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
-; CHECK-NEXT:    ptrue p1.s, vl32
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sdiv z0.s, p1/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i16>, <32 x i16>* %a
   %op2 = load <32 x i16>, <32 x i16>* %b
@@ -434,14 +428,13 @@ define void @sdiv_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: sdiv_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
-; CHECK-NEXT:    ptrue p1.s, vl64
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
-; CHECK-NEXT:    sdiv z0.s, p1/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <64 x i16>, <64 x i16>* %a
   %op2 = load <64 x i16>, <64 x i16>* %b
@@ -871,18 +864,11 @@ define <16 x i8> @udiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 define void @udiv_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: udiv_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    ptrue p1.s, vl32
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
-; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    udiv z0.s, p1/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl32
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x1]
+; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    udivr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1b { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, <32 x i8>* %a
   %op2 = load <32 x i8>, <32 x i8>* %b
@@ -894,18 +880,11 @@ define void @udiv_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(8,0) #0 {
 define void @udiv_v64i8(<64 x i8>* %a, <64 x i8>* %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: udiv_v64i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl64
-; CHECK-NEXT:    ptrue p1.s, vl64
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
-; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    udiv z0.s, p1/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl64
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x1]
+; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    udivr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1b { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <64 x i8>, <64 x i8>* %a
   %op2 = load <64 x i8>, <64 x i8>* %b
@@ -917,21 +896,18 @@ define void @udiv_v64i8(<64 x i8>* %a, <64 x i8>* %b) vscale_range(16,0) #0 {
 define void @udiv_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: udiv_v128i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl128
+; CHECK-NEXT:    ptrue p0.h, vl128
 ; CHECK-NEXT:    ptrue p1.s, vl64
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
-; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z3.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x1]
+; CHECK-NEXT:    ld1b { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    uunpkhi z2.s, z0.h
+; CHECK-NEXT:    uunpkhi z3.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    udivr z2.s, p1/m, z2.s, z3.s
-; CHECK-NEXT:    udiv z0.s, p1/m, z0.s, z1.s
+; CHECK-NEXT:    udivr z0.s, p1/m, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
-; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    st1b { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <128 x i8>, <128 x i8>* %a
   %op2 = load <128 x i8>, <128 x i8>* %b
@@ -1106,15 +1082,11 @@ define void @udiv_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ;
 ; VBITS_GE_512-LABEL: udiv_v16i16:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_512-NEXT:    ptrue p1.s, vl16
-; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    uunpklo z1.s, z1.h
-; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
-; VBITS_GE_512-NEXT:    udiv z0.s, p1/m, z0.s, z1.s
-; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
-; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
+; VBITS_GE_512-NEXT:    ld1h { z0.s }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    ld1h { z1.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    udivr z0.s, p0/m, z0.s, z1.s
+; VBITS_GE_512-NEXT:    st1h { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %op2 = load <16 x i16>, <16 x i16>* %b
@@ -1126,15 +1098,11 @@ define void @udiv_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 define void @udiv_v32i16(<32 x i16>* %a, <32 x i16>* %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: udiv_v32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl32
-; CHECK-NEXT:    ptrue p1.s, vl32
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    udiv z0.s, p1/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl32
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x1]
+; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    udivr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i16>, <32 x i16>* %a
   %op2 = load <32 x i16>, <32 x i16>* %b
@@ -1146,15 +1114,11 @@ define void @udiv_v32i16(<32 x i16>* %a, <32 x i16>* %b) vscale_range(8,0) #0 {
 define void @udiv_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: udiv_v64i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl64
-; CHECK-NEXT:    ptrue p1.s, vl64
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    udiv z0.s, p1/m, z0.s, z1.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl64
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x1]
+; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    udivr z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <64 x i16>, <64 x i16>* %a
   %op2 = load <64 x i16>, <64 x i16>* %b
