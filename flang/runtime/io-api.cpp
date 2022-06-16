@@ -400,7 +400,7 @@ Cookie IONAME(BeginWait)(ExternalUnit unitNumber, AsynchronousId id,
 }
 Cookie IONAME(BeginWaitAll)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
-  return IONAME(BeginWait)(unitNumber, 0 /*no ID=*/);
+  return IONAME(BeginWait)(unitNumber, 0 /*no ID=*/, sourceFile, sourceLine);
 }
 
 Cookie IONAME(BeginClose)(

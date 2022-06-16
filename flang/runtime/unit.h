@@ -39,6 +39,7 @@ public:
   explicit ExternalFileUnit(int unitNumber) : unitNumber_{unitNumber} {
     isUTF8 = executionEnvironment.defaultUTF8;
     asyncIdAvailable_.set();
+    asyncIdAvailable_.reset(0);
   }
   ~ExternalFileUnit() {}
 
