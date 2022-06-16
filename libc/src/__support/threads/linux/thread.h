@@ -15,7 +15,10 @@
 #include "src/__support/threads/linux/futex_word.h" // For FutexWordType
 #include "src/__support/threads/thread_attrib.h"
 
+#ifdef LLVM_LIBC_ARCH_AARCH64
 #include <arm_acle.h>
+#endif
+
 #include <linux/futex.h>
 #include <linux/sched.h> // For CLONE_* flags.
 #include <stdint.h>
