@@ -289,7 +289,7 @@ define amdgpu_ps float @div_scale_s_s_true(float inreg %src0, float inreg %src1)
 ;
 ; GFX10-LABEL: div_scale_s_s_true:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_div_scale_f32 v0, null, s2, s3, s2
+; GFX10-NEXT:    v_div_scale_f32 v0, s0, s2, s3, s2
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: div_scale_s_s_true:
@@ -310,7 +310,7 @@ define amdgpu_ps float @div_scale_s_s_false(float inreg %src0, float inreg %src1
 ;
 ; GFX10-LABEL: div_scale_s_s_false:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_div_scale_f32 v0, null, s3, s3, s2
+; GFX10-NEXT:    v_div_scale_f32 v0, s0, s3, s3, s2
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: div_scale_s_s_false:

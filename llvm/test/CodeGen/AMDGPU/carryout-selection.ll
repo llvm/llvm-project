@@ -3,7 +3,9 @@
 ; RUN: llc -march=amdgcn -mcpu=verde   -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CISI    %s
 ; RUN: llc -march=amdgcn -mcpu=fiji    -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI      %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900  -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9    %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1010 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,GFX1010,GFX10W32 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,GFX1030,GFX10W32 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,GFX1030,GFX10W64 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11 %s
 
 ; GCN-ISEL-LABEL: name:   sadd64rr
@@ -52,8 +54,10 @@ entry:
 ; GFX9:	v_add_co_u32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX9: v_addc_co_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc
 ;
-; GFX1010: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}
-; GFX1010: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
+; GFX10W32: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}
+; GFX10W64: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, v{{[0-9]+}}
+; GFX1010: v_add_co_ci_u32_e64 v{{[0-9]+}}, [[CARRY]], s{{[0-9]+}}, 0, [[CARRY]]
+; GFX1030: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
 ;
 ; GFX11: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
@@ -85,8 +89,10 @@ entry:
 ; GFX9: v_mov_b32_e32 v1, 0x1234
 ; GFX9: v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ;
-; GFX1010: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], 0x56789876, v{{[0-9]+}}
-; GFX1010: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, 0, 0x1234, [[CARRY]]
+; GFX10W32: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], 0x56789876, v{{[0-9]+}}
+; GFX10W64: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s\[[0-9]+:[0-9]+\]]], 0x56789876, v{{[0-9]+}}
+; GFX1010: v_add_co_ci_u32_e64 v{{[0-9]+}}, [[CARRY]], 0, 0x1234, [[CARRY]]
+; GFX1030: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, 0, 0x1234, [[CARRY]]
 ;
 ; GFX11: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], 0x56789876, v{{[0-9]+}}
 ; GFX11: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, 0, 0x1234, [[CARRY]]
@@ -132,8 +138,9 @@ define amdgpu_kernel void @suaddo32(i32 addrspace(1)* %out, i1 addrspace(1)* %ca
 ; GFX9:	v_add_co_u32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX9:	v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 ;
-; GFX1010: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
-; GFX1010: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, [[CARRY]]
+; GFX10W32: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
+; GFX10W64: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, s{{[0-9]+}}
+; GFX10: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, [[CARRY]]
 ;
 ; GFX11: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX11: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, [[CARRY]]
@@ -180,8 +187,10 @@ define amdgpu_kernel void @suaddo64(i64 addrspace(1)* %out, i1 addrspace(1)* %ca
 ; GFX9:	v_add_co_u32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v0
 ; GFX9:	v_addc_co_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc
 ;
-; GFX1010: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v0
-; GFX1010: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
+; GFX10W32: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v0
+; GFX10W64: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, v0
+; GFX1010: v_add_co_ci_u32_e64 v{{[0-9]+}}, [[CARRY]], s{{[0-9]+}}, 0, [[CARRY]]
+; GFX1030: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
 ;
 ; GFX11: v_add_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v0
 ; GFX11: v_add_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
@@ -201,7 +210,9 @@ define amdgpu_kernel void @vuaddo64(i64 addrspace(1)* %out, i1 addrspace(1)* %ca
 ; RUN: llc -march=amdgcn -mcpu=verde   -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CISI    %s
 ; RUN: llc -march=amdgcn -mcpu=fiji    -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI      %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900  -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9    %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1010 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,GFX1010,GFX10W32 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,GFX10W32,GFX1030 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,GFX10W64,GFX1030 %s
 
 ; GCN-ISEL-LABEL: name:   ssub64rr
 ; GCN-ISEL-LABEL: body:
@@ -249,8 +260,10 @@ entry:
 ; GFX9:	v_sub_co_u32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX9: v_subbrev_co_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc
 ;
-; GFX1010: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}
-; GFX1010: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
+; GFX10W32: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}
+; GFX10W64: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, v{{[0-9]+}}
+; GFX1010: v_sub_co_ci_u32_e64 v{{[0-9]+}}, [[CARRY]], s{{[0-9]+}}, 0, [[CARRY]]
+; GFX1030: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
 ;
 ; GFX11: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
@@ -282,8 +295,10 @@ entry:
 ; GFX9: v_mov_b32_e32 v1, 0x1234
 ; GFX9: v_subbrev_co_u32_e32 v1, vcc, 0, v1, vcc
 ;
-; GFX1010: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], 0x56789876, v{{[0-9]+}}
-; GFX1010: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, 0x1234, 0, [[CARRY]]
+; GFX10W32: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], 0x56789876, v{{[0-9]+}}
+; GFX10W64: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s\[[0-9]+:[0-9]+\]]], 0x56789876, v{{[0-9]+}}
+; GFX1010: v_sub_co_ci_u32_e64 v{{[0-9]+}}, [[CARRY]], 0x1234, 0, [[CARRY]]
+; GFX1030: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, 0x1234, 0, [[CARRY]]
 ;
 ; GFX11: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], 0x56789876, v{{[0-9]+}}
 ; GFX11: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, 0x1234, 0, [[CARRY]]
@@ -329,8 +344,9 @@ define amdgpu_kernel void @susubo32(i32 addrspace(1)* %out, i1 addrspace(1)* %ca
 ; GFX9:	v_sub_co_u32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX9:	v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 ;
-; GFX1010: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
-; GFX1010: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, [[CARRY]]
+; GFX10W32: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
+; GFX10W64: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, s{{[0-9]+}}
+; GFX10: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, [[CARRY]]
 ;
 ; GFX11: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
 ; GFX11: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, [[CARRY]]
@@ -377,8 +393,10 @@ define amdgpu_kernel void @susubo64(i64 addrspace(1)* %out, i1 addrspace(1)* %ca
 ; GFX9:	v_sub_co_u32_e32 v{{[0-9]+}}, vcc, s{{[0-9]+}}, v0
 ; GFX9:	v_subbrev_co_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc
 ;
-; GFX1010: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v0
-; GFX1010: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
+; GFX10W32: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v0
+; GFX10W64: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, v0
+; GFX1010: v_sub_co_ci_u32_e64 v{{[0-9]+}}, [[CARRY]], s{{[0-9]+}}, 0, [[CARRY]]
+; GFX1030: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
 ;
 ; GFX11: v_sub_co_u32 v{{[0-9]+}}, [[CARRY:s[0-9]+]], s{{[0-9]+}}, v0
 ; GFX11: v_sub_co_ci_u32_e64 v{{[0-9]+}}, null, s{{[0-9]+}}, 0, [[CARRY]]
