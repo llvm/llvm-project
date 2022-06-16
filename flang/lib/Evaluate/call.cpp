@@ -10,6 +10,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Semantics/symbol.h"
@@ -199,7 +200,15 @@ std::optional<Expr<SubscriptInteger>> ProcedureRef::LEN() const {
     // ProcedureDesignator::LEN() because they're independent of the
     // lengths of the actual arguments.
   }
-  return proc_.LEN();
+  if (auto len{proc_.LEN()}) {
+    if (IsActuallyConstant(*len)) {
+      return len;
+    }
+    // TODO: Handle cases where the length of a function result is a
+    // safe expression in terms of actual argument values, after substituting
+    // actual argument expressions for INTENT(IN)/VALUE dummy arguments.
+  }
+  return std::nullopt;
 }
 
 int ProcedureRef::Rank() const {
