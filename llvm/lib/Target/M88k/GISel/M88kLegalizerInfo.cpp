@@ -87,5 +87,31 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FNEG})
       .legalFor({S32, S64, S80});
+
+  getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalFor({S32, S64});
+
+  // FP to int conversion instructions
+  getActionDefinitionsBuilder(G_FPTOSI)
+      .legalForCartesianProduct({S32}, {S64, S32})
+      .libcallForCartesianProduct({S64}, {S64, S32})
+      .minScalar(0, S32);
+
+  getActionDefinitionsBuilder(G_FPTOUI)
+      .libcallForCartesianProduct({S64}, {S64, S32})
+      .lowerForCartesianProduct({S32}, {S64, S32})
+      .minScalar(0, S32);
+
+  // Int to FP conversion instructions
+  getActionDefinitionsBuilder(G_SITOFP)
+      .legalForCartesianProduct({S64, S32}, {S32})
+      .libcallForCartesianProduct({S64, S32}, {S64})
+      .minScalar(1, S32);
+/*
+  getActionDefinitionsBuilder(G_UITOFP)
+      .libcallForCartesianProduct({S64, S32}, {S64})
+      .customForCartesianProduct({S64, S32}, {S32})
+      .minScalar(1, S32);
+*/
   getLegacyLegalizerInfo().computeTables();
 }

@@ -158,6 +158,35 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FMUL:
   case TargetOpcode::G_FDIV:
     return getSameKindOfOperandsMapping(MI);
+  case TargetOpcode::G_FCONSTANT: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    if (Ty.getSizeInBits() != 64 && Ty.getSizeInBits() != 32)
+      return getInvalidInstructionMapping(); // TODO Support 80 bit FP.
+    PartialMappingIdx RBIdx = (Ty.getSizeInBits() == 64) ? PMI_GR64 : PMI_GR32;
+    OperandsMapping = getOperandsMapping(
+        {getValueMapping(RBIdx), nullptr});
+    break;
+  }
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI: {
+    LLT Ty = MRI.getType(MI.getOperand(1).getReg());
+    if (Ty.getSizeInBits() != 64 && Ty.getSizeInBits() != 32)
+      return getInvalidInstructionMapping(); // TODO Support 80 bit FP.
+    PartialMappingIdx RBIdx = (Ty.getSizeInBits() == 64) ? PMI_GR64 : PMI_GR32;
+    OperandsMapping = getOperandsMapping(
+        {getValueMapping(PMI_GR32), getValueMapping(RBIdx)});
+    break;
+  }
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    if (Ty.getSizeInBits() != 64 && Ty.getSizeInBits() != 32)
+      return getInvalidInstructionMapping(); // TODO Support 80 bit FP.
+    PartialMappingIdx RBIdx = (Ty.getSizeInBits() == 64) ? PMI_GR64 : PMI_GR32;
+    OperandsMapping = getOperandsMapping(
+        {getValueMapping(RBIdx), getValueMapping(PMI_GR32)});
+    break;
+  }
   case TargetOpcode::G_UBFX:
   case TargetOpcode::G_SBFX:
     OperandsMapping = getOperandsMapping(
