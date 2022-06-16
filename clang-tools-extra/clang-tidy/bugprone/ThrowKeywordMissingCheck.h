@@ -19,7 +19,7 @@ namespace bugprone {
 /// class that has 'EXCEPTION', 'Exception' or 'exception' in its name.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-throw-keyword-missing.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/throw-keyword-missing.html
 class ThrowKeywordMissingCheck : public ClangTidyCheck {
 public:
   ThrowKeywordMissingCheck(StringRef Name, ClangTidyContext *Context)

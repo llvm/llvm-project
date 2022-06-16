@@ -20,7 +20,7 @@ namespace cert {
 /// https://www.securecoding.cert.org/confluence/display/c/FLP30-C.+Do+not+use+floating-point+variables+as+loop+counters
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert-flp30-c.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cert/flp30-c.html
 class FloatLoopCounter : public ClangTidyCheck {
 public:
   FloatLoopCounter(StringRef Name, ClangTidyContext *Context)

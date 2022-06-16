@@ -21,7 +21,7 @@ namespace objc {
 /// 'g[A-Z].*' (variables).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google-objc-global-variable-declaration.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/google/objc-global-variable-declaration.html
 class GlobalVariableDeclarationCheck : public ClangTidyCheck {
  public:
   GlobalVariableDeclarationCheck(StringRef Name, ClangTidyContext *Context)

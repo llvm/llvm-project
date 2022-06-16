@@ -20,7 +20,7 @@ namespace boost {
 /// ``std::to_string`` and ``std::to_wstring`` calls.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/boost-use-to-string.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/boost/use-to-string.html
 class UseToStringCheck : public ClangTidyCheck {
 public:
   UseToStringCheck(StringRef Name, ClangTidyContext *Context)

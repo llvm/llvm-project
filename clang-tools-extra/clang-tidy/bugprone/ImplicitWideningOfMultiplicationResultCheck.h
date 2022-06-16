@@ -19,7 +19,7 @@ namespace bugprone {
 /// Diagnoses instances of an implicit widening of multiplication result.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-implicit-widening-of-multiplication-result.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result.html
 class ImplicitWideningOfMultiplicationResultCheck : public ClangTidyCheck {
   const ast_matchers::MatchFinder::MatchResult *Result;
   bool ShouldUseCXXStaticCast;

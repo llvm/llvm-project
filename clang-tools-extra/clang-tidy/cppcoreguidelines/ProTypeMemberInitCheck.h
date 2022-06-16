@@ -27,7 +27,7 @@ namespace cppcoreguidelines {
 /// will result in false positives.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-member-init.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-member-init.html
 /// TODO: See if 'fixes' for false positives are optimized away by the compiler.
 /// TODO: For classes with multiple constructors, make sure that we don't offer
 ///     multiple in-class initializer fixits for the same  member.

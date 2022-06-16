@@ -20,7 +20,7 @@ namespace bugprone {
 /// using the copy-and-swap or the copy-and-move method.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-unhandled-self-assignment.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unhandled-self-assignment.html
 class UnhandledSelfAssignmentCheck : public ClangTidyCheck {
 public:
   UnhandledSelfAssignmentCheck(StringRef Name, ClangTidyContext *Context);

@@ -19,7 +19,7 @@ namespace bugprone {
 /// accidentally.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-missing-comma.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-missing-comma.html
 class SuspiciousMissingCommaCheck : public ClangTidyCheck {
 public:
   SuspiciousMissingCommaCheck(StringRef Name, ClangTidyContext *Context);

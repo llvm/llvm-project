@@ -18,7 +18,7 @@ namespace cppcoreguidelines {
 /// Flags possible initialization order issues of static variables.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-interfaces-global-init.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/interfaces-global-init.html
 class InterfacesGlobalInitCheck : public ClangTidyCheck {
 public:
   InterfacesGlobalInitCheck(StringRef Name, ClangTidyContext *Context)

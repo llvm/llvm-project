@@ -19,7 +19,7 @@ namespace modernize {
 /// and replaces those that have a non-deprecated equivalent.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-deprecated-ios-base-aliases.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/deprecated-ios-base-aliases.html
 class DeprecatedIosBaseAliasesCheck : public ClangTidyCheck {
 public:
   DeprecatedIosBaseAliasesCheck(StringRef Name, ClangTidyContext *Context)

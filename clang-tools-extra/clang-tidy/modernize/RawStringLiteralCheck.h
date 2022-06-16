@@ -22,7 +22,7 @@ using CharsBitSet = std::bitset<1 << CHAR_BIT>;
 /// raw string literals.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-raw-string-literal.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/raw-string-literal.html
 class RawStringLiteralCheck : public ClangTidyCheck {
 public:
   RawStringLiteralCheck(StringRef Name, ClangTidyContext *Context);

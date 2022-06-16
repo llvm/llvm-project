@@ -18,7 +18,7 @@ namespace readability {
 /// Find redundant variable declarations.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-declaration.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/redundant-declaration.html
 class RedundantDeclarationCheck : public ClangTidyCheck {
 public:
   RedundantDeclarationCheck(StringRef Name, ClangTidyContext *Context);

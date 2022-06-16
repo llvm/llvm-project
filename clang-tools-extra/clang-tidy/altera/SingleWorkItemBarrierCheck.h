@@ -20,7 +20,7 @@ namespace altera {
 /// kernels, which may be inefficient or cause an error.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/opencl-single-work-item-barrier.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/opencl/single-work-item-barrier.html
 class SingleWorkItemBarrierCheck : public ClangTidyCheck {
   const unsigned AOCVersion;
 

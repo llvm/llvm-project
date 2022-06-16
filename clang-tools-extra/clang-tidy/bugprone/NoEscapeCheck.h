@@ -20,7 +20,7 @@ namespace bugprone {
 /// attribute, then we warn the user of their error.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-no-escape.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/no-escape.html
 class NoEscapeCheck : public ClangTidyCheck {
 public:
   NoEscapeCheck(StringRef Name, ClangTidyContext *Context)

@@ -33,7 +33,7 @@ namespace modernize {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-equals-delete.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-equals-delete.html
 class UseEqualsDeleteCheck : public ClangTidyCheck {
 public:
   UseEqualsDeleteCheck(StringRef Name, ClangTidyContext *Context)

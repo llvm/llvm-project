@@ -21,7 +21,7 @@ namespace android {
 /// This check only works when corresponding argument is StringLiteral. No
 /// constant propagation.
 ///
-/// http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-fopen.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-fopen.html
 class CloexecFopenCheck : public CloexecCheck {
 public:
   CloexecFopenCheck(StringRef Name, ClangTidyContext *Context)

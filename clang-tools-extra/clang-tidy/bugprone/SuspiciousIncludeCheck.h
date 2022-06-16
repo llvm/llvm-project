@@ -34,7 +34,7 @@ namespace bugprone {
 ///     filename extensions of implementation files. "c;cc;cpp;cxx" by default.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-include.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-include.html
 class SuspiciousIncludeCheck : public ClangTidyCheck {
 public:
   SuspiciousIncludeCheck(StringRef Name, ClangTidyContext *Context);

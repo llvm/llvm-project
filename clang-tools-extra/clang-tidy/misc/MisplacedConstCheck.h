@@ -19,7 +19,7 @@ namespace misc {
 /// pointer type rather than to the pointee.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc-misplaced-const.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/misc/misplaced-const.html
 class MisplacedConstCheck : public ClangTidyCheck {
 public:
   MisplacedConstCheck(StringRef Name, ClangTidyContext *Context)

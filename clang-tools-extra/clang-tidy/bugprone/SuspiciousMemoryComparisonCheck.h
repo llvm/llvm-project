@@ -19,7 +19,7 @@ namespace bugprone {
 /// arguments.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-suspicious-memory-comparison.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-memory-comparison.html
 class SuspiciousMemoryComparisonCheck : public ClangTidyCheck {
 public:
   SuspiciousMemoryComparisonCheck(StringRef Name, ClangTidyContext *Context)
