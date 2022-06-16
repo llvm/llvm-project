@@ -203,7 +203,8 @@ static inline int get_except() {
 static inline int clear_except(int excepts) {
   internal::X87StateDescriptor state;
   internal::get_x87_state_descriptor(state);
-  state.status_word &= ~internal::get_status_value_for_except(excepts);
+  state.status_word &=
+      static_cast<uint16_t>(~internal::get_status_value_for_except(excepts));
   internal::write_x87_state_descriptor(state);
 
   uint32_t mxcsr = internal::get_mxcsr();
@@ -215,8 +216,8 @@ static inline int clear_except(int excepts) {
 static inline int test_except(int excepts) {
   uint16_t status_value = internal::get_status_value_for_except(excepts);
   // Check both x87 status word and MXCSR.
-  return internal::exception_status_to_macro(status_value &
-                                             internal::get_mxcsr());
+  return internal::exception_status_to_macro(
+      static_cast<uint16_t>(status_value & internal::get_mxcsr()));
 }
 
 // Sets the exception flags but does not trigger the exception handler.
