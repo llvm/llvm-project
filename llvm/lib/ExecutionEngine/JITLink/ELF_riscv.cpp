@@ -471,8 +471,9 @@ private:
       return EdgeKind_riscv::R_RISCV_32_PCREL;
     }
 
-    return make_error<JITLinkError>("Unsupported riscv relocation:" +
-                                    formatv("{0:d}", Type));
+    return make_error<JITLinkError>(
+        "Unsupported riscv relocation:" + formatv("{0:d}: ", Type) +
+        object::getELFRelocationTypeName(ELF::EM_RISCV, Type));
   }
 
   Error addRelocations() override {
