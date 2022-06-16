@@ -508,6 +508,10 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return ScalableVectorType::get(Type::getBFloatTy(Context), 4);
   case MVT::nxv8bf16:
     return ScalableVectorType::get(Type::getBFloatTy(Context), 8);
+  case MVT::nxv16bf16:
+    return ScalableVectorType::get(Type::getBFloatTy(Context), 16);
+  case MVT::nxv32bf16:
+    return ScalableVectorType::get(Type::getBFloatTy(Context), 32);
   case MVT::nxv1f32:
     return ScalableVectorType::get(Type::getFloatTy(Context), 1);
   case MVT::nxv2f32:
