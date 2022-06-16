@@ -449,3 +449,14 @@ ArrayRef<lldb::core_id_t> Trace::GetTracedCores() {
     return *m_cores;
   return {};
 }
+
+std::vector<Process *> Trace::GetTracedProcesses() const {
+  std::vector<Process *> processes;
+
+  for (Process *proc : m_postmortem_processes)
+    processes.push_back(proc);
+
+  if (m_live_process)
+    processes.push_back(m_live_process);
+  return processes;
+}

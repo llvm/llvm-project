@@ -496,6 +496,10 @@ protected:
   DoRefreshLiveProcessState(TraceGetStateResponse state,
                             llvm::StringRef json_response) = 0;
 
+  /// Return the list of processes traced by this instance. None of the returned
+  /// pointers are invalid.
+  std::vector<Process *> GetTracedProcesses() const;
+
   /// Method to be invoked by the plug-in to refresh the live process state. It
   /// will invoked DoRefreshLiveProcessState at some point, which should be
   /// implemented by the plug-in for custom state handling.
