@@ -119,10 +119,22 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-#include <compare>
 #include <stdexcept>
 #include <type_traits>
 #include <version>
+
+// standard-mandated includes
+
+// [iterator.range]
+#include <__iterator/access.h>
+#include <__iterator/data.h>
+#include <__iterator/empty.h>
+#include <__iterator/reverse_access.h>
+#include <__iterator/size.h>
+
+// [array.syn]
+#include <compare>
+#include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
