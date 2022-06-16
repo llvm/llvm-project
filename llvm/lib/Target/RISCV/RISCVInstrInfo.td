@@ -83,6 +83,9 @@ def riscv_read_cycle_wide : SDNode<"RISCVISD::READ_CYCLE_WIDE",
                                    SDT_RISCVReadCycleWide,
                                    [SDNPHasChain, SDNPSideEffect]>;
 
+def riscv_add_lo : SDNode<"RISCVISD::ADD_LO", SDTIntBinOp>;
+def riscv_hi : SDNode<"RISCVISD::HI", SDTIntUnaryOp>;
+
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -1206,6 +1209,22 @@ def PseudoAddTPRel : Pseudo<(outs GPR:$rd),
 
 def : Pat<(FrameAddrRegImm GPR:$rs1, simm12:$imm12),
           (ADDI GPR:$rs1, simm12:$imm12)>;
+
+// HI and ADD_LO address nodes.
+
+def : Pat<(riscv_hi tglobaladdr:$in), (LUI tglobaladdr:$in)>;
+def : Pat<(riscv_hi tblockaddress:$in), (LUI tblockaddress:$in)>;
+def : Pat<(riscv_hi tjumptable:$in), (LUI tjumptable:$in)>;
+def : Pat<(riscv_hi tconstpool:$in), (LUI tconstpool:$in)>;
+
+def : Pat<(riscv_add_lo GPR:$hi, tglobaladdr:$lo),
+          (ADDI GPR:$hi, tglobaladdr:$lo)>;
+def : Pat<(riscv_add_lo GPR:$hi, tblockaddress:$lo),
+          (ADDI GPR:$hi, tblockaddress:$lo)>;
+def : Pat<(riscv_add_lo GPR:$hi, tjumptable:$lo),
+          (ADDI GPR:$hi, tjumptable:$lo)>;
+def : Pat<(riscv_add_lo GPR:$hi, tconstpool:$lo),
+          (ADDI GPR:$hi, tconstpool:$lo)>;
 
 /// Setcc
 
