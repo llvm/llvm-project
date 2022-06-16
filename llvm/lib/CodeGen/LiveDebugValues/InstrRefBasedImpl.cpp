@@ -442,6 +442,10 @@ public:
     if (!ShouldEmitDebugEntryValues)
       return false;
 
+    // We don't currently emit entry values for DBG_VALUE_LISTs.
+    if (Prop.IsVariadic)
+      return false;
+
     // Is the variable appropriate for entry values (i.e., is a parameter).
     if (!isEntryValueVariable(Var, Prop.DIExpr))
       return false;
@@ -456,7 +460,8 @@ public:
     Register Reg = MTracker->LocIdxToLocID[Num.getLoc()];
     MachineOperand MO = MachineOperand::CreateReg(Reg, false);
 
-    PendingDbgValues.push_back(emitMOLoc(MO, Var, {NewExpr, Prop.Indirect}));
+    PendingDbgValues.push_back(
+        emitMOLoc(MO, Var, {NewExpr, Prop.Indirect, Prop.IsVariadic}));
     return true;
   }
 
@@ -466,7 +471,7 @@ public:
                       MI.getDebugLoc()->getInlinedAt());
     DbgValueProperties Properties(MI);
 
-    const MachineOperand &MO = MI.getOperand(0);
+    const MachineOperand &MO = MI.getDebugOperand(0);
 
     // Ignore non-register locations, we don't transfer those.
     if (!MO.isReg() || MO.getReg() == 0) {
@@ -861,13 +866,38 @@ MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
   DebugLoc DL = DILocation::get(Var.getVariable()->getContext(), 0, 0,
                                 Var.getVariable()->getScope(),
                                 const_cast<DILocation *>(Var.getInlinedAt()));
-  auto MIB = BuildMI(MF, DL, TII.get(TargetOpcode::DBG_VALUE));
+
+  const MCInstrDesc &Desc = Properties.IsVariadic
+                                ? TII.get(TargetOpcode::DBG_VALUE_LIST)
+                                : TII.get(TargetOpcode::DBG_VALUE);
+
+  auto GetRegOp = [](unsigned Reg) -> MachineOperand {
+    return MachineOperand::CreateReg(
+        /* Reg */ Reg, /* isDef */ false, /* isImp */ false,
+        /* isKill */ false, /* isDead */ false,
+        /* isUndef */ false, /* isEarlyClobber */ false,
+        /* SubReg */ 0, /* isDebug */ true);
+  };
+
+  SmallVector<MachineOperand> MOs;
+
+  auto EmitUndef = [&]() {
+    MOs.clear();
+    MOs.assign(Properties.getLocationOpCount(), GetRegOp(0));
+    return BuildMI(MF, DL, Desc, false, MOs, Var.getVariable(),
+                   Properties.DIExpr);
+  };
+
+  // Only 1 location is currently supported.
+  if (Properties.IsVariadic && Properties.getLocationOpCount() != 1)
+    return EmitUndef();
+
+  bool Indirect = Properties.Indirect;
 
   const DIExpression *Expr = Properties.DIExpr;
   if (!MLoc) {
     // No location -> DBG_VALUE $noreg
-    MIB.addReg(0);
-    MIB.addReg(0);
+    return EmitUndef();
   } else if (LocIdxToLocID[*MLoc] >= NumRegs) {
     unsigned LocID = LocIdxToLocID[*MLoc];
     SpillLocationNo SpillID = locIDToSpill(LocID);
@@ -884,7 +914,7 @@ MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
     if (Offset == 0) {
       const SpillLoc &Spill = SpillLocs[SpillID.id()];
       unsigned Base = Spill.SpillBase;
-      MIB.addReg(Base);
+      MOs.push_back(GetRegOp(Base));
 
       // There are several ways we can dereference things, and several inputs
       // to consider:
@@ -923,7 +953,6 @@ MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
         Expr = TRI.prependOffsetExpression(
             Expr, DIExpression::ApplyOffset | DIExpression::DerefAfter,
             Spill.SpillOffset);
-        MIB.addImm(0);
       } else if (UseDerefSize) {
         // We're loading a value off the stack that's not the same size as the
         // variable. Add / subtract stack offset, explicitly deref with a size,
@@ -933,7 +962,6 @@ MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
         Expr = DIExpression::prependOpcodes(Expr, Ops, true);
         unsigned Flags = DIExpression::StackValue | DIExpression::ApplyOffset;
         Expr = TRI.prependOffsetExpression(Expr, Flags, Spill.SpillOffset);
-        MIB.addReg(0);
       } else if (Expr->isComplex()) {
         // A variable with no size ambiguity, but with extra elements in it's
         // expression. Manually dereference the stack location.
@@ -941,34 +969,26 @@ MachineInstrBuilder MLocTracker::emitLoc(Optional<LocIdx> MLoc,
         Expr = TRI.prependOffsetExpression(
             Expr, DIExpression::ApplyOffset | DIExpression::DerefAfter,
             Spill.SpillOffset);
-        MIB.addReg(0);
       } else {
         // A plain value that has been spilt to the stack, with no further
         // context. Request a location expression, marking the DBG_VALUE as
         // IsIndirect.
         Expr = TRI.prependOffsetExpression(Expr, DIExpression::ApplyOffset,
                                            Spill.SpillOffset);
-        MIB.addImm(0);
+        Indirect = true;
       }
     } else {
       // This is a stack location with a weird subregister offset: emit an undef
       // DBG_VALUE instead.
-      MIB.addReg(0);
-      MIB.addReg(0);
+      return EmitUndef();
     }
   } else {
     // Non-empty, non-stack slot, must be a plain register.
     unsigned LocID = LocIdxToLocID[*MLoc];
-    MIB.addReg(LocID);
-    if (Properties.Indirect)
-      MIB.addImm(0);
-    else
-      MIB.addReg(0);
+    MOs.push_back(GetRegOp(LocID));
   }
 
-  MIB.addMetadata(Var.getVariable());
-  MIB.addMetadata(Expr);
-  return MIB;
+  return BuildMI(MF, DL, Desc, Indirect, MOs, Var.getVariable(), Expr);
 }
 
 /// Default construct and initialize the pass.
@@ -1063,7 +1083,7 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
     return true;
   }
 
-  const MachineOperand &MO = MI.getOperand(0);
+  const MachineOperand &MO = MI.getDebugOperand(0);
 
   // MLocTracker needs to know that this register is read, even if it's only
   // read by a debug inst.
@@ -1081,9 +1101,8 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
         VTracker->defVar(MI, Properties, MTracker->readReg(MO.getReg()));
       else
         VTracker->defVar(MI, Properties, None);
-    } else if (MI.getOperand(0).isImm() || MI.getOperand(0).isFPImm() ||
-               MI.getOperand(0).isCImm()) {
-      VTracker->defVar(MI, MI.getOperand(0));
+    } else if (MO.isImm() || MO.isFPImm() || MO.isCImm()) {
+      VTracker->defVar(MI, MO);
     }
   }
 
@@ -1267,7 +1286,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // it. The rest of this LiveDebugValues implementation acts exactly the same
   // for DBG_INSTR_REFs as DBG_VALUEs (just, the former can refer to values that
   // aren't immediately available).
-  DbgValueProperties Properties(Expr, false);
+  DbgValueProperties Properties(Expr, false, false);
   if (VTracker)
     VTracker->defVar(MI, Properties, NewID);
 
@@ -1307,7 +1326,8 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // later instruction in this block, this is a block-local use-before-def.
   if (!FoundLoc && NewID && NewID->getBlock() == CurBB &&
       NewID->getInst() > CurInst)
-    TTracker->addUseBeforeDef(V, {MI.getDebugExpression(), false}, *NewID);
+    TTracker->addUseBeforeDef(V, {MI.getDebugExpression(), false, false},
+                              *NewID);
 
   // Produce a DBG_VALUE representing what this DBG_INSTR_REF meant.
   // This DBG_VALUE is potentially a $noreg / undefined location, if
@@ -2683,7 +2703,7 @@ void InstrRefBasedLDV::buildVLocValueMap(
 
   // Initialize all values to start as NoVals. This signifies "it's live
   // through, but we don't know what it is".
-  DbgValueProperties EmptyProperties(EmptyExpr, false);
+  DbgValueProperties EmptyProperties(EmptyExpr, false, false);
   for (unsigned int I = 0; I < NumBlocks; ++I) {
     DbgValue EmptyDbgValue(I, EmptyProperties, DbgValue::NoVal);
     LiveIns.push_back(EmptyDbgValue);
