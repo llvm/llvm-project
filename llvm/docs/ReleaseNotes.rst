@@ -66,6 +66,9 @@ versions of these toolchains.
 Changes to the LLVM IR
 ----------------------
 
+* Renamed ``llvm.experimental.vector.extract`` intrinsic to ``llvm.vector.extract``.
+* Renamed ``llvm.experimental.vector.insert`` intrinsic to ``llvm.vector.insert``.
+
 Changes to building LLVM
 ------------------------
 
