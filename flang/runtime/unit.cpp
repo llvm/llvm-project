@@ -640,6 +640,7 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
   } else {
     SetPosition(0, handler);
     currentRecordNumber = 1;
+    leftTabLimit.reset();
   }
 }
 
