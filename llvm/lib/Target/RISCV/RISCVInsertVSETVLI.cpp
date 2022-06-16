@@ -82,6 +82,17 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   }
 }
 
+static unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
+  unsigned LMul;
+  bool Fractional;
+  std::tie(LMul, Fractional) = RISCVVType::decodeVLMUL(VLMul);
+
+  // Convert LMul to a fixed point value with 3 fractional bits.
+  LMul = Fractional ? (8 / LMul) : (LMul * 8);
+
+  assert(SEW >= 8 && "Unexpected SEW value");
+  return (SEW * 8) / LMul;
+}
 
 class VSETVLIInfo {
   union {
@@ -216,22 +227,10 @@ public:
                     Other.MaskAgnostic);
   }
 
-  static unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
-    unsigned LMul;
-    bool Fractional;
-    std::tie(LMul, Fractional) = RISCVVType::decodeVLMUL(VLMul);
-
-    // Convert LMul to a fixed point value with 3 fractional bits.
-    LMul = Fractional ? (8 / LMul) : (LMul * 8);
-
-    assert(SEW >= 8 && "Unexpected SEW value");
-    return (SEW * 8) / LMul;
-  }
-
   unsigned getSEWLMULRatio() const {
     assert(isValid() && !isUnknown() &&
            "Can't use VTYPE for uninitialized or unknown");
-    return getSEWLMULRatio(SEW, VLMul);
+    return ::getSEWLMULRatio(SEW, VLMul);
   }
 
   // Check if the VTYPE for these two VSETVLIInfos produce the same VLMAX.
@@ -337,7 +336,7 @@ public:
     if (!hasSameAVL(Require))
       return false;
 
-    return getSEWLMULRatio() == getSEWLMULRatio(EEW, Require.VLMul);
+    return getSEWLMULRatio() == ::getSEWLMULRatio(EEW, Require.VLMul);
   }
 
   bool operator==(const VSETVLIInfo &Other) const {
@@ -1447,12 +1446,10 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
     return false;
 
   if (Used.SEWLMULRatio) {
-    auto PriorRatio =
-      VSETVLIInfo::getSEWLMULRatio(RISCVVType::getSEW(PriorVType),
-                                   RISCVVType::getVLMUL(PriorVType));
-    auto Ratio =
-      VSETVLIInfo::getSEWLMULRatio(RISCVVType::getSEW(VType),
-                                   RISCVVType::getVLMUL(VType));
+    auto PriorRatio = getSEWLMULRatio(RISCVVType::getSEW(PriorVType),
+                                      RISCVVType::getVLMUL(PriorVType));
+    auto Ratio = getSEWLMULRatio(RISCVVType::getSEW(VType),
+                                 RISCVVType::getVLMUL(VType));
     if (PriorRatio != Ratio)
       return false;
   }
