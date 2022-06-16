@@ -165,7 +165,7 @@ void MPIChecker::allRegionsUsedByWait(
         Ctx.getState(), SuperRegion, Ctx.getSValBuilder(),
         CE.getArgExpr(1)->getType()->getPointeeType());
     const llvm::APSInt &ArrSize =
-        ElementCount.getAs<nonloc::ConcreteInt>()->getValue();
+        ElementCount.castAs<nonloc::ConcreteInt>().getValue();
 
     for (size_t i = 0; i < ArrSize; ++i) {
       const NonLoc Idx = Ctx.getSValBuilder().makeArrayIndex(i);

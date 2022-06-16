@@ -856,7 +856,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
     // This must come after the test if the RHS is a symbol, which is used to
     // build constraints. The address of any non-symbolic region is guaranteed
     // to be non-NULL, as is any label.
-    assert(rhs.getAs<loc::MemRegionVal>() || rhs.getAs<loc::GotoLabel>());
+    assert((isa<loc::MemRegionVal, loc::GotoLabel>(rhs)));
     if (lhs.isZeroConstant()) {
       switch (op) {
       default:

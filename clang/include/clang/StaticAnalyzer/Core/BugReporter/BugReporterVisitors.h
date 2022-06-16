@@ -397,7 +397,7 @@ class TrackConstraintBRVisitor final : public BugReporterVisitor {
 public:
   TrackConstraintBRVisitor(DefinedSVal constraint, bool assumption)
       : Constraint(constraint), Assumption(assumption),
-        IsZeroCheck(!Assumption && Constraint.getAs<Loc>()) {}
+        IsZeroCheck(!Assumption && isa<Loc>(Constraint)) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 

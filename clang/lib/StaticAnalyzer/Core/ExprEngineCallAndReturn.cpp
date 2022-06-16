@@ -129,7 +129,7 @@ static std::pair<const Stmt*,
 static SVal adjustReturnValue(SVal V, QualType ExpectedTy, QualType ActualTy,
                               StoreManager &StoreMgr) {
   // For now, the only adjustments we handle apply only to locations.
-  if (!V.getAs<Loc>())
+  if (!isa<Loc>(V))
     return V;
 
   // If the types already match, don't do any unnecessary work.

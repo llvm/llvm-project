@@ -141,10 +141,10 @@ bool FindUninitializedFields::isDereferencableUninit(
   SVal V = State->getSVal(FR);
 
   assert((isDereferencableType(FR->getDecl()->getType()) ||
-          V.getAs<nonloc::LocAsInteger>()) &&
+          isa<nonloc::LocAsInteger>(V)) &&
          "This method only checks dereferenceable objects!");
 
-  if (V.isUnknown() || V.getAs<loc::ConcreteInt>()) {
+  if (V.isUnknown() || isa<loc::ConcreteInt>(V)) {
     IsAnyFieldInitialized = true;
     return false;
   }
@@ -230,8 +230,8 @@ static llvm::Optional<DereferenceInfo> dereference(ProgramStateRef State,
   // If the static type of the field is a void pointer, or it is a
   // nonloc::LocAsInteger, we need to cast it back to the dynamic type before
   // dereferencing.
-  bool NeedsCastBack = isVoidPointer(FR->getDecl()->getType()) ||
-                       V.getAs<nonloc::LocAsInteger>();
+  bool NeedsCastBack =
+      isVoidPointer(FR->getDecl()->getType()) || isa<nonloc::LocAsInteger>(V);
 
   // The region we'd like to acquire.
   const auto *R = V.getAsRegion()->getAs<TypedValueRegion>();

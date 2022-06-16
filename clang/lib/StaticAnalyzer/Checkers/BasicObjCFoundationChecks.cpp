@@ -754,7 +754,7 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       continue;
 
     // Ignore pointer constants.
-    if (msg.getArgSVal(I).getAs<loc::ConcreteInt>())
+    if (isa<loc::ConcreteInt>(msg.getArgSVal(I)))
       continue;
 
     // Ignore pointer types annotated with 'NSObject' attribute.

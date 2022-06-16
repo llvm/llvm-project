@@ -486,8 +486,7 @@ SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
   if (lhs.isUnknown() || rhs.isUnknown())
     return UnknownVal();
 
-  if (lhs.getAs<nonloc::LazyCompoundVal>() ||
-      rhs.getAs<nonloc::LazyCompoundVal>()) {
+  if (isa<nonloc::LazyCompoundVal>(lhs) || isa<nonloc::LazyCompoundVal>(rhs)) {
     return UnknownVal();
   }
 

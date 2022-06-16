@@ -680,7 +680,7 @@ SVal CXXInstanceCall::getCXXThisVal() const {
     return UnknownVal();
 
   SVal ThisVal = getSVal(Base);
-  assert(ThisVal.isUnknownOrUndef() || ThisVal.getAs<Loc>());
+  assert(ThisVal.isUnknownOrUndef() || isa<Loc>(ThisVal));
   return ThisVal;
 }
 
