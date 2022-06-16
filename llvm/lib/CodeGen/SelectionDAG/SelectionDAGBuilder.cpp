@@ -7206,7 +7206,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, SetCC);
     return;
   }
-  case Intrinsic::experimental_vector_insert: {
+  case Intrinsic::vector_insert: {
     SDValue Vec = getValue(I.getOperand(0));
     SDValue SubVec = getValue(I.getOperand(1));
     SDValue Index = getValue(I.getOperand(2));
@@ -7223,7 +7223,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              Index));
     return;
   }
-  case Intrinsic::experimental_vector_extract: {
+  case Intrinsic::vector_extract: {
     SDValue Vec = getValue(I.getOperand(0));
     SDValue Index = getValue(I.getOperand(1));
     EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
