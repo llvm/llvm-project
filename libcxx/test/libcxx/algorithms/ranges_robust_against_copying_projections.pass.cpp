@@ -123,8 +123,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::is_sorted_until(a, Less(), Proj(&copies)); assert(copies == 0);
     //if (!std::is_constant_evaluated()) { (void)std::ranges::inplace_merge(first, mid, last, Less(), Proj(&copies)); assert(copies == 0); }
     //if (!std::is_constant_evaluated()) { (void)std::ranges::inplace_merge(a, mid, Less(), Proj(&copies)); assert(copies == 0); }
-    //(void)std::ranges::lexicographical_compare(first, last, first2, last2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::lexicographical_compare(a, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::lexicographical_compare(first, last, first2, last2, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::lexicographical_compare(a, b, Less(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::lower_bound(first, last, value, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::lower_bound(a, value, Less(), Proj(&copies)); assert(copies == 0);
     //(void)std::ranges::make_heap(first, last, Less(), Proj(&copies)); assert(copies == 0);
