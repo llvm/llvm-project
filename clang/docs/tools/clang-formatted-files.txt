@@ -1834,7 +1834,6 @@ compiler-rt/lib/sanitizer_common/sanitizer_fuchsia.cpp
 compiler-rt/lib/sanitizer_common/sanitizer_leb128.h
 compiler-rt/lib/sanitizer_common/sanitizer_local_address_space_view.h
 compiler-rt/lib/sanitizer_common/sanitizer_lzw.h
-compiler-rt/lib/sanitizer_common/sanitizer_openbsd.cpp
 compiler-rt/lib/sanitizer_common/sanitizer_placement_new.h
 compiler-rt/lib/sanitizer_common/sanitizer_platform.h
 compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_openbsd.cpp
