@@ -52,6 +52,7 @@ protected:
     return *p < '0' || *p > '9';
   }
 
+  // Returns null when the exponent overflows a fixed-size output field.
   const char *FormatExponent(int, const DataEdit &edit, int &length);
   bool EmitPrefix(const DataEdit &, std::size_t length, std::size_t width);
   bool EmitSuffix(const DataEdit &);

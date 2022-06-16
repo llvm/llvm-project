@@ -8,7 +8,7 @@
 declare i8* @malloc(i64)
 declare void @consume(%struct.big_structure*)
 declare void @consume.2(%struct.big_structure.2*)
-define void @a(i1 zeroext %cond) "coroutine.presplit"="1" {
+define void @a(i1 zeroext %cond) presplitcoroutine {
 entry:
   %__promise = alloca %"struct.task::promise_type", align 1
   %a = alloca %struct.big_structure, align 1

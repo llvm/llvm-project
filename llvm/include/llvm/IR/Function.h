@@ -484,11 +484,12 @@ public:
     return AttributeSets.getParamDereferenceableOrNullBytes(ArgNo);
   }
 
-  /// A function will have the "coroutine.presplit" attribute if it's
-  /// a coroutine and has not gone through full CoroSplit pass.
+  /// Determine if the function is presplit coroutine.
   bool isPresplitCoroutine() const {
-    return hasFnAttribute("coroutine.presplit");
+    return hasFnAttribute(Attribute::PresplitCoroutine);
   }
+  void setPresplitCoroutine() { addFnAttr(Attribute::PresplitCoroutine); }
+  void setSplittedCoroutine() { removeFnAttr(Attribute::PresplitCoroutine); }
 
   /// Determine if the function does not access memory.
   bool doesNotAccessMemory() const {

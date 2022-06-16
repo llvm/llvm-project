@@ -476,6 +476,12 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   case arith::AtomicRMWKind::maxu:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
                                                CombiningKind::MAXUI, vector);
+  case arith::AtomicRMWKind::andi:
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::AND, vector);
+  case arith::AtomicRMWKind::ori:
+    return builder.create<vector::ReductionOp>(vector.getLoc(),
+                                               CombiningKind::OR, vector);
   // TODO: Add remaining reduction operations.
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");

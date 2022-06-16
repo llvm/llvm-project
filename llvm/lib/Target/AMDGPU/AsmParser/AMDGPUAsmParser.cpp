@@ -6348,6 +6348,7 @@ void AMDGPUAsmParser::cvtDSImpl(MCInst &Inst, const OperandVector &Operands,
                                 bool IsGdsHardcoded) {
   OptionalImmIndexMap OptionalIdx;
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
+  AMDGPUOperand::ImmTy OffsetType = AMDGPUOperand::ImmTyOffset;
 
   for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
@@ -6373,14 +6374,10 @@ void AMDGPUAsmParser::cvtDSImpl(MCInst &Inst, const OperandVector &Operands,
 
     // Handle optional arguments
     OptionalIdx[Op.getImmTy()] = i;
-  }
 
-  AMDGPUOperand::ImmTy OffsetType =
-    (Inst.getOpcode() == AMDGPU::DS_SWIZZLE_B32_gfx10 ||
-     Inst.getOpcode() == AMDGPU::DS_SWIZZLE_B32_gfx11 ||
-     Inst.getOpcode() == AMDGPU::DS_SWIZZLE_B32_gfx6_gfx7 ||
-     Inst.getOpcode() == AMDGPU::DS_SWIZZLE_B32_vi) ? AMDGPUOperand::ImmTySwizzle :
-                                                      AMDGPUOperand::ImmTyOffset;
+    if (Op.getImmTy() == AMDGPUOperand::ImmTySwizzle)
+      OffsetType = AMDGPUOperand::ImmTySwizzle;
+  }
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, OffsetType);
 

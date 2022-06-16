@@ -3,7 +3,7 @@
 ; '-fvisibility-inlines-hidden'.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-define hidden i8* @f() "coroutine.presplit"="1" {
+define hidden i8* @f() presplitcoroutine {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
