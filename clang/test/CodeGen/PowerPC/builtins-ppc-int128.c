@@ -1,8 +1,8 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -target-feature +vsx \
 // RUN:   -triple powerpc64-unknown-unknown -target-cpu pwr8 \
 // RUN:   -emit-llvm %s -o - -U__XL_COMPAT_ALTIVEC__ | FileCheck %s
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -target-feature +vsx \
 // RUN:   -triple powerpc64le-unknown-unknown -target-cpu pwr8 \
 // RUN:   -emit-llvm %s -o - -U__XL_COMPAT_ALTIVEC__ | \
 // RUN:   FileCheck %s -check-prefix=CHECK-LE

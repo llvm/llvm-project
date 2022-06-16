@@ -1,6 +1,6 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -target-feature +vsx -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-LE
+// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +altivec -target-feature +vsx -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -no-opaque-pointers -target-feature +altivec -target-feature +vsx -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-LE
 #include <altivec.h>
 
 vector bool char vbc = { 0, 1, 0, 1, 0, 1, 0, 1,
@@ -914,7 +914,7 @@ void test1() {
 // CHECK-LE: or <2 x i64>
 // CHECK-LE: xor <2 x i64>
 
-  res_vull = vec_nor(vbll, vbll);
+  res_vbll = vec_nor(vbll, vbll);
 // CHECK: or <2 x i64>
 // CHECK: xor <2 x i64>
 // CHECK-LE: or <2 x i64>
@@ -1290,13 +1290,13 @@ void test1() {
   // CHECK-LE: fmul <2 x double> {{%.*}}, <double 8.000000e+00, double 8.000000e+00>
   // CHECK-LE: fptosi <2 x double> {{%.*}} to <2 x i64>
 
-  res_vsll = vec_ctu(vd, 0);
+  res_vull = vec_ctu(vd, 0);
 // CHECK: fmul <2 x double>
 // CHECK: fptoui <2 x double> %{{.*}} to <2 x i64>
 // CHECK-LE: fmul <2 x double>
 // CHECK-LE: fptoui <2 x double> %{{.*}} to <2 x i64>
 
-  res_vsll = vec_ctu(vd, 31);
+  res_vull = vec_ctu(vd, 31);
 // CHECK: fmul <2 x double>
 // CHECK: fptoui <2 x double> %{{.*}} to <2 x i64>
 // CHECK-LE: fmul <2 x double>
@@ -1315,25 +1315,25 @@ void test1() {
   // CHECK-LE: fmul <2 x double> {{%.*}}, <double 8.000000e+00, double 8.000000e+00>
   // CHECK-LE: fptoui <2 x double> {{%.*}} to <2 x i64>
 
-  res_vd = vec_ctf(vsll, 0);
+  res_vf = vec_ctf(vsll, 0);
 // CHECK: sitofp <2 x i64> %{{.*}} to <2 x double>
 // CHECK: fmul <2 x double>
 // CHECK-LE: sitofp <2 x i64> %{{.*}} to <2 x double>
 // CHECK-LE: fmul <2 x double>
 
-  res_vd = vec_ctf(vsll, 31);
+  res_vf = vec_ctf(vsll, 31);
 // CHECK: sitofp <2 x i64> %{{.*}} to <2 x double>
 // CHECK: fmul <2 x double>
 // CHECK-LE: sitofp <2 x i64> %{{.*}} to <2 x double>
 // CHECK-LE: fmul <2 x double>
 
-  res_vd = vec_ctf(vull, 0);
+  res_vf = vec_ctf(vull, 0);
 // CHECK: uitofp <2 x i64> %{{.*}} to <2 x double>
 // CHECK: fmul <2 x double>
 // CHECK-LE: uitofp <2 x i64> %{{.*}} to <2 x double>
 // CHECK-LE: fmul <2 x double>
 
-  res_vd = vec_ctf(vull, 31);
+  res_vf = vec_ctf(vull, 31);
 // CHECK: uitofp <2 x i64> %{{.*}} to <2 x double>
 // CHECK: fmul <2 x double>
 // CHECK-LE: uitofp <2 x i64> %{{.*}} to <2 x double>
@@ -1997,7 +1997,7 @@ res_vd = vec_xlds(sll, ad);
 // CHECK-LE: insertelement <2 x double>
 // CHECK-LE: shufflevector <2 x double>
 
-res_vsll = vec_load_splats(sll, asi);
+res_vsi = vec_load_splats(sll, asi);
 // CHECK: load i32
 // CHECK: insertelement <4 x i32>
 // CHECK: shufflevector <4 x i32>
@@ -2005,7 +2005,7 @@ res_vsll = vec_load_splats(sll, asi);
 // CHECK-LE: insertelement <4 x i32>
 // CHECK-LE: shufflevector <4 x i32>
 
-res_vsll = vec_load_splats(ull, asi);
+res_vsi = vec_load_splats(ull, asi);
 // CHECK: load i32
 // CHECK: insertelement <4 x i32>
 // CHECK: shufflevector <4 x i32>
@@ -2013,7 +2013,7 @@ res_vsll = vec_load_splats(ull, asi);
 // CHECK-LE: insertelement <4 x i32>
 // CHECK-LE: shufflevector <4 x i32>
 
-res_vsll = vec_load_splats(sll, aui);
+res_vui = vec_load_splats(sll, aui);
 // CHECK: load i32
 // CHECK: insertelement <4 x i32>
 // CHECK: shufflevector <4 x i32>
@@ -2021,7 +2021,7 @@ res_vsll = vec_load_splats(sll, aui);
 // CHECK-LE: insertelement <4 x i32>
 // CHECK-LE: shufflevector <4 x i32>
 
-res_vsll = vec_load_splats(ull, aui);
+res_vui = vec_load_splats(ull, aui);
 // CHECK: load i32
 // CHECK: insertelement <4 x i32>
 // CHECK: shufflevector <4 x i32>
@@ -2029,7 +2029,7 @@ res_vsll = vec_load_splats(ull, aui);
 // CHECK-LE: insertelement <4 x i32>
 // CHECK-LE: shufflevector <4 x i32>
 
-res_vsll = vec_load_splats(sll, af);
+res_vf = vec_load_splats(sll, af);
 // CHECK: load float
 // CHECK: insertelement <4 x float>
 // CHECK: shufflevector <4 x float>
@@ -2037,7 +2037,7 @@ res_vsll = vec_load_splats(sll, af);
 // CHECK-LE: insertelement <4 x float>
 // CHECK-LE: shufflevector <4 x float>
 
-res_vsll = vec_load_splats(ull, af);
+res_vf = vec_load_splats(ull, af);
 // CHECK: load float
 // CHECK: insertelement <4 x float>
 // CHECK: shufflevector <4 x float>
@@ -2117,7 +2117,7 @@ res_vull = vec_permi(vull, vull, 3);
 // CHECK: shufflevector <2 x i64> %{{[0-9]+}}, <2 x i64> %{{[0-9]+}}, <2 x i32> <i32 1, i32 3>
 // CHECK-LE: shufflevector <2 x i64> %{{[0-9]+}}, <2 x i64> %{{[0-9]+}}, <2 x i32> <i32 1, i32 3>
 
-res_vull = vec_permi(vbll, vbll, 3);
+res_vbll = vec_permi(vbll, vbll, 3);
 // CHECK: shufflevector <2 x i64> %{{[0-9]+}}, <2 x i64> %{{[0-9]+}}, <2 x i32> <i32 1, i32 3>
 // CHECK-LE: shufflevector <2 x i64> %{{[0-9]+}}, <2 x i64> %{{[0-9]+}}, <2 x i32> <i32 1, i32 3>
 
