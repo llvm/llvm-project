@@ -864,7 +864,6 @@ template<size_t N, class T>
 #include <cstdint>
 #include <cstring>
 #include <iosfwd>
-#include <iterator> // TODO: Remove this include
 #include <new>
 #include <stdexcept>
 #include <tuple>

@@ -182,7 +182,6 @@ template <class T, class Allocator, class Predicate>
 #include <__utility/swap.h>
 #include <compare>
 #include <initializer_list>
-#include <iterator> // TODO: Remove this include
 #include <limits>
 #include <stdexcept>
 #include <type_traits>

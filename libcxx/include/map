@@ -544,7 +544,6 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__utility/swap.h>
 #include <compare>
 #include <initializer_list>
-#include <iterator> // TODO: Remove this include
 #include <memory>
 #include <type_traits>
 #include <version>

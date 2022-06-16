@@ -528,7 +528,6 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__node_handle>
 #include <__utility/forward.h>
 #include <compare>
-#include <iterator> // TODO: Remove this include
 #include <stdexcept>
 #include <tuple>
 #include <version>
