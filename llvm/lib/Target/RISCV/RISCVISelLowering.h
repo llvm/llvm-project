@@ -41,6 +41,12 @@ enum NodeType : unsigned {
   BuildPairF64,
   SplitF64,
   TAIL,
+
+  // Add the Lo 12 bits from an address. Selected to ADDI.
+  ADD_LO,
+  // Get the Hi 20 bits from an address. Selected to LUI.
+  HI,
+
   // Multiply high for signedxunsigned.
   MULHSU,
   // RV64I shifts, directly matching the semantics of the named RISC-V
