@@ -25,12 +25,12 @@ define dso_local signext i32 @test_32byte_vector() nounwind {
 ; CHECK-LE-NEXT:    addis r4, r2, .LCPI0_1@toc@ha
 ; CHECK-LE-NEXT:    addi r3, r3, .LCPI0_0@toc@l
 ; CHECK-LE-NEXT:    addi r4, r4, .LCPI0_1@toc@l
-; CHECK-LE-NEXT:    lvx v2, 0, r3
-; CHECK-LE-NEXT:    lvx v3, 0, r4
+; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-LE-NEXT:    lxvd2x vs1, 0, r4
 ; CHECK-LE-NEXT:    addi r4, r1, 48
 ; CHECK-LE-NEXT:    addi r3, r1, 32
-; CHECK-LE-NEXT:    stvx v2, 0, r4
-; CHECK-LE-NEXT:    stvx v3, 0, r3
+; CHECK-LE-NEXT:    stxvd2x vs0, 0, r4
+; CHECK-LE-NEXT:    stxvd2x vs1, 0, r3
 ; CHECK-LE-NEXT:    bl test
 ; CHECK-LE-NEXT:    nop
 ; CHECK-LE-NEXT:    lwa r3, 32(r1)
@@ -99,9 +99,9 @@ define dso_local signext i32 @test_32byte_aligned_vector() nounwind {
 ; CHECK-LE-NEXT:    stdux r1, r1, r0
 ; CHECK-LE-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
 ; CHECK-LE-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-LE-NEXT:    lvx v2, 0, r3
+; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    addi r3, r1, 32
-; CHECK-LE-NEXT:    stvx v2, 0, r3
+; CHECK-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    bl test1
 ; CHECK-LE-NEXT:    nop
 ; CHECK-LE-NEXT:    lwa r3, 32(r1)
@@ -158,7 +158,69 @@ define dso_local void @test_Array() nounwind {
 ; CHECK-OPT-NEXT: entry:
 ; CHECK-OPT-NEXT: %Arr2 = alloca [64 x i16], align 2
 ; CHECK-OPT: store <16 x i16> [[TMP0:%.*]], <16 x i16>* [[TMP0:%.*]], align 2
-
+; CHECK-LE-LABEL: test_Array:
+; CHECK-LE:       # %bb.0: # %entry
+; CHECK-LE-NEXT:    mflr r0
+; CHECK-LE-NEXT:    std r0, 16(r1)
+; CHECK-LE-NEXT:    stdu r1, -176(r1)
+; CHECK-LE-NEXT:    addis r4, r2, Arr1@toc@ha
+; CHECK-LE-NEXT:    li r3, 0
+; CHECK-LE-NEXT:    li r6, 65
+; CHECK-LE-NEXT:    addi r5, r1, 46
+; CHECK-LE-NEXT:    addi r4, r4, Arr1@toc@l
+; CHECK-LE-NEXT:    stw r3, 44(r1)
+; CHECK-LE-NEXT:    addi r4, r4, -1
+; CHECK-LE-NEXT:    mtctr r6
+; CHECK-LE-NEXT:    bdz .LBB2_2
+; CHECK-LE-NEXT:    .p2align 5
+; CHECK-LE-NEXT:  .LBB2_1: # %for.body
+; CHECK-LE-NEXT:    #
+; CHECK-LE-NEXT:    lbz r6, 1(r4)
+; CHECK-LE-NEXT:    addi r7, r5, 2
+; CHECK-LE-NEXT:    addi r4, r4, 1
+; CHECK-LE-NEXT:    addi r3, r3, 1
+; CHECK-LE-NEXT:    sth r6, 2(r5)
+; CHECK-LE-NEXT:    mr r5, r7
+; CHECK-LE-NEXT:    bdnz .LBB2_1
+; CHECK-LE-NEXT:  .LBB2_2: # %for.cond.cleanup
+; CHECK-LE-NEXT:    addi r3, r1, 48
+; CHECK-LE-NEXT:    bl test_arr
+; CHECK-LE-NEXT:    nop
+; CHECK-LE-NEXT:    addi r1, r1, 176
+; CHECK-LE-NEXT:    ld r0, 16(r1)
+; CHECK-LE-NEXT:    mtlr r0
+; CHECK-LE-NEXT:    blr
+;
+; CHECK-BE-LABEL: test_Array:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    mflr r0
+; CHECK-BE-NEXT:    std r0, 16(r1)
+; CHECK-BE-NEXT:    stdu r1, -256(r1)
+; CHECK-BE-NEXT:    addis r5, r2, Arr1@toc@ha
+; CHECK-BE-NEXT:    li r3, 0
+; CHECK-BE-NEXT:    addi r5, r5, Arr1@toc@l
+; CHECK-BE-NEXT:    addi r4, r1, 126
+; CHECK-BE-NEXT:    li r6, 65
+; CHECK-BE-NEXT:    stw r3, 124(r1)
+; CHECK-BE-NEXT:    addi r5, r5, -1
+; CHECK-BE-NEXT:    mtctr r6
+; CHECK-BE-NEXT:    bdz .LBB2_2
+; CHECK-BE-NEXT:  .LBB2_1: # %for.body
+; CHECK-BE-NEXT:    #
+; CHECK-BE-NEXT:    lbz r6, 1(r5)
+; CHECK-BE-NEXT:    addi r5, r5, 1
+; CHECK-BE-NEXT:    addi r3, r3, 1
+; CHECK-BE-NEXT:    sth r6, 2(r4)
+; CHECK-BE-NEXT:    addi r4, r4, 2
+; CHECK-BE-NEXT:    bdnz .LBB2_1
+; CHECK-BE-NEXT:  .LBB2_2: # %for.cond.cleanup
+; CHECK-BE-NEXT:    addi r3, r1, 128
+; CHECK-BE-NEXT:    bl test_arr
+; CHECK-BE-NEXT:    nop
+; CHECK-BE-NEXT:    addi r1, r1, 256
+; CHECK-BE-NEXT:    ld r0, 16(r1)
+; CHECK-BE-NEXT:    mtlr r0
+; CHECK-BE-NEXT:    blr
 entry:
   %Arr2 = alloca [64 x i16], align 2
   %i = alloca i32, align 4

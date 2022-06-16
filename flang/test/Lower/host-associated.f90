@@ -661,3 +661,25 @@ subroutine test_11a
   external test_11b
   call test_11c(test_11b, 3)
 end subroutine test_11a
+
+subroutine test_PDT_with_init_do_not_crash_host_symbol_analysis()
+  integer :: i
+  call sub()
+contains
+  subroutine sub()
+    ! PDT definition symbols maps to un-analyzed expression,
+    ! check this does not crash the visit of the internal procedure
+    ! parse-tree to get the list of captured host variables.
+    type type1 (k)
+      integer, KIND :: k
+      integer :: x = k
+    end type
+    type type2 (k, l)
+      integer, KIND :: k = 4
+      integer, LEN :: l = 2
+      integer :: x = 10
+      real :: y = 20
+    end type
+    print *, i
+  end subroutine
+end subroutine

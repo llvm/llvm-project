@@ -173,8 +173,7 @@ void handleTargetFeaturesGroup(const llvm::opt::ArgList &Args,
                                llvm::opt::OptSpecifier Group);
 
 /// If there are multiple +xxx or -xxx features, keep the last one.
-std::vector<StringRef>
-unifyTargetFeatures(const std::vector<StringRef> &Features);
+SmallVector<StringRef> unifyTargetFeatures(ArrayRef<StringRef> Features);
 
 /// Handles the -save-stats option and returns the filename to save statistics
 /// to.

@@ -16,17 +16,17 @@ if (MLIR_ENABLE_SPIRV_CPU_RUNNER)
   target_link_libraries(mlir-spirv-cpu-runner PRIVATE
     ${conversion_libs}
     MLIRAnalysis
-    MLIRArithmetic
+    MLIRArithmeticDialect
     MLIRExecutionEngine
-    MLIRFunc
+    MLIRFuncDialect
     MLIRGPUOps
     MLIRIR
     MLIRJitRunner
-    MLIRLLVMIR
+    MLIRLLVMDialect
     MLIRLLVMToLLVMIRTranslation
-    MLIRMemRef
+    MLIRMemRefDialect
     MLIRParser
-    MLIRSPIRV
+    MLIRSPIRVDialect
     MLIRTargetLLVMIRExport
     MLIRTransforms
     MLIRTranslateLib

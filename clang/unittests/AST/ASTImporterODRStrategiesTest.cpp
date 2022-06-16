@@ -290,7 +290,7 @@ struct ODRViolation : ASTImporterOptionSpecificTestBase {
   // Check that a Decl was not imported because of NameConflict.
   static void CheckImportNameConflict(llvm::Expected<Decl *> &Result,
                                       Decl *ToTU, Decl *ToD) {
-    EXPECT_TRUE(isImportError(Result, ImportError::NameConflict));
+    EXPECT_TRUE(isImportError(Result, ASTImportError::NameConflict));
     EXPECT_EQ(DeclCounter<DeclTy>().match(ToTU, getPattern()), 1u);
   }
 

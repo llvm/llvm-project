@@ -43,32 +43,23 @@ ExternalFileUnit *ExternalFileUnit::LookUp(int unit) {
   return GetUnitMap().LookUp(unit);
 }
 
-ExternalFileUnit &ExternalFileUnit::LookUpOrCrash(
-    int unit, const Terminator &terminator) {
-  ExternalFileUnit *file{LookUp(unit)};
-  if (!file) {
-    terminator.Crash("%d is not an open I/O unit number", unit);
-  }
-  return *file;
-}
-
-ExternalFileUnit &ExternalFileUnit::LookUpOrCreate(
+ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
     int unit, const Terminator &terminator, bool &wasExtant) {
   return GetUnitMap().LookUpOrCreate(unit, terminator, wasExtant);
 }
 
-ExternalFileUnit &ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
+ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
     Direction dir, std::optional<bool> isUnformatted,
     const Terminator &terminator) {
   bool exists{false};
-  ExternalFileUnit &result{
+  ExternalFileUnit *result{
       GetUnitMap().LookUpOrCreate(unit, terminator, exists)};
-  if (!exists) {
+  if (result && !exists) {
     IoErrorHandler handler{terminator};
-    result.OpenAnonymousUnit(
+    result->OpenAnonymousUnit(
         dir == Direction::Input ? OpenStatus::Unknown : OpenStatus::Replace,
         Action::ReadWrite, Position::Rewind, Convert::Native, handler);
-    result.isUnformatted = isUnformatted;
+    result->isUnformatted = isUnformatted;
   }
   return result;
 }
@@ -81,10 +72,10 @@ ExternalFileUnit *ExternalFileUnit::LookUp(
 ExternalFileUnit &ExternalFileUnit::CreateNew(
     int unit, const Terminator &terminator) {
   bool wasExtant{false};
-  ExternalFileUnit &result{
+  ExternalFileUnit *result{
       GetUnitMap().LookUpOrCreate(unit, terminator, wasExtant)};
-  RUNTIME_CHECK(terminator, !wasExtant);
-  return result;
+  RUNTIME_CHECK(terminator, result && !wasExtant);
+  return *result;
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUpForClose(int unit) {
@@ -227,21 +218,22 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
   UnitMap *newUnitMap{New<UnitMap>{terminator}().release()};
 
   bool wasExtant{false};
-  ExternalFileUnit &out{newUnitMap->LookUpOrCreate(6, terminator, wasExtant)};
+  ExternalFileUnit &out{*newUnitMap->LookUpOrCreate(6, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   out.Predefine(1);
   handler.SignalError(out.SetDirection(Direction::Output));
   out.isUnformatted = false;
   defaultOutput = &out;
 
-  ExternalFileUnit &in{newUnitMap->LookUpOrCreate(5, terminator, wasExtant)};
+  ExternalFileUnit &in{*newUnitMap->LookUpOrCreate(5, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   in.Predefine(0);
   handler.SignalError(in.SetDirection(Direction::Input));
   in.isUnformatted = false;
   defaultInput = &in;
 
-  ExternalFileUnit &error{newUnitMap->LookUpOrCreate(0, terminator, wasExtant)};
+  ExternalFileUnit &error{
+      *newUnitMap->LookUpOrCreate(0, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   error.Predefine(2);
   handler.SignalError(error.SetDirection(Direction::Output));
@@ -458,14 +450,14 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
 void ExternalFileUnit::FinishReadingRecord(IoErrorHandler &handler) {
   RUNTIME_CHECK(handler, direction_ == Direction::Input && beganReadingRecord_);
   beganReadingRecord_ = false;
-  if (handler.InError() && handler.GetIoStat() != IostatEor) {
+  if (handler.GetIoStat() == IostatEnd ||
+      (IsRecordFile() && !recordLength.has_value())) {
     // Avoid bogus crashes in END/ERR circumstances; but
     // still increment the current record number so that
     // an attempted read of an endfile record, followed by
     // a BACKSPACE, will still be at EOF.
     ++currentRecordNumber;
   } else if (IsRecordFile()) {
-    RUNTIME_CHECK(handler, recordLength.has_value());
     recordOffsetInFrame_ += *recordLength;
     if (access != Access::Direct) {
       RUNTIME_CHECK(handler, isUnformatted.has_value());
@@ -649,6 +641,7 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
   } else {
     SetPosition(0, handler);
     currentRecordNumber = 1;
+    leftTabLimit.reset();
   }
 }
 
@@ -909,6 +902,32 @@ void ExternalFileUnit::PopChildIo(ChildIo &child) {
         "ChildIo being popped is not top of stack");
   }
   child_.reset(child.AcquirePrevious().release()); // deletes top child
+}
+
+int ExternalFileUnit::GetAsynchronousId(IoErrorHandler &handler) {
+  if (!mayAsynchronous()) {
+    handler.SignalError(IostatBadAsynchronous);
+    return -1;
+  } else if (auto least{asyncIdAvailable_.LeastElement()}) {
+    asyncIdAvailable_.reset(*least);
+    return static_cast<int>(*least);
+  } else {
+    handler.SignalError(IostatTooManyAsyncOps);
+    return -1;
+  }
+}
+
+bool ExternalFileUnit::Wait(int id) {
+  if (id < 0 || asyncIdAvailable_.test(id)) {
+    return false;
+  } else {
+    if (id == 0) {
+      asyncIdAvailable_.set();
+    } else {
+      asyncIdAvailable_.set(id);
+    }
+    return true;
+  }
 }
 
 void ChildIo::EndIoStatement() {

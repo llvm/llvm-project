@@ -14,7 +14,7 @@ struct coro {
 };
 
 // CHECK: void @_Z3foov() #[[FOO_ATTR_NUM:[0-9]+]]
-// CHECK: attributes #[[FOO_ATTR_NUM]] = { {{.*}} "coroutine.presplit"="0"
+// CHECK: attributes #[[FOO_ATTR_NUM]] = { {{.*}} presplitcoroutine
 coro foo() {
   co_await suspend_always{};
 }

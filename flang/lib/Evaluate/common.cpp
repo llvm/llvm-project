@@ -22,7 +22,7 @@ void RealFlagWarnings(
     if (std::strcmp(operation, "division") == 0) {
       context.messages().Say("division by zero"_warn_en_US);
     } else {
-      context.messages().Say("division on %s"_warn_en_US);
+      context.messages().Say("division on %s"_warn_en_US, operation);
     }
   }
   if (flags.test(RealFlag::InvalidArgument)) {

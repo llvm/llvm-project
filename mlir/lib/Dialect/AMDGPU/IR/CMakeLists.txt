@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRAMDGPU
+add_mlir_dialect_library(MLIRAMDGPUDialect
   AMDGPUDialect.cpp
 
   ADDITIONAL_HEADER_DIRS

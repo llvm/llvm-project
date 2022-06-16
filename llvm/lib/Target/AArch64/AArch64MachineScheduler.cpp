@@ -26,7 +26,7 @@ static bool needReorderStoreMI(const MachineInstr *MI) {
        return false;
     LLVM_FALLTHROUGH;
   case AArch64::STPQi:
-    return AArch64InstrInfo::getLdStOffsetOp(*MI).getType() == MachineOperand::MO_Immediate;
+    return AArch64InstrInfo::getLdStOffsetOp(*MI).isImm();
   }
 
   return false;

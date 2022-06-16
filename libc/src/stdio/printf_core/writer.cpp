@@ -13,24 +13,23 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-void Writer::write(const char *new_string, size_t length) {
-
-  raw_write(output, new_string, length);
-
-  // chars_written tracks the number of chars that would have been written
-  // regardless of what the raw_write call does.
+int Writer::write(const char *new_string, size_t length) {
   chars_written += length;
+  return raw_write(output, new_string, length);
 }
 
-void Writer::write_chars(char new_char, size_t length) {
+int Writer::write_chars(char new_char, size_t length) {
   constexpr size_t BUFF_SIZE = 8;
   char buff[BUFF_SIZE];
+  int result;
   inline_memset(buff, new_char, BUFF_SIZE);
   while (length > BUFF_SIZE) {
-    write(buff, BUFF_SIZE);
+    result = write(buff, BUFF_SIZE);
+    if (result < 0)
+      return result;
     length -= BUFF_SIZE;
   }
-  write(buff, length);
+  return write(buff, length);
 }
 
 } // namespace printf_core

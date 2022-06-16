@@ -36,8 +36,8 @@ public:
 
 // write_to_string treats raw_pointer as a StringWriter and calls its write
 // function.
-void write_to_string(void *raw_pointer, const char *__restrict to_write,
-                     size_t len);
+int write_to_string(void *raw_pointer, const char *__restrict to_write,
+                    size_t len);
 
 } // namespace printf_core
 } // namespace __llvm_libc

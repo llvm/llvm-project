@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // size_type rfind(const basic_string& str, size_type pos = npos) const; // constexpr since C++20

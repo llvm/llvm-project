@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -flax-vector-conversions=all -Werror -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -flax-vector-conversions=all -verify -fsyntax-only -DERROR_CHECK %s
+// RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -flax-vector-conversions=all -fdouble-square-bracket-attributes -Werror -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -flax-vector-conversions=all -fdouble-square-bracket-attributes -verify -fsyntax-only -DERROR_CHECK %s
 
 typedef   signed short      int16_t;
 typedef   signed int        int32_t;
@@ -14,6 +14,14 @@ typedef __attribute__((neon_vector_type(2), __clang_arm_mve_strict_polymorphism)
 typedef __attribute__((neon_vector_type(8), __clang_arm_mve_strict_polymorphism)) uint16_t uint16x8_t;
 typedef __attribute__((neon_vector_type(4), __clang_arm_mve_strict_polymorphism)) uint32_t uint32x4_t;
 typedef __attribute__((neon_vector_type(2), __clang_arm_mve_strict_polymorphism)) uint64_t uint64x2_t;
+
+// Verify that we can use the [[]] spelling of the attribute.
+// We intentionally use the same type alias name to check that both versions
+// define the same type.
+typedef int16_t [[clang::neon_vector_type(8), clang::__clang_arm_mve_strict_polymorphism]] int16x8_t;
+
+// Verify that we can use the attribute outside of a typedef.
+void test_param(int16_t [[clang::neon_vector_type(8), clang::__clang_arm_mve_strict_polymorphism]] int16x8);
 
 __attribute__((overloadable))
 int overload(int16x8_t x, int16_t y); // expected-note {{candidate function}}

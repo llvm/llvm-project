@@ -530,8 +530,11 @@ define i64 @gorci64_knownbits(i64 %a) nounwind {
 ; RV64ZBP:       # %bb.0:
 ; RV64ZBP-NEXT:    lui a1, %hi(.LCPI54_0)
 ; RV64ZBP-NEXT:    ld a1, %lo(.LCPI54_0)(a1)
+; RV64ZBP-NEXT:    lui a2, %hi(.LCPI54_1)
+; RV64ZBP-NEXT:    ld a2, %lo(.LCPI54_1)(a2)
 ; RV64ZBP-NEXT:    or a0, a0, a1
 ; RV64ZBP-NEXT:    orc32 a0, a0
+; RV64ZBP-NEXT:    or a0, a0, a2
 ; RV64ZBP-NEXT:    ret
   %tmp = or i64 %a, 72624976668147840 ; 0x102040810204080
   %tmp2 = call i64 @llvm.riscv.gorc.i64(i64 %tmp, i64 32)

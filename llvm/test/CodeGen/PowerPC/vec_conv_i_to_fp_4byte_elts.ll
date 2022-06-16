@@ -64,12 +64,12 @@ define void @test8elt(<8 x float>* noalias nocapture sret(<8 x float>) %agg.resu
 ; CHECK-P8-LABEL: test8elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r5, 16
-; CHECK-P8-NEXT:    lvx v3, 0, r4
-; CHECK-P8-NEXT:    lvx v2, r4, r5
-; CHECK-P8-NEXT:    xvcvuxwsp v3, v3
-; CHECK-P8-NEXT:    xvcvuxwsp v2, v2
-; CHECK-P8-NEXT:    stvx v3, 0, r3
-; CHECK-P8-NEXT:    stvx v2, r3, r5
+; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
+; CHECK-P8-NEXT:    xvcvuxwsp vs1, vs1
+; CHECK-P8-NEXT:    xvcvuxwsp vs0, vs0
+; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
+; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test8elt:
@@ -104,18 +104,18 @@ define void @test16elt(<16 x float>* noalias nocapture sret(<16 x float>) %agg.r
 ; CHECK-P8-NEXT:    li r5, 16
 ; CHECK-P8-NEXT:    li r6, 32
 ; CHECK-P8-NEXT:    li r7, 48
-; CHECK-P8-NEXT:    lvx v5, 0, r4
-; CHECK-P8-NEXT:    lvx v2, r4, r5
-; CHECK-P8-NEXT:    lvx v3, r4, r6
-; CHECK-P8-NEXT:    lvx v4, r4, r7
-; CHECK-P8-NEXT:    xvcvuxwsp v5, v5
-; CHECK-P8-NEXT:    xvcvuxwsp v2, v2
-; CHECK-P8-NEXT:    xvcvuxwsp v3, v3
-; CHECK-P8-NEXT:    xvcvuxwsp v4, v4
-; CHECK-P8-NEXT:    stvx v5, 0, r3
-; CHECK-P8-NEXT:    stvx v2, r3, r5
-; CHECK-P8-NEXT:    stvx v3, r3, r6
-; CHECK-P8-NEXT:    stvx v4, r3, r7
+; CHECK-P8-NEXT:    lxvd2x vs3, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
+; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
+; CHECK-P8-NEXT:    lxvd2x vs2, r4, r7
+; CHECK-P8-NEXT:    xvcvuxwsp vs3, vs3
+; CHECK-P8-NEXT:    xvcvuxwsp vs0, vs0
+; CHECK-P8-NEXT:    xvcvuxwsp vs1, vs1
+; CHECK-P8-NEXT:    xvcvuxwsp vs2, vs2
+; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
+; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
+; CHECK-P8-NEXT:    stxvd2x vs3, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt:
@@ -211,12 +211,12 @@ define void @test8elt_signed(<8 x float>* noalias nocapture sret(<8 x float>) %a
 ; CHECK-P8-LABEL: test8elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    li r5, 16
-; CHECK-P8-NEXT:    lvx v3, 0, r4
-; CHECK-P8-NEXT:    lvx v2, r4, r5
-; CHECK-P8-NEXT:    xvcvsxwsp v3, v3
-; CHECK-P8-NEXT:    xvcvsxwsp v2, v2
-; CHECK-P8-NEXT:    stvx v3, 0, r3
-; CHECK-P8-NEXT:    stvx v2, r3, r5
+; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
+; CHECK-P8-NEXT:    xvcvsxwsp vs1, vs1
+; CHECK-P8-NEXT:    xvcvsxwsp vs0, vs0
+; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
+; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test8elt_signed:
@@ -251,18 +251,18 @@ define void @test16elt_signed(<16 x float>* noalias nocapture sret(<16 x float>)
 ; CHECK-P8-NEXT:    li r5, 16
 ; CHECK-P8-NEXT:    li r6, 32
 ; CHECK-P8-NEXT:    li r7, 48
-; CHECK-P8-NEXT:    lvx v5, 0, r4
-; CHECK-P8-NEXT:    lvx v2, r4, r5
-; CHECK-P8-NEXT:    lvx v3, r4, r6
-; CHECK-P8-NEXT:    lvx v4, r4, r7
-; CHECK-P8-NEXT:    xvcvsxwsp v5, v5
-; CHECK-P8-NEXT:    xvcvsxwsp v2, v2
-; CHECK-P8-NEXT:    xvcvsxwsp v3, v3
-; CHECK-P8-NEXT:    xvcvsxwsp v4, v4
-; CHECK-P8-NEXT:    stvx v5, 0, r3
-; CHECK-P8-NEXT:    stvx v2, r3, r5
-; CHECK-P8-NEXT:    stvx v3, r3, r6
-; CHECK-P8-NEXT:    stvx v4, r3, r7
+; CHECK-P8-NEXT:    lxvd2x vs3, 0, r4
+; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
+; CHECK-P8-NEXT:    lxvd2x vs1, r4, r6
+; CHECK-P8-NEXT:    lxvd2x vs2, r4, r7
+; CHECK-P8-NEXT:    xvcvsxwsp vs3, vs3
+; CHECK-P8-NEXT:    xvcvsxwsp vs0, vs0
+; CHECK-P8-NEXT:    xvcvsxwsp vs1, vs1
+; CHECK-P8-NEXT:    xvcvsxwsp vs2, vs2
+; CHECK-P8-NEXT:    stxvd2x vs2, r3, r7
+; CHECK-P8-NEXT:    stxvd2x vs1, r3, r6
+; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
+; CHECK-P8-NEXT:    stxvd2x vs3, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt_signed:

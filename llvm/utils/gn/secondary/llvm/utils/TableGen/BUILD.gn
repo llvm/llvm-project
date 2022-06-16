@@ -28,6 +28,7 @@ executable("llvm-tblgen") {
     "DAGISelMatcherOpt.cpp",
     "DFAEmitter.cpp",
     "DFAPacketizerEmitter.cpp",
+    "DXILEmitter.cpp",
     "DecoderEmitter.cpp",
     "DirectiveEmitter.cpp",
     "DisassemblerEmitter.cpp",

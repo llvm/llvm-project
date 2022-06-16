@@ -5,8 +5,8 @@ add_mlir_dialect_library(MLIRTensorUtils
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tensor
 
   LINK_LIBS PUBLIC
-  MLIRAffine
-  MLIRArithmetic
+  MLIRAffineDialect
+  MLIRArithmeticDialect
   MLIRIR
-  MLIRTensor
+  MLIRTensorDialect
 )

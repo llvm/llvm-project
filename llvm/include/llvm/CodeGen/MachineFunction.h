@@ -1131,12 +1131,6 @@ public:
   /// Add a cleanup action for a landing pad.
   void addCleanup(MachineBasicBlock *LandingPad);
 
-  void addSEHCatchHandler(MachineBasicBlock *LandingPad, const Function *Filter,
-                          const BlockAddress *RecoverBA);
-
-  void addSEHCleanupHandler(MachineBasicBlock *LandingPad,
-                            const Function *Cleanup);
-
   /// Return the type id for the specified typeinfo.  This is function wide.
   unsigned getTypeIDFor(const GlobalValue *TI);
 

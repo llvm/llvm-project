@@ -1007,19 +1007,20 @@ define i64 @gorc2b_i64(i64 %a) nounwind {
 ;
 ; RV64ZBP-LABEL: gorc2b_i64:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    srli a1, a0, 2
-; RV64ZBP-NEXT:    or a1, a1, a0
-; RV64ZBP-NEXT:    orc2.n a0, a0
-; RV64ZBP-NEXT:    lui a2, %hi(.LCPI26_0)
-; RV64ZBP-NEXT:    ld a2, %lo(.LCPI26_0)(a2)
+; RV64ZBP-NEXT:    lui a1, %hi(.LCPI26_0)
+; RV64ZBP-NEXT:    ld a1, %lo(.LCPI26_0)(a1)
+; RV64ZBP-NEXT:    srli a2, a0, 2
+; RV64ZBP-NEXT:    and a2, a2, a1
 ; RV64ZBP-NEXT:    lui a3, %hi(.LCPI26_1)
 ; RV64ZBP-NEXT:    ld a3, %lo(.LCPI26_1)(a3)
-; RV64ZBP-NEXT:    slli a1, a1, 2
-; RV64ZBP-NEXT:    and a1, a1, a2
-; RV64ZBP-NEXT:    srli a2, a0, 2
+; RV64ZBP-NEXT:    or a2, a2, a0
+; RV64ZBP-NEXT:    orc2.n a0, a0
+; RV64ZBP-NEXT:    slli a2, a2, 2
 ; RV64ZBP-NEXT:    and a2, a2, a3
-; RV64ZBP-NEXT:    or a0, a2, a0
-; RV64ZBP-NEXT:    or a0, a0, a1
+; RV64ZBP-NEXT:    srli a3, a0, 2
+; RV64ZBP-NEXT:    and a1, a3, a1
+; RV64ZBP-NEXT:    or a0, a1, a0
+; RV64ZBP-NEXT:    or a0, a0, a2
 ; RV64ZBP-NEXT:    ret
   %and1 = shl i64 %a, 2
   %shl1 = and i64 %and1, -3689348814741910324

@@ -10,8 +10,10 @@
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "transform-dialect"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
 
 using namespace mlir;
 
@@ -186,16 +188,18 @@ LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
   return success();
 }
 
-LogicalResult
+DiagnosedSilenceableFailure
 transform::TransformState::applyTransform(TransformOpInterface transform) {
+  LLVM_DEBUG(DBGS() << "applying: " << transform << "\n");
   if (options.getExpensiveChecksEnabled() &&
       failed(checkAndRecordHandleInvalidation(transform))) {
-    return failure();
+    return DiagnosedSilenceableFailure::definiteFailure();
   }
 
   transform::TransformResults results(transform->getNumResults());
-  if (failed(transform.apply(results, *this)))
-    return failure();
+  DiagnosedSilenceableFailure result(transform.apply(results, *this));
+  if (!result.succeeded())
+    return result;
 
   // Remove the mapping for the operand if it is consumed by the operation. This
   // allows us to catch use-after-free with assertions later on.
@@ -219,10 +223,10 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
            "payload IR association for a value other than the result of the "
            "current transform op");
     if (failed(setPayloadOps(result, results.get(result.getResultNumber()))))
-      return failure();
+      return DiagnosedSilenceableFailure::definiteFailure();
   }
 
-  return success();
+  return DiagnosedSilenceableFailure::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -273,15 +277,14 @@ transform::TransformResults::get(unsigned resultNumber) const {
 //===----------------------------------------------------------------------===//
 
 LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
-    TransformState &state, Operation *op) {
+    TransformState &state, Operation *op, Region &region) {
   SmallVector<Operation *> targets;
   if (op->getNumOperands() != 0)
     llvm::append_range(targets, state.getPayloadOps(op->getOperand(0)));
   else
     targets.push_back(state.getTopLevel());
 
-  return state.mapBlockArguments(op->getRegion(0).front().getArgument(0),
-                                 targets);
+  return state.mapBlockArguments(region.front().getArgument(0), targets);
 }
 
 LogicalResult
@@ -293,8 +296,8 @@ transform::detail::verifyPossibleTopLevelTransformOpTrait(Operation *op) {
          "should implement TransformOpInterface to have "
          "PossibleTopLevelTransformOpTrait");
 
-  if (op->getNumRegions() != 1)
-    return op->emitOpError() << "expects one region";
+  if (op->getNumRegions() < 1)
+    return op->emitOpError() << "expects at least one region";
 
   Region *bodyRegion = &op->getRegion(0);
   if (!llvm::hasNItems(*bodyRegion, 1))

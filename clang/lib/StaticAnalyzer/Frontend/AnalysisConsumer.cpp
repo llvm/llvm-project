@@ -171,13 +171,7 @@ public:
     }
 
     // Create the analyzer component creators.
-    switch (Opts->AnalysisStoreOpt) {
-    default:
-      llvm_unreachable("Unknown store manager.");
-#define ANALYSIS_STORE(NAME, CMDFLAG, DESC, CREATEFN)           \
-      case NAME##Model: CreateStoreMgr = CREATEFN; break;
-#include "clang/StaticAnalyzer/Core/Analyses.def"
-    }
+    CreateStoreMgr = &CreateRegionStoreManager;
 
     switch (Opts->AnalysisConstraintsOpt) {
     default:
@@ -358,7 +352,6 @@ public:
 
 private:
   void storeTopLevelDecls(DeclGroupRef DG);
-  std::string getFunctionName(const Decl *D);
 
   /// Check if we should skip (not analyze) the given function.
   AnalysisMode getModeForDecl(Decl *D, AnalysisMode Mode);
