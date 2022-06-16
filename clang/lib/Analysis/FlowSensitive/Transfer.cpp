@@ -95,6 +95,11 @@ public:
                                                 : Env.makeNot(LHSEqRHSValue));
       break;
     }
+    case BO_Comma: {
+      if (auto *Loc = Env.getStorageLocation(*RHS, SkipPast::None))
+        Env.setStorageLocation(*S, *Loc);
+      break;
+    }
     default:
       break;
     }
