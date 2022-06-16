@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# Set 'CLANG_CACHE_BUILD_SESSION_ID' to a unique identifier so that clang
+# invocations under the given command share the same depscan daemon while the
+# command is running.
+# Uses the process id to ensure parallel invocations of this script will not
+# share the same identifier, and 'elapsed seconds since epoch' to ensure the
+# same for consecutive invocations.
+env CLANG_CACHE_BUILD_SESSION_ID=$$-$(date +%s) "$@"

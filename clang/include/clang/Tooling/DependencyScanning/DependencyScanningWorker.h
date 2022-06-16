@@ -15,6 +15,7 @@
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
+#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include <string>
@@ -68,7 +69,21 @@ public:
 
   ScanningOutputFormat getFormat() const { return Format; }
 
-  llvm::StringSet<> AlreadySeen;
+  /// Scan from a compiler invocation.
+  void computeDependenciesFromCompilerInvocation(
+      std::shared_ptr<CompilerInvocation> Invocation,
+      StringRef WorkingDirectory, DependencyConsumer &Consumer,
+      DiagnosticConsumer &DiagsConsumer);
+
+  llvm::vfs::FileSystem &getRealFS() { return *RealFS; }
+  llvm::cas::CachingOnDiskFileSystem &getCASFS() { return *CacheFS; }
+  bool useCAS() const { return UseCAS; }
+  const CASOptions &getCASOpts() const { return CASOpts; }
+
+  /// If \p DependencyScanningService enabled sharing of \p FileManager this
+  /// will return the same instance, otherwise it will create a new one for
+  /// each invocation.
+  llvm::IntrusiveRefCntPtr<FileManager> getOrCreateFileManager() const;
 
 private:
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
@@ -77,16 +92,23 @@ private:
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> RealFS;
   /// The in-memory filesystem laid on top the physical filesystem in `RealFS`.
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
+  /// The caching file system.
+  llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS;
   /// The file system that is used by each worker when scanning for
   /// dependencies. This filesystem persists across multiple compiler
   /// invocations.
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
+  /// The CAS Dependency Filesytem. This is not set at the sametime as DepFS;
+  llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   /// The file manager that is reused across multiple invocations by this
   /// worker. If null, the file manager will not be reused.
   llvm::IntrusiveRefCntPtr<FileManager> Files;
   ScanningOutputFormat Format;
   /// Whether to optimize the modules' command-line arguments.
   bool OptimizeArgs;
+
+  CASOptions CASOpts;
+  bool UseCAS;
 };
 
 } // end namespace dependencies

@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualOutputBackend.h"
 #include <cassert>
 #include <list>
 #include <memory>
@@ -82,8 +83,14 @@ class CompilerInstance : public ModuleLoader {
   /// Auxiliary Target info.
   IntrusiveRefCntPtr<TargetInfo> AuxTarget;
 
+  /// The CAS, if any.
+  std::shared_ptr<llvm::cas::CASDB> CAS;
+
   /// The file manager.
   IntrusiveRefCntPtr<FileManager> FileMgr;
+
+  /// The output context.
+  IntrusiveRefCntPtr<llvm::vfs::OutputBackend> TheOutputBackend;
 
   /// The source manager.
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
@@ -157,21 +164,8 @@ class CompilerInstance : public ModuleLoader {
   /// The stream for verbose output.
   raw_ostream *VerboseOutputStream = &llvm::errs();
 
-  /// Holds information about the output file.
-  ///
-  /// If TempFilename is not empty we must rename it to Filename at the end.
-  /// TempFilename may be empty and Filename non-empty if creating the temporary
-  /// failed.
-  struct OutputFile {
-    std::string Filename;
-    Optional<llvm::sys::fs::TempFile> File;
-
-    OutputFile(std::string filename, Optional<llvm::sys::fs::TempFile> file)
-        : Filename(std::move(filename)), File(std::move(file)) {}
-  };
-
   /// The list of active output files.
-  std::list<OutputFile> OutputFiles;
+  std::list<llvm::vfs::OutputFile> OutputFiles;
 
   /// \brief An optional callback function used to wrap all FrontendActions
   /// produced to generate imported modules before they are executed.
@@ -337,6 +331,13 @@ public:
     return Invocation->getTargetOpts();
   }
 
+  CASOptions &getCASOpts() {
+    return Invocation->getCASOpts();
+  }
+  const CASOptions &getCASOpts() const {
+    return Invocation->getCASOpts();
+  }
+
   /// }
   /// @name Diagnostics Engine
   /// {
@@ -424,6 +425,20 @@ public:
 
   /// Replace the current file manager and virtual file system.
   void setFileManager(FileManager *Value);
+
+  /// Set the output manager.
+  void setOutputBackend(IntrusiveRefCntPtr<llvm::vfs::OutputBackend> NewOutputs);
+
+  /// Create an output manager.
+  void createOutputBackend();
+
+  bool hasOutputBackend() const { return bool(TheOutputBackend); }
+
+  llvm::vfs::OutputBackend &getOutputBackend();
+  llvm::vfs::OutputBackend &getOrCreateOutputBackend();
+
+  /// Get the CAS, or create it using the configuration in CompilerInvocation.
+  llvm::cas::CASDB &getOrCreateCAS();
 
   /// }
   /// @name Source Manager

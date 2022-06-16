@@ -349,6 +349,10 @@ public:
   unsigned IndexIgnoreMacros : 1;
   unsigned IndexIgnorePcms : 1;
 
+  /// Cache -cc1 compilations when possible. Ignored unless CASFileSystemRootID
+  /// is specified.
+  unsigned CacheCompileJob : 1;
+
   /// Output (and read) PCM files regardless of compiler errors.
   unsigned AllowPCMWithCompilerErrors : 1;
 
@@ -517,7 +521,7 @@ public:
         GenerateGlobalModuleIndex(true), ASTDumpDecls(false),
         ASTDumpLookups(false), BuildingImplicitModule(false),
         BuildingImplicitModuleUsesLock(true), ModulesEmbedAllFiles(false),
-        IncludeTimestamps(true), UseTemporary(true),
+        IncludeTimestamps(true), UseTemporary(true), CacheCompileJob(false),
         AllowPCMWithCompilerErrors(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file

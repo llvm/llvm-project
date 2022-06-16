@@ -58,6 +58,7 @@ list(APPEND CLANG_TEST_DEPS
   apinotes-test
   c-index-test
   clang
+  clang-cas-test
   clang-resource-headers
   clang-format
   clang-tblgen
@@ -109,6 +110,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-ar
     llvm-as
     llvm-bcanalyzer
+    llvm-cas
     llvm-cat
     llvm-cxxfilt
     llvm-dis
