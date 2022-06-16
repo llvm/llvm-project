@@ -521,6 +521,44 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
   return !Subscripts.empty();
 }
 
+bool llvm::tryDelinearizeFixedSizeImpl(
+    ScalarEvolution *SE, Instruction *Inst, const SCEV *AccessFn,
+    SmallVectorImpl<const SCEV *> &Subscripts, SmallVectorImpl<int> &Sizes) {
+  Value *SrcPtr = getLoadStorePointerOperand(Inst);
+
+  // Check the simple case where the array dimensions are fixed size.
+  auto *SrcGEP = dyn_cast<GetElementPtrInst>(SrcPtr);
+  if (!SrcGEP)
+    return false;
+
+  getIndexExpressionsFromGEP(*SE, SrcGEP, Subscripts, Sizes);
+
+  // Check that the two size arrays are non-empty and equal in length and
+  // value.
+  // TODO: it would be better to let the caller to clear Subscripts, similar
+  // to how we handle Sizes.
+  if (Sizes.empty() || Subscripts.size() <= 1) {
+    Subscripts.clear();
+    return false;
+  }
+
+  // Check that for identical base pointers we do not miss index offsets
+  // that have been added before this GEP is applied.
+  Value *SrcBasePtr = SrcGEP->getOperand(0)->stripPointerCasts();
+  const SCEVUnknown *SrcBase =
+      dyn_cast<SCEVUnknown>(SE->getPointerBase(AccessFn));
+  if (!SrcBase || SrcBasePtr != SrcBase->getValue()) {
+    Subscripts.clear();
+    return false;
+  }
+
+  assert(Subscripts.size() == Sizes.size() + 1 &&
+         "Expected equal number of entries in the list of size and "
+         "subscript.");
+
+  return true;
+}
+
 namespace {
 
 class Delinearization : public FunctionPass {
