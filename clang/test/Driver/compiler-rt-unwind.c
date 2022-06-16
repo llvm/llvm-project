@@ -13,7 +13,15 @@
 // RUN:     --gcc-toolchain="" -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=RTLIB-GCC-UNWINDLIB-COMPILER-RT %s
 // RTLIB-GCC-UNWINDLIB-COMPILER-RT: "{{.*}}lgcc"
-// RTLIB-GCC-UNWINDLIB-COMPILER-RT: "{{.*}}l:libunwind.so"
+// RTLIB-GCC-UNWINDLIB-COMPILER-RT: "{{.*}}lunwind"
+//
+// RUN: %clang -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -rtlib=libgcc --unwindlib=libunwind \
+// RUN:     -shared-libgcc \
+// RUN:     --gcc-toolchain="" -resource-dir=%S/Inputs/resource_dir \
+// RUN:   | FileCheck --check-prefix=RTLIB-GCC-SHARED-UNWINDLIB-COMPILER-RT %s
+// RTLIB-GCC-SHARED-UNWINDLIB-COMPILER-RT: "{{.*}}l:libunwind.so"
+// RTLIB-GCC-SHARED-UNWINDLIB-COMPILER-RT: "{{.*}}lgcc"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=libgcc --unwindlib=libunwind \
