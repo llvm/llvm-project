@@ -192,15 +192,6 @@ define amdgpu_kernel void @vuaddo64(i64 addrspace(1)* %out, i1 addrspace(1)* %ca
   ret void
 }
 
-; RUN: llc -march=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -enable-var-scope -check-prefixes=GCN-ISEL                %s
-
-; RUN: llc -march=amdgcn -mcpu=verde   -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CISI    %s
-; RUN: llc -march=amdgcn -mcpu=fiji    -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI      %s
-; RUN: llc -march=amdgcn -mcpu=gfx900  -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9    %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,GFX1010,GFX10W32 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,GFX10W32,GFX1030 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,GFX10W64,GFX1030 %s
-
 ; GCN-ISEL-LABEL: name:   ssub64rr
 ; GCN-ISEL-LABEL: body:
 ; GCN-ISEL-LABEL: bb.0.entry:
