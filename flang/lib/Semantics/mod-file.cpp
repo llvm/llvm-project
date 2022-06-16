@@ -419,8 +419,11 @@ static const Attrs subprogramPrefixAttrs{Attr::ELEMENTAL, Attr::IMPURE,
     Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::RECURSIVE};
 
 void ModFileWriter::PutSubprogram(const Symbol &symbol) {
-  auto attrs{symbol.attrs()};
   auto &details{symbol.get<SubprogramDetails>()};
+  if (const Symbol * interface{details.moduleInterface()}) {
+    PutSubprogram(*interface);
+  }
+  auto attrs{symbol.attrs()};
   Attrs bindAttrs{};
   if (attrs.test(Attr::BIND_C)) {
     // bind(c) is a suffix, not prefix
@@ -1092,6 +1095,9 @@ void SubprogramSymbolCollector::Collect() {
         const Symbol *dt{generic->derivedType()};
         needed = needed || (spec && useSet_.count(*spec) > 0) ||
             (dt && useSet_.count(*dt) > 0);
+      } else if (const auto *subp{ultimate.detailsIf<SubprogramDetails>()}) {
+        const Symbol *interface { subp->moduleInterface() };
+        needed = needed || (interface && useSet_.count(*interface) > 0);
       }
       if (needed) {
         need_.push_back(symbol);
