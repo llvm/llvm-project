@@ -1,0 +1,15 @@
+RUN: rm -rf %t && mkdir -p %t
+
+RUN: llvm-cas --cas %t/cas --ingest --prefix-map %S/Inputs=/^input --data %S/Inputs > %t/cas.id
+RUN: llvm-cas --cas %t/cas --ls-tree-recursive @%t/cas.id | FileCheck %s
+
+CHECK: file
+CHECK-SAME: /^input/directory/file
+CHECK: syml
+CHECK-SAME: /^input/file -> directory/file
+CHECK: file
+CHECK-SAME: /^input/oneline
+CHECK: file
+CHECK-SAME: /^input/oneline-nonewline
+CHECK: syml
+CHECK-SAME: /^input/sym_dir

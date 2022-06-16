@@ -48,6 +48,14 @@ constexpr bool is_style_posix(Style S) {
 /// Check if \p S uses Windows path rules.
 constexpr bool is_style_windows(Style S) { return !is_style_posix(S); }
 
+constexpr Style system_style() {
+#if defined(_WIN32)
+  return Style::windows;
+#else
+  return Style::posix;
+#endif
+}
+
 /// @name Lexical Component Iterator
 /// @{
 

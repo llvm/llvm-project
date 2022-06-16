@@ -1,0 +1,28 @@
+RUN: rm -rf %t
+RUN: mkdir %t
+
+RUN: llvm-cas --cas %t/cas --ingest --data %S/Inputs > %t/cas.id
+RUN: llvm-cas --cas %t/cas --ls-tree-recursive @%t/cas.id | FileCheck %s
+
+CHECK: file
+CHECK-SAME: directory/file
+CHECK: syml
+CHECK-SAME: file -> directory/file
+CHECK: file
+CHECK-SAME: oneline
+CHECK: file
+CHECK-SAME: oneline-nonewline
+CHECK: syml
+CHECK-SAME: sym_dir
+
+RUN: llvm-cas --cas %t/cas --get-cas-id --data %S/Inputs/directory/file @%t/cas.id > %t/file.casid
+RUN: llvm-cas --cas %t/cas --cat-blob @%t/file.casid | FileCheck %s --check-prefix=CHECK-TEST-FILE
+
+CHECK-TEST-FILE: test
+
+RUN: not llvm-cas --cas  %t/cas --get-cas-id --data %s @%t/cas.id 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+
+CHECK-ERROR: llvm-cas: get-cas-id: No such file or directory
+
+RUN: not llvm-cas --cas  %t/cas --ls-node-refs @%t/cas.id 2>&1 | FileCheck %s --check-prefix=CHECK-WRONG-TYPE
+CHECK-WRONG-TYPE: llvm-cas: ls-node-refs: wrong object kind
