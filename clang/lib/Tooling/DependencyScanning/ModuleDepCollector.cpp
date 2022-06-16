@@ -321,13 +321,28 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   return MD.ID;
 }
 
+static void forEachSubmoduleSorted(const Module *M,
+                                   llvm::function_ref<void(const Module *)> F) {
+  // Submodule order depends on order of header includes for inferred submodules
+  // we don't care about the exact order, so sort so that it's consistent across
+  // TUs to improve sharing.
+  SmallVector<const Module *> Submodules(M->submodule_begin(),
+                                         M->submodule_end());
+  llvm::stable_sort(Submodules, [](const Module *A, const Module *B) {
+    return A->Name < B->Name;
+  });
+  for (const Module *SubM : Submodules)
+    F(SubM);
+}
+
 void ModuleDepCollectorPP::addAllSubmodulePrebuiltDeps(
     const Module *M, ModuleDeps &MD,
     llvm::DenseSet<const Module *> &SeenSubmodules) {
   addModulePrebuiltDeps(M, MD, SeenSubmodules);
 
-  for (const Module *SubM : M->submodules())
+  forEachSubmoduleSorted(M, [&](const Module *SubM) {
     addAllSubmodulePrebuiltDeps(SubM, MD, SeenSubmodules);
+  });
 }
 
 void ModuleDepCollectorPP::addModulePrebuiltDeps(
@@ -345,8 +360,9 @@ void ModuleDepCollectorPP::addAllSubmoduleDeps(
     llvm::DenseSet<const Module *> &AddedModules) {
   addModuleDep(M, MD, AddedModules);
 
-  for (const Module *SubM : M->submodules())
+  forEachSubmoduleSorted(M, [&](const Module *SubM) {
     addAllSubmoduleDeps(SubM, MD, AddedModules);
+  });
 }
 
 void ModuleDepCollectorPP::addModuleDep(
