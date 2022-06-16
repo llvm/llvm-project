@@ -28,12 +28,16 @@ public:
     return Find(n);
   }
 
-  ExternalFileUnit &LookUpOrCreate(
+  ExternalFileUnit *LookUpOrCreate(
       int n, const Terminator &terminator, bool &wasExtant) {
     CriticalSection critical{lock_};
-    auto *p{Find(n)};
-    wasExtant = p != nullptr;
-    return p ? *p : Create(n, terminator);
+    if (auto *p{Find(n)}) {
+      wasExtant = true;
+      return p;
+    } else {
+      wasExtant = false;
+      return n >= 0 ? &Create(n, terminator) : nullptr;
+    }
   }
 
   // Unit look-up by name is needed for INQUIRE(FILE="...")
