@@ -59,8 +59,10 @@ struct DXILOperationData {
   SmallVector<DXILParam> Params; // the operands that this instruction takes
   StringRef OverloadTypes;       // overload types if applicable
   StringRef FnAttr;              // attribute shorthands: rn=does not access
-                                 // memory,ro=only reads from memory,
-  bool IsDeriv;                  // whether this is some kind of derivative
+                                 // memory,ro=only reads from memory
+  StringRef Intrinsic; // The llvm intrinsic map to DXILOp. Default is "" which
+                       // means no map exist
+  bool IsDeriv;        // whether this is some kind of derivative
   bool IsGradient;               // whether this requires a gradient calculation
   bool IsFeedback;               // whether this is a sampler feedback op
   bool IsWave; // whether this requires in-wave, cross-lane functionality
@@ -79,7 +81,16 @@ struct DXILOperationData {
     DXILClass = R->getValueAsDef("op_class")->getValueAsString("name");
     Category = R->getValueAsDef("category")->getValueAsString("name");
 
+    if (R->getValue("llvm_intrinsic")) {
+      auto *IntrinsicDef = R->getValueAsDef("llvm_intrinsic");
+      auto DefName = IntrinsicDef->getName();
+      assert(DefName.startswith("int_") && "invalid intrinsic name");
+      // Remove the int_ from intrinsic name.
+      Intrinsic = DefName.substr(4);
+    }
+
     Doc = R->getValueAsString("doc");
+
     ListInit *ParamList = R->getValueAsListInit("ops");
     for (unsigned i = 0; i < ParamList->size(); ++i) {
       Record *Param = ParamList->getElementAsRecord(i);
@@ -179,6 +190,24 @@ static void emitDXILEnums(std::vector<DXILOperationData> &DXILOps,
   OS << "\n};\n\n";
 }
 
+// Emit map from llvm intrinsic to DXIL operation.
+static void EmitDXILIntrinsicMap(std::vector<DXILOperationData> &DXILOps,
+                                 raw_ostream &OS) {
+  OS << "\n";
+  // FIXME: use array instead of SmallDenseMap.
+  OS << "static const SmallDenseMap<Intrinsic::ID, DXIL::OpCode> LowerMap = "
+        "{\n";
+  for (auto &DXILOp : DXILOps) {
+    if (DXILOp.Intrinsic.empty())
+      continue;
+    // {Intrinsic::sin, DXIL::OpCode::Sin},
+    OS << "  { Intrinsic::" << DXILOp.Intrinsic
+       << ", DXIL::OpCode::" << DXILOp.DXILOp << "},\n";
+  }
+  OS << "};\n";
+  OS << "\n";
+}
+
 namespace llvm {
 
 void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
@@ -195,6 +224,11 @@ void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef DXIL_OP_ENUM\n";
   emitDXILEnums(DXILOps, OS);
   OS << "#endif\n\n";
+
+  OS << "#ifdef DXIL_OP_INTRINSIC_MAP\n";
+  EmitDXILIntrinsicMap(DXILOps, OS);
+  OS << "#endif\n\n";
+
 
   OS << "\n";
 }
