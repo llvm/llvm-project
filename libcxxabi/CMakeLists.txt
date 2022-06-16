@@ -241,6 +241,11 @@ if(ZOS)
   add_target_flags_if_supported("-fzos-le-char-mode=ebcdic")
 endif()
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_target_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
+  set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
+endif()
+
 # Configure compiler. Must happen after setting the target flags.
 include(config-ix)
 

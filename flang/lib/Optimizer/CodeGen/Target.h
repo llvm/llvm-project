@@ -71,11 +71,13 @@ public:
   /// Type representation of a `complex<eleTy>` type argument when passed by
   /// value. An argument value may need to be passed as a (safe) reference
   /// argument.
-  virtual Marshalling complexArgumentType(mlir::Type eleTy) const = 0;
+  virtual Marshalling complexArgumentType(mlir::Location loc,
+                                          mlir::Type eleTy) const = 0;
 
   /// Type representation of a `complex<eleTy>` type return value. Such a return
   /// value may need to be converted to a hidden reference argument.
-  virtual Marshalling complexReturnType(mlir::Type eleTy) const = 0;
+  virtual Marshalling complexReturnType(mlir::Location loc,
+                                        mlir::Type eleTy) const = 0;
 
   /// Type presentation of a `boxchar<n>` type value in memory.
   virtual mlir::Type boxcharMemoryType(mlir::Type eleTy) const = 0;

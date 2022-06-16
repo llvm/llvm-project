@@ -5,7 +5,7 @@ add_mlir_library(MLIRFuncTestPasses
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
   MLIRPass
   MLIRFuncTransforms
   MLIRTestDialect

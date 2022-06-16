@@ -64,9 +64,10 @@ static const char *getOverloadTypeName(OverloadKind Kind) {
   case OverloadKind::VOID:
   case OverloadKind::ObjectType:
   case OverloadKind::UserDefineType:
-    llvm_unreachable("invalid overload type for name");
     break;
   }
+  llvm_unreachable("invalid overload type for name");
+  return "void";
 }
 
 static OverloadKind getOverloadKind(Type *Ty) {
@@ -140,6 +141,7 @@ struct OpCodeProperty {
 static const char *getOpCodeClassName(const OpCodeProperty &Prop) {
   // FIXME: generate this table with tableGen.
   static const char *OpCodeClassNames[] = {
+      "binary",
       "unary",
   };
   unsigned Index = static_cast<unsigned>(Prop.OpCodeClass);
@@ -163,6 +165,9 @@ static const OpCodeProperty *getOpCodeProperty(DXIL::OpCode DXILOp) {
   static const OpCodeProperty OpCodeProps[] = {
       {DXIL::OpCode::Sin, "Sin", OpCodeClass::Unary,
        OverloadKind::FLOAT | OverloadKind::HALF, Attribute::AttrKind::ReadNone},
+      {DXIL::OpCode::UMax, "UMax", OpCodeClass::Binary,
+       OverloadKind::I16 | OverloadKind::I32 | OverloadKind::I64,
+       Attribute::AttrKind::ReadNone},
   };
   // FIXME: change search to indexing with
   // DXILOp once all DXIL op is added.
@@ -229,12 +234,17 @@ static void lowerIntrinsic(DXIL::OpCode DXILOp, Function &F, Module &M) {
 
 static bool lowerIntrinsics(Module &M) {
   bool Updated = false;
-  static SmallDenseMap<Intrinsic::ID, DXIL::OpCode> LowerMap = {
-      {Intrinsic::sin, DXIL::OpCode::Sin}};
+
+#define DXIL_OP_INTRINSIC_MAP
+#include "DXILOperation.inc"
+#undef DXIL_OP_INTRINSIC_MAP
+
   for (Function &F : make_early_inc_range(M.functions())) {
     if (!F.isDeclaration())
       continue;
     Intrinsic::ID ID = F.getIntrinsicID();
+    if (ID == Intrinsic::not_intrinsic)
+      continue;
     auto LowerIt = LowerMap.find(ID);
     if (LowerIt == LowerMap.end())
       continue;

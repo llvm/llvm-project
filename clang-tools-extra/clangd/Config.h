@@ -129,7 +129,7 @@ struct Config {
   /// Configures hover feature.
   struct {
     /// Whether hover show a.k.a type.
-    bool ShowAKA = false;
+    bool ShowAKA = true;
   } Hover;
 
   struct {

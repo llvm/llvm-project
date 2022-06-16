@@ -62,6 +62,10 @@ std::unique_ptr<Pass> createStripDebugInfoPass();
 /// the module.
 std::unique_ptr<Pass> createPrintOpStatsPass(raw_ostream &os = llvm::errs());
 
+/// Creates a pass which prints the list of ops and the number of occurrences in
+/// the module with the output format option.
+std::unique_ptr<Pass> createPrintOpStatsPass(raw_ostream &os, bool printAsJSON);
+
 /// Creates a pass which inlines calls and callable operations as defined by
 /// the CallGraph.
 std::unique_ptr<Pass> createInlinerPass();

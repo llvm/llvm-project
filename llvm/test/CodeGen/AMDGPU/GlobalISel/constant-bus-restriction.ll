@@ -294,7 +294,7 @@ define amdgpu_ps float @div_scale_s_s_true(float inreg %src0, float inreg %src1)
 ;
 ; GFX11-LABEL: div_scale_s_s_true:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_div_scale_f32 v0, s0, s2, s3, s2
+; GFX11-NEXT:    v_div_scale_f32 v0, null, s2, s3, s2
 ; GFX11-NEXT:    ; return to shader part epilog
   %div.scale = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %src0, float %src1, i1 true)
   %result = extractvalue { float, i1 } %div.scale, 0
@@ -315,7 +315,7 @@ define amdgpu_ps float @div_scale_s_s_false(float inreg %src0, float inreg %src1
 ;
 ; GFX11-LABEL: div_scale_s_s_false:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_div_scale_f32 v0, s0, s3, s3, s2
+; GFX11-NEXT:    v_div_scale_f32 v0, null, s3, s3, s2
 ; GFX11-NEXT:    ; return to shader part epilog
   %div.scale = call { float, i1 } @llvm.amdgcn.div.scale.f32(float %src0, float %src1, i1 false)
   %result = extractvalue { float, i1 } %div.scale, 0

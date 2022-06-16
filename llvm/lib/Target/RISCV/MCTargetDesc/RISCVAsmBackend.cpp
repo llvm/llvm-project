@@ -593,7 +593,7 @@ bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
   if (AF.getAlignment() <= MinNopLen) {
     return false;
   } else {
-    Size = AF.getAlignment() - MinNopLen;
+    Size = AF.getAlignment().value() - MinNopLen;
     return true;
   }
 }

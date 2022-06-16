@@ -1,6 +1,6 @@
 add_subdirectory(Transforms)
 
-add_mlir_dialect_library(MLIRLLVMIR
+add_mlir_dialect_library(MLIRLLVMDialect
   IR/FunctionCallUtils.cpp
   IR/LLVMDialect.cpp
   IR/LLVMIntrinsicOps.cpp
@@ -33,7 +33,7 @@ add_mlir_dialect_library(MLIRLLVMIR
   MLIRSupport
   )
 
-add_mlir_dialect_library(MLIRNVVMIR
+add_mlir_dialect_library(MLIRNVVMDialect
   IR/NVVMDialect.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -50,11 +50,11 @@ add_mlir_dialect_library(MLIRNVVMIR
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRLLVMIR
+  MLIRLLVMDialect
   MLIRSideEffectInterfaces
   )
 
-add_mlir_dialect_library(MLIRROCDLIR
+add_mlir_dialect_library(MLIRROCDLDialect
   IR/ROCDLDialect.cpp
 
   ADDITIONAL_HEADER_DIRS

@@ -233,6 +233,8 @@ end
 * Legacy names `AND`, `OR`, and `XOR` are accepted as aliases for
   the standard intrinsic functions `IAND`, `IOR`, and `IEOR`
   respectively.
+* A digit count of d=0 is accepted in Ew.0, Dw.0, and Gw.0 output
+  editing if no nonzero scale factor (kP) is in effect.
 
 ### Extensions supported when enabled by options
 
@@ -304,6 +306,8 @@ end
   related generics. Some accepted exceptions are listed above in the allowed extensions.
   PGI, Intel, and XLF support this in ways that are not numerically equivalent.
   PGI converts the arguments while Intel and XLF replace the specific by the related generic.
+* VMS listing control directives (`%LIST`, `%NOLIST`, `%EJECT`)
+* Continuation lines on `INCLUDE` lines
 
 ## Preprocessing behavior
 

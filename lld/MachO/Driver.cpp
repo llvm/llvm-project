@@ -1403,15 +1403,18 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     config->segmentProtections.push_back({segName, maxProt, initProt});
   }
 
+  config->hasExplicitExports =
+      args.hasArg(OPT_no_exported_symbols) ||
+      args.hasArgNoClaim(OPT_exported_symbol, OPT_exported_symbols_list);
   handleSymbolPatterns(args, config->exportedSymbols, OPT_exported_symbol,
                        OPT_exported_symbols_list);
   handleSymbolPatterns(args, config->unexportedSymbols, OPT_unexported_symbol,
                        OPT_unexported_symbols_list);
-  if (!config->exportedSymbols.empty() && !config->unexportedSymbols.empty()) {
-    error("cannot use both -exported_symbol* and -unexported_symbol* options\n"
-          ">>> ignoring unexports");
-    config->unexportedSymbols.clear();
-  }
+  if (config->hasExplicitExports && !config->unexportedSymbols.empty())
+    error("cannot use both -exported_symbol* and -unexported_symbol* options");
+
+  if (args.hasArg(OPT_no_exported_symbols) && !config->exportedSymbols.empty())
+    error("cannot use both -exported_symbol* and -no_exported_symbols options");
 
   // Imitating LD64's:
   // -non_global_symbols_no_strip_list and -non_global_symbols_strip_list can't
@@ -1555,7 +1558,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     createSyntheticSections();
     createSyntheticSymbols();
 
-    if (!config->exportedSymbols.empty()) {
+    if (config->hasExplicitExports) {
       parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
         if (auto *defined = dyn_cast<Defined>(sym)) {
           StringRef symbolName = defined->getName();

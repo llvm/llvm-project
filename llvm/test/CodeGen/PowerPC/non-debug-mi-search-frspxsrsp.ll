@@ -30,7 +30,8 @@ define dso_local void @test(float* nocapture readonly %Fptr, <4 x float>* nocapt
 ; CHECK-NEXT:          xvcvdpsp 35, 1
 ; CHECK-NEXT:          vmrgew 2, 2, 3
 ; CHECK-NEXT:          .loc    1 3 9 is_stmt 0
-; CHECK-NEXT:          stvx 2, 0, 4
+; CHECK-NEXT:          xxswapd	0, 34
+; CHECK-NEXT:          stxvd2x 0, 0, 4
 ; CHECK-NEXT:          .loc    1 4 1 is_stmt 1
 ; CHECK-NEXT:          blr
 entry:

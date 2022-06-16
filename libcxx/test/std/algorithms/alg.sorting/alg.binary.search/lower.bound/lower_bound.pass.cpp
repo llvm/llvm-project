@@ -65,11 +65,6 @@ test()
         test(Iter(v.data()), Iter(v.data()+v.size()), x);
 }
 
-void test_instantiation() {
-    auto iter = Cpp20HostileIterator<int*>();
-    std::lower_bound(iter, iter, 0);
-}
-
 int main(int, char**)
 {
     int d[] = {0, 1, 2, 3};

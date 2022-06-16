@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // size_type find_first_not_of(const basic_string& str, size_type pos = 0) const; // constexpr since C++20

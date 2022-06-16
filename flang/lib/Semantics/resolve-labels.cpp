@@ -233,13 +233,16 @@ public:
     using LabeledConstructEndStmts = std::tuple<parser::EndAssociateStmt,
         parser::EndBlockStmt, parser::EndChangeTeamStmt,
         parser::EndCriticalStmt, parser::EndDoStmt, parser::EndForallStmt,
-        parser::EndIfStmt, parser::EndSelectStmt, parser::EndWhereStmt>;
+        parser::EndIfStmt, parser::EndWhereStmt>;
     using LabeledProgramUnitEndStmts =
         std::tuple<parser::EndFunctionStmt, parser::EndMpSubprogramStmt,
             parser::EndProgramStmt, parser::EndSubroutineStmt>;
     auto targetFlags{ConstructBranchTargetFlags(statement)};
     if constexpr (common::HasMember<A, LabeledConstructStmts>) {
       AddTargetLabelDefinition(label.value(), targetFlags, ParentScope());
+    } else if constexpr (std::is_same_v<A, parser::EndSelectStmt>) {
+      // the label on an END SELECT is not in the last case
+      AddTargetLabelDefinition(label.value(), targetFlags, ParentScope(), true);
     } else if constexpr (common::HasMember<A, LabeledConstructEndStmts>) {
       constexpr bool isExecutableConstructEndStmt{true};
       AddTargetLabelDefinition(label.value(), targetFlags, currentScope_,
@@ -286,19 +289,23 @@ public:
   bool Pre(const parser::CaseConstruct &caseConstruct) {
     return PushConstructName(caseConstruct);
   }
+  void Post(const parser::SelectCaseStmt &) { PushScope(); }
   bool Pre(const parser::CaseConstruct::Case &) { return SwitchToNewScope(); }
   bool Pre(const parser::SelectRankConstruct &selectRankConstruct) {
     return PushConstructName(selectRankConstruct);
   }
+  void Post(const parser::SelectRankStmt &) { PushScope(); }
   bool Pre(const parser::SelectRankConstruct::RankCase &) {
     return SwitchToNewScope();
   }
   bool Pre(const parser::SelectTypeConstruct &selectTypeConstruct) {
     return PushConstructName(selectTypeConstruct);
   }
+  void Post(const parser::SelectTypeStmt &) { PushScope(); }
   bool Pre(const parser::SelectTypeConstruct::TypeCase &) {
     return SwitchToNewScope();
   }
+  void Post(const parser::EndSelectStmt &) { PopScope(); }
   bool Pre(const parser::WhereConstruct &whereConstruct) {
     return PushConstructName(whereConstruct);
   }
@@ -994,7 +1001,7 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
       context.Say(position,
           isFatal
               ? "Label '%u' is in a construct that prevents its use as a branch target here"_err_en_US
-              : "Label '%u' is in a construct that prevents its use as a branch target here"_en_US,
+              : "Label '%u' is in a construct that should not be used as a branch target here"_warn_en_US,
           SayLabel(label));
     }
   }

@@ -47,6 +47,12 @@ public:
 
   explicit Value(Kind ValKind) : ValKind(ValKind) {}
 
+  // Non-copyable because addresses of values are used as their identities
+  // throughout framework and user code. The framework is responsible for
+  // construction and destruction of values.
+  Value(const Value &) = delete;
+  Value &operator=(const Value &) = delete;
+
   virtual ~Value() = default;
 
   Kind getKind() const { return ValKind; }
@@ -170,17 +176,17 @@ public:
 /// in C.
 class ReferenceValue final : public Value {
 public:
-  explicit ReferenceValue(StorageLocation &PointeeLoc)
-      : Value(Kind::Reference), PointeeLoc(PointeeLoc) {}
+  explicit ReferenceValue(StorageLocation &ReferentLoc)
+      : Value(Kind::Reference), ReferentLoc(ReferentLoc) {}
 
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::Reference;
   }
 
-  StorageLocation &getPointeeLoc() const { return PointeeLoc; }
+  StorageLocation &getReferentLoc() const { return ReferentLoc; }
 
 private:
-  StorageLocation &PointeeLoc;
+  StorageLocation &ReferentLoc;
 };
 
 /// Models a symbolic pointer. Specifically, any value of type `T*`.

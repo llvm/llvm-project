@@ -37,9 +37,14 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
     break;
   case ISD::Constant: {
     int64_t Imm = cast<ConstantSDNode>(Node)->getSExtValue();
+    if (Imm == 0 && Node->getSimpleValueType(0) == GRLenVT) {
+      SDValue New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
+                                           LoongArch::R0, GRLenVT);
+      ReplaceNode(Node, New.getNode());
+      return;
+    }
     SDNode *Result = nullptr;
     SDValue SrcReg = CurDAG->getRegister(LoongArch::R0, GRLenVT);
-
     // The instructions in the sequence are handled here.
     for (LoongArchMatInt::Inst &Inst : LoongArchMatInt::generateInstSeq(Imm)) {
       SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, GRLenVT);
