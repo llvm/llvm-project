@@ -16,7 +16,6 @@
 #include "AMDGPUInstrInfo.h"
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -621,7 +620,7 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
 
   // Registers in the sequence are allocated contiguously so we can just
   // use register number to pick one of three round-robin temps.
-  unsigned RegNo = DestReg % 3;
+  unsigned RegNo = (DestReg - AMDGPU::AGPR0) % 3;
   Register Tmp =
       MBB.getParent()->getInfo<SIMachineFunctionInfo>()->getVGPRForAGPRCopy();
   assert(MBB.getParent()->getRegInfo().isReserved(Tmp) &&
@@ -3950,7 +3949,7 @@ bool SIInstrInfo::usesConstantBus(const MachineRegisterInfo &MRI,
     return RI.isSGPRClass(MRI.getRegClass(MO.getReg()));
 
   // Null is free
-  if (MO.getReg() == AMDGPU::SGPR_NULL)
+  if (MO.getReg() == AMDGPU::SGPR_NULL || MO.getReg() == AMDGPU::SGPR_NULL64)
     return false;
 
   // SGPRs use the constant bus

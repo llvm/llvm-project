@@ -835,9 +835,9 @@ define <2 x i1> @isnan_v2f_strictfp(<2 x float> %x) strictfp {
 ;
 ; CHECK-64-LABEL: isnan_v2f_strictfp:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; CHECK-64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-64-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 3)  ; "nan"

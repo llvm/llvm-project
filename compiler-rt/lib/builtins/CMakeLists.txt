@@ -165,8 +165,10 @@ set(GENERIC_SOURCES
   subvsi3.c
   subvti3.c
   trampoline_setup.c
+  truncdfbf2.c
   truncdfhf2.c
   truncdfsf2.c
+  truncsfbf2.c
   truncsfhf2.c
   ucmpdi2.c
   ucmpti2.c

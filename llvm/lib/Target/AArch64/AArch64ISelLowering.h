@@ -406,6 +406,9 @@ enum NodeType : unsigned {
   SSTNT1_PRED,
   SSTNT1_INDEX_PRED,
 
+  // SME
+  RDSVL,
+
   // Asserts that a function argument (i32) is zero-extended to i8 by
   // the caller
   ASSERT_ZEXT_BOOL,
@@ -555,6 +558,15 @@ public:
 
   MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
+
+  MachineBasicBlock *EmitTileLoad(unsigned Opc, unsigned BaseReg,
+                                  MachineInstr &MI,
+                                  MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitFill(MachineInstr &MI, MachineBasicBlock *BB) const;
+
+  MachineBasicBlock *EmitInsertVectorToTile(unsigned Opc, unsigned BaseReg,
+                                            MachineInstr &MI,
+                                            MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,

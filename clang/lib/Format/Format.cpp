@@ -1833,7 +1833,9 @@ namespace {
 class BracesInserter : public TokenAnalyzer {
 public:
   BracesInserter(const Environment &Env, const FormatStyle &Style)
-      : TokenAnalyzer(Env, Style) {}
+      : TokenAnalyzer(Env, Style) {
+    this->Style.RemoveBracesLLVM = false;
+  }
 
   std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,
@@ -1875,7 +1877,9 @@ private:
 class BracesRemover : public TokenAnalyzer {
 public:
   BracesRemover(const Environment &Env, const FormatStyle &Style)
-      : TokenAnalyzer(Env, Style) {}
+      : TokenAnalyzer(Env, Style) {
+    this->Style.InsertBraces = false;
+  }
 
   std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,

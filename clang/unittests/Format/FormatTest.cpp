@@ -25784,6 +25784,25 @@ TEST_F(FormatTest, RemoveBraces) {
                "}",
                Style);
 
+  verifyFormat("if (a)\n"
+               "  b;\n"
+               "else if (c) {\n"
+               "  d;\n"
+               "  e;\n"
+               "} else\n"
+               "  f = g(foo, bar,\n"
+               "        baz);",
+               "if (a)\n"
+               "  b;\n"
+               "else {\n"
+               "  if (c) {\n"
+               "    d;\n"
+               "    e;\n"
+               "  } else\n"
+               "    f = g(foo, bar, baz);\n"
+               "}",
+               Style);
+
   Style.ColumnLimit = 0;
   verifyFormat("if (a)\n"
                "  b234567890223456789032345678904234567890 = "

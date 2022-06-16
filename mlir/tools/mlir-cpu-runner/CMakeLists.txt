@@ -14,7 +14,7 @@ target_link_libraries(mlir-cpu-runner PRIVATE
   MLIRExecutionEngine
   MLIRIR
   MLIRJitRunner
-  MLIRLLVMIR
+  MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
   MLIRToLLVMIRTranslationRegistration
   MLIRParser

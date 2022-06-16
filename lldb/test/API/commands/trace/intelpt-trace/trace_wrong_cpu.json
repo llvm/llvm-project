@@ -1,12 +1,10 @@
 {
-  "trace": {
-    "type": "intel-pt",
-    "cpuInfo": {
-      "vendor": "intel",
-      "family": 2123123,
-      "model": 12123123,
-      "stepping": 1231231
-    }
+  "type": "intel-pt",
+  "cpuInfo": {
+    "vendor": "GenuineIntel",
+    "family": 2123123,
+    "model": 12123123,
+    "stepping": 1231231
   },
   "processes": [
     {
@@ -15,14 +13,14 @@
       "threads": [
         {
           "tid": 3842849,
-          "traceFile": "3842849.trace"
+          "traceBuffer": "3842849.trace"
         }
       ],
       "modules": [
         {
           "file": "a.out",
           "systemPath": "a.out",
-          "loadAddress": "0x0000000000400000",
+          "loadAddress": 4194304,
           "uuid": "6AA9A4E2-6F28-2F33-377D-59FECE874C71-5B41261A"
         }
       ]

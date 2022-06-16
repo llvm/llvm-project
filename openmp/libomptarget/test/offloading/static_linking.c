@@ -1,9 +1,9 @@
 // RUN: %libomptarget-compile-generic -DLIBRARY -c -o %t.o
-// RUN: llvm-ar rcs %t.a %t.o
+// RUN: ar rcs %t.a %t.o
 // RUN: %libomptarget-compile-generic %t.a && %libomptarget-run-generic 2>&1 | %fcheck-generic
 
-// REQUIRES: nvptx64-nvidia-cuda-oldDriver
-// REQUIRES: amdgcn-amd-amdhsa-oldDriver
+// UNSUPPORTED: nvptx64-nvidia-cuda-oldDriver
+// UNSUPPORTED: amdgcn-amd-amdhsa-oldDriver
 
 #ifdef LIBRARY
 int x = 42;

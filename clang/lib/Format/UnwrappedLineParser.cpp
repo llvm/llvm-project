@@ -844,7 +844,7 @@ FormatToken *UnwrappedLineParser::parseBlock(
 
   size_t PPStartHash = computePPHash();
 
-  unsigned InitialLevel = Line->Level;
+  const unsigned InitialLevel = Line->Level;
   nextToken(/*LevelDifference=*/AddLevels);
 
   // Bail out if there are too many levels. Otherwise, the stack might overflow.
@@ -905,7 +905,8 @@ FormatToken *UnwrappedLineParser::parseBlock(
         return false;
     }
     assert(!CurrentLines->empty());
-    if (!mightFitOnOneLine(CurrentLines->back()))
+    auto &LastLine = CurrentLines->back();
+    if (LastLine.Level == InitialLevel + 1 && !mightFitOnOneLine(LastLine))
       return false;
     if (Tok->is(TT_ElseLBrace))
       return true;

@@ -804,6 +804,14 @@ def Annotate : InheritableParamAttr {
   let Documentation = [Undocumented];
 }
 
+def AnnotateType : TypeAttr {
+  let Spellings = [CXX11<"clang", "annotate_type">, C2x<"clang", "annotate_type">];
+  let Args = [StringArgument<"Annotation">, VariadicExprArgument<"Args">];
+  let HasCustomParsing = 1;
+  let AcceptsExprPack = 1;
+  let Documentation = [AnnotateTypeDocs];
+}
+
 def ARMInterrupt : InheritableAttr, TargetSpecificAttr<TargetARM> {
   // NOTE: If you add any additional spellings, M68kInterrupt's,
   // MSP430Interrupt's, MipsInterrupt's and AnyX86Interrupt's spellings

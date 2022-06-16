@@ -22,11 +22,13 @@ define void @qp_trunc(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl truncf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -57,11 +59,13 @@ define void @qp_rint(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl rintf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -92,11 +96,13 @@ define void @qp_nearbyint(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl nearbyintf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -127,11 +133,13 @@ define void @qp_round(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl roundf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -162,11 +170,13 @@ define void @qp_floor(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl floorf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -197,11 +207,13 @@ define void @qp_ceil(fp128* nocapture readonly %a, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
-; CHECK-P8-NEXT:    lvx v2, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    mr r30, r4
+; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl ceilf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    stvx v2, 0, r30
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r30
 ; CHECK-P8-NEXT:    addi r1, r1, 48
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload

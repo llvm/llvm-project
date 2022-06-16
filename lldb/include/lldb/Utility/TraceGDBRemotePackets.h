@@ -129,35 +129,13 @@ bool fromJSON(const llvm::json::Value &value, TraceCoreState &packet,
 
 llvm::json::Value toJSON(const TraceCoreState &packet);
 
-/// Interface for different algorithms used to convert trace
-/// counters into different units.
-template <typename ToType> class TraceCounterConversion {
-public:
-  virtual ~TraceCounterConversion() = default;
-
-  /// Convert from raw counter value to the target type.
-  ///
-  /// \param[in] raw_counter_value
-  ///   The raw counter value to be converted.
-  ///
-  /// \return
-  ///   The converted counter value.
-  virtual ToType Convert(uint64_t raw_counter_value) = 0;
-
-  /// Serialize trace counter conversion values to JSON.
-  ///
-  /// \return
-  ///   \a llvm::json::Value representing the trace counter conversion object.
-  virtual llvm::json::Value toJSON() = 0;
-};
-
-using TraceTscConversionUP =
-    std::unique_ptr<TraceCounterConversion<std::chrono::nanoseconds>>;
-
 struct TraceGetStateResponse {
   std::vector<TraceThreadState> traced_threads;
   std::vector<TraceBinaryData> process_binary_data;
   llvm::Optional<std::vector<TraceCoreState>> cores;
+  llvm::Optional<std::vector<std::string>> warnings;
+
+  void AddWarning(llvm::StringRef warning);
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceGetStateResponse &packet,
@@ -175,6 +153,8 @@ struct TraceGetBinaryDataRequest {
   std::string kind;
   /// Optional tid if the data is related to a thread.
   llvm::Optional<lldb::tid_t> tid;
+  /// Optional core id if the data is related to a cpu core.
+  llvm::Optional<lldb::tid_t> core_id;
   /// Offset in bytes from where to start reading the data.
   uint64_t offset;
   /// Number of bytes to read.

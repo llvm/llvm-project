@@ -26,6 +26,10 @@ void populateArithmeticExpandOpsPatterns(RewritePatternSet &patterns);
 /// Create a pass to legalize Arithmetic ops for LLVM lowering.
 std::unique_ptr<Pass> createArithmeticExpandOpsPass();
 
+/// Create a pass to replace signed ops with unsigned ones where they are proven
+/// equivalent.
+std::unique_ptr<Pass> createArithmeticUnsignedWhenEquivalentPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

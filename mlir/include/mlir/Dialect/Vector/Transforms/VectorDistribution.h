@@ -65,6 +65,20 @@ void populateDistributeTransferWriteOpPatterns(
 /// region.
 void moveScalarUniformCode(WarpExecuteOnLane0Op op);
 
+/// Collect patterns to propagate warp distribution.
+void populatePropagateWarpVectorDistributionPatterns(
+    RewritePatternSet &pattern);
+
+/// Lambda signature to compute a reduction of a distributed value for the given
+/// reduction kind and size.
+using DistributedReductionFn =
+    std::function<Value(Location, OpBuilder &, Value, CombiningKind, uint32_t)>;
+
+/// Collect patterns to distribute vector reduction ops using given lamdba to
+/// distribute reduction op.
+void populateDistributeReduction(RewritePatternSet &pattern,
+                                 DistributedReductionFn distributedReductionFn);
+
 } // namespace vector
 } // namespace mlir
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_VECTORDISTRIBUTION_H_
