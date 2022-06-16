@@ -289,7 +289,7 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
   std::unordered_map<const BinaryBasicBlock *, BinaryBasicBlock *> InlinedBBMap;
   InlinedBBMap[&Callee.front()] = FirstInlinedBB;
   for (auto BBI = std::next(Callee.begin()); BBI != Callee.end(); ++BBI) {
-    BinaryBasicBlock *InlinedBB = CallerFunction.addBasicBlock(0);
+    BinaryBasicBlock *InlinedBB = CallerFunction.addBasicBlock();
     InlinedBBMap[&*BBI] = InlinedBB;
     InlinedBB->setCFIState(FirstInlinedBB->getCFIState());
     if (Callee.hasValidProfile())
