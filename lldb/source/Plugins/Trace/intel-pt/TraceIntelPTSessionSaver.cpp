@@ -30,6 +30,8 @@ using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
 
+/// Write a stream of bytes from \p data to the given output file.
+/// It creates or overwrites the output file, but not append.
 static llvm::Error WriteBytesToDisk(FileSpec &output_file,
                                     ArrayRef<uint8_t> data) {
   std::basic_fstream<char> out_fs = std::fstream(
@@ -63,7 +65,7 @@ WriteSessionToFile(const llvm::json::Value &trace_session_json,
   FileSpec trace_path = directory;
   trace_path.AppendPathComponent("trace.json");
   std::ofstream os(trace_path.GetPath());
-  os << std::string(formatv("{0:2}", trace_session_json));
+  os << formatv("{0:2}", trace_session_json).str();
   os.close();
   if (!os)
     return createStringError(inconvertibleErrorCode(),
@@ -91,7 +93,6 @@ BuildThreadsSection(Process &process, FileSpec directory) {
 
   FileSpec threads_dir = directory;
   threads_dir.AppendPathComponent("threads");
-  FileSystem::Instance().Resolve(threads_dir);
   sys::fs::create_directories(threads_dir.GetCString());
 
   for (ThreadSP thread_sp : process.Threads()) {
@@ -129,7 +130,6 @@ BuildCoresSection(TraceIntelPT &trace_ipt, FileSpec directory) {
   std::vector<JSONCore> json_cores;
   FileSpec cores_dir = directory;
   cores_dir.AppendPathComponent("cores");
-  FileSystem::Instance().Resolve(cores_dir);
   sys::fs::create_directories(cores_dir.GetCString());
 
   for (lldb::core_id_t core_id : trace_ipt.GetTracedCores()) {
@@ -217,7 +217,6 @@ BuildModulesSection(Process &process, FileSpec directory) {
     if (load_addr == LLDB_INVALID_ADDRESS)
       continue;
 
-    FileSystem::Instance().Resolve(directory);
     FileSpec path_to_copy_module = directory;
     path_to_copy_module.AppendPathComponent("modules");
     path_to_copy_module.AppendPathComponent(system_path);
@@ -290,6 +289,8 @@ Error TraceIntelPTSessionSaver::SaveToDisk(TraceIntelPT &trace_ipt,
   Expected<pt_cpu> cpu_info = trace_ipt.GetCPUInfo();
   if (!cpu_info)
     return cpu_info.takeError();
+
+  FileSystem::Instance().Resolve(directory);
 
   Expected<std::vector<JSONProcess>> json_processes =
       BuildProcessesSection(trace_ipt, directory);

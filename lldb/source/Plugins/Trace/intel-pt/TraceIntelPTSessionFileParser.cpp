@@ -29,7 +29,7 @@ FileSpec TraceIntelPTSessionFileParser::NormalizePath(const std::string &path) {
   return file_spec;
 }
 
-Error TraceIntelPTSessionFileParser::ParseModule(lldb::TargetSP &target_sp,
+Error TraceIntelPTSessionFileParser::ParseModule(Target &target,
                                                  const JSONModule &module) {
   auto do_parse = [&]() -> Error {
     FileSpec system_file_spec(module.system_path);
@@ -46,13 +46,13 @@ Error TraceIntelPTSessionFileParser::ParseModule(lldb::TargetSP &target_sp,
 
     Status error;
     ModuleSP module_sp =
-        target_sp->GetOrCreateModule(module_spec, /*notify*/ false, &error);
+        target.GetOrCreateModule(module_spec, /*notify*/ false, &error);
 
     if (error.Fail())
       return error.ToError();
 
     bool load_addr_changed = false;
-    module_sp->SetLoadAddress(*target_sp, module.load_address, false,
+    module_sp->SetLoadAddress(target, module.load_address, false,
                               load_addr_changed);
     return Error::success();
   };
@@ -74,7 +74,7 @@ Error TraceIntelPTSessionFileParser::CreateJSONError(json::Path::Root &root,
 }
 
 ThreadPostMortemTraceSP
-TraceIntelPTSessionFileParser::ParseThread(ProcessSP &process_sp,
+TraceIntelPTSessionFileParser::ParseThread(Process &process,
                                            const JSONThread &thread) {
   lldb::tid_t tid = static_cast<lldb::tid_t>(thread.tid);
 
@@ -83,8 +83,8 @@ TraceIntelPTSessionFileParser::ParseThread(ProcessSP &process_sp,
     trace_file = FileSpec(*thread.trace_buffer);
 
   ThreadPostMortemTraceSP thread_sp =
-      std::make_shared<ThreadPostMortemTrace>(*process_sp, tid, trace_file);
-  process_sp->GetThreadList().AddThread(thread_sp);
+      std::make_shared<ThreadPostMortemTrace>(process, tid, trace_file);
+  process.GetThreadList().AddThread(thread_sp);
   return thread_sp;
 }
 
@@ -110,10 +110,10 @@ TraceIntelPTSessionFileParser::ParseProcess(const JSONProcess &process) {
   process_sp->SetID(static_cast<lldb::pid_t>(process.pid));
 
   for (const JSONThread &thread : process.threads)
-    parsed_process.threads.push_back(ParseThread(process_sp, thread));
+    parsed_process.threads.push_back(ParseThread(*process_sp, thread));
 
   for (const JSONModule &module : process.modules)
-    if (Error err = ParseModule(target_sp, module))
+    if (Error err = ParseModule(*target_sp, module))
       return std::move(err);
 
   if (!process.threads.empty())

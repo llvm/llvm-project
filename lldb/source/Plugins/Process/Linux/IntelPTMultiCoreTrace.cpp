@@ -158,9 +158,8 @@ IntelPTMultiCoreTrace::TryGetBinaryData(
         formatv("Core {0} is not being traced", *request.core_id));
 
   if (request.kind == IntelPTDataKinds::kTraceBuffer)
-    return it->second.first.GetTraceBuffer(request.offset, request.size);
+    return it->second.first.GetTraceBuffer();
   if (request.kind == IntelPTDataKinds::kPerfContextSwitchTrace)
-    return it->second.second.ReadFlushedOutDataCyclicBuffer(request.offset,
-                                                            request.size);
+    return it->second.second.GetReadOnlyDataBuffer();
   return None;
 }

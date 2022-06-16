@@ -121,8 +121,8 @@ bool fromJSON(const json::Value &value, TraceCoreState &packet,
               json::Path path) {
   ObjectMapper o(value, path);
   uint64_t core_id;
-  if (!o || !o.map("coreId", core_id) ||
-      !o.map("binaryData", packet.binary_data))
+  if (!(o && o.map("coreId", core_id) &&
+        o.map("binaryData", packet.binary_data)))
     return false;
   packet.core_id = static_cast<lldb::core_id_t>(core_id);
   return true;
@@ -139,19 +139,16 @@ json::Value toJSON(const TraceCoreState &packet) {
 json::Value toJSON(const TraceGetBinaryDataRequest &packet) {
   return json::Value(Object{{"type", packet.type},
                             {"kind", packet.kind},
-                            {"offset", packet.offset},
                             {"tid", packet.tid},
-                            {"coreId", packet.core_id},
-                            {"size", packet.size}});
+                            {"coreId", packet.core_id}});
 }
 
 bool fromJSON(const json::Value &value, TraceGetBinaryDataRequest &packet,
               Path path) {
   ObjectMapper o(value, path);
   Optional<uint64_t> core_id;
-  if (!o || !o.map("type", packet.type) || !o.map("kind", packet.kind) ||
-      !o.map("tid", packet.tid) || !o.map("offset", packet.offset) ||
-      !o.map("size", packet.size) || !o.map("coreId", core_id))
+  if (!(o && o.map("type", packet.type) && o.map("kind", packet.kind) &&
+        o.map("tid", packet.tid) && o.map("coreId", core_id)))
     return false;
 
   if (core_id)

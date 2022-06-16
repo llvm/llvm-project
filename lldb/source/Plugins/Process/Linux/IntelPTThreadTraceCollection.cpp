@@ -85,7 +85,7 @@ IntelPTThreadTraceCollection::TryGetBinaryData(
 
   if (Expected<IntelPTSingleBufferTrace &> trace =
           GetTracedThread(*request.tid))
-    return trace->GetTraceBuffer(request.offset, request.size);
+    return trace->GetTraceBuffer();
   else
     return trace.takeError();
 }

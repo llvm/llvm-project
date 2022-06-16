@@ -87,9 +87,9 @@ json::Value toJSON(const JSONCore &core) {
 bool fromJSON(const json::Value &value, JSONCore &core, Path path) {
   ObjectMapper o(value, path);
   uint64_t core_id;
-  if (!o || !o.map("coreId", core_id) ||
-      !o.map("traceBuffer", core.trace_buffer) ||
-      !o.map("contextSwitchTrace", core.context_switch_trace))
+  if (!(o && o.map("coreId", core_id) &&
+        o.map("traceBuffer", core.trace_buffer) &&
+        o.map("contextSwitchTrace", core.context_switch_trace)))
     return false;
   core.core_id = core_id;
   return true;
@@ -108,8 +108,8 @@ bool fromJSON(const json::Value &value, pt_cpu &cpu_info, Path path) {
   ObjectMapper o(value, path);
   std::string vendor;
   uint64_t family, model, stepping;
-  if (!o || !o.map("vendor", vendor) || !o.map("family", family) ||
-      !o.map("model", model) || !o.map("stepping", stepping))
+  if (!(o && o.map("vendor", vendor) && o.map("family", family) &&
+        o.map("model", model) && o.map("stepping", stepping)))
     return false;
   cpu_info.vendor = vendor == "GenuineIntel" ? pcv_intel : pcv_unknown;
   cpu_info.family = family;
@@ -130,9 +130,9 @@ json::Value toJSON(const JSONTraceSession &session) {
 
 bool fromJSON(const json::Value &value, JSONTraceSession &session, Path path) {
   ObjectMapper o(value, path);
-  if (!o || !o.map("processes", session.processes) ||
-      !o.map("type", session.type) || !o.map("cores", session.cores) ||
-      !o.map("tscPerfZeroConversion", session.tsc_perf_zero_conversion))
+  if (!(o && o.map("processes", session.processes) &&
+        o.map("type", session.type) && o.map("cores", session.cores) &&
+        o.map("tscPerfZeroConversion", session.tsc_perf_zero_conversion)))
     return false;
   if (session.cores && !session.tsc_perf_zero_conversion) {
     path.report(

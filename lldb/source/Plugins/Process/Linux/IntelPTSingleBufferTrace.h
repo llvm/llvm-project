@@ -64,18 +64,9 @@ public:
   /// underlying perf_event is paused during read, and later it's returned to
   /// its initial state.
   ///
-  /// \param[in] offset
-  ///     Offset of the data to read.
-  ///
-  /// \param[in] size
-  ///     Number of bytes to read.
-  ///
   /// \return
-  ///     A vector with the requested binary data. The vector will have the
-  ///     size of the requested \a size. Non-available positions will be
-  ///     filled with zeroes.
-  llvm::Expected<std::vector<uint8_t>> GetTraceBuffer(size_t offset,
-                                                      size_t size);
+  ///     A vector with the requested binary data.
+  llvm::Expected<std::vector<uint8_t>> GetTraceBuffer();
 
   /// \return
   ///     The total the size in bytes used by the trace buffer managed by this

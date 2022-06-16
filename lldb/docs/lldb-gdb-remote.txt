@@ -562,10 +562,6 @@ read packet: {...object}/E<error code>;AAAAAAAAA
 //       Core id in decimal if the data belongs to a CPU core.
 //   "tid"?: <Optional decimal>,
 //       Tid in decimal if the data belongs to a thread.
-//   "offset": <decimal>,
-//       Offset of the data in bytes.
-//   "size": <decimal>,
-//      Number of bytes in to read starting from the offset.
 //  }
 //
 // INTEL PT

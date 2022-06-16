@@ -200,43 +200,29 @@ public:
   ///   \a ArrayRef<uint8_t> extending \a aux_size bytes from \a aux_offset.
   llvm::ArrayRef<uint8_t> GetAuxBuffer() const;
 
-  /// Read the aux buffer managed by this perf event. To ensure that the
-  /// data is up-to-date and is not corrupted by read-write race conditions, the
-  /// underlying perf_event is paused during read, and later it's returned to
-  /// its initial state. The returned data will be linear, i.e. it will fix the
-  /// circular wrapping the might exist int he buffer.
-  ///
-  /// \param[in] offset
-  ///     Offset of the data to read.
-  ///
-  /// \param[in] size
-  ///     Number of bytes to read.
+  /// Read the aux buffer managed by this perf event assuming it was configured
+  /// with PROT_READ permissions only, which indicates that the buffer is
+  /// automatically wrapped and overwritten by the kernel or hardware. To ensure
+  /// that the data is up-to-date and is not corrupted by read-write race
+  /// conditions, the underlying perf_event is paused during read, and later
+  /// it's returned to its initial state. The returned data will be linear, i.e.
+  /// it will fix the circular wrapping the might exist in the buffer.
   ///
   /// \return
-  ///     A vector with the requested binary data. The vector will have the
-  ///     size of the requested \a size. Non-available positions will be
-  ///     filled with zeroes.
-  llvm::Expected<std::vector<uint8_t>>
-  ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size);
+  ///     A vector with the requested binary data.
+  llvm::Expected<std::vector<uint8_t>> GetReadOnlyAuxBuffer();
 
-  /// Read the data buffer managed by this perf event. To ensure that the
-  /// data is up-to-date and is not corrupted by read-write race conditions, the
-  /// underlying perf_event is paused during read, and later it's returned to
-  /// its initial state. The returned data will be linear, i.e. it will fix the
-  /// circular wrapping the might exist int he buffer.
-  ///
-  /// \param[in] offset
-  ///     Offset of the data to read.
-  ///
-  /// \param[in] size
-  ///     Number of bytes to read.
+  /// Read the data buffer managed by this perf even assuming it was configured
+  /// with PROT_READ permissions only, which indicates that the buffer is
+  /// automatically wrapped and overwritten by the kernel or hardware. To ensure
+  /// that the data is up-to-date and is not corrupted by read-write race
+  /// conditions, the underlying perf_event is paused during read, and later
+  /// it's returned to its initial state. The returned data will be linear, i.e.
+  /// it will fix the circular wrapping the might exist int he buffer.
   ///
   /// \return
-  ///     A vector with the requested binary data. The vector will have the
-  ///     size of the requested \a size. Non-available positions will be
-  ///     filled with zeroes.
-  llvm::Expected<std::vector<uint8_t>>
-  ReadFlushedOutDataCyclicBuffer(size_t offset, size_t size);
+  ///     A vector with the requested binary data.
+  llvm::Expected<std::vector<uint8_t>> GetReadOnlyDataBuffer();
 
   /// Use the ioctl API to disable the perf event and all the events in its
   /// group. This doesn't terminate the perf event.
