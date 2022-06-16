@@ -31,21 +31,21 @@ TEST(LlvmLibcAddress, AliasHaveRightAlignment) {
 
 TEST(LlvmLibcAddress, NarrowAlignment) {
   // Address 8-byte aligned, offset by 8.
-  ASSERT_EQ(offsetAddr<8>(SrcAddr<8>(nullptr)).ALIGNMENT, 8UL);
+  ASSERT_EQ(offsetAddr<8>(SrcAddr<8>(nullptr)).ALIGNMENT, size_t(8));
   // Address 16-byte aligned, offset by 4.
-  ASSERT_EQ(offsetAddr<4>(SrcAddr<16>(nullptr)).ALIGNMENT, 4UL);
+  ASSERT_EQ(offsetAddr<4>(SrcAddr<16>(nullptr)).ALIGNMENT, size_t(4));
   // Address 4-byte aligned, offset by 16.
-  ASSERT_EQ(offsetAddr<16>(SrcAddr<4>(nullptr)).ALIGNMENT, 4UL);
+  ASSERT_EQ(offsetAddr<16>(SrcAddr<4>(nullptr)).ALIGNMENT, size_t(4));
   // Address 4-byte aligned, offset by 1.
-  ASSERT_EQ(offsetAddr<1>(SrcAddr<4>(nullptr)).ALIGNMENT, 1UL);
+  ASSERT_EQ(offsetAddr<1>(SrcAddr<4>(nullptr)).ALIGNMENT, size_t(1));
   // Address 4-byte aligned, offset by 2.
-  ASSERT_EQ(offsetAddr<2>(SrcAddr<4>(nullptr)).ALIGNMENT, 2UL);
+  ASSERT_EQ(offsetAddr<2>(SrcAddr<4>(nullptr)).ALIGNMENT, size_t(2));
   // Address 4-byte aligned, offset by 6.
-  ASSERT_EQ(offsetAddr<6>(SrcAddr<4>(nullptr)).ALIGNMENT, 2UL);
+  ASSERT_EQ(offsetAddr<6>(SrcAddr<4>(nullptr)).ALIGNMENT, size_t(2));
   // Address 4-byte aligned, offset by 10.
-  ASSERT_EQ(offsetAddr<10>(SrcAddr<4>(nullptr)).ALIGNMENT, 2UL);
+  ASSERT_EQ(offsetAddr<10>(SrcAddr<4>(nullptr)).ALIGNMENT, size_t(2));
   // Address 8-byte aligned, offset by 6.
-  ASSERT_EQ(offsetAddr<6>(SrcAddr<8>(nullptr)).ALIGNMENT, 2UL);
+  ASSERT_EQ(offsetAddr<6>(SrcAddr<8>(nullptr)).ALIGNMENT, size_t(2));
 }
 
 TEST(LlvmLibcAddress, OffsetAddr) {
@@ -57,10 +57,10 @@ TEST(LlvmLibcAddress, OffsetAddr) {
 
 TEST(LlvmLibcAddress, AssumeAligned) {
   SrcAddr<16> addr(nullptr);
-  ASSERT_EQ(offsetAddrAssumeAligned<8>(addr, 0).ALIGNMENT, 8UL);
-  ASSERT_EQ(offsetAddrAssumeAligned<1>(addr, 0).ALIGNMENT, 1UL);
-  ASSERT_EQ(offsetAddrMultiplesOf<4>(addr, 0).ALIGNMENT, 4UL);
-  ASSERT_EQ(offsetAddrMultiplesOf<32>(addr, 0).ALIGNMENT, 16UL);
+  ASSERT_EQ(offsetAddrAssumeAligned<8>(addr, 0).ALIGNMENT, size_t(8));
+  ASSERT_EQ(offsetAddrAssumeAligned<1>(addr, 0).ALIGNMENT, size_t(1));
+  ASSERT_EQ(offsetAddrMultiplesOf<4>(addr, 0).ALIGNMENT, size_t(4));
+  ASSERT_EQ(offsetAddrMultiplesOf<32>(addr, 0).ALIGNMENT, size_t(16));
 }
 
 TEST(LlvmLibcAddress, offsetAddrAssumeAligned) {
