@@ -3133,7 +3133,6 @@ cc_library(
         ":BufferizationTransforms",
         ":DialectUtils",
         ":FuncDialect",
-        ":GPUDialect",
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",

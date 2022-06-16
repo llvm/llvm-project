@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
@@ -725,11 +724,10 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
 };
 
 /// A pattern that extracts vector.reduction ops from a WarpExecuteOnLane0Op.
-/// The vector is reduced in parallel. Currently limited to vector<32x...>
-/// values. Every lane reduces two scalars, 5 times in a row.
-/// E.g.:
+/// The vector is reduced in parallel. Currently limited to vector size matching
+/// the warpOp size. E.g.:
 /// ```
-/// %r = vector_ext.warp_execute_on_lane_0(%laneid) -> (f32) {
+/// %r = vector_ext.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
 ///   %0 = "some_def"() : () -> (vector<32xf32>)
 ///   %1 = vector.reduction "add", %0 : vector<32xf32> into f32
 ///   vector_ext.yield %1 : f32
@@ -737,22 +735,19 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
 /// ```
 /// is lowered to:
 /// ```
-/// %0 = vector_ext.warp_execute_on_lane_0(%laneid) -> (vector<1xf32>) {
+/// %0 = vector_ext.warp_execute_on_lane_0(%laneid)[32] -> (vector<1xf32>) {
 ///   %1 = "some_def"() : () -> (vector<32xf32>)
 ///   vector_ext.yield %1 : vector<32xf32>
 /// }
 /// %a = vector.extract %0[0] : vector<1xf32>
-/// %r0, %s0 = gpu.shuffle xor %e, %c1, %c32 : f32
-/// %a0 = arith.addf %a, %r0 : f32
-/// %r1, %s1 = gpu.shuffle xor %a0, %c2, %c32 : f32
-/// %a1 = arith.addf %a0, %r1 : f32
-/// ...
-/// %r4, %s4 = gpu.shuffle xor %a3, %c16, %c32 : f32
-/// %r = arith.addf %a3, %r4 : f32
+/// %r = ("warp.reduction %a")
 /// ```
-struct ReductionToGPUWarpShuffle
-    : public OpRewritePattern<WarpExecuteOnLane0Op> {
-  using OpRewritePattern<WarpExecuteOnLane0Op>::OpRewritePattern;
+struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
+  WarpOpReduction(MLIRContext *context,
+                  DistributedReductionFn distributedReductionFn,
+                  PatternBenefit benefit = 1)
+      : OpRewritePattern<WarpExecuteOnLane0Op>(context, benefit),
+        distributedReductionFn(distributedReductionFn) {}
 
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
@@ -793,22 +788,15 @@ struct ReductionToGPUWarpShuffle
     // Every lane has one scalar value. These should be reduced.
     Value laneValVec = newWarpOp.getResult(numResults);
     Value laneVal = rewriter.create<vector::ExtractOp>(yieldLoc, laneValVec, 0);
-
-    // Parallel reduction using butterfly shuffles.
-    for (uint64_t i = 1; i < newWarpOp.getWarpSize(); i <<= 1) {
-      Value shuffled =
-          rewriter
-              .create<gpu::ShuffleOp>(reductionOp.getLoc(), laneVal, i,
-                                      /*width=*/newWarpOp.getWarpSize(),
-                                      /*mode=*/gpu::ShuffleMode::XOR)
-              .result();
-      laneVal = makeArithReduction(rewriter, reductionOp.getLoc(),
-                                   reductionOp.getKind(), laneVal, shuffled);
-    }
-
+    laneVal =
+        distributedReductionFn(reductionOp.getLoc(), rewriter, laneVal,
+                               reductionOp.getKind(), newWarpOp.getWarpSize());
     newWarpOp.getResult(operandIndex).replaceAllUsesWith(laneVal);
     return success();
   }
+
+private:
+  DistributedReductionFn distributedReductionFn;
 };
 
 } // namespace
@@ -831,9 +819,10 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
       patterns.getContext());
 }
 
-void mlir::vector::populateReductionToGPUWarpShufflePatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<ReductionToGPUWarpShuffle>(patterns.getContext());
+void mlir::vector::populateDistributeReduction(
+    RewritePatternSet &patterns,
+    DistributedReductionFn distributedReductionFn) {
+  patterns.add<WarpOpReduction>(patterns.getContext(), distributedReductionFn);
 }
 
 void mlir::vector::moveScalarUniformCode(WarpExecuteOnLane0Op warpOp) {
