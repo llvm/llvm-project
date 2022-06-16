@@ -1133,7 +1133,6 @@ void Writer::writeCodeSignature() {
 void Writer::writeOutputFile() {
   TimeTraceScope timeScope("Write output file");
   openFile();
-  reportPendingUndefinedSymbols();
   if (errorCount())
     return;
   writeSections();
@@ -1156,7 +1155,6 @@ template <class LP> void Writer::run() {
   scanRelocations();
 
   // Do not proceed if there was an undefined symbol.
-  reportPendingUndefinedSymbols();
   if (errorCount())
     return;
 
