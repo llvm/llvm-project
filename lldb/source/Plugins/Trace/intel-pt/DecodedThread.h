@@ -243,10 +243,10 @@ public:
 
   lldb::ThreadSP GetThread();
 
-private:
   /// Append a decoding error given an llvm::Error.
   void AppendError(llvm::Error &&error);
 
+private:
   /// Notify this class that the last added instruction or error has
   /// an associated TSC.
   void RecordTscForLastInstruction(uint64_t tsc);
