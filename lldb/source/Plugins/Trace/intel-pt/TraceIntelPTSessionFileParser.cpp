@@ -171,7 +171,8 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
           // A list of known threads for the given process. When context switch
           // data is provided, LLDB will automatically create threads for the
           // this process whenever it finds new threads when traversing the
-          // context switches.
+          // context switches, so passing values to this list in this case is
+          // optional.
         {
           "tid": integer,
           "traceBuffer"?: string
@@ -213,10 +214,6 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
     "timeShift": integer,
     "timeZero": integer,
   }
-  "dontCreateThreadsFromContextSwitches"?: boolean,
-    // If this is true, then the automatic creation of threads from context switch
-    // data is disabled, and thus only the threads provided in the "processes.threads"
-    // section will be created.
 }
 
 Notes:
