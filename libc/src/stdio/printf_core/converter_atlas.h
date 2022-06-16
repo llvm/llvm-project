@@ -36,5 +36,6 @@
 // defines convert_write_int
 
 // defines convert_pointer
+#include "src/stdio/printf_core/ptr_converter.h"
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_ATLAS_H
