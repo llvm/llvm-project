@@ -12,34 +12,13 @@ types, there is a desire to remove pointee types from pointers.
 
 The opaque pointer type project aims to replace all pointer types containing
 pointee types in LLVM with an opaque pointer type. The new pointer type is
-tentatively represented textually as ``ptr``.
-
-Address spaces are still used to distinguish between different kinds of pointers
-where the distinction is relevant for lowering (e.g. data vs function pointers
-have different sizes on some architectures). Opaque pointers are not changing
-anything related to address spaces and lowering. For more information, see
-`DataLayout <LangRef.html#langref-datalayout>`_. Opaque pointers in non-default
-address space are spelled ``ptr addrspace(N)``.
-
-Issues with explicit pointee types
-==================================
-
-LLVM IR pointers can be cast back and forth between pointers with different
-pointee types. The pointee type does not necessarily represent the actual
-underlying type in memory. In other words, the pointee type carries no real
-semantics.
-
-Lots of operations do not actually care about the underlying type. These
-operations, typically intrinsics, usually end up taking an ``i8*``. This causes
-lots of redundant no-op bitcasts in the IR to and from a pointer with a
-different pointee type. The extra bitcasts take up space and require extra work
-to look through in optimizations. And more bitcasts increase the chances of
-incorrect bitcasts, especially in regards to address spaces.
+represented textually as ``ptr``.
 
 Some instructions still need to know what type to treat the memory pointed to by
 the pointer as. For example, a load needs to know how many bytes to load from
-memory. In these cases, instructions themselves contain a type argument. For
-example the load instruction from older versions of LLVM
+memory and what type to treat the resulting value as. In these cases,
+instructions themselves contain a type argument. For example the load
+instruction from older versions of LLVM
 
 .. code-block:: llvm
 
@@ -51,12 +30,75 @@ becomes
 
   load i64, ptr %p
 
-A nice analogous transition that happened earlier in LLVM is integer signedness.
-There is no distinction between signed and unsigned integer types, rather the
-integer operations themselves contain what to treat the integer as. Initially,
-LLVM IR distinguished between unsigned and signed integer types. The transition
-from manifesting signedness in types to instructions happened early on in LLVM's
-life to the betterment of LLVM IR.
+Address spaces are still used to distinguish between different kinds of pointers
+where the distinction is relevant for lowering (e.g. data vs function pointers
+have different sizes on some architectures). Opaque pointers are not changing
+anything related to address spaces and lowering. For more information, see
+`DataLayout <LangRef.html#langref-datalayout>`_. Opaque pointers in non-default
+address space are spelled ``ptr addrspace(N)``.
+
+This was proposed all the way back in
+`2015 <https://lists.llvm.org/pipermail/llvm-dev/2015-February/081822.html>`_.
+
+Issues with explicit pointee types
+==================================
+
+LLVM IR pointers can be cast back and forth between pointers with different
+pointee types. The pointee type does not necessarily represent the actual
+underlying type in memory. In other words, the pointee type carries no real
+semantics.
+
+Historically LLVM was some sort of type-safe subset of C. Having pointee types
+provided an extra layer of checks to make sure that the Clang frontend matched
+its frontend values/operations with the corresponding LLVM IR. However, as other
+languages like C++ adopted LLVM, the community realized that pointee types were
+more of a hinderance for LLVM development and that the extra type checking with
+some frontends wasn't worth it.
+
+LLVM's type system was `originally designed
+<https://llvm.org/pubs/2003-05-01-GCCSummit2003.html>` to support high-level
+optimization. However, years of LLVM implementation experience have demonstrated
+that the pointee type system design does not effectively support
+optimization. Memory optimization algorithms, such as SROA, GVN, and AA,
+generally need to look through LLVM's struct types and reason about the
+underlying memory offsets. The community realized that pointee types hinder LLVM
+development, rather than helping it. Some of the initially proposed high-level
+optimizations have evolved into `TBAA
+<https://llvm.org/docs/LangRef.html#tbaa-metadata>` due to limitations with
+representing higher-level language information directly via SSA values.
+
+Pointee types provide some value to frontends because the IR verifier uses types
+to detect straightforward type confusion bugs. However, frontends also have to
+deal with the complexity of inserting bitcasts everywhere that they might be
+required. The community consensus is that the costs of pointee types
+outweight the benefits, and that they should be removed.
+
+Many operations do not actually care about the underlying type. These
+operations, typically intrinsics, usually end up taking an arbitrary pointer
+type ``i8*`` and sometimes a size. This causes lots of redundant no-op bitcasts
+in the IR to and from a pointer with a different pointee type.
+
+No-op bitcasts take up memory/disk space and also take up compile time to look
+through. However, perhaps the biggest issue is the code complexity required to
+deal with bitcasts. When looking up through def-use chains for pointers it's
+easy to forget to call `Value::stripPointerCasts()` to find the true underlying
+pointer obfuscated by bitcasts. And when looking down through def-use chains
+passes need to iterate through bitcasts to handle uses. Removing no-op pointer
+bitcasts prevents a category of missed optimizations and makes writing LLVM
+passes a little bit easier.
+
+Fewer no-op pointer bitcasts also reduces the chances of incorrect bitcasts in
+regards to address spaces. People maintaining backends that care a lot about
+address spaces have complained that frontends like Clang often incorrectly
+bitcast pointers, losing address space information.
+
+An analogous transition that happened earlier in LLVM is integer signedness.
+Currently there is no distinction between signed and unsigned integer types, but
+rather each integer operation (e.g. add) contains flags to signal how to treat
+the integer. Previously LLVM IR distinguished between unsigned and signed
+integer types and ran into similar issues of no-op casts. The transition from
+manifesting signedness in types to instructions happened early on in LLVM's
+timeline to make LLVM easier to work with.
 
 Opaque Pointers Mode
 ====================
