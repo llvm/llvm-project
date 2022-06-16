@@ -3341,12 +3341,14 @@ bool DependenceInfo::tryDelinearizeFixedSize(
     Instruction *Src, Instruction *Dst, const SCEV *SrcAccessFn,
     const SCEV *DstAccessFn, SmallVectorImpl<const SCEV *> &SrcSubscripts,
     SmallVectorImpl<const SCEV *> &DstSubscripts) {
-  const SCEVUnknown *SrcBase =
-      dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
-  const SCEVUnknown *DstBase =
-      dyn_cast<SCEVUnknown>(SE->getPointerBase(DstAccessFn));
-  assert(SrcBase && DstBase && SrcBase == DstBase &&
-         "expected src and dst scev unknowns to be equal");
+  LLVM_DEBUG({
+    const SCEVUnknown *SrcBase =
+        dyn_cast<SCEVUnknown>(SE->getPointerBase(SrcAccessFn));
+    const SCEVUnknown *DstBase =
+        dyn_cast<SCEVUnknown>(SE->getPointerBase(DstAccessFn));
+    assert(SrcBase && DstBase && SrcBase == DstBase &&
+           "expected src and dst scev unknowns to be equal");
+    });
 
   SmallVector<int, 4> SrcSizes;
   SmallVector<int, 4> DstSizes;
