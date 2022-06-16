@@ -1374,10 +1374,29 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     maybeKind = getCombinerOpKind(reduceOp);
     if (!maybeKind || *maybeKind != vector::CombiningKind::ADD)
       return;
-    maybeKind = getCombinerOpKind(&(linalgOp->getRegion(0).front().front()));
-    if (!maybeKind || *maybeKind != vector::CombiningKind::MUL)
+    // Check for single `mul` predecessor. The `mul` operands must be block
+    // arguments or extension of block arguments.
+    Operation *mulOp = nullptr;
+    for (Value operand : reduceOp->getOperands()) {
+      if (operand.isa<BlockArgument>())
+        continue;
+      if (mulOp)
+        return;
+      mulOp = operand.getDefiningOp();
+      if (!mulOp || !isa<arith::MulIOp, arith::MulFOp>(mulOp))
+        return;
+    }
+    if (!mulOp)
       return;
-
+    for (Value operand : mulOp->getOperands()) {
+      if (Operation *def = operand.getDefiningOp()) {
+        if (!isa<arith::ExtFOp>(def))
+          return;
+        operand = def->getOperand(0);
+      }
+      if (!operand.isa<BlockArgument>())
+        return;
+    }
     // The op is now known to be valid.
     valid = true;
   }
