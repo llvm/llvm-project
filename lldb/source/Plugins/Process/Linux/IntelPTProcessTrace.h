@@ -16,7 +16,8 @@
 namespace lldb_private {
 namespace process_linux {
 
-// Abstract class to be inherited by all the process tracing strategies.
+/// Interface to be implemented by each 'process trace' strategy (per core, per
+/// thread, etc).
 class IntelPTProcessTrace {
 public:
   virtual ~IntelPTProcessTrace() = default;

@@ -1,14 +1,14 @@
 {
   "cores": [
     {
-      "contextSwitchTrace": "/tmp/trace8/cores/45.perf_context_switch_trace",
+      "contextSwitchTrace": "cores/45.perf_context_switch_trace",
       "coreId": 45,
-      "traceBuffer": "/tmp/trace8/cores/45.intelpt_trace"
+      "traceBuffer": "cores/45.intelpt_trace"
     },
     {
-      "contextSwitchTrace": "/tmp/trace8/cores/51.perf_context_switch_trace",
+      "contextSwitchTrace": "cores/51.perf_context_switch_trace",
       "coreId": 51,
-      "traceBuffer": "/tmp/trace8/cores/51.intelpt_trace"
+      "traceBuffer": "cores/51.intelpt_trace"
     }
   ],
   "cpuInfo": {

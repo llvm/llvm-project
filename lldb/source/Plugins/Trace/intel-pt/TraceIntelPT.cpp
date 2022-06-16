@@ -75,37 +75,22 @@ Expected<TraceSP> TraceIntelPT::CreateInstanceForLiveProcess(Process &process) {
 }
 
 TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
-                           const FileSpec &session_file_dir,
                            ArrayRef<ProcessSP> traced_processes,
                            ArrayRef<ThreadPostMortemTraceSP> traced_threads)
     : Trace(traced_processes, session.GetCoreIds()),
-      m_cpu_info(session.cpu_info),
-      m_tsc_conversion(session.tsc_perf_zero_conversion) {
-  for (const ThreadPostMortemTraceSP &thread : traced_threads) {
-    m_thread_decoders.emplace(thread->GetID(),
-                              std::make_unique<ThreadDecoder>(thread, *this));
-    if (const Optional<FileSpec> &trace_file = thread->GetTraceFile()) {
-      SetPostMortemThreadDataFile(thread->GetID(),
-                                  IntelPTDataKinds::kTraceBuffer, *trace_file);
-    }
-  }
+      m_cpu_info(session.cpu_info) {
+  m_storage.tsc_conversion = session.tsc_perf_zero_conversion;
+
   if (session.cores) {
     std::vector<core_id_t> cores;
 
     for (const JSONCore &core : *session.cores) {
-      FileSpec trace_buffer(core.trace_buffer);
-      if (trace_buffer.IsRelative())
-        trace_buffer.PrependPathComponent(session_file_dir);
-
       SetPostMortemCoreDataFile(core.core_id, IntelPTDataKinds::kTraceBuffer,
-                                trace_buffer);
+                                FileSpec(core.trace_buffer));
 
-      FileSpec context_switch(core.context_switch_trace);
-      if (context_switch.IsRelative())
-        context_switch.PrependPathComponent(session_file_dir);
       SetPostMortemCoreDataFile(core.core_id,
                                 IntelPTDataKinds::kPerfContextSwitchTrace,
-                                context_switch);
+                                FileSpec(core.context_switch_trace));
       cores.push_back(core.core_id);
     }
 
@@ -114,8 +99,16 @@ TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
       for (const JSONThread &thread : process.threads)
         tids.push_back(thread.tid);
 
-    m_multicore_decoder.emplace(*this, cores, tids,
-                                *session.tsc_perf_zero_conversion);
+    m_storage.multicore_decoder.emplace(*this);
+  } else {
+    for (const ThreadPostMortemTraceSP &thread : traced_threads) {
+      m_storage.thread_decoders.emplace(
+          thread->GetID(), std::make_unique<ThreadDecoder>(thread, *this));
+      if (const Optional<FileSpec> &trace_file = thread->GetTraceFile()) {
+        SetPostMortemThreadDataFile(
+            thread->GetID(), IntelPTDataKinds::kTraceBuffer, *trace_file);
+      }
+    }
   }
 }
 
@@ -125,11 +118,12 @@ DecodedThreadSP TraceIntelPT::Decode(Thread &thread) {
         thread.shared_from_this(),
         createStringError(inconvertibleErrorCode(), error));
 
-  if (m_multicore_decoder)
-    return m_multicore_decoder->Decode(thread);
+  Storage &storage = GetUpdatedStorage();
+  if (storage.multicore_decoder)
+    return storage.multicore_decoder->Decode(thread);
 
-  auto it = m_thread_decoders.find(thread.GetID());
-  if (it == m_thread_decoders.end())
+  auto it = storage.thread_decoders.find(thread.GetID());
+  if (it == storage.thread_decoders.end())
     return std::make_shared<DecodedThread>(
         thread.shared_from_this(),
         createStringError(inconvertibleErrorCode(), "thread not traced"));
@@ -141,6 +135,8 @@ lldb::TraceCursorUP TraceIntelPT::GetCursor(Thread &thread) {
 }
 
 void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
+  Storage &storage = GetUpdatedStorage();
+
   lldb::tid_t tid = thread.GetID();
   s.Format("\nthread #{0}: tid = {1}", thread.GetIndexID(), thread.GetID());
   if (!IsTraced(tid)) {
@@ -209,12 +205,13 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
   }
 
   // Multicode decoding stats
-  if (m_multicore_decoder) {
+  if (storage.multicore_decoder) {
     s << "\n  Multi-core decoding:\n";
     s.Format("    Total number of continuous executions found: {0}\n",
-             m_multicore_decoder->GetTotalContinuousExecutionsCount());
-    s.Format("    Number of continuous executions for this thread: {0}\n",
-             m_multicore_decoder->GetNumContinuousExecutionsForThread(tid));
+             storage.multicore_decoder->GetTotalContinuousExecutionsCount());
+    s.Format(
+        "    Number of continuous executions for this thread: {0}\n",
+        storage.multicore_decoder->GetNumContinuousExecutionsForThread(tid));
   }
 
   // Errors
@@ -234,7 +231,7 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
 
 llvm::Expected<Optional<uint64_t>>
 TraceIntelPT::GetRawTraceSize(Thread &thread) {
-  if (m_multicore_decoder)
+  if (GetUpdatedStorage().multicore_decoder)
     return None; // TODO: calculate the amount of intel pt raw trace associated
                  // with the given thread.
   if (GetLiveProcess())
@@ -316,15 +313,17 @@ Expected<pt_cpu> TraceIntelPT::GetCPUInfo() {
 
 llvm::Optional<LinuxPerfZeroTscConversion>
 TraceIntelPT::GetPerfZeroTscConversion() {
+  return GetUpdatedStorage().tsc_conversion;
+}
+
+TraceIntelPT::Storage &TraceIntelPT::GetUpdatedStorage() {
   RefreshLiveProcessState();
-  return m_tsc_conversion;
+  return m_storage;
 }
 
 Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
                                               StringRef json_response) {
-  m_thread_decoders.clear();
-  m_tsc_conversion.reset();
-  m_multicore_decoder.reset();
+  m_storage = {};
 
   Expected<TraceIntelPTGetStateResponse> intelpt_state =
       json::parse<TraceIntelPTGetStateResponse>(json_response,
@@ -332,11 +331,13 @@ Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
   if (!intelpt_state)
     return intelpt_state.takeError();
 
+  m_storage.tsc_conversion = intelpt_state->tsc_perf_zero_conversion;
+
   if (!intelpt_state->cores) {
     for (const TraceThreadState &thread_state : state.traced_threads) {
       ThreadSP thread_sp =
           GetLiveProcess()->GetThreadList().FindThreadByID(thread_state.tid);
-      m_thread_decoders.emplace(
+      m_storage.thread_decoders.emplace(
           thread_state.tid, std::make_unique<ThreadDecoder>(thread_sp, *this));
     }
   } else {
@@ -351,12 +352,10 @@ Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
     if (!intelpt_state->tsc_perf_zero_conversion)
       return createStringError(inconvertibleErrorCode(),
                                "Missing perf time_zero conversion values");
-    m_multicore_decoder.emplace(*this, cores, tids,
-                                *intelpt_state->tsc_perf_zero_conversion);
+    m_storage.multicore_decoder.emplace(*this);
   }
 
-  m_tsc_conversion = intelpt_state->tsc_perf_zero_conversion;
-  if (m_tsc_conversion) {
+  if (m_storage.tsc_conversion) {
     Log *log = GetLog(LLDBLog::Target);
     LLDB_LOG(log, "TraceIntelPT found TSC conversion information");
   }
@@ -364,10 +363,10 @@ Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
 }
 
 bool TraceIntelPT::IsTraced(lldb::tid_t tid) {
-  RefreshLiveProcessState();
-  if (m_multicore_decoder)
-    return m_multicore_decoder->TracesThread(tid);
-  return m_thread_decoders.count(tid);
+  Storage &storage = GetUpdatedStorage();
+  if (storage.multicore_decoder)
+    return storage.multicore_decoder->TracesThread(tid);
+  return storage.thread_decoders.count(tid);
 }
 
 // The information here should match the description of the intel-pt section
@@ -481,46 +480,4 @@ Error TraceIntelPT::OnThreadBufferRead(lldb::tid_t tid,
   return OnThreadBinaryDataRead(tid, IntelPTDataKinds::kTraceBuffer, callback);
 }
 
-TaskTimer &TraceIntelPT::GetTimer() { return m_task_timer; }
-
-Error TraceIntelPT::CreateThreadsFromContextSwitches() {
-  DenseMap<lldb::pid_t, DenseSet<lldb::tid_t>> pids_to_tids;
-
-  for (core_id_t core_id : GetTracedCores()) {
-    Error err = OnCoreBinaryDataRead(
-        core_id, IntelPTDataKinds::kPerfContextSwitchTrace,
-        [&](ArrayRef<uint8_t> data) -> Error {
-          Expected<std::vector<ThreadContinuousExecution>> executions =
-              DecodePerfContextSwitchTrace(data, core_id, *m_tsc_conversion);
-          if (!executions)
-            return executions.takeError();
-          for (const ThreadContinuousExecution &execution : *executions)
-            pids_to_tids[execution.pid].insert(execution.tid);
-          return Error::success();
-        });
-    if (err)
-      return err;
-  }
-
-  DenseMap<lldb::pid_t, Process *> processes;
-  for (Process *proc : GetTracedProcesses())
-    processes.try_emplace(proc->GetID(), proc);
-
-  for (const auto &pid_to_tids : pids_to_tids) {
-    lldb::pid_t pid = pid_to_tids.first;
-    auto it = processes.find(pid);
-    if (it == processes.end())
-      continue;
-
-    Process &process = *it->second;
-    ThreadList &thread_list = process.GetThreadList();
-
-    for (lldb::tid_t tid : pid_to_tids.second) {
-      if (!thread_list.FindThreadByID(tid)) {
-        thread_list.AddThread(std::make_shared<ThreadPostMortemTrace>(
-            process, tid, /*trace_file*/ None));
-      }
-    }
-  }
-  return Error::success();
-}
+TaskTimer &TraceIntelPT::GetTimer() { return GetUpdatedStorage().task_timer; }
