@@ -3117,6 +3117,7 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 %subitive
 ; GFX1164-NEXT:    v_mad_u64_u32 v[3:4], null, s2, v2, 0
 ; GFX1164-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1164-NEXT:    v_readfirstlane_b32 s4, v1
+; GFX1164-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX1164-NEXT:    v_mad_u64_u32 v[5:6], null, s3, v2, v[4:5]
 ; GFX1164-NEXT:    v_sub_co_u32 v0, vcc, s2, v3
 ; GFX1164-NEXT:    s_mov_b32 s3, 0x31016000
