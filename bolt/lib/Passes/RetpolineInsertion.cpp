@@ -91,8 +91,7 @@ BinaryFunction *createNewRetpoline(BinaryContext &BC,
   for (int I = 0; I < 3; I++) {
     MCSymbol *Symbol =
         Ctx.createNamedTempSymbol(Twine(RetpolineTag + "_BB" + to_string(I)));
-    NewBlocks[I] = NewRetpoline->createBasicBlock(
-        BinaryBasicBlock::INVALID_OFFSET, Symbol);
+    NewBlocks[I] = NewRetpoline->createBasicBlock(Symbol);
     NewBlocks[I].get()->setCFIState(0);
   }
 

@@ -118,7 +118,7 @@ void PatchEntries::runOnFunctions(BinaryContext &BC) {
 
       InstructionListType Seq;
       BC.MIB->createLongTailCall(Seq, Patch.Symbol, BC.Ctx.get());
-      PatchFunction->addBasicBlock(0)->addInstructions(Seq);
+      PatchFunction->addBasicBlock()->addInstructions(Seq);
 
       // Verify the size requirements.
       uint64_t HotSize, ColdSize;

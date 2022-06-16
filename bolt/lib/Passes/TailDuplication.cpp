@@ -532,7 +532,7 @@ std::vector<BinaryBasicBlock *> TailDuplication::duplicateBlocks(
 
   for (BinaryBasicBlock *CurBB : BlocksToDuplicate) {
     DuplicatedBlocks.emplace_back(
-        BF->createBasicBlock(0, (BC.Ctx)->createNamedTempSymbol("tail-dup")));
+        BF->createBasicBlock((BC.Ctx)->createNamedTempSymbol("tail-dup")));
     BinaryBasicBlock *NewBB = DuplicatedBlocks.back().get();
 
     NewBB->addInstructions(CurBB->begin(), CurBB->end());
