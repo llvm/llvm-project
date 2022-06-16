@@ -228,9 +228,9 @@ BuildModulesSection(Process &process, FileSpec directory) {
           inconvertibleErrorCode(),
           formatv("couldn't write to the file. {0}", ec.message()));
 
-    json_modules.push_back(JSONModule{system_path,
-                                      path_to_copy_module.GetPath(), load_addr,
-                                      module_sp->GetUUID().GetAsString()});
+    json_modules.push_back(
+        JSONModule{system_path, path_to_copy_module.GetPath(),
+                   JSONUINT64{load_addr}, module_sp->GetUUID().GetAsString()});
   }
   return json_modules;
 }

@@ -22,13 +22,33 @@ bool TraceIntelPTStartRequest::IsPerCpuTracing() const {
   return per_cpu_tracing.getValueOr(false);
 }
 
+json::Value toJSON(const JSONUINT64 &uint64, bool hex) {
+  if (hex)
+    return json::Value(formatv("{0:x+}", uint64.value));
+  else
+    return json::Value(formatv("{0}", uint64.value));
+}
+
+bool fromJSON(const json::Value &value, JSONUINT64 &uint64, Path path) {
+  if (Optional<uint64_t> val = value.getAsUINT64()) {
+    uint64.value = *val;
+    return true;
+  } else if (Optional<StringRef> val = value.getAsString()) {
+    if (!val->getAsInteger(/*radix=*/0, uint64.value))
+      return true;
+    path.report("invalid string number");
+  }
+  path.report("invalid number or string number");
+  return false;
+}
+
 bool fromJSON(const json::Value &value, TraceIntelPTStartRequest &packet,
               Path path) {
   ObjectMapper o(value, path);
-  if (!o || !fromJSON(value, (TraceStartRequest &)packet, path) ||
-      !o.map("enableTsc", packet.enable_tsc) ||
-      !o.map("psbPeriod", packet.psb_period) ||
-      !o.map("iptTraceSize", packet.ipt_trace_size))
+  if (!(o && fromJSON(value, (TraceStartRequest &)packet, path) &&
+        o.map("enableTsc", packet.enable_tsc) &&
+        o.map("psbPeriod", packet.psb_period) &&
+        o.map("iptTraceSize", packet.ipt_trace_size)))
     return false;
 
   if (packet.IsProcessTracing()) {
@@ -54,11 +74,11 @@ uint64_t LinuxPerfZeroTscConversion::ToNanos(uint64_t tsc) const {
   uint64_t quot = tsc >> time_shift;
   uint64_t rem_flag = (((uint64_t)1 << time_shift) - 1);
   uint64_t rem = tsc & rem_flag;
-  return time_zero + quot * time_mult + ((rem * time_mult) >> time_shift);
+  return time_zero.value + quot * time_mult + ((rem * time_mult) >> time_shift);
 }
 
 uint64_t LinuxPerfZeroTscConversion::ToTSC(uint64_t nanos) const {
-  uint64_t time = nanos - time_zero;
+  uint64_t time = nanos - time_zero.value;
   uint64_t quot = time / time_mult;
   uint64_t rem = time % time_mult;
   return (quot << time_shift) + (rem << time_shift) / time_mult;
@@ -68,19 +88,18 @@ json::Value toJSON(const LinuxPerfZeroTscConversion &packet) {
   return json::Value(json::Object{
       {"timeMult", packet.time_mult},
       {"timeShift", packet.time_shift},
-      {"timeZero", packet.time_zero},
+      {"timeZero", toJSON(packet.time_zero, /*hex=*/false)},
   });
 }
 
 bool fromJSON(const json::Value &value, LinuxPerfZeroTscConversion &packet,
               json::Path path) {
   ObjectMapper o(value, path);
-  uint64_t time_mult, time_shift, time_zero;
-  if (!o || !o.map("timeMult", time_mult) || !o.map("timeShift", time_shift) ||
-      !o.map("timeZero", time_zero))
+  uint64_t time_mult, time_shift;
+  if (!(o && o.map("timeMult", time_mult) && o.map("timeShift", time_shift) &&
+        o.map("timeZero", packet.time_zero)))
     return false;
   packet.time_mult = time_mult;
-  packet.time_zero = time_zero;
   packet.time_shift = time_shift;
   return true;
 }
