@@ -21,11 +21,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/VirtualCachedDirectoryEntry.h"
 #include <cassert>
 #include <cstdint>
 #include <ctime>
@@ -300,6 +302,46 @@ public:
   virtual std::error_code getRealPath(const Twine &Path,
                                       SmallVectorImpl<char> &Output) const;
 
+  /// Gets access to the directory entry for \p Path. Among other things, this
+  /// exposes the filesystem tree's actual path to \p Path.
+  ///
+  /// If \p FollowSymlinks and \p Path refers to a symbol link, this returns
+  /// the directory entry for the link's target, evaluated recursively (as if
+  /// calling \a getRealPath()). Otherwise, it returns the entry for the
+  /// symbolic link itself (as if \a getRealPath() had been called only on the
+  /// parent path).
+  ///
+  /// For example, given:
+  ///
+  ///     /a/sym -> b
+  ///     /a/b/c
+  ///
+  /// The following table explains the object returned, and its tree path:
+  ///
+  ///     Path      Follow     NoFollow
+  ///     ====      ======     ========
+  ///     /a/sym    /a/b       /a/sym
+  ///     /a/sym/   /a/b       /a/b
+  ///     /a/sym/c  /a/b/c     /a/b/c
+  ///
+  /// Paths are made absolute before lookup.
+  ///
+  /// FIXME: Make this non-const, since it can do work? (Why is \a
+  /// getRealPath() const?)
+  ///
+  /// FIXME: Add \a getCachedDirectoryEntry(), which is const-qualified and
+  /// never does work?
+  ///
+  /// FIXME: Follow symlinks by default (can make the virtual function end in
+  /// Impl to avoid virtual/default parameter shenanigans)?
+  virtual Expected<const CachedDirectoryEntry *>
+  getDirectoryEntry(const Twine &Path, bool FollowSymlinks) const {
+    // FIXME: Consider providing a defualt imlementation that calls \a
+    // getRealPath() on the parent path and reappending the filename (assuming
+    // it exists).
+    return createFileError(Path, make_error_code(std::errc::not_supported));
+  }
+
   /// Check whether a file exists. Provided for convenience.
   bool exists(const Twine &Path);
 
@@ -318,6 +360,9 @@ public:
   /// \returns success if \a path has been made absolute, otherwise a
   ///          platform-specific error_code.
   virtual std::error_code makeAbsolute(SmallVectorImpl<char> &Path) const;
+
+  /// Check if files are loaded from a CAS.
+  virtual bool isCASFS() const { return false; }
 
   enum class PrintType { Summary, Contents, RecursiveContents };
   void print(raw_ostream &OS, PrintType Type = PrintType::Contents,
