@@ -107,6 +107,10 @@ template <class T, class Container>
 #include <type_traits>
 #include <version>
 
+// standard-mandated includes
+#include <compare>
+#include <initializer_list>
+
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif

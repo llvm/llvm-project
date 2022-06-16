@@ -212,12 +212,23 @@ namespace std {
 #include <__ranges/enable_view.h>
 #include <__ranges/size.h>
 #include <__string/char_traits.h>
-#include <compare>
 #include <iosfwd>
 #include <limits>
 #include <stdexcept>
 #include <type_traits>
 #include <version>
+
+// standard-mandated includes
+
+// [iterator.range]
+#include <__iterator/access.h>
+#include <__iterator/data.h>
+#include <__iterator/empty.h>
+#include <__iterator/reverse_access.h>
+#include <__iterator/size.h>
+
+// [string.view.synop]
+#include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

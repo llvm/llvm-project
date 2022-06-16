@@ -46,6 +46,9 @@ struct suspend_always;
 #include <__coroutine/trivial_awaitables.h>
 #include <version>
 
+// standard-mandated includes
+#include <compare>
+
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
 #endif

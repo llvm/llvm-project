@@ -179,10 +179,12 @@ template <class... Types>
 #include <__utility/pair.h>
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
-#include <compare>
 #include <cstddef>
 #include <type_traits>
 #include <version>
+
+// standard-mandated includes
+#include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
