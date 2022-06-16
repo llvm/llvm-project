@@ -372,6 +372,9 @@ VALUE_CODEGENOPT(SSPBufferSize, 32, 0)
 /// The kind of generated debug info.
 ENUM_CODEGENOPT(DebugInfo, codegenoptions::DebugInfoKind, 4, codegenoptions::NoDebugInfo)
 
+/// Whether to make debug info reproducible.
+CODEGENOPT(ReproducibleDebugInfo, 1, 0)
+
 /// Whether to generate macro debug info.
 CODEGENOPT(MacroDebugInfo, 1, 0)
 

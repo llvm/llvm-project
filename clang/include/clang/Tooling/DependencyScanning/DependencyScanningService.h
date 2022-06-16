@@ -9,6 +9,8 @@
 #ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
+#include "clang/CAS/CASOptions.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningCASFilesystem.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
 
 namespace clang {
@@ -38,36 +40,58 @@ enum class ScanningOutputFormat {
   /// This outputs the full module dependency graph suitable for use for
   /// explicitly building modules.
   Full,
+
+  /// This emits the CAS ID of the scanned files.
+  Tree,
+
+  /// This emits the full dependency graph but with CAS tree embedded as file
+  /// dependency.
+  FullTree,
 };
 
 /// The dependency scanning service contains the shared state that is used by
 /// the invidual dependency scanning workers.
 class DependencyScanningService {
 public:
-  DependencyScanningService(ScanningMode Mode, ScanningOutputFormat Format,
-                            bool ReuseFileManager = true,
-                            bool OptimizeArgs = false);
+  DependencyScanningService(
+      ScanningMode Mode, ScanningOutputFormat Format, CASOptions CASOpts,
+      IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
+      bool ReuseFileManager = true, bool OptimizeArgs = false);
+
+  ~DependencyScanningService();
 
   ScanningMode getMode() const { return Mode; }
 
   ScanningOutputFormat getFormat() const { return Format; }
+
+  const CASOptions &getCASOpts() const { return CASOpts; }
 
   bool canReuseFileManager() const { return ReuseFileManager; }
 
   bool canOptimizeArgs() const { return OptimizeArgs; }
 
   DependencyScanningFilesystemSharedCache &getSharedCache() {
-    return SharedCache;
+    assert(!SharedFS && "Expected not to have a CASFS");
+    assert(SharedCache && "Expected a shared cache");
+    return *SharedCache;
   }
+
+  llvm::cas::CachingOnDiskFileSystem &getSharedFS() { return *SharedFS; }
+
+  bool useCASScanning() const { return (bool)SharedFS; }
 
 private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
+  CASOptions CASOpts;
   const bool ReuseFileManager;
   /// Whether to optimize the modules' command-line arguments.
   const bool OptimizeArgs;
+  /// Shared CachingOnDiskFileSystem. Set to nullptr to not use CAS dependency
+  /// scanning.
+  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS;
   /// The global file system cache.
-  DependencyScanningFilesystemSharedCache SharedCache;
+  Optional<DependencyScanningFilesystemSharedCache> SharedCache;
 };
 
 } // end namespace dependencies

@@ -108,3 +108,6 @@ TYPE("cuda-fatbin",              CUDA_FATBIN,  INVALID,         "fatbin", phases
 TYPE("hip-fatbin",               HIP_FATBIN,   INVALID,         "hipfb",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("api-information",          API_INFO,     INVALID,         "json",   phases::Precompile)
 TYPE("none",                     Nothing,      INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+
+// Generic command line type, used to pass command as response file to the next action.
+TYPE("response-file",            ResponseFile, INVALID,         "rsp",    phases::Depscan)

@@ -8,6 +8,8 @@
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Frontend/Utils.h"
+#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/CachingOnDiskFileSystem.h"
 
 namespace clang {
 namespace tooling {
@@ -114,6 +116,88 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
   return Output;
 }
 
+namespace {
+/// Returns a CAS tree containing the dependencies.
+class MakeDependencyTree : public DependencyConsumer {
+public:
+  void handleFileDependency(StringRef File) override {
+    // FIXME: Probably we want to delete this class, since we're getting
+    // dependencies more accurately (including directories) by intercepting
+    // filesystem accesses.
+    //
+    // On the other hand, for implicitly-discovered modules, we really want to
+    // drop a bunch of extra dependencies from the directory iteration.
+    //
+    // For now just disable this.
+    //
+    // E = llvm::joinErrors(std::move(E), Builder->push(File));
+  }
+
+  void handleModuleDependency(ModuleDeps) override {}
+  void handlePrebuiltModuleDependency(PrebuiltModuleDep) override {}
+  void handleDependencyOutputOpts(const DependencyOutputOptions &) override {}
+
+  void handleContextHash(std::string) override {}
+
+  Expected<llvm::cas::TreeProxy> makeTree() {
+    if (E)
+      return std::move(E);
+    return Builder->create();
+  }
+
+  MakeDependencyTree(llvm::cas::CachingOnDiskFileSystem &FS)
+      : E(llvm::Error::success()), Builder(FS.createTreeBuilder()) {}
+
+  ~MakeDependencyTree() {
+    // Ignore the error if makeTree wasn't called.
+    llvm::consumeError(std::move(E));
+  }
+
+private:
+  llvm::Error E;
+  std::unique_ptr<llvm::cas::CachingOnDiskFileSystem::TreeBuilder> Builder;
+};
+}
+
+llvm::Expected<llvm::cas::TreeProxy> DependencyScanningTool::getDependencyTree(
+    const std::vector<std::string> &CommandLine, StringRef CWD) {
+  llvm::cas::CachingOnDiskFileSystem &FS = Worker.getCASFS();
+  FS.trackNewAccesses();
+  MakeDependencyTree Consumer(FS);
+  auto Result = Worker.computeDependencies(CWD, CommandLine, Consumer);
+  if (Result)
+    return std::move(Result);
+  // return Consumer.makeTree();
+  //
+  // FIXME: This is needed because the dependency scanner doesn't track
+  // directories are accessed -- in particular, we need the CWD to be included.
+  // However, if we *want* to filter out certain accesses (such as for modules)
+  // this will get in the way.
+  //
+  // The right fix is to add an API for listing directories that are
+  // dependencies, and explicitly add the CWD and other things that matter.
+  // (The 'make' output can ignore directories.)
+  return FS.createTreeFromNewAccesses();
+}
+
+llvm::Expected<llvm::cas::TreeProxy>
+DependencyScanningTool::getDependencyTreeFromCompilerInvocation(
+    std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
+    DiagnosticConsumer &DiagsConsumer,
+    llvm::function_ref<StringRef(const llvm::vfs::CachedDirectoryEntry &)>
+        RemapPath) {
+  llvm::cas::CachingOnDiskFileSystem &FS = Worker.getCASFS();
+  FS.trackNewAccesses();
+  FS.setCurrentWorkingDirectory(CWD);
+  MakeDependencyTree DepsConsumer(FS);
+  Worker.computeDependenciesFromCompilerInvocation(std::move(Invocation), CWD,
+                                                   DepsConsumer, DiagsConsumer);
+  // return DepsConsumer.makeTree();
+  //
+  // FIXME: See FIXME in getDepencyTree().
+  return FS.createTreeFromNewAccesses(RemapPath);
+}
+
 llvm::Expected<FullDependenciesResult>
 DependencyScanningTool::getFullDependencies(
     const std::vector<std::string> &CommandLine, StringRef CWD,
@@ -143,8 +227,9 @@ DependencyScanningTool::getFullDependencies(
       ContextHash = std::move(Hash);
     }
 
-    FullDependenciesResult getFullDependencies(
-        const std::vector<std::string> &OriginalCommandLine) const {
+    Expected<FullDependenciesResult>
+    getFullDependencies(const std::vector<std::string> &OriginalCommandLine,
+                        llvm::cas::CachingOnDiskFileSystem *FS) const {
       FullDependencies FD;
 
       FD.OriginalCommandLine =
@@ -161,6 +246,13 @@ DependencyScanningTool::getFullDependencies(
       }
 
       FD.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
+
+      if (FS) {
+        if (auto Tree = FS->createTreeFromNewAccesses())
+          FD.CASFileSystemRootID = Tree->getID();
+        else
+          return Tree.takeError();
+      }
 
       FullDependenciesResult FDR;
 
@@ -186,11 +278,18 @@ DependencyScanningTool::getFullDependencies(
   };
 
   FullDependencyPrinterConsumer Consumer(AlreadySeen);
+  llvm::cas::CachingOnDiskFileSystem *FS =
+      Worker.useCAS() ? &Worker.getCASFS() : nullptr;
+  if (FS) {
+    FS->trackNewAccesses();
+    FS->setCurrentWorkingDirectory(CWD);
+  }
   llvm::Error Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
   if (Result)
     return std::move(Result);
-  return Consumer.getFullDependencies(CommandLine);
+
+  return Consumer.getFullDependencies(CommandLine, FS);
 }
 
 } // end namespace dependencies

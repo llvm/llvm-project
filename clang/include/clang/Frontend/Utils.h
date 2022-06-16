@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileCollector.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/VirtualOutputBackend.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -34,6 +35,7 @@
 namespace clang {
 
 class ASTReader;
+class CASOptions;
 class CompilerInstance;
 class CompilerInvocation;
 class DiagnosticsEngine;
@@ -101,7 +103,12 @@ private:
 /// loaded.
 class DependencyFileGenerator : public DependencyCollector {
 public:
-  DependencyFileGenerator(const DependencyOutputOptions &Opts);
+  /// Constructs a \c DependencyFileGenerator with the given options and output
+  /// backend. If \p OutputBackend is null, a default on-disk backend will be
+  /// used.
+  DependencyFileGenerator(
+      const DependencyOutputOptions &Opts,
+      IntrusiveRefCntPtr<llvm::vfs::OutputBackend> OutputBackend = nullptr);
 
   void attachToPreprocessor(Preprocessor &PP) override;
 
@@ -118,6 +125,7 @@ protected:
 private:
   void outputDependencyFile(DiagnosticsEngine &Diags);
 
+  IntrusiveRefCntPtr<llvm::vfs::OutputBackend> OutputBackend;
   std::string OutputFile;
   std::vector<std::string> Targets;
   bool IncludeSystemHeaders;

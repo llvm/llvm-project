@@ -771,6 +771,9 @@ llvm::StringRef getDriverMode(StringRef ProgName, ArrayRef<const char *> Args);
 /// Checks whether the value produced by getDriverMode is for CL mode.
 bool IsClangCL(StringRef DriverMode);
 
+/// Checks whether the value produced by getDriverMode is for 'cache' mode.
+bool isClangCache(StringRef DriverMode);
+
 } // end namespace driver
 } // end namespace clang
 

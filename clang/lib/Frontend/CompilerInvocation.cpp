@@ -14,6 +14,7 @@
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
@@ -61,6 +62,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/CASFileSystem.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Linker/Linker.h"
@@ -2265,6 +2268,42 @@ static bool checkVerifyPrefixes(const std::vector<std::string> &VerifyPrefixes,
       Diags.Report(diag::note_drv_verify_prefix_spelling);
     }
   }
+  return Success;
+}
+
+void CompilerInvocation::GenerateCASArgs(
+    const CASOptions &Opts, SmallVectorImpl<const char *> &Args,
+    CompilerInvocation::StringAllocator SA) {
+  const CASOptions &CASOpts = Opts;
+
+#define CAS_OPTION_WITH_MARSHALLING(                                           \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  GENERATE_OPTION_WITH_MARSHALLING(                                            \
+      Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
+      IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef CAS_OPTION_WITH_MARSHALLING
+}
+
+bool CompilerInvocation::ParseCASArgs(CASOptions &Opts, const ArgList &Args,
+                                      DiagnosticsEngine &Diags) {
+  CASOptions &CASOpts = Opts;
+  bool Success = true;
+
+#define CAS_OPTION_WITH_MARSHALLING(                                           \
+    PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
+    HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
+    DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
+    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+  PARSE_OPTION_WITH_MARSHALLING(                                               \
+      Args, Diags, ID, FLAGS, PARAM, SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,     \
+      IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, MERGER, TABLE_INDEX)
+#include "clang/Driver/Options.inc"
+#undef CAS_OPTION_WITH_MARSHALLING
+
   return Success;
 }
 
@@ -4581,6 +4620,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
           << ArgString << Nearest;
   }
 
+  ParseCASArgs(Res.getCASOpts(), Args, Diags);
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);
   ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
   ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
@@ -4818,6 +4858,7 @@ void CompilerInvocation::generateCC1CommandLine(
     SmallVectorImpl<const char *> &Args, StringAllocator SA) const {
   llvm::Triple T(TargetOpts->Triple);
 
+  GenerateCASArgs(CASOpts, Args, SA);
   GenerateFileSystemArgs(FileSystemOpts, Args, SA);
   GenerateMigratorArgs(MigratorOpts, Args, SA);
   GenerateAnalyzerArgs(*AnalyzerOpts, Args, SA);
@@ -4837,11 +4878,77 @@ void CompilerInvocation::generateCC1CommandLine(
   GenerateDependencyOutputArgs(DependencyOutputOpts, Args, SA);
 }
 
+static IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+createBaseFS(const CompilerInvocation &Invocation, DiagnosticsEngine &Diags,
+             std::shared_ptr<llvm::cas::CASDB> OverrideCAS) {
+  const FileSystemOptions &FSOpts = Invocation.getFileSystemOpts();
+  if (FSOpts.CASFileSystemRootID.empty())
+    return llvm::vfs::getRealFileSystem();
+
+  // If no CAS was provided, create one with CASOptions.
+  std::shared_ptr<llvm::cas::CASDB> CAS = std::move(OverrideCAS);
+  if (!CAS)
+    CAS = Invocation.getCASOpts().getOrCreateCAS(Diags);
+
+  // Helper for creating a valid (but empty) CASFS if an error is encountered.
+  auto makeEmptyCASFS = [&CAS]() {
+    // Try to use the configured CAS, if any.
+    Optional<llvm::cas::CASID> EmptyRootID;
+    if (CAS) {
+      // If we cannot create an empty tree, fall back to creating an empty
+      // in-memory CAS.
+      if (llvm::Error E = CAS->createTree(None).moveInto(EmptyRootID)) {
+        consumeError(std::move(E));
+        CAS = nullptr;
+      }
+    }
+    // Create an empty in-memory CAS with an empty tree.
+    if (!CAS) {
+      CAS = llvm::cas::createInMemoryCAS();
+      EmptyRootID = llvm::cantFail(CAS->createTree(None));
+    }
+    return llvm::cantFail(
+        llvm::cas::createCASFileSystem(std::move(CAS), *EmptyRootID));
+  };
+
+  // CAS couldn't be created. The error was already reported to Diags.
+  if (!CAS)
+    return makeEmptyCASFS();
+
+  StringRef RootIDString = FSOpts.CASFileSystemRootID;
+  Expected<llvm::cas::CASID> RootID = CAS->parseID(RootIDString);
+  if (!RootID) {
+    llvm::consumeError(RootID.takeError());
+    Diags.Report(diag::err_cas_cannot_parse_root_id) << RootIDString;
+    return makeEmptyCASFS();
+  }
+
+  Expected<std::unique_ptr<llvm::vfs::FileSystem>> ExpectedFS =
+      llvm::cas::createCASFileSystem(std::move(CAS), *RootID);
+  if (!ExpectedFS) {
+    llvm::consumeError(ExpectedFS.takeError());
+    Diags.Report(diag::err_cas_filesystem_cannot_be_initialized)
+        << RootIDString;
+    return makeEmptyCASFS();
+  }
+  std::unique_ptr<llvm::vfs::FileSystem> FS = std::move(*ExpectedFS);
+
+  // Try to change directories.
+  StringRef CWD = FSOpts.CASFileSystemWorkingDirectory;
+  if (!CWD.empty())
+    if (std::error_code EC = FS->setCurrentWorkingDirectory(CWD))
+      Diags.Report(diag::err_cas_filesystem_cannot_set_working_directory)
+          << CWD;
+
+  return std::move(FS);
+}
+
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-clang::createVFSFromCompilerInvocation(const CompilerInvocation &CI,
-                                       DiagnosticsEngine &Diags) {
-  return createVFSFromCompilerInvocation(CI, Diags,
-                                         llvm::vfs::getRealFileSystem());
+clang::createVFSFromCompilerInvocation(
+    const CompilerInvocation &CI, DiagnosticsEngine &Diags,
+    std::shared_ptr<llvm::cas::CASDB> OverrideCAS) {
+  return createVFSFromCompilerInvocation(
+      CI, Diags, createBaseFS(CI, Diags, std::move(OverrideCAS)));
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>

@@ -14,7 +14,14 @@
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/CAS/CASID.h"
 #include <string>
+
+namespace llvm {
+namespace cas {
+class TreeProxy;
+} // namespace cas
+} // namespace llvm
 
 namespace clang {
 namespace tooling {
@@ -44,6 +51,9 @@ struct FullDependencies {
 
   /// The original command line of the TU (excluding the compiler executable).
   std::vector<std::string> OriginalCommandLine;
+
+  /// The CASID for input file dependency tree.
+  llvm::Optional<llvm::cas::CASID> CASFileSystemRootID;
 
   /// Get the full command line.
   ///
@@ -81,6 +91,16 @@ public:
   getDependencyFile(const std::vector<std::string> &CommandLine, StringRef CWD,
                     llvm::Optional<StringRef> ModuleName = None);
 
+  /// Collect dependency tree.
+  llvm::Expected<llvm::cas::TreeProxy>
+  getDependencyTree(const std::vector<std::string> &CommandLine, StringRef CWD);
+
+  llvm::Expected<llvm::cas::TreeProxy> getDependencyTreeFromCompilerInvocation(
+      std::shared_ptr<CompilerInvocation> Invocation, StringRef CWD,
+      DiagnosticConsumer &DiagsConsumer,
+      llvm::function_ref<StringRef(const llvm::vfs::CachedDirectoryEntry &)>
+          RemapPath = nullptr);
+
   /// Collect the full module dependency graph for the input, ignoring any
   /// modules which have already been seen. If \p ModuleName isn't empty, this
   /// function returns the full dependency information of module \p ModuleName.
@@ -97,6 +117,19 @@ public:
   getFullDependencies(const std::vector<std::string> &CommandLine,
                       StringRef CWD, const llvm::StringSet<> &AlreadySeen,
                       llvm::Optional<StringRef> ModuleName = None);
+
+  const CASOptions &getCASOpts() const { return Worker.getCASOpts(); }
+
+  llvm::cas::CachingOnDiskFileSystem &getCachingFileSystem() {
+    return Worker.getCASFS();
+  }
+
+  /// If \p DependencyScanningService enabled sharing of \p FileManager this
+  /// will return the same instance, otherwise it will create a new one for
+  /// each invocation.
+  llvm::IntrusiveRefCntPtr<FileManager> getOrCreateFileManager() const {
+    return Worker.getOrCreateFileManager();
+  }
 
 private:
   DependencyScanningWorker Worker;

@@ -4386,13 +4386,16 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
   RenderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 }
 
-void Clang::ConstructJob(Compilation &C, const JobAction &JA,
+void Clang::ConstructJob(Compilation &C, const JobAction &Job,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
   const auto &TC = getToolChain();
   const llvm::Triple &RawTriple = TC.getTriple();
   const llvm::Triple &Triple = TC.getEffectiveTriple();
   const std::string &TripleStr = Triple.getTriple();
+  const JobAction &JA = isa<DepscanJobAction>(Job)
+                            ? cast<DepscanJobAction>(Job).getScanningJobAction()
+                            : Job;
 
   bool KernelOrKext =
       Args.hasArg(options::OPT_mkernel, options::OPT_fapple_kext);
@@ -4498,10 +4501,82 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (IsIAMCU && types::isCXX(Input.getType()))
     D.Diag(diag::err_drv_clang_unsupported) << "C++ for IAMCU";
 
+  {
+    const OptSpecifier DepScanOpts[] = {
+        options::OPT_fdepscan_EQ,
+        options::OPT_fdepscan_share_EQ,
+        options::OPT_fdepscan_share_identifier,
+        options::OPT_fdepscan_share_parent,
+        options::OPT_fdepscan_share_parent_EQ,
+        options::OPT_fno_depscan_share,
+        options::OPT_fdepscan_share_stop_EQ,
+        options::OPT_fdepscan_daemon_EQ,
+        options::OPT_fdepscan_prefix_map_EQ,
+        options::OPT_fdepscan_prefix_map_sdk_EQ,
+        options::OPT_fdepscan_prefix_map_toolchain_EQ};
+
+    // Handle depscan.
+    if (Job.getKind() == Action::DepscanJobClass) {
+      CmdArgs.push_back("-cc1depscan");
+
+      // Pass depscan related options to cc1depscan.
+      Args.AddAllArgs(CmdArgs, DepScanOpts);
+
+      assert(Output.isFilename() && "Depscan needs to have file output");
+      CmdArgs.push_back("-o");
+      CmdArgs.push_back(Output.getFilename());
+      CmdArgs.push_back("-cc1-args");
+    } else if (Arg *A = Args.getLastArg(options::OPT_fdepscan_EQ)) {
+      if (A->getValue() == llvm::StringLiteral("off")) {
+        // Claim depscan args.
+        for (auto Opt : DepScanOpts)
+          Args.ClaimAllArgs(Opt);
+      }
+    }
+  }
+
   // Invoke ourselves in -cc1 mode.
   //
   // FIXME: Implement custom jobs for internal actions.
   CmdArgs.push_back("-cc1");
+
+  // Handle response file input.
+  if (Inputs.front().getType() == types::TY_ResponseFile) {
+    // Render response file input first.
+    assert(Inputs.size() == 1 && "Only one response file input");
+    auto &II = Inputs.front();
+    assert(II.isFilename() && "Should be response file");
+    SmallString<128> InputName("@");
+    InputName += II.getFilename();
+    CmdArgs.push_back(C.getArgs().MakeArgString(InputName));
+
+    // FIXME: The -cc1depscan job should include the -o for the -cc1 job that
+    // follows it in -cc1-args, but it doesn't currently have access to that
+    // filename. To fix this, we need to somehow route the final output type
+    // into Depscan ConstructJob.
+    // FIXME: This intermediate output file will adds 3-4% of overhead comparing
+    // to passing all the cc1 args in the memory. The fix might be pin DepScan
+    // job in-process and pass cc1 args in memory instead of creating an actual
+    // file here.
+    if (Output.isFilename()) {
+      CmdArgs.push_back("-o");
+      CmdArgs.push_back(Output.getFilename());
+    }
+    // FIXME: Clean up this code and factor out the common logic (see the end of
+    // the function)
+    const char *Exec = D.getClangProgramPath();
+    if (D.CC1Main && !D.CCGenDiagnostics) {
+      // Invoke the CC1 directly in this process
+      C.addCommand(std::make_unique<CC1Command>(
+          Job, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs,
+          Output));
+    } else {
+      C.addCommand(std::make_unique<Command>(Job, *this,
+                                             ResponseFileSupport::AtFileUTF8(),
+                                             Exec, CmdArgs, Inputs, Output));
+    }
+    return;
+  }
 
   // Add the "effective" target triple.
   CmdArgs.push_back("-triple");
@@ -4667,7 +4742,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Arg *ProductNameArg = Args.getLastArg(options::OPT_product_name_EQ))
       ProductNameArg->render(Args, CmdArgs);
   } else {
-    assert((isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) &&
+    assert((isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA) || isa<DepscanJobAction>(JA)) &&
            "Invalid action for clang tool.");
     if (JA.getType() == types::TY_Nothing) {
       CmdArgs.push_back("-fsyntax-only");
@@ -4868,7 +4943,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::AtFileUTF8(), D.getClangProgramPath(),
+        Job, *this, ResponseFileSupport::AtFileUTF8(), D.getClangProgramPath(),
         CmdArgs, Inputs, Output));
     return;
   }
@@ -6980,12 +7055,21 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   const char *Exec = D.getClangProgramPath();
 
+  // Check if there's a request for reproducible debug info. Pass it through
+  // but also use it.
+  bool GReproducible =
+      Args.hasFlag(options::OPT_greproducible,
+                   options::OPT_gno_reproducible, false);
+  if (GReproducible)
+    CmdArgs.push_back("-greproducible");
+
   // Optionally embed the -cc1 level arguments into the debug info or a
   // section, for build analysis.
   // Also record command line arguments into the debug info if
   // -grecord-gcc-switches options is set on.
   // By default, -gno-record-gcc-switches is set on and no recording.
   auto GRecordSwitches =
+      !GReproducible &&
       Args.hasFlag(options::OPT_grecord_command_line,
                    options::OPT_gno_record_command_line, false);
   auto FRecordSwitches =
@@ -7294,11 +7378,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.CC1Main && !D.CCGenDiagnostics) {
     // Invoke the CC1 directly in this process
-    C.addCommand(std::make_unique<CC1Command>(JA, *this,
+    C.addCommand(std::make_unique<CC1Command>(Job, *this,
                                               ResponseFileSupport::AtFileUTF8(),
                                               Exec, CmdArgs, Inputs, Output));
   } else {
-    C.addCommand(std::make_unique<Command>(JA, *this,
+    C.addCommand(std::make_unique<Command>(Job, *this,
                                            ResponseFileSupport::AtFileUTF8(),
                                            Exec, CmdArgs, Inputs, Output));
   }

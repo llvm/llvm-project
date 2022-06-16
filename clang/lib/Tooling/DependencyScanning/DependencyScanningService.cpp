@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
+#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace clang;
@@ -14,13 +16,20 @@ using namespace tooling;
 using namespace dependencies;
 
 DependencyScanningService::DependencyScanningService(
-    ScanningMode Mode, ScanningOutputFormat Format, bool ReuseFileManager,
-    bool OptimizeArgs)
-    : Mode(Mode), Format(Format), ReuseFileManager(ReuseFileManager),
-      OptimizeArgs(OptimizeArgs) {
+    ScanningMode Mode, ScanningOutputFormat Format, CASOptions CASOpts,
+    IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
+    bool ReuseFileManager, bool OptimizeArgs)
+    : Mode(Mode), Format(Format), CASOpts(std::move(CASOpts)),
+      ReuseFileManager(ReuseFileManager), OptimizeArgs(OptimizeArgs),
+      SharedFS(std::move(SharedFS)) {
+  if (!this->SharedFS)
+    SharedCache.emplace();
+
   // Initialize targets for object file support.
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
   llvm::InitializeAllAsmParsers();
 }
+
+DependencyScanningService::~DependencyScanningService() = default;

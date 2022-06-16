@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Driver.h"
+#include "CacheLauncherMode.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Config/config.h"
@@ -50,6 +52,18 @@
 #include <memory>
 #include <set>
 #include <system_error>
+
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
+#if defined(__APPLE__) &&                                                      \
+    __has_include(<libproc.h>) && __has_include(<sys/proc_info.h>)
+#define USE_APPLE_LIBPROC_FOR_DEPSCAN_ANCESTORS
+#include <libproc.h>
+#include <sys/proc_info.h>
+#endif
+
 using namespace clang;
 using namespace clang::driver;
 using namespace llvm::opt;
@@ -205,6 +219,10 @@ static void ApplyQAOverride(SmallVectorImpl<const char*> &Args,
 
 extern int cc1_main(ArrayRef<const char *> Argv, const char *Argv0,
                     void *MainAddr);
+extern int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
+                            void *MainAddr);
+extern int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
+                           void *MainAddr);
 extern int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0,
                       void *MainAddr);
 extern int cc1gen_reproducer_main(ArrayRef<const char *> Argv,
@@ -315,6 +333,12 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
   if (Tool == "-cc1")
     return cc1_main(makeArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
+  if (Tool == "-cc1depscand")
+    return cc1depscand_main(makeArrayRef(ArgV).slice(2), ArgV[0],
+                            GetExecutablePathVP);
+  if (Tool == "-cc1depscan")
+    return cc1depscan_main(makeArrayRef(ArgV).slice(2), ArgV[0],
+                           GetExecutablePathVP);
   if (Tool == "-cc1as")
     return cc1as_main(makeArrayRef(ArgV).slice(2), ArgV[0],
                       GetExecutablePathVP);
@@ -343,6 +367,13 @@ int clang_main(int Argc, char **Argv) {
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
 
+  StringRef DriverMode =
+      getDriverMode(Args[0], llvm::makeArrayRef(Args).slice(1));
+  if (isClangCache(DriverMode)) {
+    if (Optional<int> ExitCode = handleClangCacheInvocation(Args, Saver))
+      return *ExitCode;
+  }
+
   // Parse response files using the GNU syntax, unless we're in CL mode. There
   // are two ways to put clang in CL compatibility mode: Args[0] is either
   // clang-cl or cl, or --driver-mode=cl is on the command line. The normal
@@ -350,8 +381,7 @@ int clang_main(int Argc, char **Argv) {
   // have to manually search for a --driver-mode=cl argument the hard way.
   // Finally, our -cc1 tools don't care which tokenization mode we use because
   // response files written by clang will tokenize the same way in either mode.
-  bool ClangCLMode =
-      IsClangCL(getDriverMode(Args[0], llvm::makeArrayRef(Args).slice(1)));
+  bool ClangCLMode = IsClangCL(DriverMode);
   enum { Default, POSIX, Windows } RSPQuoting = Default;
   for (const char *F : Args) {
     if (strcmp(F, "--rsp-quoting=posix") == 0)

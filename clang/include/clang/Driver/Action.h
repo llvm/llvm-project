@@ -56,6 +56,7 @@ public:
     InputClass = 0,
     BindArchClass,
     OffloadClass,
+    DepscanJobClass,
     PreprocessJobClass,
     PrecompileJobClass,
     HeaderModulePrecompileJobClass,
@@ -78,7 +79,7 @@ public:
     LinkerWrapperJobClass,
     StaticLibJobClass,
 
-    JobClassFirst = PreprocessJobClass,
+    JobClassFirst = DepscanJobClass,
     JobClassLast = StaticLibJobClass
   };
 
@@ -404,6 +405,23 @@ public:
     return (A->getKind() >= JobClassFirst &&
             A->getKind() <= JobClassLast);
   }
+};
+
+class DepscanJobAction : public JobAction {
+  void anchor() override;
+
+public:
+  DepscanJobAction(Action *Input, types::ID OutputType);
+
+  static bool classof(const Action *A) {
+    return A->getKind() == DepscanJobClass;
+  }
+
+  const JobAction &getScanningJobAction() const { return *JA; }
+  void setScanningJobAction(const JobAction *Job) { JA = Job; }
+
+private:
+  const JobAction *JA;
 };
 
 class PreprocessJobAction : public JobAction {

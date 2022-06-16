@@ -3,6 +3,7 @@ add_subdirectory(Rewrite)
 set(LLVM_LINK_COMPONENTS
   BitReader
   BitstreamReader
+  CAS
   Option
   ProfileData
   Support
@@ -14,6 +15,7 @@ add_clang_library(clangFrontend
   ASTUnit.cpp
   ChainedDiagnosticConsumer.cpp
   ChainedIncludesSource.cpp
+  CompileJobCacheKey.cpp
   CompilerInstance.cpp
   CompilerInvocation.cpp
   CreateInvocationFromCommandLine.cpp
@@ -53,5 +55,6 @@ add_clang_library(clangFrontend
   clangLex
   clangParse
   clangSema
+  clangCAS
   clangSerialization
   )

@@ -1,6 +1,7 @@
 set( LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Analysis
+  CAS
   CodeGen
   Core
   IPO
@@ -24,9 +25,12 @@ endif()
 
 add_clang_tool(clang
   driver.cpp
+  CacheLauncherMode.cpp
   cc1_main.cpp
   cc1as_main.cpp
   cc1gen_reproducer_main.cpp
+  cc1depscanProtocol.cpp
+  cc1depscan_main.cpp
 
   DEPENDS
   intrinsics_gen
@@ -36,9 +40,11 @@ add_clang_tool(clang
 
 clang_target_link_libraries(clang
   PRIVATE
-  clangBasic
   clangAPINotes
+  clangBasic
+  clangCAS
   clangCodeGen
+  clangDependencyScanning
   clangDriver
   clangFrontend
   clangFrontendTool
@@ -59,12 +65,35 @@ endif()
 add_dependencies(clang clang-resource-headers)
 
 if(NOT CLANG_LINKS_TO_CREATE)
-  set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp)
+  set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp clang-cache)
 endif()
 
 foreach(link ${CLANG_LINKS_TO_CREATE})
   add_clang_symlink(${link} clang)
 endforeach()
+
+# Add clang-cache-build-session file into usr/bin
+set(clang_cache_build_session_src "${CMAKE_CURRENT_SOURCE_DIR}/clang-cache-build-session")
+set(clang_cache_build_session_dest "${CMAKE_BINARY_DIR}/bin/clang-cache-build-session")
+
+add_custom_command(OUTPUT "${clang_cache_build_session_dest}"
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                     "${clang_cache_build_session_src}"
+                     "${clang_cache_build_session_dest}"
+                   DEPENDS "${clang_cache_build_session_src}")
+
+add_custom_target(clang-cache-build-session DEPENDS "${clang_cache_build_session_dest}")
+add_dependencies(clang clang-cache-build-session)
+if (CLANG_BUILD_TOOLS)
+  install(PROGRAMS "${clang_cache_build_session_dest}"
+          DESTINATION "${CMAKE_INSTALL_BINDIR}"
+          COMPONENT clang)
+  if(NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-clang-cache-build-session
+                             DEPENDS clang-cache-build-session
+                             COMPONENT clang)
+  endif()
+endif()
 
 # Configure plist creation for OS X.
 set (TOOL_INFO_PLIST "Info.plist" CACHE STRING "Plist name")
@@ -82,6 +111,7 @@ if (APPLE)
   set(TOOL_INFO_PLIST_OUT "${CMAKE_CURRENT_BINARY_DIR}/${TOOL_INFO_PLIST}")
   target_link_libraries(clang
     PRIVATE
+    -lutil # FIXME: Apple-only. Not portable
     "-Wl,-sectcreate,__TEXT,__info_plist,\"${TOOL_INFO_PLIST_OUT}\"")
   configure_file("${TOOL_INFO_PLIST}.in" "${TOOL_INFO_PLIST_OUT}" @ONLY)
 

@@ -259,6 +259,7 @@ class PreprocessorOutputOpts<string base>
   : KeyPathAndMacro<"PreprocessorOutputOpts.", base, "PREPROCESSOR_OUTPUT_"> {}
 class DependencyOutputOpts<string base>
   : KeyPathAndMacro<"DependencyOutputOpts.", base, "DEPENDENCY_OUTPUT_"> {}
+class CASOpts<string base> : KeyPathAndMacro<"CASOpts.", base, "CAS_"> {}
 class CodeGenOpts<string base>
   : KeyPathAndMacro<"CodeGenOpts.", base, "CODEGEN_"> {}
 class HeaderSearchOpts<string base>
@@ -3195,6 +3196,10 @@ def gcoff : Joined<["-"], "gcoff">, Group<g_Group>, Flags<[Unsupported]>;
 def gxcoff : Joined<["-"], "gxcoff">, Group<g_Group>, Flags<[Unsupported]>;
 def gvms : Joined<["-"], "gvms">, Group<g_Group>, Flags<[Unsupported]>;
 def gtoggle : Flag<["-"], "gtoggle">, Group<g_flags_Group>, Flags<[Unsupported]>;
+defm reproducible : BoolOption<"g", "reproducible",
+  CodeGenOpts<"ReproducibleDebugInfo">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Tune debug info to be reproducible.">,
+  NegFlag<SetFalse>>, Group<g_flags_Group>;
 def grecord_command_line : Flag<["-"], "grecord-command-line">,
   Group<g_flags_Group>;
 def gno_record_command_line : Flag<["-"], "gno-record-command-line">,
@@ -6311,6 +6316,166 @@ def fsycl_is_host : Flag<["-"], "fsycl-is-host">,
   HelpText<"SYCL host compilation">,
   Flags<[CC1Option, NoDriverOption]>,
   MarshallingInfoFlag<LangOpts<"SYCLIsHost">>;
+
+//===----------------------------------------------------------------------===//
+// CAS Options
+//===----------------------------------------------------------------------===//
+
+// Example command-lines we expect:
+//
+// For building against some pre-ingested, CAS-based filesystem in the builtin
+// on-disk CAS:
+// ```
+// % clang -fcas-path=auto -fcas-fs=llvmcas://1af12fa2afa1af2a1fa
+// % clang -fcas-path=path/to/cas -fcas-fs=llvmcas://1af12fa2afa1af2a1fa
+// ```
+//
+// For building against some pre-ingested, CAS-based filesystem using a plugin:
+// ```
+// % clang -fcas-plugin=path/to/some/cas-plugind \
+//         -fcas-plugin-args=-X,-Y,-Z            \
+//         -fcas-fs=llvmcas://1af12fa2afa1af2a1fa
+// ```
+//
+// For automatically ingesting from the live filesystem into a CAS,
+// canonicalizing the paths, and running the `-cc1` against the CAS tree:
+// ```
+// % clang -fdepscan                              \
+//         -fdepscan-prefix-map=/my/sources=/^src \
+//         -fdepscan-prefix-map=/my/build/dir=/^build
+// ```
+//
+// For pruning and canonicalizing even when starting from a pre-ingested,
+// CAS-based filesystem:
+// ```
+// % clang -fcas-path=path/to/the/cas             \
+//         -fcas-fs=llvmcas://1af12fa2afa1af2a1fa \
+//         -fdepscan                              \
+//         -fdepscan-prefix-map=/my/sources=/^src \
+//         -fdepscan-prefix-map=/my/build/dir=/^build
+// ```
+
+// Driver-only CAS options.
+def fdepscan_EQ : Joined<["-"], "fdepscan=">,
+    Group<f_Group>,
+    HelpText<"Scan for dependencies ahead of compiling, generating a"
+             " pruned CAS tree to send to -fcas-fs. Values are"
+             " 'auto',"
+             " 'daemon' (see -fdepscan-share and -fdepscan-share-parent),"
+             " 'inline', or"
+             " 'off' (default).">;
+def fdepscan : Flag<["-"], "fdepscan">,
+    Group<f_Group>, HelpText<"Turn on -fdepscan=auto.">,
+    Alias<fdepscan_EQ>, AliasArgs<["auto"]>;
+def fno_depscan : Flag<["-"], "fno-depscan">,
+    Group<f_Group>,
+    Alias<fdepscan_EQ>, AliasArgs<["off"]>;
+def fdepscan_share_EQ : Joined<["-"], "fdepscan-share=">,
+    Group<f_Group>,
+    HelpText<"If the argument is the name of a command in the process tree,"
+             " share state based on its PID."
+             " E.g., -fdepscan -fdepscan-share=ninja will search for 'ninja'"
+             " in the process tree and share state based on its PID if found."
+             " See also -fdepscan-share-stop.">;
+def fdepscan_share_parent_EQ : Joined<["-"], "fdepscan-share-parent=">,
+    Group<f_Group>,
+    HelpText<"Share state based on the PID of the parent command if the name"
+             " matches."
+             " See also -fdepscan-share-stop.">;
+def fdepscan_share_parent : Flag<["-"], "fdepscan-share-parent">,
+    Group<f_Group>,
+    HelpText<"Share state based on the PID of the parent command."
+             " See also -fdepscan-share-stop.">;
+def fno_depscan_share : Flag<["-"], "fno-depscan-share">,
+    Group<f_Group>,
+    HelpText<"Turn off -fdepscan-share and -fdepscan-share-parent.">;
+def fdepscan_share_stop_EQ : Joined<["-"], "fdepscan-share-stop=">,
+    Group<f_Group>,
+    HelpText<"Stop looking for the command named by -fdepscan-share if a"
+             " process with the name of the provided argument is found first."
+             " Also blocks -fdepscan-share=parent if the parent has this name."
+             " E.g., -fdepscan -fdepscan-share=ninja"
+             " -fdepscan-share-stop=cmake looks for 'ninja' and 'cmake' in the"
+             " process tree; if 'ninja' is found first, state is shared based"
+             " on ninja's PID; if 'cmake' is found first, state is not"
+             " shared.">;
+def fdepscan_share_identifier : Separate<["-"], "fdepscan-share-identifier">,
+    Group<f_Group>,
+    HelpText<"Share depscan daemon for Clang invocations using the same string "
+             "identifier.">;
+def fdepscan_share_identifier_EQ : Joined<["-"], "fdepscan-share-identifier=">,
+    Alias<fdepscan_share_identifier>;
+def fdepscan_daemon_EQ : Joined<["-"], "fdepscan-daemon=">, Group<f_Group>,
+    HelpText<"Specify the path to the daemon to be used. Clang will use the"
+             " daemon specified, rather than try to spawn its own based on"
+             " parent processes.">;
+
+// CAS prefix map options.
+//
+// FIXME: Add DepscanOption flag.
+def fdepscan_prefix_map_EQ : Joined<["-"], "fdepscan-prefix-map=">,
+    Group<f_Group>, MetaVarName<"<old>=<new>">,
+    HelpText<"With -fdepscan, seamlessly filter the CAS filesystem to"
+             " apply the given prefix, updating the command-line to match.">;
+def fdepscan_prefix_map_sdk_EQ :
+    Joined<["-"], "fdepscan-prefix-map-sdk=">,
+    Group<f_Group>, MetaVarName<"<new>">,
+    HelpText<"With -fdepscan, auto-detect the SDK path on-disk and remap"
+             " it to the given path (see -fdepscan-prefix-map=).">;
+def fdepscan_prefix_map_toolchain_EQ :
+    Joined<["-"], "fdepscan-prefix-map-toolchain=">,
+    Group<f_Group>, MetaVarName<"<new>">,
+    HelpText<"With -fdepscan, auto-detect the toolchain path on-disk and"
+             " remap it to the given path (see -fdepscan-prefix-map=).">;
+
+// -cc1depscan options.
+//
+// FIXME: Add to their own group; add NoDriverOption and DepscanOption flags.
+def cc1_args : Option<["-"], "cc1-args", KIND_REMAINING_ARGS>,
+    HelpText<"pass cc1 options to depscan afterwards">;
+def dump_depscan_tree_EQ : Option<["-"], "dump-depscan-tree=", KIND_JOINED>,
+    HelpText<"emit the CAS identifier for the tree instead of the full -cc1">;
+
+// -cc1 options. These should be available in the driver too, but the driver
+// doesn't currently support most of them. For example, the driver should
+// read only from -fcas-fs if specified, in which case the -fdepscan
+// should scan to prune the CAS filesystem. Also, -fdepscan shouldn't
+// override -fcas / etc., it should just add those if not already specified.
+let Flags = [CC1Option, NoDriverOption] in {
+
+// FIXME: Add to driver once it's supported by (not clobbered by) -fdepscan.
+//
+// The driver should also have:
+// - '-fcas-path=<dir>|auto' ('='-joined alias).
+// - '-fno-cas-path' (same as '-fcas-path ""', the default).
+def fcas_path : Separate<["-"], "fcas-path">,
+    Group<f_Group>, MetaVarName<"<dir>|auto">,
+    HelpText<"Path to a persistent on-disk backing store for the builtin CAS."
+             " '-fcas-path=auto' chooses a path in the user's system cache.">,
+    MarshallingInfoString<CASOpts<"CASPath">>;
+
+// FIXME: Add to driver once it's supported by -fdepscan.
+def fcas_fs : Separate<["-"], "fcas-fs">,
+    Group<f_Group>, MetaVarName<"<tree>">,
+    HelpText<"Configure the filesystem to read from the provided CAS tree."
+             " See also -fcas-builtin-path for loading a tree.">,
+    MarshallingInfoString<FileSystemOpts<"CASFileSystemRootID">>;
+
+// FIXME: Remove / merge with -fworking-directory?
+def fcas_fs_working_directory : Separate<["-"], "fcas-fs-working-directory">,
+    Group<f_Group>, MetaVarName<"<dir>">,
+    HelpText<"Working directory for -fcas-fs (if not the root).">,
+    ShouldParseIf<!strconcat("!", fcas_fs.KeyPath, ".empty()")>,
+    MarshallingInfoString<FileSystemOpts<"CASFileSystemWorkingDirectory">>;
+
+// FIXME: Add to driver under -fexperimental-cache=compile-job.
+defm cache_compile_job : BoolFOption<"cache-compile-job",
+    FrontendOpts<"CacheCompileJob">, DefaultFalse,
+    PosFlag<SetTrue, [], "Try to cache full compilation job (-cc1). Ignored"
+                         " (for now) without -fcas-fs.">,
+    NegFlag<SetFalse>>;
+
+} // let Flags = [CC1Option, NoDriverOption]
 
 def sycl_std_EQ : Joined<["-"], "sycl-std=">, Group<sycl_Group>,
   Flags<[CC1Option, NoArgumentUnused, CoreOption]>,

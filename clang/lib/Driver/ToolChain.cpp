@@ -183,6 +183,7 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
       {"++", "--driver-mode=g++"},
       {"flang", "--driver-mode=flang"},
       {"clang-dxc", "--driver-mode=dxc"},
+      {"clang-cache", "--driver-mode=cache"},
   };
 
   for (size_t i = 0; i < llvm::array_lengthof(DriverSuffixes); ++i) {
@@ -394,6 +395,7 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   case Action::CompileJobClass:
   case Action::PrecompileJobClass:
   case Action::HeaderModulePrecompileJobClass:
+  case Action::DepscanJobClass:
   case Action::PreprocessJobClass:
   case Action::ExtractAPIJobClass:
   case Action::AnalyzeJobClass:

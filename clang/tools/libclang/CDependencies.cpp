@@ -53,8 +53,11 @@ void clang_experimental_ModuleDependencySet_dispose(
 
 CXDependencyScannerService
 clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format) {
+  // FIXME: Pass default CASOpts and nullptr as CachingOnDiskFileSystem now.
+  CASOptions CASOpts;
+  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   return wrap(new DependencyScanningService(
-      ScanningMode::DependencyDirectivesScan, unwrap(Format),
+      ScanningMode::DependencyDirectivesScan, unwrap(Format), CASOpts, FS,
       /*ReuseFilemanager=*/false));
 }
 
@@ -171,7 +174,8 @@ static CXFileDependencies *getFullDependencies(
     void *Context, CXString *error, FileBuildArgsFn GetFileBuildArgs,
     ModuleBuildArgsFn GetModuleBuildArgs,
     llvm::Optional<StringRef> ModuleName = None) {
-  FullDependencyConsumer Consumer(Worker->AlreadySeen);
+  llvm::StringSet<> AlreadySeen;
+  FullDependencyConsumer Consumer(AlreadySeen);
   llvm::Error Result = Worker->computeDependencies(
       WorkingDirectory, Compilation, Consumer, ModuleName);
 

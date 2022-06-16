@@ -17,6 +17,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/CAS/CachingOnDiskFileSystem.h"
 
 using namespace clang;
 using namespace tooling;
@@ -28,8 +29,10 @@ namespace {
 class DependencyConsumerForwarder : public DependencyFileGenerator {
 public:
   DependencyConsumerForwarder(std::unique_ptr<DependencyOutputOptions> Opts,
-                              DependencyConsumer &C)
-      : DependencyFileGenerator(*Opts), Opts(std::move(Opts)), C(C) {}
+                              DependencyConsumer &C,
+                              bool EmitDependencyFile)
+      : DependencyFileGenerator(*Opts), Opts(std::move(Opts)), C(C),
+        EmitDependencyFile(EmitDependencyFile) {}
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
     C.handleDependencyOutputOpts(*Opts);
@@ -39,11 +42,14 @@ public:
       llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
       C.handleFileDependency(CanonPath);
     }
+    if (EmitDependencyFile)
+      DependencyFileGenerator::finishedMainFile(Diags);
   }
 
 private:
   std::unique_ptr<DependencyOutputOptions> Opts;
   DependencyConsumer &C;
+  bool EmitDependencyFile = false;
 };
 
 using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
@@ -136,11 +142,15 @@ class DependencyScanningAction : public tooling::ToolAction {
 public:
   DependencyScanningAction(
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
+      const CASOptions &CASOpts,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      ScanningOutputFormat Format, bool OptimizeArgs, bool DisableFree,
-      llvm::Optional<StringRef> ModuleName = None)
+      llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS,
+      ScanningOutputFormat Format, bool OptimizeArgs, bool EmitDependencyFile,
+      bool DisableFree, llvm::Optional<StringRef> ModuleName = None)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
-        DepFS(std::move(DepFS)), Format(Format), OptimizeArgs(OptimizeArgs),
+        CASOpts(CASOpts), DepFS(std::move(DepFS)),
+        DepCASFS(std::move(DepCASFS)), Format(Format),
+        OptimizeArgs(OptimizeArgs), EmitDependencyFile(EmitDependencyFile),
         DisableFree(DisableFree), ModuleName(ModuleName) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
@@ -155,6 +165,7 @@ public:
     // Create a compiler instance to handle the actual work.
     CompilerInstance ScanInstance(std::move(PCHContainerOps));
     ScanInstance.setInvocation(std::move(Invocation));
+    ScanInstance.getInvocation().getCASOpts() = CASOpts;
 
     // Create the compiler's actual diagnostics engine.
     sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());
@@ -180,7 +191,8 @@ public:
       visitPrebuiltModule(
           ScanInstance.getPreprocessorOpts().ImplicitPCHInclude, ScanInstance,
           ScanInstance.getHeaderSearchOpts().PrebuiltModuleFiles,
-          PrebuiltModulesInputFiles, /*VisitInputFiles=*/DepFS != nullptr);
+          PrebuiltModulesInputFiles,
+          /*VisitInputFiles=*/getDepScanFS() != nullptr);
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
@@ -198,6 +210,22 @@ public:
                 LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
           return Entry->getDirectiveTokens();
         return None;
+      };
+    }
+    // CAS Implementation.
+    if (DepCASFS) {
+      // Support for virtual file system overlays on top of the caching
+      // filesystem.
+      FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
+          ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
+          DepCASFS));
+
+      llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> LocalDepCASFS =
+          DepCASFS;
+      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
+          [LocalDepCASFS = std::move(LocalDepCASFS)](FileEntryRef File)
+          -> Optional<ArrayRef<dependency_directives_scan::Directive>> {
+        return LocalDepCASFS->getDirectiveTokens(File.getName());
       };
     }
 
@@ -220,11 +248,14 @@ public:
 
     switch (Format) {
     case ScanningOutputFormat::Make:
+    case ScanningOutputFormat::Tree:
       ScanInstance.addDependencyCollector(
           std::make_shared<DependencyConsumerForwarder>(std::move(Opts),
-                                                        Consumer));
+                                                        Consumer,
+                                                        EmitDependencyFile));
       break;
     case ScanningOutputFormat::Full:
+    case ScanningOutputFormat::FullTree:
       ScanInstance.addDependencyCollector(std::make_shared<ModuleDepCollector>(
           std::move(Opts), ScanInstance, Consumer,
           std::move(OriginalInvocation), OptimizeArgs));
@@ -246,17 +277,32 @@ public:
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
     const bool Result = ScanInstance.ExecuteAction(*Action);
-    if (!DepFS)
+    if (!getDepScanFS())
       FileMgr->clearStatCache();
     return Result;
+  }
+
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> getDepScanFS() {
+    if (DepFS) {
+      assert(!DepCASFS && "CAS DepFS should not be set");
+      return DepFS;
+    }
+    if (DepCASFS) {
+      assert(!DepFS && "DepFS should not be set");
+      return DepCASFS;
+    }
+    return nullptr;
   }
 
 private:
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
+  const CASOptions &CASOpts;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
+  llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   ScanningOutputFormat Format;
   bool OptimizeArgs;
+  bool EmitDependencyFile = false;
   bool DisableFree;
   llvm::Optional<StringRef> ModuleName;
 };
@@ -265,7 +311,8 @@ private:
 
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service)
-    : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()) {
+    : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()),
+      CASOpts(Service.getCASOpts()), UseCAS(Service.useCASScanning()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   PCHContainerOps->registerReader(
       std::make_unique<ObjectFilePCHContainerReader>());
@@ -274,17 +321,34 @@ DependencyScanningWorker::DependencyScanningWorker(
   PCHContainerOps->registerWriter(
       std::make_unique<ObjectFilePCHContainerWriter>());
 
-  auto OverlayFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
-      llvm::vfs::createPhysicalFileSystem());
-  InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  OverlayFS->pushOverlay(InMemoryFS);
-  RealFS = OverlayFS;
+  if (!Service.useCASScanning()) {
+    auto OverlayFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+        llvm::vfs::createPhysicalFileSystem());
+    InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+    OverlayFS->pushOverlay(InMemoryFS);
+    RealFS = OverlayFS;
+  } else {
+    // FIXME: Need to teach CachingFileSystem to understand overlay.
+    CacheFS = Service.getSharedFS().createProxyFS();
+    RealFS = CacheFS;
+  }
 
-  if (Service.getMode() == ScanningMode::DependencyDirectivesScan)
-    DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
-                                                   RealFS);
+  if (Service.getMode() == ScanningMode::DependencyDirectivesScan) {
+    if (Service.useCASScanning())
+      DepCASFS = new DependencyScanningCASFilesystem(CacheFS);
+    else
+      DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
+                                                     RealFS);
+  }
   if (Service.canReuseFileManager())
     Files = new FileManager(FileSystemOptions(), RealFS);
+}
+
+llvm::IntrusiveRefCntPtr<FileManager>
+DependencyScanningWorker::getOrCreateFileManager() const {
+  if (Files)
+    return Files;
+  return new FileManager(FileSystemOptions(), RealFS);
 }
 
 static llvm::Error
@@ -337,8 +401,10 @@ llvm::Error DependencyScanningWorker::computeDependencies(
                         // always true for a driver invocation.
                         bool DisableFree = true;
                         DependencyScanningAction Action(
-                            WorkingDirectory, Consumer, DepFS, Format,
-                            OptimizeArgs, DisableFree, ModuleName);
+                            WorkingDirectory, Consumer, getCASOpts(), DepFS,
+                            DepCASFS, Format,
+                            OptimizeArgs, /*EmitDependencyFile=*/false,
+                            DisableFree, ModuleName);
                         // Create an invocation that uses the underlying file
                         // system to ensure that any file system requests that
                         // are made by the driver do not go through the
@@ -350,4 +416,48 @@ llvm::Error DependencyScanningWorker::computeDependencies(
                         Invocation.setDiagnosticOptions(&DiagOpts);
                         return Invocation.run();
                       });
+}
+
+void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
+    std::shared_ptr<CompilerInvocation> Invocation, StringRef WorkingDirectory,
+    DependencyConsumer &DepsConsumer, DiagnosticConsumer &DiagsConsumer) {
+  RealFS->setCurrentWorkingDirectory(WorkingDirectory);
+
+  // Adjust the invocation.
+  auto &Frontend = Invocation->getFrontendOpts();
+  Frontend.ProgramAction = frontend::RunPreprocessorOnly;
+  Frontend.OutputFile = "/dev/null";
+  Frontend.DisableFree = false;
+
+  // // Reset dependency options.
+  // Dependencies = DependencyOutputOptions();
+  // Dependencies.IncludeSystemHeaders = true;
+  // Dependencies.OutputFile = "/dev/null";
+
+  // Make the output file path absolute relative to WorkingDirectory.
+  std::string &DepFile = Invocation->getDependencyOutputOpts().OutputFile;
+  if (!llvm::sys::path::is_absolute(DepFile)) {
+    // FIXME: On Windows, WorkingDirectory is insufficient for making an
+    // absolute path if OutputFile has a root name.
+    llvm::SmallString<128> Path = StringRef(DepFile);
+    llvm::sys::fs::make_absolute(WorkingDirectory, Path);
+    DepFile = Path.str().str();
+  }
+
+  // FIXME: EmitDependencyFile should only be set when it's for a real
+  // compilation.
+  DependencyScanningAction Action(WorkingDirectory, DepsConsumer, getCASOpts(),
+                                  DepFS, DepCASFS, Format,
+                                  /*OptimizeArgs=*/false,
+                                  /*EmitDependencyFile=*/true,
+                                  /*DisableFree=*/false);
+
+  // Ignore result; we're just collecting dependencies.
+  //
+  // FIXME: will clients other than -cc1scand care?
+  IntrusiveRefCntPtr<FileManager> ActiveFiles = Files;
+  if (!ActiveFiles) // Pass in RealFS via the file manager.
+    ActiveFiles = new FileManager(Invocation->getFileSystemOpts(), RealFS);
+  (void)Action.runInvocation(std::move(Invocation), ActiveFiles.get(),
+                             PCHContainerOps, &DiagsConsumer);
 }
