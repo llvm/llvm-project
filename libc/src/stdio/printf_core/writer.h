@@ -14,7 +14,7 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-using WriteFunc = void (*)(void *, const char *__restrict, size_t);
+using WriteFunc = int (*)(void *, const char *__restrict, size_t);
 
 class Writer final {
   // output is a pointer to the string or file that the writer is meant to write
@@ -23,26 +23,27 @@ class Writer final {
 
   // raw_write is a function that, when called on output with a char* and
   // length, will copy the number of bytes equal to the length from the char*
-  // onto the end of output.
+  // onto the end of output. It should return a positive number or zero on
+  // success, or a negative number on failure.
   WriteFunc raw_write;
 
-  unsigned long long chars_written = 0;
+  int chars_written = 0;
 
 public:
   Writer(void *init_output, WriteFunc init_raw_write)
       : output(init_output), raw_write(init_raw_write) {}
 
   // write will copy length bytes from new_string into output using
-  // raw_write, unless that would cause more bytes than max_length to be
-  // written. It always increments chars_written by length.
-  void write(const char *new_string, size_t length);
+  // raw_write. It increments chars_written by length always. It returns the
+  // result of raw_write.
+  int write(const char *new_string, size_t length);
 
-  // write_chars will copy length copies of new_char into output using raw_write
-  // unless that would cause more bytes than max_length to be written. It always
-  // increments chars_written by length.
-  void write_chars(char new_char, size_t length);
+  // write_chars will copy length copies of new_char into output using the write
+  // function and a statically sized buffer. This is primarily used for padding.
+  // If write returns a negative value, this will return early with that value.
+  int write_chars(char new_char, size_t length);
 
-  unsigned long long get_chars_written() { return chars_written; }
+  int get_chars_written() { return chars_written; }
 };
 
 } // namespace printf_core

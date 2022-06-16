@@ -258,8 +258,6 @@ add_entrypoint_object(
   HDRS
     fprintf.h
   DEPENDS
-    libc.include.stdio
-    libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.file_writer
-    libc.src.stdio.printf_core.writer
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.vfprintf_internal
 )

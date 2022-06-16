@@ -36,7 +36,7 @@ TEST(LlvmLibcPrintfStringWriterTest, Write) {
   str_writer.terminate();
 
   ASSERT_STREQ("abc", str);
-  ASSERT_EQ(writer.get_chars_written(), 3ull);
+  ASSERT_EQ(writer.get_chars_written(), 3);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteMultipleTimes) {
@@ -52,7 +52,7 @@ TEST(LlvmLibcPrintfStringWriterTest, WriteMultipleTimes) {
   str_writer.terminate();
 
   ASSERT_STREQ("abcDEF123", str);
-  ASSERT_EQ(writer.get_chars_written(), 9ull);
+  ASSERT_EQ(writer.get_chars_written(), 9);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteChars) {
@@ -67,7 +67,7 @@ TEST(LlvmLibcPrintfStringWriterTest, WriteChars) {
   str_writer.terminate();
 
   ASSERT_STREQ("aaa", str);
-  ASSERT_EQ(writer.get_chars_written(), 3ull);
+  ASSERT_EQ(writer.get_chars_written(), 3);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteCharsMultipleTimes) {
@@ -83,7 +83,7 @@ TEST(LlvmLibcPrintfStringWriterTest, WriteCharsMultipleTimes) {
   str_writer.terminate();
 
   ASSERT_STREQ("aaaDDD111", str);
-  ASSERT_EQ(writer.get_chars_written(), 9ull);
+  ASSERT_EQ(writer.get_chars_written(), 9);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteManyChars) {
@@ -107,7 +107,7 @@ TEST(LlvmLibcPrintfStringWriterTest, WriteManyChars) {
                "ZZZZZZZZZZ"
                "ZZZZZZZZZ",
                str);
-  ASSERT_EQ(writer.get_chars_written(), 99ull);
+  ASSERT_EQ(writer.get_chars_written(), 99);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, MixedWrites) {
@@ -124,7 +124,7 @@ TEST(LlvmLibcPrintfStringWriterTest, MixedWrites) {
   str_writer.terminate();
 
   ASSERT_STREQ("aaaDEF111456", str);
-  ASSERT_EQ(writer.get_chars_written(), 12ull);
+  ASSERT_EQ(writer.get_chars_written(), 12);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteWithMaxLength) {
@@ -138,7 +138,7 @@ TEST(LlvmLibcPrintfStringWriterTest, WriteWithMaxLength) {
   str_writer.terminate();
 
   ASSERT_STREQ("abcDEF1234", str);
-  ASSERT_EQ(writer.get_chars_written(), 12ull);
+  ASSERT_EQ(writer.get_chars_written(), 12);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, WriteCharsWithMaxLength) {
@@ -153,7 +153,7 @@ TEST(LlvmLibcPrintfStringWriterTest, WriteCharsWithMaxLength) {
   str_writer.terminate();
 
   ASSERT_STREQ("1111111111", str);
-  ASSERT_EQ(writer.get_chars_written(), 15ull);
+  ASSERT_EQ(writer.get_chars_written(), 15);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, MixedWriteWithMaxLength) {
@@ -170,7 +170,7 @@ TEST(LlvmLibcPrintfStringWriterTest, MixedWriteWithMaxLength) {
   str_writer.terminate();
 
   ASSERT_STREQ("aaaDEF1114", str);
-  ASSERT_EQ(writer.get_chars_written(), 12ull);
+  ASSERT_EQ(writer.get_chars_written(), 12);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, StringWithMaxLengthOne) {
@@ -189,7 +189,7 @@ TEST(LlvmLibcPrintfStringWriterTest, StringWithMaxLengthOne) {
   str_writer.terminate();
 
   ASSERT_STREQ("", str);
-  ASSERT_EQ(writer.get_chars_written(), 12ull);
+  ASSERT_EQ(writer.get_chars_written(), 12);
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, NullStringWithZeroMaxLength) {
@@ -202,5 +202,5 @@ TEST(LlvmLibcPrintfStringWriterTest, NullStringWithZeroMaxLength) {
   writer.write_chars('1', 3);
   writer.write("456", 3);
 
-  ASSERT_EQ(writer.get_chars_written(), 12ull);
+  ASSERT_EQ(writer.get_chars_written(), 12);
 }

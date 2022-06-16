@@ -19,7 +19,7 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-void inline convert_int(Writer *writer, const FormatSection &to_conv) {
+int inline convert_int(Writer *writer, const FormatSection &to_conv) {
   static constexpr size_t BITS_IN_BYTE = 8;
   static constexpr size_t BITS_IN_NUM = sizeof(uintmax_t) * BITS_IN_BYTE;
 
@@ -148,24 +148,25 @@ void inline convert_int(Writer *writer, const FormatSection &to_conv) {
   if ((flags & FormatFlags::LEFT_JUSTIFIED) == FormatFlags::LEFT_JUSTIFIED) {
     // If left justified it goes sign zeroes digits spaces
     if (sign_char != 0)
-      writer->write(&sign_char, 1);
+      RET_IF_RESULT_NEGATIVE(writer->write(&sign_char, 1));
     if (zeroes > 0)
-      writer->write_chars('0', zeroes);
+      RET_IF_RESULT_NEGATIVE(writer->write_chars('0', zeroes));
     if (digits_written > 0)
-      writer->write(buffer + buff_cur, digits_written);
+      RET_IF_RESULT_NEGATIVE(writer->write(buffer + buff_cur, digits_written));
     if (spaces > 0)
-      writer->write_chars(' ', spaces);
+      RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', spaces));
   } else {
     // Else it goes spaces sign zeroes digits
     if (spaces > 0)
-      writer->write_chars(' ', spaces);
+      RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', spaces));
     if (sign_char != 0)
-      writer->write(&sign_char, 1);
+      RET_IF_RESULT_NEGATIVE(writer->write(&sign_char, 1));
     if (zeroes > 0)
-      writer->write_chars('0', zeroes);
+      RET_IF_RESULT_NEGATIVE(writer->write_chars('0', zeroes));
     if (digits_written > 0)
-      writer->write(buffer + buff_cur, digits_written);
+      RET_IF_RESULT_NEGATIVE(writer->write(buffer + buff_cur, digits_written));
   }
+  return 0;
 }
 
 } // namespace printf_core

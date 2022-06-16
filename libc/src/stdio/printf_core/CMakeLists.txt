@@ -79,3 +79,19 @@ add_object_library(
     .core_structs
     libc.src.__support.arg_list
 )
+
+add_object_library(
+  vfprintf_internal
+  SRCS
+    vfprintf_internal.cpp
+  HDRS
+    vfprintf_internal.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.file_writer
+    libc.src.stdio.printf_core.writer
+)

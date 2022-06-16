@@ -24,10 +24,11 @@ void StringWriter::write(const char *__restrict to_write, size_t len) {
   }
 }
 
-void write_to_string(void *raw_pointer, const char *__restrict to_write,
-                     size_t len) {
+int write_to_string(void *raw_pointer, const char *__restrict to_write,
+                    size_t len) {
   StringWriter *string_writer = reinterpret_cast<StringWriter *>(raw_pointer);
   string_writer->write(to_write, len);
+  return 0;
 }
 
 } // namespace printf_core

@@ -37,7 +37,7 @@ TEST_F(LlvmLibcPrintfConverterTest, SimpleRawConversion) {
   str_writer.terminate();
 
   ASSERT_STREQ(str, "abc");
-  ASSERT_EQ(writer.get_chars_written(), 3ull);
+  ASSERT_EQ(writer.get_chars_written(), 3);
 }
 
 TEST_F(LlvmLibcPrintfConverterTest, PercentConversion) {
@@ -51,7 +51,7 @@ TEST_F(LlvmLibcPrintfConverterTest, PercentConversion) {
   str[1] = '\0';
 
   ASSERT_STREQ(str, "%");
-  ASSERT_EQ(writer.get_chars_written(), 1ull);
+  ASSERT_EQ(writer.get_chars_written(), 1);
 }
 
 TEST_F(LlvmLibcPrintfConverterTest, CharConversionSimple) {
@@ -69,7 +69,7 @@ TEST_F(LlvmLibcPrintfConverterTest, CharConversionSimple) {
   str_writer.terminate();
 
   ASSERT_STREQ(str, "D");
-  ASSERT_EQ(writer.get_chars_written(), 1ull);
+  ASSERT_EQ(writer.get_chars_written(), 1);
 }
 
 TEST_F(LlvmLibcPrintfConverterTest, CharConversionRightJustified) {
@@ -84,7 +84,7 @@ TEST_F(LlvmLibcPrintfConverterTest, CharConversionRightJustified) {
   str_writer.terminate();
 
   ASSERT_STREQ(str, "   E");
-  ASSERT_EQ(writer.get_chars_written(), 4ull);
+  ASSERT_EQ(writer.get_chars_written(), 4);
 }
 
 TEST_F(LlvmLibcPrintfConverterTest, CharConversionLeftJustified) {
@@ -101,7 +101,7 @@ TEST_F(LlvmLibcPrintfConverterTest, CharConversionLeftJustified) {
   str_writer.terminate();
 
   ASSERT_STREQ(str, "F   ");
-  ASSERT_EQ(writer.get_chars_written(), 4ull);
+  ASSERT_EQ(writer.get_chars_written(), 4);
 }
 
 TEST_F(LlvmLibcPrintfConverterTest, StringConversionSimple) {
@@ -117,7 +117,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionSimple) {
   str_writer.terminate();
 
   ASSERT_STREQ(str, "DEF");
-  ASSERT_EQ(writer.get_chars_written(), 3ull);
+  ASSERT_EQ(writer.get_chars_written(), 3);
 }
 
 TEST_F(LlvmLibcPrintfConverterTest, StringConversionPrecisionHigh) {
@@ -132,7 +132,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionPrecisionHigh) {
   str_writer.terminate();
 
   ASSERT_STREQ(str, "456");
-  ASSERT_EQ(writer.get_chars_written(), 3ull);
+  ASSERT_EQ(writer.get_chars_written(), 3);
 }
 
 TEST_F(LlvmLibcPrintfConverterTest, StringConversionPrecisionLow) {
@@ -147,7 +147,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionPrecisionLow) {
   str_writer.terminate();
 
   ASSERT_STREQ(str, "xy");
-  ASSERT_EQ(writer.get_chars_written(), 2ull);
+  ASSERT_EQ(writer.get_chars_written(), 2);
 }
 
 TEST_F(LlvmLibcPrintfConverterTest, StringConversionRightJustified) {
@@ -162,7 +162,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionRightJustified) {
   str_writer.terminate();
 
   ASSERT_STREQ(str, " 789");
-  ASSERT_EQ(writer.get_chars_written(), 4ull);
+  ASSERT_EQ(writer.get_chars_written(), 4);
 }
 
 TEST_F(LlvmLibcPrintfConverterTest, StringConversionLeftJustified) {
@@ -179,7 +179,7 @@ TEST_F(LlvmLibcPrintfConverterTest, StringConversionLeftJustified) {
   str_writer.terminate();
 
   ASSERT_STREQ(str, "ghi ");
-  ASSERT_EQ(writer.get_chars_written(), 4ull);
+  ASSERT_EQ(writer.get_chars_written(), 4);
 }
 
 TEST_F(LlvmLibcPrintfConverterTest, IntConversionSimple) {
@@ -193,5 +193,5 @@ TEST_F(LlvmLibcPrintfConverterTest, IntConversionSimple) {
   str_writer.terminate();
 
   ASSERT_STREQ(str, "12345");
-  ASSERT_EQ(writer.get_chars_written(), 5ull);
+  ASSERT_EQ(writer.get_chars_written(), 5);
 }

@@ -13,10 +13,19 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-void write_to_file(void *raw_pointer, const char *__restrict to_write,
-                   size_t len) {
-  __llvm_libc::File *file = reinterpret_cast<__llvm_libc::File *>(raw_pointer);
-  file->write(to_write, len);
+int FileWriter::write(const char *__restrict to_write, size_t len) {
+  int written = file->write_unlocked(to_write, len);
+  if (written != len)
+    written = -1;
+  if (file->error_unlocked())
+    written = -2;
+  return written;
+}
+
+int write_to_file(void *raw_pointer, const char *__restrict to_write,
+                  size_t len) {
+  FileWriter *file_writer = reinterpret_cast<FileWriter *>(raw_pointer);
+  return file_writer->write(to_write, len);
 }
 
 } // namespace printf_core
