@@ -205,15 +205,13 @@ Expected<std::vector<uint8_t>> PerfEvent::GetReadOnlyDataBuffer() {
 
   if (data_head > data_size) {
     uint64_t actual_data_head = data_head % data_size;
-    // The buffer has wrapped
-    for (uint64_t i = actual_data_head; i < data_size; i++)
-      output.push_back(data[i]);
-
-    for (uint64_t i = 0; i < actual_data_head; i++)
-      output.push_back(data[i]);
+    // The buffer has wrapped, so we first the oldest chunk of data
+    output.insert(output.end(), data.begin() + actual_data_head, data.end());
+    // And we we read the most recent chunk of data
+    output.insert(output.end(), data.begin(), data.begin() + actual_data_head);
   } else {
-    for (uint64_t i = 0; i < data_head; i++)
-      output.push_back(data[i]);
+    // There's been no wrapping, so we just read linearly
+    output.insert(output.end(), data.begin(), data.begin() + data_head);
   }
 
   if (was_enabled) {
@@ -238,7 +236,6 @@ Expected<std::vector<uint8_t>> PerfEvent::GetReadOnlyAuxBuffer() {
 
   ArrayRef<uint8_t> data = GetAuxBuffer();
   uint64_t aux_head = mmap_metadata.aux_head;
-  uint64_t aux_size = mmap_metadata.aux_size;
   std::vector<uint8_t> output;
   output.reserve(data.size());
 
@@ -254,11 +251,8 @@ Expected<std::vector<uint8_t>> PerfEvent::GetReadOnlyAuxBuffer() {
    *
    * */
 
-  for (uint64_t i = aux_head; i < aux_size; i++)
-    output.push_back(data[i]);
-
-  for (uint64_t i = 0; i < aux_head; i++)
-    output.push_back(data[i]);
+  output.insert(output.end(), data.begin() + aux_head, data.end());
+  output.insert(output.end(), data.begin(), data.begin() + aux_head);
 
   if (was_enabled) {
     if (Error err = EnableWithIoctl())
