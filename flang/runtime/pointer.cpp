@@ -165,8 +165,9 @@ bool RTNAME(PointerIsAssociatedWith)(
   for (int j{0}; j < rank; ++j) {
     const Dimension &pDim{pointer.GetDimension(j)};
     const Dimension &tDim{target->GetDimension(j)};
-    if (pDim.Extent() != tDim.Extent() ||
-        pDim.ByteStride() != tDim.ByteStride()) {
+    auto pExtent{pDim.Extent()};
+    if (pExtent == 0 || pExtent != tDim.Extent() ||
+        (pExtent != 1 && pDim.ByteStride() != tDim.ByteStride())) {
       return false;
     }
   }
