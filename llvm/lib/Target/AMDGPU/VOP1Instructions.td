@@ -147,7 +147,7 @@ class VOPProfileI2F<ValueType dstVt, ValueType srcVt> :
   VOPProfile<[dstVt, srcVt, untyped, untyped]> {
 
   let Ins64 = (ins Src0RC64:$src0, clampmod:$clamp, omod:$omod);
-  let InsVOP3Base = Ins64;
+  let InsVOP3Base = (ins Src0DPP:$src0, clampmod:$clamp, omod:$omod);
   let Asm64 = "$vdst, $src0$clamp$omod";
   let AsmVOP3DPPBase = Asm64;
 
