@@ -292,7 +292,7 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
   if (!Funcs.empty() && Funcs.back().Range.size() == 0 && ValidTextRanges) {
     if (auto Range =
             ValidTextRanges->getRangeThatContains(Funcs.back().Range.start())) {
-      Funcs.back().Range = *Range;
+      Funcs.back().Range = {Funcs.back().Range.start(), Range->end()};
     }
   }
   OS << "Pruned " << NumBefore - Funcs.size() << " functions, ended with "
