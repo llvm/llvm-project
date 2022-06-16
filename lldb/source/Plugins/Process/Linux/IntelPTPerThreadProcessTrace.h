@@ -9,18 +9,15 @@
 #ifndef liblldb_IntelPTPerThreadProcessTrace_H_
 #define liblldb_IntelPTPerThreadProcessTrace_H_
 
+#include "IntelPTProcessTrace.h"
 #include "IntelPTSingleBufferTrace.h"
 #include "IntelPTThreadTraceCollection.h"
 
 namespace lldb_private {
 namespace process_linux {
 
-class IntelPTPerThreadProcessTrace;
-using IntelPTPerThreadProcessTraceUP =
-    std::unique_ptr<IntelPTPerThreadProcessTrace>;
-
 /// Manages a "process trace" instance by tracing each thread individually.
-class IntelPTPerThreadProcessTrace {
+class IntelPTPerThreadProcessTrace : public IntelPTProcessTrace {
 public:
   /// Start tracing the current process by tracing each of its tids
   /// individually.
@@ -35,19 +32,20 @@ public:
   /// \return
   ///   An \a IntelPTMultiCoreTrace instance if tracing was successful, or
   ///   an \a llvm::Error otherwise.
-  static llvm::Expected<IntelPTPerThreadProcessTraceUP>
+  static llvm::Expected<IntelPTProcessTraceUP>
   Start(const TraceIntelPTStartRequest &request,
         llvm::ArrayRef<lldb::tid_t> current_tids);
 
-  bool TracesThread(lldb::tid_t tid) const;
+  bool TracesThread(lldb::tid_t tid) const override;
 
-  IntelPTThreadTraceCollection &GetThreadTraces();
+  llvm::Error TraceStart(lldb::tid_t tid) override;
 
-  /// \copydoc IntelPTThreadTraceCollection::TraceStart()
-  llvm::Error TraceStart(lldb::tid_t tid);
+  llvm::Error TraceStop(lldb::tid_t tid) override;
 
-  /// \copydoc IntelPTThreadTraceCollection::TraceStop()
-  llvm::Error TraceStop(lldb::tid_t tid);
+  TraceGetStateResponse GetState() override;
+
+  llvm::Expected<std::vector<uint8_t>>
+  GetBinaryData(const TraceGetBinaryDataRequest &request) override;
 
 private:
   IntelPTPerThreadProcessTrace(const TraceIntelPTStartRequest &request)
