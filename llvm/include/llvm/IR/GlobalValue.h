@@ -324,7 +324,11 @@ public:
 
   bool hasSanitizerMetadata() const { return HasSanitizerMetadata; }
   const SanitizerMetadata &getSanitizerMetadata() const;
-  void setSanitizerMetadata(const SanitizerMetadata &Meta);
+  // Note: Not byref as it's a POD and otherwise it's too easy to call
+  // G.setSanitizerMetadata(G2.getSanitizerMetadata()), and the argument becomes
+  // dangling when the backing storage allocates the metadata for `G`, as the
+  // storage is shared between `G1` and `G2`.
+  void setSanitizerMetadata(SanitizerMetadata Meta);
   void removeSanitizerMetadata();
 
   static LinkageTypes getLinkOnceLinkage(bool ODR) {
