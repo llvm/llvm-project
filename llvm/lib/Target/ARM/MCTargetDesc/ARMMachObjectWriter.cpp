@@ -149,7 +149,7 @@ RecordARMScatteredHalfRelocation(MachObjectWriter *Writer,
   if (FixupOffset & 0xff000000) {
     Asm.getContext().reportError(Fixup.getLoc(),
                                  "can not encode offset '0x" +
-                                     to_hexString(FixupOffset) +
+                                     utohexstr(FixupOffset) +
                                      "' in resulting scattered relocation.");
     return;
   }
@@ -264,7 +264,7 @@ void ARMMachObjectWriter::RecordARMScatteredRelocation(MachObjectWriter *Writer,
   if (FixupOffset & 0xff000000) {
     Asm.getContext().reportError(Fixup.getLoc(),
                                  "can not encode offset '0x" +
-                                     to_hexString(FixupOffset) +
+                                     utohexstr(FixupOffset) +
                                      "' in resulting scattered relocation.");
     return;
   }
