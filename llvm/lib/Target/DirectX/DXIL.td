@@ -22,10 +22,14 @@ class dxil_category<string _name> {
 
 def Unary : dxil_class<"Unary">;
 def Binary : dxil_class<"Binary">;
+def FlattenedThreadIdInGroupClass : dxil_class<"FlattenedThreadIdInGroup">;
+def ThreadIdInGroupClass : dxil_class<"ThreadIdInGroup">;
+def ThreadIdClass : dxil_class<"ThreadId">;
+def GroupIdClass : dxil_class<"GroupId">;
 
 def binary_uint : dxil_category<"Binary uint">;
 def unary_float : dxil_category<"Unary float">;
-
+def ComputeID : dxil_category<"Compute/Mesh/Amplification shader">;
 
 
 // The parameter description for a DXIL instruction
@@ -105,3 +109,36 @@ def UMax :dxil_op< "UMax", 39,  Binary,  binary_uint, "unsigned integer maximum.
   ],
   ["uints"]>,
   dxil_map_intrinsic<int_umax>;
+
+def ThreadId :dxil_op< "ThreadId", 93,  ThreadIdClass, ComputeID, "reads the thread ID", "i32;",  "rn",
+  [
+    dxil_param<0,  "i32",  "",  "thread ID component">,
+    dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
+    dxil_param<2,  "i32",  "component",  "component to read (x,y,z)">
+  ]>,
+  dxil_map_intrinsic<int_dxil_thread_id>;
+
+def GroupId :dxil_op< "GroupId", 94,  GroupIdClass, ComputeID, "reads the group ID (SV_GroupID)", "i32;",  "rn",
+  [
+    dxil_param<0,  "i32",  "",  "group ID component">,
+    dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
+    dxil_param<2,  "i32",  "component",  "component to read">
+  ]>,
+  dxil_map_intrinsic<int_dxil_group_id>;
+
+def ThreadIdInGroup :dxil_op< "ThreadIdInGroup", 95,  ThreadIdInGroupClass, ComputeID,
+  "reads the thread ID within the group (SV_GroupThreadID)", "i32;",  "rn",
+  [
+    dxil_param<0,  "i32",  "",  "thread ID in group component">,
+    dxil_param<1,  "i32",  "opcode",  "DXIL opcode">,
+    dxil_param<2,  "i32",  "component",  "component to read (x,y,z)">
+  ]>,
+  dxil_map_intrinsic<int_dxil_thread_id_in_group>;
+
+def FlattenedThreadIdInGroup :dxil_op< "FlattenedThreadIdInGroup", 96,  FlattenedThreadIdInGroupClass, ComputeID,
+   "provides a flattened index for a given thread within a given group (SV_GroupIndex)", "i32;",  "rn",
+  [
+    dxil_param<0,  "i32",  "",  "result">,
+    dxil_param<1,  "i32",  "opcode",  "DXIL opcode">
+  ]>,
+  dxil_map_intrinsic<int_dxil_flattened_thread_id_in_group>;
