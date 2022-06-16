@@ -1569,10 +1569,6 @@ public:
     assert((CurrentState == State::CFG || !getBasicBlockAtOffset(Offset)) &&
            "basic block already exists in pre-CFG state");
 
-    if (!Label) {
-      std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
-      Label = BC.Ctx->createNamedTempSymbol("BB");
-    }
     std::unique_ptr<BinaryBasicBlock> BBPtr =
         createBasicBlock(Offset, Label, DeriveAlignment);
     BasicBlocks.emplace_back(BBPtr.release());
