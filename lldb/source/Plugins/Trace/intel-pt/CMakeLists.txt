@@ -22,6 +22,7 @@ add_lldb_library(lldbPluginTraceIntelPT PLUGIN
   TraceCursorIntelPT.cpp
   TraceIntelPT.cpp
   TraceIntelPTJSONStructs.cpp
+  TraceIntelPTMultiCoreDecoder.cpp
   TraceIntelPTSessionFileParser.cpp
   TraceIntelPTSessionSaver.cpp
 

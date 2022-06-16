@@ -50,12 +50,21 @@ json::Value toJSON(const TraceIntelPTStartRequest &packet) {
   return base;
 }
 
-std::chrono::nanoseconds LinuxPerfZeroTscConversion::ToNanos(uint64_t tsc) {
+std::chrono::nanoseconds
+LinuxPerfZeroTscConversion::ToNanos(uint64_t tsc) const {
   uint64_t quot = tsc >> time_shift;
   uint64_t rem_flag = (((uint64_t)1 << time_shift) - 1);
   uint64_t rem = tsc & rem_flag;
   return std::chrono::nanoseconds{time_zero + quot * time_mult +
                                   ((rem * time_mult) >> time_shift)};
+}
+
+uint64_t
+LinuxPerfZeroTscConversion::ToTSC(std::chrono::nanoseconds nanos) const {
+  uint64_t time = nanos.count() - time_zero;
+  uint64_t quot = time / time_mult;
+  uint64_t rem = time % time_mult;
+  return (quot << time_shift) + (rem << time_shift) / time_mult;
 }
 
 json::Value toJSON(const LinuxPerfZeroTscConversion &packet) {

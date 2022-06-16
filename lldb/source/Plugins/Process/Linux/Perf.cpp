@@ -231,7 +231,7 @@ PerfEvent::ReadFlushedOutDataCyclicBuffer(size_t offset, size_t size) {
                                      "buffer but only {1} are available",
                                      size, output.size()));
 
-  return data;
+  return output;
 }
 
 Expected<std::vector<uint8_t>>
@@ -282,7 +282,7 @@ PerfEvent::ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size) {
                                      "buffer but only {1} are available",
                                      size, output.size()));
 
-  return data;
+  return output;
 }
 
 Error PerfEvent::DisableWithIoctl() {
@@ -313,7 +313,7 @@ Error PerfEvent::EnableWithIoctl() {
 
 size_t PerfEvent::GetEffectiveDataBufferSize() const {
   perf_event_mmap_page &mmap_metadata = GetMetadataPage();
-  if (mmap_metadata.data_head <= mmap_metadata.data_size)
+  if (mmap_metadata.data_head < mmap_metadata.data_size)
     return mmap_metadata.data_head;
   else
     return mmap_metadata.data_size; // The buffer has wrapped.

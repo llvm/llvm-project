@@ -34,8 +34,9 @@ static llvm::Error WriteBytesToDisk(FileSpec &output_file,
                                     ArrayRef<uint8_t> data) {
   std::basic_fstream<char> out_fs = std::fstream(
       output_file.GetPath().c_str(), std::ios::out | std::ios::binary);
-  out_fs.write(reinterpret_cast<const char *>(&data[0]),
-               data.size() * sizeof(uint8_t));
+  if (!data.empty())
+    out_fs.write(reinterpret_cast<const char *>(&data[0]), data.size());
+
   out_fs.close();
   if (!out_fs)
     return createStringError(inconvertibleErrorCode(),

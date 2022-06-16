@@ -31,9 +31,9 @@ public:
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
-    size_t m_trace_buffer_size;
+    uint64_t m_trace_buffer_size;
     bool m_enable_tsc;
-    llvm::Optional<size_t> m_psb_period;
+    llvm::Optional<uint64_t> m_psb_period;
   };
 
   CommandObjectThreadTraceStartIntelPT(TraceIntelPT &trace,
@@ -74,10 +74,10 @@ public:
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
-    size_t m_trace_buffer_size;
-    size_t m_process_buffer_size_limit;
+    uint64_t m_trace_buffer_size;
+    uint64_t m_process_buffer_size_limit;
     bool m_enable_tsc;
-    llvm::Optional<size_t> m_psb_period;
+    llvm::Optional<uint64_t> m_psb_period;
     bool m_per_core_tracing;
   };
 

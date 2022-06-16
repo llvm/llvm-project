@@ -11,7 +11,9 @@
 
 #include "TaskTimer.h"
 #include "ThreadDecoder.h"
+#include "TraceIntelPTMultiCoreDecoder.h"
 #include "TraceIntelPTSessionFileParser.h"
+
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/raw_ostream.h"
@@ -73,7 +75,7 @@ public:
 
   void DumpTraceInfo(Thread &thread, Stream &s, bool verbose) override;
 
-  llvm::Expected<size_t> GetRawTraceSize(Thread &thread);
+  llvm::Expected<llvm::Optional<uint64_t>> GetRawTraceSize(Thread &thread);
 
   llvm::Error DoRefreshLiveProcessState(TraceGetStateResponse state,
                                         llvm::StringRef json_response) override;
@@ -106,8 +108,9 @@ public:
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
-  llvm::Error Start(size_t trace_buffer_size, size_t total_buffer_size_limit,
-                    bool enable_tsc, llvm::Optional<size_t> psb_period,
+  llvm::Error Start(uint64_t trace_buffer_size,
+                    uint64_t total_buffer_size_limit, bool enable_tsc,
+                    llvm::Optional<uint64_t> psb_period,
                     bool m_per_core_tracing);
 
   /// \copydoc Trace::Start
@@ -134,8 +137,9 @@ public:
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
-  llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids, size_t trace_buffer_size,
-                    bool enable_tsc, llvm::Optional<size_t> psb_period);
+  llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids,
+                    uint64_t trace_buffer_size, bool enable_tsc,
+                    llvm::Optional<uint64_t> psb_period);
 
   /// \copydoc Trace::Start
   llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids,
@@ -195,6 +199,8 @@ private:
   /// It is provided by either a session file or a live process' "cpuInfo"
   /// binary data.
   llvm::Optional<pt_cpu> m_cpu_info;
+  llvm::Optional<TraceIntelPTMultiCoreDecoder> m_multicore_decoder;
+  /// These decoders are used for the non-per-core case
   std::map<lldb::tid_t, std::unique_ptr<ThreadDecoder>> m_thread_decoders;
   /// Helper variable used to track long running operations for telemetry.
   TaskTimer m_task_timer;

@@ -120,7 +120,7 @@ void TraceGetStateResponse::AddWarning(StringRef warning) {
 bool fromJSON(const json::Value &value, TraceCoreState &packet,
               json::Path path) {
   ObjectMapper o(value, path);
-  int64_t core_id;
+  uint64_t core_id;
   if (!o || !o.map("coreId", core_id) ||
       !o.map("binaryData", packet.binary_data))
     return false;
@@ -148,9 +148,15 @@ json::Value toJSON(const TraceGetBinaryDataRequest &packet) {
 bool fromJSON(const json::Value &value, TraceGetBinaryDataRequest &packet,
               Path path) {
   ObjectMapper o(value, path);
-  return o && o.map("type", packet.type) && o.map("kind", packet.kind) &&
-         o.map("tid", packet.tid) && o.map("offset", packet.offset) &&
-         o.map("size", packet.size) && o.map("coreId", packet.core_id);
+  Optional<uint64_t> core_id;
+  if (!o || !o.map("type", packet.type) || !o.map("kind", packet.kind) ||
+      !o.map("tid", packet.tid) || !o.map("offset", packet.offset) ||
+      !o.map("size", packet.size) || !o.map("coreId", core_id))
+    return false;
+
+  if (core_id)
+    packet.core_id = static_cast<lldb::core_id_t>(*core_id);
+  return true;
 }
 /// \}
 

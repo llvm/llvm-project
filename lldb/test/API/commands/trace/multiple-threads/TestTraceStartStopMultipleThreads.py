@@ -233,5 +233,6 @@ class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
         # We must have captured the context switch of when the target resumed
         self.assertTrue(found_non_empty_context_switch)
 
+        self.expect("thread trace dump instructions", substrs=['unimplemented'])
 
         self.traceStopProcess()

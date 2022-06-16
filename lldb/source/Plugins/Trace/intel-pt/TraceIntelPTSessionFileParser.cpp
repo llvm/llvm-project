@@ -141,6 +141,7 @@ TraceIntelPTSessionFileParser::ParseSessionFile(
     else
       return HandleError(parsed_process.takeError());
   }
+
   return parsed_processes;
 }
 
@@ -191,6 +192,8 @@ StringRef TraceIntelPTSessionFileParser::GetSchema() {
           // Path to the raw Intel PT buffer for this core.
       "contextSwitchTrace": string,
           // Path to the raw perf_event_open context switch trace file for this core.
+          // The perf_event must have been configured with PERF_SAMPLE_TID and
+          // PERF_SAMPLE_TIME, as well as sample_id_all = 1.
     }
   ],
   "tscPerfZeroConversion"?: {
