@@ -3577,20 +3577,13 @@ static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,
     UseBuiltins = false;
 
   // Process the -fno-builtin-* options.
-  for (const auto &Arg : Args) {
-    const Option &O = Arg->getOption();
-    if (!O.matches(options::OPT_fno_builtin_))
-      continue;
-
-    Arg->claim();
+  for (const Arg *A : Args.filtered(options::OPT_fno_builtin_)) {
+    A->claim();
 
     // If -fno-builtin is specified, then there's no need to pass the option to
     // the frontend.
-    if (!UseBuiltins)
-      continue;
-
-    StringRef FuncName = Arg->getValue();
-    CmdArgs.push_back(Args.MakeArgString("-fno-builtin-" + FuncName));
+    if (UseBuiltins)
+      A->render(Args, CmdArgs);
   }
 
   // le32-specific flags:

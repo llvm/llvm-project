@@ -64,9 +64,10 @@ static const char *getOverloadTypeName(OverloadKind Kind) {
   case OverloadKind::VOID:
   case OverloadKind::ObjectType:
   case OverloadKind::UserDefineType:
-    llvm_unreachable("invalid overload type for name");
-    return "void";
+    break;
   }
+  llvm_unreachable("invalid overload type for name");
+  return "void";
 }
 
 static OverloadKind getOverloadKind(Type *Ty) {
@@ -233,13 +234,17 @@ static void lowerIntrinsic(DXIL::OpCode DXILOp, Function &F, Module &M) {
 
 static bool lowerIntrinsics(Module &M) {
   bool Updated = false;
-  static SmallDenseMap<Intrinsic::ID, DXIL::OpCode> LowerMap = {
-      {Intrinsic::sin, DXIL::OpCode::Sin},
-      {Intrinsic::umax, DXIL::OpCode::UMax}};
+
+#define DXIL_OP_INTRINSIC_MAP
+#include "DXILOperation.inc"
+#undef DXIL_OP_INTRINSIC_MAP
+
   for (Function &F : make_early_inc_range(M.functions())) {
     if (!F.isDeclaration())
       continue;
     Intrinsic::ID ID = F.getIntrinsicID();
+    if (ID == Intrinsic::not_intrinsic)
+      continue;
     auto LowerIt = LowerMap.find(ID);
     if (LowerIt == LowerMap.end())
       continue;

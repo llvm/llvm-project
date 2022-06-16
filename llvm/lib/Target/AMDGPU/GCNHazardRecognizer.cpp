@@ -424,11 +424,7 @@ void GCNHazardRecognizer::RecedeCycle() {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
-typedef enum {
-  HazardFound,
-  HazardExpired,
-  NoHazardFound
-} HazardFnResult;
+typedef enum { HazardFound, HazardExpired, NoHazardFound } HazardFnResult;
 
 typedef function_ref<bool(const MachineInstr &, int WaitStates)> IsExpiredFn;
 typedef function_ref<unsigned int(const MachineInstr &)> GetNumWaitStatesFn;
@@ -467,8 +463,8 @@ hasHazard(StateT State,
     if (!Visited.insert(Pred).second)
       continue;
 
-    if (hasHazard(State, IsHazard, UpdateState,
-                  Pred, Pred->instr_rbegin(), Visited))
+    if (hasHazard(State, IsHazard, UpdateState, Pred, Pred->instr_rbegin(),
+                  Visited))
       return true;
   }
 
@@ -1509,9 +1505,9 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
 
     // Instructions which cause va_vdst==0 expire hazard
     if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
-           SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
-           (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-            I.getOperand(0).getImm() == 0x0fff))
+        SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
+        (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
+         I.getOperand(0).getImm() == 0x0fff))
       return HazardExpired;
 
     // Track registers writes
@@ -1586,16 +1582,14 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
 
     return HazardFound;
   };
-  auto UpdateStateFn = [] (StateType &State, const MachineInstr &MI) {
+  auto UpdateStateFn = [](StateType &State, const MachineInstr &MI) {
     if (SIInstrInfo::isVALU(MI))
       State.VALUs += 1;
   };
 
   DenseSet<const MachineBasicBlock *> Visited;
-  if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn,
-                            MI->getParent(),
-                            std::next(MI->getReverseIterator()),
-                            Visited))
+  if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn, MI->getParent(),
+                            std::next(MI->getReverseIterator()), Visited))
     return false;
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
@@ -1646,7 +1640,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
 
     // Instructions which cause va_vdst==0 expire hazard
     if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
-           SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
+        SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
         (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
          I.getOperand(0).getImm() == 0x0fff))
       return HazardExpired;
@@ -1662,7 +1656,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
 
     return NoHazardFound;
   };
-  auto UpdateStateFn = [] (StateType &State, const MachineInstr &MI) {
+  auto UpdateStateFn = [](StateType &State, const MachineInstr &MI) {
     if (SIInstrInfo::isVALU(MI))
       State.VALUs += 1;
     if (SIInstrInfo::isTRANS(MI))
@@ -1670,10 +1664,8 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
   };
 
   DenseSet<const MachineBasicBlock *> Visited;
-  if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn,
-                            MI->getParent(),
-                            std::next(MI->getReverseIterator()),
-                            Visited))
+  if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn, MI->getParent(),
+                            std::next(MI->getReverseIterator()), Visited))
     return false;
 
   // Hazard is observed - insert a wait on va_dst counter to ensure hazard is

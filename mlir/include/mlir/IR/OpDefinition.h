@@ -1679,8 +1679,8 @@ public:
         reinterpret_cast<Operation *>(const_cast<void *>(pointer)));
   }
 
-  /// Attach the given models as implementations of the corresponding interfaces
-  /// for the concrete operation.
+  /// Attach the given models as implementations of the corresponding
+  /// interfaces for the concrete operation.
   template <typename... Models>
   static void attachInterface(MLIRContext &context) {
     Optional<RegisteredOperationName> info = RegisteredOperationName::lookup(
@@ -1689,6 +1689,7 @@ public:
       llvm::report_fatal_error(
           "Attempting to attach an interface to an unregistered operation " +
           ConcreteType::getOperationName() + ".");
+    (void)std::initializer_list<int>{(checkInterfaceTarget<Models>(), 0)...};
     info->attachInterface<Models...>();
   }
 
@@ -1713,6 +1714,32 @@ private:
       decltype(std::declval<T>().print(std::declval<OpAsmPrinter &>()));
   template <typename T>
   using detect_has_print = llvm::is_detected<has_print, T>;
+
+  /// Trait to check if T provides a 'ConcreteEntity' type alias.
+  template <typename T>
+  using has_concrete_entity_t = typename T::ConcreteEntity;
+
+  /// A struct-wrapped type alias to T::ConcreteEntity if provided and to
+  /// ConcreteType otherwise. This is akin to std::conditional but doesn't fail
+  /// on the missing typedef. Useful for checking if the interface is targeting
+  /// the right class.
+  template <typename T,
+            bool = llvm::is_detected<has_concrete_entity_t, T>::value>
+  struct InterfaceTargetOrOpT {
+    using type = typename T::ConcreteEntity;
+  };
+  template <typename T> struct InterfaceTargetOrOpT<T, false> {
+    using type = ConcreteType;
+  };
+
+  /// A hook for static assertion that the external interface model T is
+  /// targeting the concrete type of this op. The model can also be a fallback
+  /// model that works for every op.
+  template <typename T> static void checkInterfaceTarget() {
+    static_assert(std::is_same<typename InterfaceTargetOrOpT<T>::type,
+                               ConcreteType>::value,
+                  "attaching an interface to the wrong op kind");
+  }
 
   /// Returns an interface map containing the interfaces registered to this
   /// operation.

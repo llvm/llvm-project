@@ -7,195 +7,134 @@ target triple = "i386-unknown-linux-unknown"
 define <4 x half> @doTheTestMod(<4 x half> %0, <4 x half> %1) nounwind {
 ; CHECK-LABEL: doTheTestMod:
 ; CHECK:       # %bb.0: # %Entry
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    pushl %ebx
+; CHECK-NEXT:    pushl %edi
+; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    subl $124, %esp
-; CHECK-NEXT:    # implicit-def: $xmm3
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm3
-; CHECK-NEXT:    # implicit-def: $xmm2
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm2
-; CHECK-NEXT:    # implicit-def: $xmm1
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
-; CHECK-NEXT:    # implicit-def: $xmm0
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; CHECK-NEXT:    # implicit-def: $xmm4
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm4
-; CHECK-NEXT:    # implicit-def: $xmm5
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm5
-; CHECK-NEXT:    # implicit-def: $xmm6
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm6
-; CHECK-NEXT:    # implicit-def: $xmm7
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm7
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    pextrw $0, %xmm7, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    movw {{[0-9]+}}(%esp), %si
+; CHECK-NEXT:    movw {{[0-9]+}}(%esp), %dx
+; CHECK-NEXT:    movw {{[0-9]+}}(%esp), %cx
+; CHECK-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK-NEXT:    movw {{[0-9]+}}(%esp), %di
+; CHECK-NEXT:    movw {{[0-9]+}}(%esp), %bx
+; CHECK-NEXT:    movw {{[0-9]+}}(%esp), %bp
+; CHECK-NEXT:    movw {{[0-9]+}}(%esp), %ax
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pextrw $0, %xmm6, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
+; CHECK-NEXT:    movw %bp, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movw %di, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movw %si, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pextrw $0, %xmm5, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pextrw $0, %xmm4, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pextrw $0, %xmm3, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pextrw $0, %xmm2, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pextrw $0, %xmm1, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    # implicit-def: $xmm0
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    # implicit-def: $xmm0
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    # implicit-def: $xmm0
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    # implicit-def: $xmm0
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; CHECK-NEXT:    # implicit-def: $xmm1
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
-; CHECK-NEXT:    movss %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    # implicit-def: $xmm1
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
-; CHECK-NEXT:    movss %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    # implicit-def: $xmm1
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
-; CHECK-NEXT:    movss %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    # implicit-def: $xmm1
-; CHECK-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
-; CHECK-NEXT:    movss %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    movw %ax, %cx
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    movw %cx, (%eax)
-; CHECK-NEXT:    calll __extendhfsf2
-; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    movw %ax, %cx
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    movw %cx, (%eax)
-; CHECK-NEXT:    calll __extendhfsf2
-; CHECK-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fstps 4(%eax)
-; CHECK-NEXT:    fstps (%eax)
-; CHECK-NEXT:    calll fmodf
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    fstps (%eax)
-; CHECK-NEXT:    calll __truncsfhf2
-; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    movw %ax, %cx
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    movw %cx, (%eax)
-; CHECK-NEXT:    calll __extendhfsf2
-; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    movw %ax, %cx
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    movw %cx, (%eax)
-; CHECK-NEXT:    calll __extendhfsf2
-; CHECK-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fstps 4(%eax)
-; CHECK-NEXT:    fstps (%eax)
-; CHECK-NEXT:    calll fmodf
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    fstps (%eax)
-; CHECK-NEXT:    calll __truncsfhf2
-; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    movw %ax, %cx
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    movw %cx, (%eax)
-; CHECK-NEXT:    calll __extendhfsf2
-; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    movw %ax, %cx
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    movw %cx, (%eax)
-; CHECK-NEXT:    calll __extendhfsf2
-; CHECK-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fstps 4(%eax)
-; CHECK-NEXT:    fstps (%eax)
-; CHECK-NEXT:    calll fmodf
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    fstps (%eax)
-; CHECK-NEXT:    calll __truncsfhf2
-; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    movw %ax, %cx
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    movw %cx, (%eax)
-; CHECK-NEXT:    calll __extendhfsf2
-; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
-; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    movw %ax, %cx
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    movw %cx, (%eax)
-; CHECK-NEXT:    calll __extendhfsf2
-; CHECK-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    fxch %st(1)
-; CHECK-NEXT:    fstps 4(%eax)
-; CHECK-NEXT:    fstps (%eax)
-; CHECK-NEXT:    calll fmodf
-; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    fstps (%eax)
-; CHECK-NEXT:    calll __truncsfhf2
-; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm2 # 4-byte Reload
-; CHECK-NEXT:    # xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 4-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    calll __gnu_h2f_ieee
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    calll __gnu_h2f_ieee
+; CHECK-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fstps 4(%eax)
+; CHECK-NEXT:    fstps (%eax)
+; CHECK-NEXT:    calll fmodf
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    fstps (%eax)
+; CHECK-NEXT:    calll __gnu_f2h_ieee
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    calll __gnu_h2f_ieee
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    calll __gnu_h2f_ieee
+; CHECK-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fstps 4(%eax)
+; CHECK-NEXT:    fstps (%eax)
+; CHECK-NEXT:    calll fmodf
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    fstps (%eax)
+; CHECK-NEXT:    calll __gnu_f2h_ieee
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movw %ax, %si
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    calll __gnu_h2f_ieee
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    calll __gnu_h2f_ieee
+; CHECK-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fstps 4(%eax)
+; CHECK-NEXT:    fstps (%eax)
+; CHECK-NEXT:    calll fmodf
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    fstps (%eax)
+; CHECK-NEXT:    calll __gnu_f2h_ieee
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movw %ax, %di
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    calll __gnu_h2f_ieee
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    movl %ecx, (%eax)
+; CHECK-NEXT:    calll __gnu_h2f_ieee
+; CHECK-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    fxch %st(1)
+; CHECK-NEXT:    fstps 4(%eax)
+; CHECK-NEXT:    fstps (%eax)
+; CHECK-NEXT:    calll fmodf
+; CHECK-NEXT:    movl %esp, %eax
+; CHECK-NEXT:    fstps (%eax)
+; CHECK-NEXT:    calll __gnu_f2h_ieee
+; CHECK-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %dx # 2-byte Reload
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; CHECK-NEXT:    movw %ax, %bx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    pextrw $0, %xmm3, %edx
-; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
-; CHECK-NEXT:    movw %dx, 6(%ecx)
-; CHECK-NEXT:    pextrw $0, %xmm2, %edx
-; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
-; CHECK-NEXT:    movw %dx, 4(%ecx)
-; CHECK-NEXT:    pextrw $0, %xmm1, %edx
-; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
-; CHECK-NEXT:    movw %dx, 2(%ecx)
-; CHECK-NEXT:    pextrw $0, %xmm0, %edx
-; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
+; CHECK-NEXT:    movw %bx, 6(%ecx)
+; CHECK-NEXT:    movw %di, 4(%ecx)
+; CHECK-NEXT:    movw %si, 2(%ecx)
 ; CHECK-NEXT:    movw %dx, (%ecx)
 ; CHECK-NEXT:    addl $124, %esp
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %edi
+; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl $4
 Entry:
   %x = alloca <4 x half>, align 8

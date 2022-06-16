@@ -693,9 +693,6 @@ bool EditCharacterInput(
     return false;
   }
   const ConnectionState &connection{io.GetConnectionState()};
-  if (connection.IsAtEOF()) {
-    return false;
-  }
   std::size_t remaining{length};
   if (edit.width && *edit.width > 0) {
     remaining = *edit.width;

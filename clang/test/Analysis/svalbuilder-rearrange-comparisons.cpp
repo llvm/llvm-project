@@ -1,8 +1,23 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection,core.builtin -analyzer-config aggressive-binary-operation-simplification=true -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 \
+// RUN:    -analyzer-checker=debug.ExprInspection,core.builtin \
+// RUN:    -analyzer-config aggressive-binary-operation-simplification=true \
+// RUN:    -analyzer-config support-symbolic-integer-casts=false \
+// RUN:    -analyzer-config eagerly-assume=false \
+// RUN:    -verify %s
 
-void clang_analyzer_eval(int x);
-void clang_analyzer_denote(int x, const char *literal);
-void clang_analyzer_express(int x);
+// RUN: %clang_analyze_cc1 \
+// RUN:    -analyzer-checker=debug.ExprInspection,core.builtin \
+// RUN:    -analyzer-config aggressive-binary-operation-simplification=true \
+// RUN:    -analyzer-config support-symbolic-integer-casts=true \
+// RUN:    -DSUPPORT_SYMBOLIC_INTEGER_CASTS \
+// RUN:    -analyzer-config eagerly-assume=false \
+// RUN:    -verify %s
+
+void clang_analyzer_eval(bool x);
+template <typename T>
+void clang_analyzer_denote(T x, const char *literal);
+template <typename T>
+void clang_analyzer_express(T x);
 
 void exit(int);
 
@@ -510,6 +525,17 @@ void compare_same_symbol_minus_left_minus_right_int_less(void) {
   clang_analyzer_eval(x < y); // expected-warning {{FALSE}}
 }
 
+// Rearrange should happen on signed types only (tryRearrange):
+//
+//  // Rearrange signed symbolic expressions only
+//  if (!SingleTy->isSignedIntegerOrEnumerationType())
+//    return None;
+//
+// Without the symbolic casts, the SVal for `x` in `unsigned x = f()` will be
+// the signed `int`. However, with the symbolic casts it will be `unsigned`.
+// Thus, these tests are meaningful only if the cast is not emitted.
+#ifndef SUPPORT_SYMBOLIC_INTEGER_CASTS
+
 void compare_different_symbol_equal_unsigned(void) {
   unsigned x = f(), y = f();
   clang_analyzer_denote(x, "$x");
@@ -893,6 +919,10 @@ void compare_different_symbol_minus_left_minus_right_int_less_unsigned(void) {
   clang_analyzer_express(y); // expected-warning {{$y - 1}}
   clang_analyzer_express(x < y); // expected-warning {{$x - $y < 1}}
 }
+
+#endif
+
+// These pass even with aggressive-binary-operation-simplification=false
 
 void compare_same_symbol_less_unsigned(void) {
   unsigned x = f(), y = x;

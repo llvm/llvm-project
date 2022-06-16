@@ -310,6 +310,12 @@ public:
     virtual Extension GetSupportedExtensions() const { return {}; }
   };
 
+  /// Notify tracers that the target process will resume
+  virtual void NotifyTracersProcessWillResume() {}
+
+  /// Notify tracers that the target process just stopped
+  virtual void NotifyTracersProcessDidStop() {}
+
   /// Start tracing a process or its threads.
   ///
   /// \param[in] json_params
@@ -460,9 +466,6 @@ protected:
   virtual void NotifyDidExec();
 
   NativeThreadProtocol *GetThreadByIDUnlocked(lldb::tid_t tid);
-
-  /// Notify tracers that the state of the target process has changed.
-  virtual void NotifyTracersProcessStateChanged(lldb::StateType state) {}
 
 private:
   void SynchronouslyNotifyProcessStateChanged(lldb::StateType state);

@@ -345,6 +345,7 @@ static bool recoverFromUndefinedSymbol(const Undefined &sym) {
   return false;
 }
 
+namespace {
 struct UndefinedDiag {
   struct SectionAndOffset {
     const InputSection *isec;
@@ -355,7 +356,8 @@ struct UndefinedDiag {
   std::vector<std::string> otherReferences;
 };
 
-static MapVector<const Undefined *, UndefinedDiag> undefs;
+MapVector<const Undefined *, UndefinedDiag> undefs;
+}
 
 void macho::reportPendingUndefinedSymbols() {
   for (const auto &undef : undefs) {

@@ -312,7 +312,16 @@ void NativeProcessProtocol::SynchronouslyNotifyProcessStateChanged(
   Log *log = GetLog(LLDBLog::Process);
 
   m_delegate.ProcessStateChanged(this, state);
-  NotifyTracersProcessStateChanged(state);
+
+  switch (state) {
+  case eStateStopped:
+  case eStateExited:
+  case eStateCrashed:
+    NotifyTracersProcessDidStop();
+    break;
+  default:
+    break;
+  }
 
   LLDB_LOG(log, "sent state notification [{0}] from process {1}", state,
            GetID());
