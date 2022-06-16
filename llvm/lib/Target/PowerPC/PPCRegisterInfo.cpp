@@ -114,6 +114,8 @@ PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
   ImmToIdxMap[PPC::STB8] = PPC::STBX8; ImmToIdxMap[PPC::STH8] = PPC::STHX8;
   ImmToIdxMap[PPC::STW8] = PPC::STWX8; ImmToIdxMap[PPC::STDU] = PPC::STDUX;
   ImmToIdxMap[PPC::ADDI8] = PPC::ADD8;
+  ImmToIdxMap[PPC::LQ] = PPC::LQX_PSEUDO;
+  ImmToIdxMap[PPC::STQ] = PPC::STQX_PSEUDO;
 
   // VSX
   ImmToIdxMap[PPC::DFLOADf32] = PPC::LXSSPX;
@@ -487,6 +489,14 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
       LLVM_DEBUG(dbgs() << "Memory Operand: " << InstrInfo->getName(Opcode)
                         << " for register " << printReg(Reg, this) << ".\n");
       LLVM_DEBUG(dbgs() << "TRUE - Memory operand is X-Form.\n");
+      return true;
+    }
+
+    // This is a spill/restore of a quadword.
+    if ((Opcode == PPC::RESTORE_QUADWORD) || (Opcode == PPC::SPILL_QUADWORD)) {
+      LLVM_DEBUG(dbgs() << "Memory Operand: " << InstrInfo->getName(Opcode)
+                        << " for register " << printReg(Reg, this) << ".\n");
+      LLVM_DEBUG(dbgs() << "TRUE - Memory operand is a quadword.\n");
       return true;
     }
   }
@@ -1533,6 +1543,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const TargetRegisterClass *RC = is64Bit ? G8RC : GPRC;
   Register SRegHi = MF.getRegInfo().createVirtualRegister(RC),
            SReg = MF.getRegInfo().createVirtualRegister(RC);
+  unsigned NewOpcode = 0u;
 
   // Insert a set of rA with the full offset value before the ld, st, or add
   if (isInt<16>(Offset))
@@ -1561,7 +1572,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
            OpC != TargetOpcode::INLINEASM_BR) {
     assert(ImmToIdxMap.count(OpC) &&
            "No indexed form of load or store available!");
-    unsigned NewOpcode = ImmToIdxMap.find(OpC)->second;
+    NewOpcode = ImmToIdxMap.find(OpC)->second;
     MI.setDesc(TII.get(NewOpcode));
     OperandBase = 1;
   } else {
@@ -1571,6 +1582,20 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Register StackReg = MI.getOperand(FIOperandNum).getReg();
   MI.getOperand(OperandBase).ChangeToRegister(StackReg, false);
   MI.getOperand(OperandBase + 1).ChangeToRegister(SReg, false, false, true);
+
+  // Since these are not real X-Form instructions, we must
+  // add the registers and access 0(NewReg) rather than
+  // emitting the X-Form pseudo.
+  if (NewOpcode == PPC::LQX_PSEUDO || NewOpcode == PPC::STQX_PSEUDO) {
+    assert(is64Bit && "Quadword loads/stores only supported in 64-bit mode");
+    Register NewReg = MF.getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(MBB, II, dl, TII.get(PPC::ADD8), NewReg)
+        .addReg(SReg, RegState::Kill)
+        .addReg(StackReg);
+    MI.setDesc(TII.get(NewOpcode == PPC::LQX_PSEUDO ? PPC::LQ : PPC::STQ));
+    MI.getOperand(OperandBase + 1).ChangeToRegister(NewReg, false);
+    MI.getOperand(OperandBase).ChangeToImmediate(0);
+  }
 }
 
 Register PPCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
