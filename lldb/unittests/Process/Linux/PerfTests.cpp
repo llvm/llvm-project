@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef __x86_64__
+
 #include "Perf.h"
 
 #include "llvm/Support/Error.h"
@@ -83,3 +85,5 @@ TEST(Perf, TscConversion) {
   ASSERT_LT(converted_tsc_diff.count(),
             (SLEEP_NANOS + acceptable_overhead).count());
 }
+
+#endif // __x86_64__
