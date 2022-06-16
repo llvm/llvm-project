@@ -32,13 +32,16 @@ FullDependencies::getCommandLineWithoutModulePaths() const {
   for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps)
     Args.push_back("-fmodule-file=" + PMD.PCMFile);
 
-  // This argument is unused in explicit compiles.
-  llvm::erase_if(Args, [](const std::string &Arg) {
-    return Arg.find("-fmodules-cache-path=") == 0;
+  // These arguments are unused in explicit compiles.
+  llvm::erase_if(Args, [](StringRef Arg) {
+    if (Arg.consume_front("-fmodules-")) {
+      return Arg.startswith("cache-path=") ||
+             Arg.startswith("prune-interval=") ||
+             Arg.startswith("prune-after=") ||
+             Arg == "validate-once-per-build-session";
+    }
+    return Arg.startswith("-fbuild-session-file=");
   });
-
-  // TODO: Filter out the remaining implicit modules leftovers
-  // (e.g. "-fmodules-prune-interval=" or "-fmodules-prune-after=").
 
   return Args;
 }

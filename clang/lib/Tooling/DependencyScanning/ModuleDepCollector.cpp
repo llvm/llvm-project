@@ -63,9 +63,17 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
   CI.getLangOpts()->ModuleName = Deps.ID.ModuleName;
   CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
 
+  // Disable implicit modules and canonicalize options that are only used by
+  // implicit modules.
   CI.getLangOpts()->ImplicitModules = false;
   CI.getHeaderSearchOpts().ImplicitModuleMaps = false;
   CI.getHeaderSearchOpts().ModuleCachePath.clear();
+  CI.getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;
+  CI.getHeaderSearchOpts().BuildSessionTimestamp = 0;
+  // The specific values we canonicalize to for pruning don't affect behaviour,
+  /// so use the default values so they will be dropped from the command-line.
+  CI.getHeaderSearchOpts().ModuleCachePruneInterval = 7 * 24 * 60 * 60;
+  CI.getHeaderSearchOpts().ModuleCachePruneAfter = 31 * 24 * 60 * 60;
 
   // Report the prebuilt modules this module uses.
   for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
