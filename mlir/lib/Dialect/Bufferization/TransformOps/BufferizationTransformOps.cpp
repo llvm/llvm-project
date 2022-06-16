@@ -24,7 +24,7 @@ using namespace mlir::transform;
 // OneShotBufferizeOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult
+DiagnosedSilenceableFailure
 transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
                                      TransformState &state) {
   OneShotBufferizationOptions options;
@@ -39,19 +39,19 @@ transform::OneShotBufferizeOp::apply(TransformResults &transformResults,
   for (Operation *target : payloadOps) {
     auto moduleOp = dyn_cast<ModuleOp>(target);
     if (getTargetIsModule() && !moduleOp)
-      return emitError("expected ModuleOp target");
+      return emitSilenceableError() << "expected ModuleOp target";
     if (options.bufferizeFunctionBoundaries) {
       if (!moduleOp)
-        return emitError("expected ModuleOp target");
+        return emitSilenceableError() << "expected ModuleOp target";
       if (failed(bufferization::runOneShotModuleBufferize(moduleOp, options)))
-        return emitError("bufferization failed");
+        return emitSilenceableError() << "bufferization failed";
     } else {
       if (failed(bufferization::runOneShotBufferize(target, options)))
-        return emitError("bufferization failed");
+        return emitSilenceableError() << "bufferization failed";
     }
   }
 
-  return success();
+  return DiagnosedSilenceableFailure::success();
 }
 
 void transform::OneShotBufferizeOp::getEffects(

@@ -2,9 +2,10 @@ set(LLVM_TARGET_DEFINITIONS ArithmeticCanonicalization.td)
 mlir_tablegen(ArithmeticCanonicalization.inc -gen-rewriters)
 add_public_tablegen_target(MLIRArithmeticCanonicalizationIncGen)
 
-add_mlir_dialect_library(MLIRArithmetic
+add_mlir_dialect_library(MLIRArithmeticDialect
   ArithmeticOps.cpp
   ArithmeticDialect.cpp
+  InferIntRangeInterfaceImpls.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Arithmetic
@@ -14,6 +15,7 @@ add_mlir_dialect_library(MLIRArithmetic
 
   LINK_LIBS PUBLIC
   MLIRDialect
+  MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRIR
   )

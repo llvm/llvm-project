@@ -96,6 +96,8 @@ private:
   bool fixSMEMtoVectorWriteHazards(MachineInstr *MI);
   bool fixVcmpxExecWARHazard(MachineInstr *MI);
   bool fixLdsBranchVmemWARHazard(MachineInstr *MI);
+  bool fixVALUPartialForwardingHazard(MachineInstr *MI);
+  bool fixVALUTransUseHazard(MachineInstr *MI);
 
   int checkMAIHazards(MachineInstr *MI);
   int checkMAIHazards908(MachineInstr *MI);

@@ -4429,8 +4429,38 @@ public:
   // Helper for delayed processing of attributes.
   void ProcessDeclAttributeDelayed(Decl *D,
                                    const ParsedAttributesView &AttrList);
-  void ProcessDeclAttributeList(Scope *S, Decl *D, const ParsedAttributesView &AL,
-                             bool IncludeCXX11Attributes = true);
+
+  // Options for ProcessDeclAttributeList().
+  struct ProcessDeclAttributeOptions {
+    ProcessDeclAttributeOptions()
+        : IncludeCXX11Attributes(true), IgnoreTypeAttributes(false) {}
+
+    ProcessDeclAttributeOptions WithIncludeCXX11Attributes(bool Val) {
+      ProcessDeclAttributeOptions Result = *this;
+      Result.IncludeCXX11Attributes = Val;
+      return Result;
+    }
+
+    ProcessDeclAttributeOptions WithIgnoreTypeAttributes(bool Val) {
+      ProcessDeclAttributeOptions Result = *this;
+      Result.IgnoreTypeAttributes = Val;
+      return Result;
+    }
+
+    // Should C++11 attributes be processed?
+    bool IncludeCXX11Attributes;
+
+    // Should any type attributes encountered be ignored?
+    // If this option is false, a diagnostic will be emitted for any type
+    // attributes of a kind that does not "slide" from the declaration to
+    // the decl-specifier-seq.
+    bool IgnoreTypeAttributes;
+  };
+
+  void ProcessDeclAttributeList(Scope *S, Decl *D,
+                                const ParsedAttributesView &AttrList,
+                                const ProcessDeclAttributeOptions &Options =
+                                    ProcessDeclAttributeOptions());
   bool ProcessAccessDeclAttributeList(AccessSpecDecl *ASDecl,
                                    const ParsedAttributesView &AttrList);
 
@@ -6716,7 +6746,6 @@ public:
                                    NestedNameSpecInfo &IdInfo,
                                    bool EnteringContext,
                                    CXXScopeSpec &SS,
-                                   bool ErrorRecoveryLookup = false,
                                    bool *IsCorrectedToColon = nullptr,
                                    bool OnlyNamespace = false);
 
@@ -10388,6 +10417,13 @@ public:
   /// AddAnnotationAttr - Adds an annotation Annot with Args arguments to D.
   void AddAnnotationAttr(Decl *D, const AttributeCommonInfo &CI,
                          StringRef Annot, MutableArrayRef<Expr *> Args);
+
+  /// ConstantFoldAttrArgs - Folds attribute arguments into ConstantExprs
+  /// (unless they are value dependent or type dependent). Returns false
+  /// and emits a diagnostic if one or more of the arguments could not be
+  /// folded into a constant.
+  bool ConstantFoldAttrArgs(const AttributeCommonInfo &CI,
+                            MutableArrayRef<Expr *> Args);
 
   /// AddLaunchBoundsAttr - Adds a launch_bounds attribute to a particular
   /// declaration.

@@ -69,7 +69,12 @@ private:
   std::vector<Symbol *> symVector;
 };
 
-void treatUndefinedSymbol(const Undefined &, StringRef source = "");
+void reportPendingUndefinedSymbols();
+
+// Call reportPendingUndefinedSymbols() to emit diagnostics.
+void treatUndefinedSymbol(const Undefined &, StringRef source);
+void treatUndefinedSymbol(const Undefined &, const InputSection *,
+                          uint64_t offset);
 
 extern std::unique_ptr<SymbolTable> symtab;
 

@@ -138,7 +138,6 @@ template <class Stream, class T>
 #include <__config>
 #include <bitset>
 #include <ios>
-#include <iterator> // TODO: Remove this include
 #include <locale>
 #include <streambuf>
 #include <version>

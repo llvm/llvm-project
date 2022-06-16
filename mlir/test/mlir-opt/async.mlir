@@ -3,9 +3,9 @@
 // RUN:   mlir-opt %s -pass-pipeline="async-to-async-runtime,func.func(async-runtime-ref-counting,async-runtime-ref-counting-opt),convert-async-to-llvm,func.func(convert-linalg-to-loops,convert-scf-to-cf),convert-linalg-to-llvm,convert-memref-to-llvm,func.func(convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts" \
 // RUN: | FileCheck %s
 
-// CHECK: llvm.func @async_execute_fn{{.*}}attributes{{.*}}"coroutine.presplit", "0"
-// CHECK: llvm.func @async_execute_fn_0{{.*}}attributes{{.*}}"coroutine.presplit", "0"
-// CHECK: llvm.func @async_execute_fn_1{{.*}}attributes{{.*}}"coroutine.presplit", "0"
+// CHECK: llvm.func @async_execute_fn{{.*}}attributes{{.*}}presplitcoroutine
+// CHECK: llvm.func @async_execute_fn_0{{.*}}attributes{{.*}}presplitcoroutine
+// CHECK: llvm.func @async_execute_fn_1{{.*}}attributes{{.*}}presplitcoroutine
 
 func.func @main() {
   %i0 = arith.constant 0 : index

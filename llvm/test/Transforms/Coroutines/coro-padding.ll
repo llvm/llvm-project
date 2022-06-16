@@ -6,7 +6,7 @@
 
 declare void @consume(%PackedStruct*)
 
-define i8* @f() "coroutine.presplit"="1" {
+define i8* @f() presplitcoroutine {
 entry:
   %data = alloca %PackedStruct, align 32
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)

@@ -2,9 +2,9 @@
 
 // Taken from https://github.com/llvm/llvm-project/issues/54216
 
-
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-oldDriver
+// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 
 #include <algorithm>
 #include <cstdlib>

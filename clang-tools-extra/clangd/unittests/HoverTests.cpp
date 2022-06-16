@@ -3206,6 +3206,30 @@ TEST(Hover, HideBigInitializers) {
   ASSERT_TRUE(H);
   EXPECT_EQ(H->Definition, "int arr[]");
 }
+
+TEST(Hover, Typedefs) {
+  Annotations T(R"cpp(
+  template <bool X, typename T, typename F>
+  struct cond { using type = T; };
+  template <typename T, typename F>
+  struct cond<false, T, F> { using type = F; };
+
+  template <bool X, typename T, typename F>
+  using type = typename cond<X, T, F>::type;
+
+  void foo() {
+    using f^oo = type<true, int, double>;
+  }
+  )cpp");
+
+  TestTU TU = TestTU::withCode(T.code());
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+
+  ASSERT_TRUE(H && H->Type);
+  EXPECT_EQ(H->Type->Type, "int");
+  EXPECT_EQ(H->Definition, "using foo = type<true, int, double>");
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

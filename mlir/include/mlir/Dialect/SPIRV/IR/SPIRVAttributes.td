@@ -23,7 +23,7 @@
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
-class SPV_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
+class SPV_Attr<string attrName, string attrMnemonic>
     : AttrDef<SPIRV_Dialect, attrName> {
   let mnemonic = attrMnemonic;
 }
@@ -48,14 +48,14 @@ def SPV_CapabilityArrayAttr : TypedArrayAttrBase<
 def SPV_CooperativeMatrixPropertiesNVAttr :
     SPV_Attr<"CooperativeMatrixPropertiesNV", "coop_matrix_props"> {
   let parameters = (ins
-    "int":$m_size, 
-    "int":$n_size, 
-    "int":$k_size, 
-    "mlir::Type":$a_type, 
-    "mlir::Type":$b_type, 
-    "mlir::Type":$c_type, 
-    "mlir::Type":$result_type, 
-    "mlir::spirv::ScopeAttr":$scope 
+    "int":$m_size,
+    "int":$n_size,
+    "int":$k_size,
+    "mlir::Type":$a_type,
+    "mlir::Type":$b_type,
+    "mlir::Type":$c_type,
+    "mlir::Type":$result_type,
+    "mlir::spirv::ScopeAttr":$scope
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -93,7 +93,7 @@ def SPV_ResourceLimitsAttr : SPV_Attr<"ResourceLimits", "resource_limits"> {
     // The configurations of cooperative matrix operations
     // supported. Default is an empty list.
     DefaultValuedParameter<
-      "ArrayAttr", 
+      "ArrayAttr",
       "nullptr"
     >:$cooperative_matrix_properties_nv
   );

@@ -875,11 +875,11 @@ std::optional<parser::Message> WhyNotModifiable(parser::CharBlock at,
 }
 
 class ImageControlStmtHelper {
-  using ImageControlStmts = std::variant<parser::ChangeTeamConstruct,
-      parser::CriticalConstruct, parser::EventPostStmt, parser::EventWaitStmt,
-      parser::FormTeamStmt, parser::LockStmt, parser::StopStmt,
-      parser::SyncAllStmt, parser::SyncImagesStmt, parser::SyncMemoryStmt,
-      parser::SyncTeamStmt, parser::UnlockStmt>;
+  using ImageControlStmts =
+      std::variant<parser::ChangeTeamConstruct, parser::CriticalConstruct,
+          parser::EventPostStmt, parser::EventWaitStmt, parser::FormTeamStmt,
+          parser::LockStmt, parser::SyncAllStmt, parser::SyncImagesStmt,
+          parser::SyncMemoryStmt, parser::SyncTeamStmt, parser::UnlockStmt>;
 
 public:
   template <typename T> bool operator()(const T &) {
@@ -928,6 +928,11 @@ public:
       }
     }
     return false;
+  }
+  bool operator()(const parser::StopStmt &stmt) {
+    // STOP is an image control statement; ERROR STOP is not
+    return std::get<parser::StopStmt::Kind>(stmt.t) ==
+        parser::StopStmt::Kind::Stop;
   }
   bool operator()(const parser::Statement<parser::ActionStmt> &stmt) {
     return common::visit(*this, stmt.statement.u);

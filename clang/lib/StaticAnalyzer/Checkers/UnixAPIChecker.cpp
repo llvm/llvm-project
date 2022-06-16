@@ -43,8 +43,6 @@ class UnixAPIMisuseChecker : public Checker< check::PreStmt<CallExpr> > {
   mutable Optional<uint64_t> Val_O_CREAT;
 
 public:
-  bool CheckMisuse = false, CheckPortability = false;
-
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 
   void CheckOpen(CheckerContext &C, const CallExpr *CE) const;
@@ -229,7 +227,7 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   // Now check if oflags has O_CREAT set.
   const Expr *oflagsEx = CE->getArg(FlagsArgIndex);
   const SVal V = C.getSVal(oflagsEx);
-  if (!V.getAs<NonLoc>()) {
+  if (!isa<NonLoc>(V)) {
     // The case where 'V' can be a location can only be due to a bad header,
     // so in this case bail out.
     return;
@@ -503,7 +501,7 @@ void UnixAPIPortabilityChecker::checkPreStmt(const CallExpr *CE,
     mgr.registerChecker<CHECKERNAME>();                                        \
   }                                                                            \
                                                                                \
-  bool ento::shouldRegister##CHECKERNAME(const CheckerManager &mgr) {              \
+  bool ento::shouldRegister##CHECKERNAME(const CheckerManager &mgr) {          \
     return true;                                                               \
   }
 

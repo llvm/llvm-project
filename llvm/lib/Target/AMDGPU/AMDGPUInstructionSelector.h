@@ -210,6 +210,8 @@ private:
 
   InstructionSelector::ComplexRendererFns
   selectScratchSAddr(MachineOperand &Root) const;
+  bool checkFlatScratchSVSSwizzleBug(Register VAddr, Register SAddr,
+                                     uint64_t ImmOffset) const;
   InstructionSelector::ComplexRendererFns
   selectScratchSVAddr(MachineOperand &Root) const;
 

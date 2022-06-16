@@ -265,7 +265,6 @@ void CSKYRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     assert(isInt<32>(Offset) && "Int32 expected");
     // The offset won't fit in an immediate, so use a scratch register instead
     // Modify Offset and FrameReg appropriately
-    assert(Offset >= 0);
     Register ScratchReg = TII->movImm(MBB, NewII, DL, Offset);
     BuildMI(MBB, NewII, DL,
             TII->get(STI.hasE2() ? CSKY::ADDU32 : CSKY::ADDU16XZ), ScratchReg)

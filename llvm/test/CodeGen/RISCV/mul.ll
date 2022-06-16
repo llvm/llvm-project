@@ -1580,3 +1580,37 @@ define i8 @muladd_demand(i8 %x, i8 %y) nounwind {
   %r = and i8 %a, 15
   ret i8 %r
 }
+
+define i8 @mulsub_demand(i8 %x, i8 %y) nounwind {
+; RV32I-LABEL: mulsub_demand:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 1
+; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    andi a0, a0, 15
+; RV32I-NEXT:    ret
+;
+; RV32IM-LABEL: mulsub_demand:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    slli a0, a0, 1
+; RV32IM-NEXT:    add a0, a1, a0
+; RV32IM-NEXT:    andi a0, a0, 15
+; RV32IM-NEXT:    ret
+;
+; RV64I-LABEL: mulsub_demand:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slliw a0, a0, 1
+; RV64I-NEXT:    addw a0, a1, a0
+; RV64I-NEXT:    andi a0, a0, 15
+; RV64I-NEXT:    ret
+;
+; RV64IM-LABEL: mulsub_demand:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    slliw a0, a0, 1
+; RV64IM-NEXT:    addw a0, a1, a0
+; RV64IM-NEXT:    andi a0, a0, 15
+; RV64IM-NEXT:    ret
+  %m = mul i8 %x, 14
+  %a = sub i8 %y, %m
+  %r = and i8 %a, 15
+  ret i8 %r
+}

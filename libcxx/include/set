@@ -485,7 +485,6 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__utility/forward.h>
 #include <compare>
 #include <initializer_list>
-#include <iterator> // TODO: Remove this include
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

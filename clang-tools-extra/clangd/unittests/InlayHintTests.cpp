@@ -555,6 +555,17 @@ TEST(ParameterHints, SetterFunctions) {
                        ExpectedHint{"timeout_millis: ", "timeout_millis"});
 }
 
+TEST(ParameterHints, BuiltinFunctions) {
+  // This prototype of std::forward is sufficient for clang to recognize it
+  assertParameterHints(R"cpp(
+    namespace std { template <typename T> T&& forward(T&); }
+    void foo() {
+      int i;
+      std::forward(i);
+    }
+  )cpp");
+}
+
 TEST(ParameterHints, IncludeAtNonGlobalScope) {
   Annotations FooInc(R"cpp(
     void bar() { foo(42); }

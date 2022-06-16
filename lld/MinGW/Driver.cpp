@@ -323,6 +323,9 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (args.hasFlag(OPT_disable_tsaware, OPT_tsaware, false))
     add("-tsaware:no");
 
+  if (args.hasFlag(OPT_disable_reloc_section, OPT_enable_reloc_section, false))
+    add("-fixed");
+
   if (args.hasFlag(OPT_no_insert_timestamp, OPT_insert_timestamp, false))
     add("-timestamp:0");
 

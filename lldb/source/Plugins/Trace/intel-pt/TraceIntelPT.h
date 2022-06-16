@@ -75,8 +75,8 @@ public:
 
   llvm::Expected<size_t> GetRawTraceSize(Thread &thread);
 
-  void DoRefreshLiveProcessState(
-      llvm::Expected<TraceGetStateResponse> state) override;
+  llvm::Error DoRefreshLiveProcessState(TraceGetStateResponse state,
+                                        llvm::StringRef json_response) override;
 
   bool IsTraced(lldb::tid_t tid) override;
 
@@ -146,14 +146,11 @@ public:
   llvm::Error OnThreadBufferRead(lldb::tid_t tid,
                                  OnBinaryDataReadCallback callback);
 
+  /// Get or fetch the cpu information from, for example, /proc/cpuinfo.
   llvm::Expected<pt_cpu> GetCPUInfo();
 
-  /// Get the current traced live process.
-  ///
-  /// \return
-  ///     The current traced live process. If it's not a live process,
-  ///     return \a nullptr.
-  Process *GetLiveProcess();
+  /// Get or fetch the values used to convert to and from TSCs and nanos.
+  llvm::Optional<LinuxPerfZeroTscConversion> GetPerfZeroTscConversion();
 
   /// \return
   ///     The timer object for this trace.
@@ -164,12 +161,20 @@ private:
 
   llvm::Expected<pt_cpu> GetCPUInfoForLiveProcess();
 
+  /// Postmortem trace constructor
+  ///
+  /// \param[in] session
+  ///     The definition file for the postmortem session.
+  ///
+  /// \param[in] traces_proceses
+  ///     The processes traced in the live session.
+  ///
   /// \param[in] trace_threads
-  ///     ThreadTrace instances, which are not live-processes and whose trace
-  ///     files are fixed.
-  TraceIntelPT(
-      const pt_cpu &cpu_info,
-      const std::vector<lldb::ThreadPostMortemTraceSP> &traced_threads);
+  ///     The threads traced in the live session. They must belong to the
+  ///     processes mentioned above.
+  TraceIntelPT(JSONTraceSession &session,
+               llvm::ArrayRef<lldb::ProcessSP> traced_processes,
+               llvm::ArrayRef<lldb::ThreadPostMortemTraceSP> traced_threads);
 
   /// Constructor for live processes
   TraceIntelPT(Process &live_process)
@@ -191,9 +196,11 @@ private:
   /// binary data.
   llvm::Optional<pt_cpu> m_cpu_info;
   std::map<lldb::tid_t, std::unique_ptr<ThreadDecoder>> m_thread_decoders;
-  /// Error gotten after a failed live process update, if any.
-  llvm::Optional<std::string> m_live_refresh_error;
+  /// Helper variable used to track long running operations for telemetry.
   TaskTimer m_task_timer;
+  /// It is provided by either a session file or a live process to convert TSC
+  /// counters to and from nanos. It might not be available on all hosts.
+  llvm::Optional<LinuxPerfZeroTscConversion> m_tsc_conversion;
 };
 
 } // namespace trace_intel_pt

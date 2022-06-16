@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRAMX
+add_mlir_dialect_library(MLIRAMXDialect
   AMXDialect.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -9,6 +9,6 @@ add_mlir_dialect_library(MLIRAMX
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRLLVMIR
+  MLIRLLVMDialect
   MLIRSideEffectInterfaces
   )

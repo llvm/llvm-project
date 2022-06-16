@@ -300,8 +300,8 @@ define dso_local void @testUnalignedLdSt() {
 ; LE-PWR8-LABEL: testUnalignedLdSt:
 ; LE-PWR8:       # %bb.0: # %entry
 ; LE-PWR8-NEXT:    addis r3, r2, f@toc@ha
-; LE-PWR8-NEXT:    li r4, 59
-; LE-PWR8-NEXT:    li r5, 43
+; LE-PWR8-NEXT:    li r4, 43
+; LE-PWR8-NEXT:    li r5, 59
 ; LE-PWR8-NEXT:    addi r3, r3, f@toc@l
 ; LE-PWR8-NEXT:    lxvd2x vs0, r3, r4
 ; LE-PWR8-NEXT:    li r4, 11
@@ -309,8 +309,8 @@ define dso_local void @testUnalignedLdSt() {
 ; LE-PWR8-NEXT:    li r5, 27
 ; LE-PWR8-NEXT:    lxvd2x vs2, r3, r4
 ; LE-PWR8-NEXT:    lxvd2x vs3, r3, r5
-; LE-PWR8-NEXT:    li r4, 51
-; LE-PWR8-NEXT:    li r5, 67
+; LE-PWR8-NEXT:    li r4, 67
+; LE-PWR8-NEXT:    li r5, 51
 ; LE-PWR8-NEXT:    stxvd2x vs1, r3, r4
 ; LE-PWR8-NEXT:    li r4, 35
 ; LE-PWR8-NEXT:    stxvd2x vs0, r3, r5
@@ -576,17 +576,15 @@ define dso_local void @testUnalignedLdStPair() {
 ; LE-PWR8-LABEL: testUnalignedLdStPair:
 ; LE-PWR8:       # %bb.0: # %entry
 ; LE-PWR8-NEXT:    addis r3, r2, g@toc@ha
-; LE-PWR8-NEXT:    li r4, 27
-; LE-PWR8-NEXT:    li r5, 11
-; LE-PWR8-NEXT:    li r6, 19
-; LE-PWR8-NEXT:    li r8, 35
+; LE-PWR8-NEXT:    li r4, 11
+; LE-PWR8-NEXT:    li r5, 27
 ; LE-PWR8-NEXT:    addi r3, r3, g@toc@l
 ; LE-PWR8-NEXT:    lxvd2x vs0, r3, r4
-; LE-PWR8-NEXT:    ldx r5, r3, r5
-; LE-PWR8-NEXT:    ldx r7, r3, r6
-; LE-PWR8-NEXT:    stdx r7, r3, r4
-; LE-PWR8-NEXT:    stdx r5, r3, r6
-; LE-PWR8-NEXT:    stxvd2x vs0, r3, r8
+; LE-PWR8-NEXT:    lxvd2x vs1, r3, r5
+; LE-PWR8-NEXT:    li r4, 35
+; LE-PWR8-NEXT:    li r5, 19
+; LE-PWR8-NEXT:    stxvd2x vs1, r3, r4
+; LE-PWR8-NEXT:    stxvd2x vs0, r3, r5
 ; LE-PWR8-NEXT:    blr
 ;
 ; BE-PWR9-LABEL: testUnalignedLdStPair:

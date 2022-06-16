@@ -10,14 +10,14 @@ add_mlir_dialect_library(MLIRFuncTransforms
   MLIRFuncTransformsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
   MLIRArithmeticTransforms
-  MLIRBufferization
+  MLIRBufferizationDialect
   MLIRBufferizationTransforms
-  MLIRFunc
+  MLIRFuncDialect
   MLIRIR
-  MLIRMemRef
+  MLIRMemRefDialect
   MLIRPass
-  MLIRSCF
+  MLIRSCFDialect
   MLIRTransforms
   )

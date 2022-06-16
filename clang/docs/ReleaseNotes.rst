@@ -170,6 +170,11 @@ Bug Fixes
   fixes `Issue 48230 <https://github.com/llvm/llvm-project/issues/48230>`_.
 - Fixed memory leak due to ``VarTemplateSpecializationDecl`` using
   ``TemplateArgumentListInfo`` instead of ``ASTTemplateArgumentListInfo``.
+- An initializer for a static variable declaration, which is nested
+  inside a statement expression in an aggregate initializer, is now
+  emitted as a dynamic initializer. Previously the variable would
+  incorrectly be zero-initialized. In contexts where a dynamic
+  initializer is not allowed this is now diagnosed as an error.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -256,6 +261,12 @@ Improvements to Clang's diagnostics
 - The ``-Wdeprecated`` diagnostic will now warn on out-of-line ``constexpr``
   declarations downgraded to definitions in C++1z, in addition to the
   existing warning on out-of-line ``const`` declarations.
+- ``-Wshift-overflow`` will not warn for signed left shifts in C++20 mode
+  (and newer), as it will always wrap and never overflow. This fixes
+  `Issue 52873 <https://github.com/llvm/llvm-project/issues/52873>`_.
+- When using class templates without arguments, clang now tells developers
+  that template arguments are missing in certain contexts.
+  This fixes `Issue 55962 <https://github.com/llvm/llvm-project/issues/55962>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -352,6 +363,9 @@ Attribute Changes in Clang
 
 - When the ``weak`` attribute is applied to a const qualified variable clang no longer
   tells the backend it is allowed to optimize based on initializer value.
+
+- Added the ``clang::annotate_type`` attribute, which can be used to add
+  annotations to types (see documentation for details).
 
 Windows Support
 ---------------
@@ -549,6 +563,12 @@ Static Analyzer
   from common memory copy/manipulation functions such as ``memcpy``, ``mempcpy``, ``memmove``, ``memcmp``, `
   `strcmp``, ``strncmp``, ``strcpy``, ``strlen``, ``strsep`` and many more. Although
   this checker currently is in list of alpha checkers due to a false positive.
+
+- Deprecate the ``-analyzer-store region`` and
+  ``-analyzer-opt-analyze-nested-blocks`` analyzer flags.
+  These flags are still accepted, but a warning will be displayed.
+  These flags will be rejected, thus turned into a hard error starting with
+  ``clang-16``.
 
 .. _release-notes-ubsan:
 
