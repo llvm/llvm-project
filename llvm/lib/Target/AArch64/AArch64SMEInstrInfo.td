@@ -14,6 +14,9 @@
 // Add vector elements horizontally or vertically to ZA tile.
 //===----------------------------------------------------------------------===//
 
+def SDT_AArch64RDSVL  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
+def AArch64rdsvl : SDNode<"AArch64ISD::RDSVL", SDT_AArch64RDSVL>;
+
 let Predicates = [HasSME] in {
 def RDSVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdsvl", /*streaming_sve=*/0b1>;
 def ADDSPL_XXI : sve_int_arith_vl<0b1, "addspl", /*streaming_sve=*/0b1>;
@@ -21,6 +24,8 @@ def ADDSVL_XXI : sve_int_arith_vl<0b0, "addsvl", /*streaming_sve=*/0b1>;
 
 def ADDHA_MPPZ_S : sme_add_vector_to_tile_u32<0b0, "addha">;
 def ADDVA_MPPZ_S : sme_add_vector_to_tile_u32<0b1, "addva">;
+
+def : Pat<(AArch64rdsvl (i32 simm6_32b:$imm)), (RDSVLI_XI simm6_32b:$imm)>;
 }
 
 let Predicates = [HasSMEI64] in {

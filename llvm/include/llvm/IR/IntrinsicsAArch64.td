@@ -2649,4 +2649,17 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_readq_vert   : SME_TileToVector_Intrinsic;
   def int_aarch64_sme_writeq_horiz : SME_VectorToTile_Intrinsic;
   def int_aarch64_sme_writeq_vert  : SME_VectorToTile_Intrinsic;
+
+
+  //
+  // Counting elements
+  //
+
+  class AdvSIMD_SME_CNTSB_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem]>;
+
+  def int_aarch64_sme_cntsb : AdvSIMD_SME_CNTSB_Intrinsic;
+  def int_aarch64_sme_cntsh : AdvSIMD_SME_CNTSB_Intrinsic;
+  def int_aarch64_sme_cntsw : AdvSIMD_SME_CNTSB_Intrinsic;
+  def int_aarch64_sme_cntsd : AdvSIMD_SME_CNTSB_Intrinsic;
 }
