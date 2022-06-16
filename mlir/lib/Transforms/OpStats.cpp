@@ -114,5 +114,5 @@ std::unique_ptr<Pass> mlir::createPrintOpStatsPass(raw_ostream &os) {
 
 std::unique_ptr<Pass> mlir::createPrintOpStatsPass(raw_ostream &os,
                                                    bool printAsJSON) {
-  return std::make_unique<PrintOpStatsPass>(os);
+  return std::make_unique<PrintOpStatsPass>(os, printAsJSON);
 }
