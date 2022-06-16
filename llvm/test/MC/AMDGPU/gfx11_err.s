@@ -45,6 +45,18 @@ v_add3_u32_e64_dpp v5, v1, v2, 49812340 dpp8:[7,6,5,4,3,2,1,0]
 v_add3_u32_e64_dpp v5, v1, s1, v0 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 
+v_cvt_f32_i32_e64_dpp v5, s1 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_cvt_f32_i32_e64_dpp v5, s1 row_shl:15 row_mask:0xf bank_mask:0xf
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_cvt_f16_u16_e64_dpp v5, s1 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_cvt_f16_u16_e64_dpp v5, s1 row_shl:1 row_mask:0xf bank_mask:0xf
+// GFX11: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
 // On GFX11, v_dot8_i32_i4 is a valid SP3 alias for v_dot8_i32_iu4.
 // However, we intentionally leave it unimplemented because on other
 // processors v_dot8_i32_i4 denotes an instruction of a different
