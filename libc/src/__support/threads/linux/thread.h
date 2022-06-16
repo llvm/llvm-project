@@ -15,6 +15,7 @@
 #include "src/__support/threads/linux/futex_word.h" // For FutexWordType
 #include "src/__support/threads/thread_attrib.h"
 
+#include <arm_acle.h>
 #include <linux/futex.h>
 #include <linux/sched.h> // For CLONE_* flags.
 #include <stdint.h>
@@ -85,14 +86,19 @@ __attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
   // NOTE: For __builtin_frame_address to work reliably across compilers,
   // architectures and various optimization levels, the TU including this file
   // should be compiled with -fno-omit-frame-pointer.
+#ifdef LLVM_LIBC_ARCH_X86_64
   return reinterpret_cast<uintptr_t>(__builtin_frame_address(0))
          // The x86_64 call instruction pushes resume address on to the stack.
          // Next, The x86_64 SysV ABI requires that the frame pointer be pushed
-         // on to the stack. Similarly on aarch64, previous frame pointer and
-         // the value of the link register are pushed on to the stack. So, in
-         // both these cases, we have to step past two 64-bit values to get
+         // on to the stack. So, we have to step past two 64-bit values to get
          // to the start args.
          + sizeof(uintptr_t) * 2;
+#elif defined(LLVM_LIBC_ARCH_AARCH64)
+  // The frame pointer after cloning the new thread in the Thread::run method
+  // is set to the stack pointer where start args are stored. So, we fetch
+  // from there.
+  return reinterpret_cast<uintptr_t>(__builtin_frame_address(1));
+#endif
 }
 
 template <typename ReturnType> struct Thread {
@@ -179,6 +185,11 @@ public:
 #endif
 
     if (clone_result == 0) {
+#ifdef LLVM_LIBC_ARCH_AARCH64
+      // We set the frame pointer to be the same as the "sp" so that start args
+      // can be sniffed out from start_thread.
+      __arm_wsr64("x29", __arm_rsr64("sp"));
+#endif
       start_thread();
     } else if (clone_result < 0) {
       if (attrib->owned_stack)
