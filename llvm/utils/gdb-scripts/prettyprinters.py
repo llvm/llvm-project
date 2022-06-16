@@ -386,6 +386,9 @@ class PointerIntPairPrinter:
     yield ('pointer', self.pointer)
     yield ('value', self.value)
 
+  def to_string(self):
+    return '(%s, %s)' % self.pointer.type, self.value.type
+
 def make_pointer_int_pair_printer(val):
   """Factory for an llvm::PointerIntPair printer."""
   try:
