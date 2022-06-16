@@ -47,7 +47,6 @@ public:
   bool createdForInternalChildIo() const { return createdForInternalChildIo_; }
 
   static ExternalFileUnit *LookUp(int unit);
-  static ExternalFileUnit &LookUpOrCrash(int unit, const Terminator &);
   static ExternalFileUnit &LookUpOrCreate(
       int unit, const Terminator &, bool &wasExtant);
   static ExternalFileUnit &LookUpOrCreateAnonymous(int unit, Direction,
