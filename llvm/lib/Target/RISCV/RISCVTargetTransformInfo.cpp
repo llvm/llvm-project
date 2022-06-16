@@ -232,15 +232,21 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
 
-  // FIXME: Only supporting fixed vectors for now.
-  if (!isa<FixedVectorType>(DataTy))
-    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
-
-  auto *VTy = cast<FixedVectorType>(DataTy);
-  unsigned NumLoads = VTy->getNumElements();
-  InstructionCost MemOpCost =
-      getMemoryOpCost(Opcode, VTy->getElementType(), Alignment, 0, CostKind, I);
+  // Cost is proportional to the number of memory operations implied.  For
+  // scalable vectors, we use an upper bound on that number since we don't
+  // know exactly what VL will be.
+  auto &VTy = *cast<VectorType>(DataTy);
+  InstructionCost MemOpCost = getMemoryOpCost(Opcode, VTy.getElementType(),
+                                              Alignment, 0, CostKind, I);
+  if (isa<ScalableVectorType>(VTy)) {
+    const unsigned EltSize = VTy.getScalarSizeInBits();
+    const unsigned MinSize = VTy.getPrimitiveSizeInBits().getKnownMinValue();
+    const unsigned VectorBitsMax = ST->getRealMaxVLen();
+    const unsigned MaxVLMAX =
+      RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);
+    return MaxVLMAX * MemOpCost;
+  }
+  unsigned NumLoads = cast<FixedVectorType>(VTy).getNumElements();
   return NumLoads * MemOpCost;
 }
 
