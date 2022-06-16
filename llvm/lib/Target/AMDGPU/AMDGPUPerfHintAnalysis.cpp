@@ -116,7 +116,6 @@ private:
 
   bool isGlobalAddr(const Value *V) const;
   bool isLocalAddr(const Value *V) const;
-  bool isConstantAddr(const Value *V) const;
 };
 
 static std::pair<const Value *, const Type *> getMemoryInstrPtrAndType(
@@ -334,15 +333,6 @@ AMDGPUPerfHint::makeMemAccessInfo(Instruction *Inst) const {
   MAI.V = MO;
   MAI.Base = GetPointerBaseWithConstantOffset(MO, MAI.Offset, *DL);
   return MAI;
-}
-
-bool AMDGPUPerfHint::isConstantAddr(const Value *V) const {
-  if (auto PT = dyn_cast<PointerType>(V->getType())) {
-    unsigned As = PT->getAddressSpace();
-    return As == AMDGPUAS::CONSTANT_ADDRESS ||
-           As == AMDGPUAS::CONSTANT_ADDRESS_32BIT;
-  }
-  return false;
 }
 
 bool AMDGPUPerfHint::MemAccessInfo::isLargeStride(
