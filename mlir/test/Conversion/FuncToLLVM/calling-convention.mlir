@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-memref-to-llvm -convert-func-to-llvm='emit-c-wrappers=1' -reconcile-unrealized-casts %s | FileCheck %s
+// RUN: mlir-opt -convert-memref-to-llvm -llvm-request-c-wrappers -convert-func-to-llvm -reconcile-unrealized-casts %s | FileCheck %s
 // RUN: mlir-opt -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts %s | FileCheck %s --check-prefix=EMIT_C_ATTRIBUTE
 
 // This tests the default memref calling convention and the emission of C

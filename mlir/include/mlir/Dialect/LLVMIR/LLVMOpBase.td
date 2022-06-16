@@ -56,6 +56,11 @@ def LLVM_Dialect : Dialect {
 
     /// Name of the target triple attribute.
     static StringRef getTargetTripleAttrName() { return "llvm.target_triple"; }
+
+    /// Name of the C wrapper emission attribute.
+    static StringRef getEmitCWrapperAttrName() {
+      return "llvm.emit_c_interface";
+    }
   }];
 
   let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
