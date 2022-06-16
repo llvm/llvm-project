@@ -38,7 +38,7 @@ TEST(TraceGDBRemotePacketsTest, IntelPTGetStateResponse) {
 
   // Create TraceIntelPTGetStateResponse.
   TraceIntelPTGetStateResponse response;
-  response.tsc_perf_zero_conversion = LinuxPerfZeroTscConversion{test_time_mult, test_time_shift, test_time_zero};
+  response.tsc_perf_zero_conversion = LinuxPerfZeroTscConversion{test_time_mult, test_time_shift, {test_time_zero}};
 
   // Serialize then deserialize.
   Expected<TraceIntelPTGetStateResponse> deserialized_response =
@@ -56,9 +56,9 @@ TEST(TraceGDBRemotePacketsTest, IntelPTGetStateResponse) {
   const uint64_t EXPECTED_NANOS = 9223372039007304983u;
 
   uint64_t pre_serialization_conversion =
-      response.tsc_perf_zero_conversion->ToNanos(TSC).count();
+      response.tsc_perf_zero_conversion->ToNanos(TSC);
   uint64_t post_serialization_conversion =
-      deserialized_response->tsc_perf_zero_conversion->ToNanos(TSC).count();
+      deserialized_response->tsc_perf_zero_conversion->ToNanos(TSC);
 
   // Check equality:
   // Ensure that both the TraceGetStateResponse and TraceIntelPTGetStateResponse
