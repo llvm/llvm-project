@@ -1,7 +1,7 @@
 Section,Description,Dependencies,Assignee,Patch,Status,First released version
-`[format.functions] <https://wg21.link/format.functions>`_,"Format functions - Improve performance format_to_n",,Mark de Wever,`D110499 <https://llvm.org/D110499>`__,|Review|,
-`[format.functions] <https://wg21.link/format.functions>`_,"Format functions - Improve performance formatted size",,Mark de Wever,`D110498 <https://llvm.org/D110498>`__,|Review|,
-`[format.functions] <https://wg21.link/format.functions>`_,"`P2216 <https://wg21.link/P2216>`_ - Compile-time checks",,Mark de Wever,`D121530 <https://llvm.org/D121530>`__,|Review|,
+`[format.functions] <https://wg21.link/format.functions>`_,"Format functions - Improve performance format_to_n",,Mark de Wever,`D110499 <https://llvm.org/D110499>`__,|Complete|,Clang 15
+`[format.functions] <https://wg21.link/format.functions>`_,"Format functions - Improve performance formatted size",,Mark de Wever,`D110498 <https://llvm.org/D110498>`__,|Complete|,Clang 15
+`[format.functions] <https://wg21.link/format.functions>`_,"`P2216 <https://wg21.link/P2216>`_ - Compile-time checks",,Mark de Wever,`D121530 <https://llvm.org/D121530>`__,|Complete|,Clang 15
 `[format.functions] <https://wg21.link/format.functions>`_,"`P2216 <https://wg21.link/P2216>`_ - Binary size",,Mark de Wever,`D110494 <https://llvm.org/D110494>`__,|Complete|,Clang 14
 
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::duration<Rep, Period>``",,Mark de Wever,,|In Progress|,
