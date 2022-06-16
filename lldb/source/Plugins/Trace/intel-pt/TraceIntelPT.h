@@ -146,8 +146,11 @@ public:
   llvm::Error OnThreadBufferRead(lldb::tid_t tid,
                                  OnBinaryDataReadCallback callback);
 
+  /// Get or fetch the cpu information from, for example, /proc/cpuinfo.
   llvm::Expected<pt_cpu> GetCPUInfo();
 
+  /// Get or fetch the values used to convert to and from TSCs and nanos.
+  llvm::Optional<LinuxPerfZeroTscConversion> GetPerfZeroTscConversion();
 
   /// \return
   ///     The timer object for this trace.
@@ -158,12 +161,20 @@ private:
 
   llvm::Expected<pt_cpu> GetCPUInfoForLiveProcess();
 
+  /// Postmortem trace constructor
+  ///
+  /// \param[in] session
+  ///     The definition file for the postmortem session.
+  ///
+  /// \param[in] traces_proceses
+  ///     The processes traced in the live session.
+  ///
   /// \param[in] trace_threads
-  ///     ThreadTrace instances, which are not live-processes and whose trace
-  ///     files are fixed.
-  TraceIntelPT(
-      const pt_cpu &cpu_info,
-      const std::vector<lldb::ThreadPostMortemTraceSP> &traced_threads);
+  ///     The threads traced in the live session. They must belong to the
+  ///     processes mentioned above.
+  TraceIntelPT(JSONTraceSession &session,
+               llvm::ArrayRef<lldb::ProcessSP> traced_processes,
+               llvm::ArrayRef<lldb::ThreadPostMortemTraceSP> traced_threads);
 
   /// Constructor for live processes
   TraceIntelPT(Process &live_process)

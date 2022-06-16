@@ -16,6 +16,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace llvm;
 
 void ThreadPostMortemTrace::RefreshStateAfterStop() {}
 
@@ -36,6 +37,6 @@ ThreadPostMortemTrace::CreateRegisterContextForFrame(StackFrame *frame) {
 
 bool ThreadPostMortemTrace::CalculateStopInfo() { return false; }
 
-const FileSpec &ThreadPostMortemTrace::GetTraceFile() const {
+const Optional<FileSpec> &ThreadPostMortemTrace::GetTraceFile() const {
   return m_trace_file;
 }

@@ -534,7 +534,7 @@ read packet: OK/E<error code>;AAAAAAAAA
 //    "tscPerfZeroConversion": {
 //      "timeMult": <decimal integer>,
 //      "timeShift": <decimal integer>,
-//      "timeSero": <decimal integer>,
+//      "timeZero": <decimal integer>,
 //    }
 //----------------------------------------------------------------------
 

@@ -270,7 +270,8 @@ IntelPTSingleBufferTrace::Start(const TraceIntelPTStartRequest &request,
 
   if (Expected<PerfEvent> perf_event = PerfEvent::Init(*attr, tid, core_id)) {
     if (Error mmap_err = perf_event->MmapMetadataAndBuffers(
-            /*num_data_pages=*/0, aux_buffer_numpages)) {
+            /*num_data_pages=*/0, aux_buffer_numpages,
+            /*data_buffer_write=*/true)) {
       return std::move(mmap_err);
     }
     return IntelPTSingleBufferTrace(std::move(*perf_event));

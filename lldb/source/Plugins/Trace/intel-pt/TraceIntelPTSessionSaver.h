@@ -11,15 +11,12 @@
 
 #include "TraceIntelPT.h"
 
-#include "../common/TraceJSONStructs.h"
+#include "TraceIntelPTJSONStructs.h"
 
 namespace lldb_private {
 namespace trace_intel_pt {
 
-class TraceIntelPT;
-
 class TraceIntelPTSessionSaver {
-
 public:
   /// Save the Intel PT trace of a live process to the specified directory,
   /// which will be created if needed. This will also create a file
@@ -38,17 +35,6 @@ public:
   ///     \a llvm::success if the operation was successful, or an \a llvm::Error
   ///     otherwise.
   llvm::Error SaveToDisk(TraceIntelPT &trace_ipt, FileSpec directory);
-
-private:
-  /// Build trace section of the intel-pt trace session description file.
-  ///
-  /// \param[in] trace_ipt
-  ///     The Intel PT trace.
-  ///
-  /// \return
-  ///     The trace section  an \a llvm::Error in case of failures.
-  llvm::Expected<JSONTraceIntelPTTrace>
-  BuildTraceSection(TraceIntelPT &trace_ipt);
 };
 
 } // namespace trace_intel_pt

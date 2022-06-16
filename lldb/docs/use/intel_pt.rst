@@ -182,14 +182,12 @@ For example
 ::
 
   {
-    "trace": {
-      "type": "intel-pt",
-      "pt_cpu": {
-        "vendor": "intel",
-        "family": 6,
-        "model": 79,
-        "stepping": 1
-      }
+    "type": "intel-pt",
+    "cpuInfo": {
+      "vendor": "GenuineIntel",
+      "family": 6,
+      "model": 79,
+      "stepping": 1
     },
     "processes": [
       {
@@ -198,14 +196,14 @@ For example
         "threads": [
           {
             "tid": 815455,
-            "traceFile": "trace.file" # raw thread-specific trace from the AUX buffer
+            "traceBuffer": "trace.file" # raw thread-specific trace from the AUX buffer
           }
         ],
         "modules": [ # this are all the shared libraries + the main executable
           {
             "file": "a.out", # optional if it's the same as systemPath
             "systemPath": "a.out",
-            "loadAddress": "0x0000000000400000",
+            "loadAddress": 4194304,
           },
           {
             "file": "libfoo.so",

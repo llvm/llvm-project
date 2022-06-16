@@ -240,6 +240,7 @@ public:
 
   using OnBinaryDataReadCallback =
       std::function<llvm::Error(llvm::ArrayRef<uint8_t> data)>;
+
   /// Fetch binary data associated with a thread, either live or postmortem, and
   /// pass it to the given callback. The reason of having a callback is to free
   /// the caller from having to manage the life cycle of the data and to hide
@@ -265,22 +266,76 @@ public:
   llvm::Error OnThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
                                      OnBinaryDataReadCallback callback);
 
-  /// Get the current traced live process.
+  /// Fetch binary data associated with a core, either live or postmortem, and
+  /// pass it to the given callback. The reason of having a callback is to free
+  /// the caller from having to manage the life cycle of the data and to hide
+  /// the different data fetching procedures that exist for live and post mortem
+  /// cores.
+  ///
+  /// The fetched data is not persisted after the callback is invoked.
+  ///
+  /// \param[in] core_id
+  ///     The core who owns the data.
+  ///
+  /// \param[in] kind
+  ///     The kind of data to read.
+  ///
+  /// \param[in] callback
+  ///     The callback to be invoked once the data was successfully read. Its
+  ///     return value, which is an \a llvm::Error, is returned by this
+  ///     function.
   ///
   /// \return
-  ///     The current traced live process. If it's not a live process,
-  ///     return \a nullptr.
-  Process *GetLiveProcess();
+  ///     An \a llvm::Error if the data couldn't be fetched, or the return value
+  ///     of the callback, otherwise.
+  llvm::Error OnCoreBinaryDataRead(lldb::core_id_t core_id,
+                                   llvm::StringRef kind,
+                                   OnBinaryDataReadCallback callback);
+
+  /// \return
+  ///     All the currently traced processes.
+  std::vector<Process *> GetAllProcesses();
+
+  /// \return
+  ///     The list of cores being traced. Might be empty depending on the
+  ///     plugin.
+  llvm::ArrayRef<lldb::core_id_t> GetTracedCores();
 
 protected:
+  /// Get the currently traced live process.
+  ///
+  /// \return
+  ///     If it's not a live process, return \a nullptr.
+  Process *GetLiveProcess();
+
+  /// Get the currently traced postmortem processes.
+  ///
+  /// \return
+  ///     If it's not a live process session, return an empty list.
+  llvm::ArrayRef<Process *> GetPostMortemProcesses();
+
   /// Implementation of \a OnThreadBinaryDataRead() for live threads.
   llvm::Error OnLiveThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
                                          OnBinaryDataReadCallback callback);
+
+  /// Implementation of \a OnLiveBinaryDataRead() for live cores.
+  llvm::Error OnLiveCoreBinaryDataRead(lldb::core_id_t core,
+                                       llvm::StringRef kind,
+                                       OnBinaryDataReadCallback callback);
 
   /// Implementation of \a OnThreadBinaryDataRead() for post mortem threads.
   llvm::Error
   OnPostMortemThreadBinaryDataRead(lldb::tid_t tid, llvm::StringRef kind,
                                    OnBinaryDataReadCallback callback);
+
+  /// Implementation of \a OnCoreBinaryDataRead() for post mortem cores.
+  llvm::Error OnPostMortemCoreBinaryDataRead(lldb::core_id_t core_id,
+                                             llvm::StringRef kind,
+                                             OnBinaryDataReadCallback callback);
+
+  /// Helper method for reading a data file and passing its data to the given
+  /// callback.
+  llvm::Error OnDataFileRead(FileSpec file, OnBinaryDataReadCallback callback);
 
   /// Get the file path containing data of a postmortem thread given a data
   /// identifier.
@@ -297,6 +352,21 @@ protected:
   llvm::Expected<FileSpec> GetPostMortemThreadDataFile(lldb::tid_t tid,
                                                        llvm::StringRef kind);
 
+  /// Get the file path containing data of a postmortem core given a data
+  /// identifier.
+  ///
+  /// \param[in] core_id
+  ///     The core whose data is requested.
+  ///
+  /// \param[in] kind
+  ///     The kind of data requested.
+  ///
+  /// \return
+  ///     The file spec containing the requested data, or an \a llvm::Error in
+  ///     case of failures.
+  llvm::Expected<FileSpec> GetPostMortemCoreDataFile(lldb::core_id_t core_id,
+                                                     llvm::StringRef kind);
+
   /// Associate a given thread with a data file using a data identifier.
   ///
   /// \param[in] tid
@@ -309,6 +379,19 @@ protected:
   ///     The path of the data file.
   void SetPostMortemThreadDataFile(lldb::tid_t tid, llvm::StringRef kind,
                                    FileSpec file_spec);
+
+  /// Associate a given core with a data file using a data identifier.
+  ///
+  /// \param[in] core_id
+  ///     The core associated with the data file.
+  ///
+  /// \param[in] kind
+  ///     The kind of data being registered.
+  ///
+  /// \param[in] file_spec
+  ///     The path of the data file.
+  void SetPostMortemCoreDataFile(lldb::core_id_t core_id, llvm::StringRef kind,
+                                 FileSpec file_spec);
 
   /// Get binary data of a live thread given a data identifier.
   ///
@@ -323,6 +406,20 @@ protected:
   ///     case of failures.
   llvm::Expected<std::vector<uint8_t>>
   GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind);
+
+  /// Get binary data of a live core given a data identifier.
+  ///
+  /// \param[in] core_id
+  ///     The core whose data is requested.
+  ///
+  /// \param[in] kind
+  ///     The kind of data requested.
+  ///
+  /// \return
+  ///     A vector of bytes with the requested data, or an \a llvm::Error in
+  ///     case of failures.
+  llvm::Expected<std::vector<uint8_t>>
+  GetLiveCoreBinaryData(lldb::core_id_t core_id, llvm::StringRef kind);
 
   /// Get binary data of the current process given a data identifier.
   ///
@@ -339,10 +436,16 @@ protected:
   llvm::Optional<size_t> GetLiveThreadBinaryDataSize(lldb::tid_t tid,
                                                      llvm::StringRef kind);
 
+  /// Get the size of the data returned by \a GetLiveCoreBinaryData
+  llvm::Optional<size_t> GetLiveCoreBinaryDataSize(lldb::core_id_t core_id,
+                                                   llvm::StringRef kind);
+
   /// Get the size of the data returned by \a GetLiveProcessBinaryData
   llvm::Optional<size_t> GetLiveProcessBinaryDataSize(llvm::StringRef kind);
+
   /// Constructor for post mortem processes
-  Trace() = default;
+  Trace(llvm::ArrayRef<lldb::ProcessSP> postmortem_processes,
+        llvm::Optional<std::vector<lldb::core_id_t>> postmortem_cores);
 
   /// Constructor for a live process
   Trace(Process &live_process) : m_live_process(&live_process) {}
@@ -400,6 +503,10 @@ private:
   /// Process traced by this object if doing live tracing. Otherwise it's null.
   Process *m_live_process = nullptr;
 
+  /// Portmortem processes traced by this object if doing non-live tracing.
+  /// Otherwise it's empty.
+  std::vector<Process *> m_postmortem_processes;
+
   /// These data kinds are returned by lldb-server when fetching the state of
   /// the tracing session. The size in bytes can be used later for fetching the
   /// data in batches.
@@ -409,15 +516,29 @@ private:
   llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, size_t>>
       m_live_thread_data;
 
+  /// core id -> data kind -> size
+  llvm::DenseMap<lldb::core_id_t, std::unordered_map<std::string, size_t>>
+      m_live_core_data;
   /// data kind -> size
   std::unordered_map<std::string, size_t> m_live_process_data;
   /// \}
 
+  /// The list of cores being traced. Might be \b None depending on the plug-in.
+  llvm::Optional<std::vector<lldb::core_id_t>> m_cores;
+
   /// Postmortem traces can specific additional data files, which are
   /// represented in this variable using a data kind identifier for each file.
+  /// \{
+
   /// tid -> data kind -> file
   llvm::DenseMap<lldb::tid_t, std::unordered_map<std::string, FileSpec>>
       m_postmortem_thread_data;
+
+  /// core id -> data kind -> file
+  llvm::DenseMap<lldb::core_id_t, std::unordered_map<std::string, FileSpec>>
+      m_postmortem_core_data;
+
+  /// \}
 
   llvm::Optional<std::string> m_live_refresh_error;
 };

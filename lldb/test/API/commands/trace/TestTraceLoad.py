@@ -62,23 +62,24 @@ thread #1: tid = 3842849
 
 Context:
 {
+  "cpuInfo": { ... },
   "processes": [
     /* error: expected object */
     123
   ],
-  "trace": { ... }
+  "type": "intel-pt"
 }
 
 Schema:
 {
-  "trace": {
-    "type": "intel-pt",
-    "cpuInfo": {
-      "vendor": "intel" | "unknown",
-      "family": integer,
-      "model": integer,
-      "stepping": integer
-    }
+  "type": "intel-pt",
+  "cpuInfo": {
+    // CPU information gotten from, for example, /proc/cpuinfo.
+
+    "vendor": "GenuineIntel" | "unknown",
+    "family": integer,
+    "model": integer,
+    "stepping": integer
   },'''])
 
         # Now we test a missing field in the global session file
@@ -87,25 +88,22 @@ Schema:
 
         # Now we test a missing field in the intel-pt settings
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad4.json"), error=True,
-            substrs=['''error: missing value at traceSession.trace.cpuInfo.family
+            substrs=['''error: missing value at traceSession.cpuInfo.family
 
 Context:
 {
+  "cpuInfo": /* error: missing value */ {
+    "model": 79,
+    "stepping": 1,
+    "vendor": "GenuineIntel"
+  },
   "processes": [],
-  "trace": {
-    "cpuInfo": /* error: missing value */ {
-      "model": 79,
-      "stepping": 1,
-      "vendor": "intel"
-    },
-    "type": "intel-pt"
-  }
+  "type": "intel-pt"
 }''', "Schema"])
 
         # Now we test an incorrect load address in the intel-pt settings
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad5.json"), error=True,
-            substrs=['error: expected numeric string at traceSession.processes[0].modules[0].loadAddress',
-                     '"loadAddress": /* error: expected numeric string */ 400000,', "Schema"])
+            substrs=['error: missing value at traceSession.processes[1].pid', "Schema"])
 
         # The following wrong schema will have a valid target and an invalid one. In the case of failure,
         # no targets should be created.

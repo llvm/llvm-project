@@ -71,3 +71,21 @@ void IntelPTThreadTraceCollection::Clear() {
 size_t IntelPTThreadTraceCollection::GetTracedThreadsCount() const {
   return m_thread_traces.size();
 }
+
+llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+IntelPTThreadTraceCollection::TryGetBinaryData(
+    const TraceGetBinaryDataRequest &request) {
+  if (!request.tid)
+    return None;
+  if (request.kind != IntelPTDataKinds::kTraceBuffer)
+    return None;
+
+  if (!TracesThread(*request.tid))
+    return None;
+
+  if (Expected<IntelPTSingleBufferTrace &> trace =
+          GetTracedThread(*request.tid))
+    return trace->GetTraceBuffer(request.offset, request.size);
+  else
+    return trace.takeError();
+}

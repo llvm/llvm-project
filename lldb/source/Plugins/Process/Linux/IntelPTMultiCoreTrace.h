@@ -80,8 +80,8 @@ public:
 
   llvm::Error TraceStop(lldb::tid_t tid) override;
 
-  llvm::Expected<std::vector<uint8_t>>
-  GetBinaryData(const TraceGetBinaryDataRequest &request) override;
+  llvm::Expected<llvm::Optional<std::vector<uint8_t>>>
+  TryGetBinaryData(const TraceGetBinaryDataRequest &request) override;
 
 private:
   /// This assumes that all underlying perf_events for each core are part of the

@@ -46,13 +46,10 @@ TraceIntelPTGetStateResponse IntelPTPerThreadProcessTrace::GetState() {
   return state;
 }
 
-Expected<std::vector<uint8_t>> IntelPTPerThreadProcessTrace::GetBinaryData(
+Expected<llvm::Optional<std::vector<uint8_t>>>
+IntelPTPerThreadProcessTrace::TryGetBinaryData(
     const TraceGetBinaryDataRequest &request) {
-  if (Expected<IntelPTSingleBufferTrace &> trace =
-          m_thread_traces.GetTracedThread(*request.tid))
-    return trace->GetTraceBuffer(request.offset, request.size);
-  else
-    return trace.takeError();
+  return m_thread_traces.TryGetBinaryData(request);
 }
 
 Expected<IntelPTProcessTraceUP>

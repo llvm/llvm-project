@@ -70,8 +70,8 @@ static Expected<PerfEvent> CreateContextSwitchTracePerfEvent(
   if (Expected<PerfEvent> perf_event = PerfEvent::Init(
           attr, /*pid=*/None, core_id,
           intelpt_core_trace.GetPerfEvent().GetFd(), /*flags=*/0)) {
-    if (Error mmap_err =
-            perf_event->MmapMetadataAndBuffers(data_buffer_numpages, 0)) {
+    if (Error mmap_err = perf_event->MmapMetadataAndBuffers(
+            data_buffer_numpages, 0, /*data_buffer_write=*/false)) {
       return std::move(mmap_err);
     }
     return perf_event;
@@ -190,7 +190,21 @@ Error IntelPTMultiCoreTrace::TraceStop(lldb::tid_t tid) {
                            "per-core process tracing is enabled.");
 }
 
-Expected<std::vector<uint8_t>>
-IntelPTMultiCoreTrace::GetBinaryData(const TraceGetBinaryDataRequest &request) {
-  return createStringError(inconvertibleErrorCode(), "Unimplemented");
+Expected<Optional<std::vector<uint8_t>>>
+IntelPTMultiCoreTrace::TryGetBinaryData(
+    const TraceGetBinaryDataRequest &request) {
+  if (!request.core_id)
+    return None;
+  auto it = m_traces_per_core.find(*request.core_id);
+  if (it == m_traces_per_core.end())
+    return createStringError(
+        inconvertibleErrorCode(),
+        formatv("Core {0} is not being traced", *request.core_id));
+
+  if (request.kind == IntelPTDataKinds::kTraceBuffer)
+    return it->second.first.GetTraceBuffer(request.offset, request.size);
+  if (request.kind == IntelPTDataKinds::kPerfContextSwitchTrace)
+    return it->second.second.ReadFlushedOutDataCyclicBuffer(request.offset,
+                                                            request.size);
+  return None;
 }

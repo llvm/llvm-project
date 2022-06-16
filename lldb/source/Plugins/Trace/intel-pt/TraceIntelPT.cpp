@@ -74,15 +74,28 @@ Expected<TraceSP> TraceIntelPT::CreateInstanceForLiveProcess(Process &process) {
   return instance;
 }
 
-TraceIntelPT::TraceIntelPT(
-    const pt_cpu &cpu_info,
-    const std::vector<ThreadPostMortemTraceSP> &traced_threads)
-    : m_cpu_info(cpu_info) {
+TraceIntelPT::TraceIntelPT(JSONTraceSession &session,
+                           ArrayRef<ProcessSP> traced_processes,
+                           ArrayRef<ThreadPostMortemTraceSP> traced_threads)
+    : Trace(traced_processes, session.GetCoreIds()),
+      m_cpu_info(session.cpu_info),
+      m_tsc_conversion(session.tsc_perf_zero_conversion) {
   for (const ThreadPostMortemTraceSP &thread : traced_threads) {
     m_thread_decoders.emplace(thread->GetID(),
                               std::make_unique<ThreadDecoder>(thread, *this));
-    SetPostMortemThreadDataFile(thread->GetID(), IntelPTDataKinds::kTraceBuffer,
-                                thread->GetTraceFile());
+    if (const Optional<FileSpec> &trace_file = thread->GetTraceFile()) {
+      SetPostMortemThreadDataFile(thread->GetID(),
+                                  IntelPTDataKinds::kTraceBuffer, *trace_file);
+    }
+  }
+  if (session.cores) {
+    for (const JSONCore &core : *session.cores) {
+      SetPostMortemCoreDataFile(core.core_id, IntelPTDataKinds::kTraceBuffer,
+                                FileSpec(core.trace_buffer));
+      SetPostMortemCoreDataFile(core.core_id,
+                                IntelPTDataKinds::kPerfContextSwitchTrace,
+                                FileSpec(core.context_switch_trace));
+    }
   }
 }
 
@@ -238,6 +251,12 @@ Expected<pt_cpu> TraceIntelPT::GetCPUInfo() {
       return cpu_info.takeError();
   }
   return *m_cpu_info;
+}
+
+llvm::Optional<LinuxPerfZeroTscConversion>
+TraceIntelPT::GetPerfZeroTscConversion() {
+  RefreshLiveProcessState();
+  return m_tsc_conversion;
 }
 
 Error TraceIntelPT::DoRefreshLiveProcessState(TraceGetStateResponse state,
