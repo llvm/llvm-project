@@ -150,7 +150,8 @@ define <4 x i32> @vectorArray() #0 {
 ; CHECK-P8-NEXT:    addis 3, 2, .LC0@toc@ha
 ; CHECK-P8-NEXT:    ld 3, .LC0@toc@l(3)
 ; CHECK-P8-NEXT:    addi 3, 3, 32
-; CHECK-P8-NEXT:    lvx 2, 0, 3
+; CHECK-P8-NEXT:    lxvd2x 0, 0, 3
+; CHECK-P8-NEXT:    xxswapd 34, 0
 ; CHECK-P8-NEXT:    blr
 entry:
   %0 = load <4 x i32>, <4 x i32>* getelementptr inbounds ([10 x <4 x i32>], [10 x <4 x i32>]* @vec_arr, i64 0, i64 2), align 16

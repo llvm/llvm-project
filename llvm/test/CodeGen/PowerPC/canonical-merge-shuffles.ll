@@ -83,7 +83,8 @@ define dso_local <16 x i8> @testmrghb2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    addis r3, r2, .LCPI1_0@toc@ha
 ; CHECK-P7-NEXT:    addi r3, r3, .LCPI1_0@toc@l
-; CHECK-P7-NEXT:    lvx v4, 0, r3
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    xxswapd v4, vs0
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
 ;
@@ -157,7 +158,8 @@ define dso_local <16 x i8> @testmrghh2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
 ; CHECK-P7-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-P7-NEXT:    lvx v4, 0, r3
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    xxswapd v4, vs0
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
 ;
@@ -231,7 +233,8 @@ define dso_local <16 x i8> @testmrglb2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
 ; CHECK-P7-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; CHECK-P7-NEXT:    lvx v4, 0, r3
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    xxswapd v4, vs0
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
 ;
@@ -305,7 +308,8 @@ define dso_local <16 x i8> @testmrglh2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    addis r3, r2, .LCPI7_0@toc@ha
 ; CHECK-P7-NEXT:    addi r3, r3, .LCPI7_0@toc@l
-; CHECK-P7-NEXT:    lvx v4, 0, r3
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    xxswapd v4, vs0
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
 ;
@@ -379,7 +383,8 @@ define dso_local <16 x i8> @testmrghw2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    addis r3, r2, .LCPI9_0@toc@ha
 ; CHECK-P7-NEXT:    addi r3, r3, .LCPI9_0@toc@l
-; CHECK-P7-NEXT:    lvx v4, 0, r3
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    xxswapd v4, vs0
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
 ;
@@ -453,7 +458,8 @@ define dso_local <16 x i8> @testmrglw2(<16 x i8> %a, <16 x i8> %b) local_unnamed
 ; CHECK-P7:       # %bb.0: # %entry
 ; CHECK-P7-NEXT:    addis r3, r2, .LCPI11_0@toc@ha
 ; CHECK-P7-NEXT:    addi r3, r3, .LCPI11_0@toc@l
-; CHECK-P7-NEXT:    lvx v4, 0, r3
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P7-NEXT:    xxswapd v4, vs0
 ; CHECK-P7-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-P7-NEXT:    blr
 ;
@@ -511,10 +517,11 @@ define dso_local <8 x i16> @testmrglb3(<8 x i8>* nocapture readonly %a) local_un
 ; CHECK-P7-NEXT:    xxlxor v4, v4, v4
 ; CHECK-P7-NEXT:    std r3, -16(r1)
 ; CHECK-P7-NEXT:    addis r3, r2, .LCPI12_0@toc@ha
-; CHECK-P7-NEXT:    lxvd2x vs0, 0, r4
 ; CHECK-P7-NEXT:    addi r3, r3, .LCPI12_0@toc@l
-; CHECK-P7-NEXT:    lvx v3, 0, r3
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P7-NEXT:    lxvd2x vs1, 0, r3
 ; CHECK-P7-NEXT:    xxswapd v2, vs0
+; CHECK-P7-NEXT:    xxswapd v3, vs1
 ; CHECK-P7-NEXT:    vperm v2, v2, v4, v3
 ; CHECK-P7-NEXT:    blr
 ;
@@ -691,8 +698,10 @@ define dso_local <16 x i8> @no_crash_bitcast(i32 %a) {
 ; CHECK-P7-NEXT:    stw r3, -16(r1)
 ; CHECK-P7-NEXT:    addi r3, r1, -16
 ; CHECK-P7-NEXT:    addi r4, r4, .LCPI14_0@toc@l
-; CHECK-P7-NEXT:    lvx v3, 0, r3
-; CHECK-P7-NEXT:    lvx v2, 0, r4
+; CHECK-P7-NEXT:    lxvd2x vs1, 0, r3
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P7-NEXT:    xxswapd v3, vs1
+; CHECK-P7-NEXT:    xxswapd v2, vs0
 ; CHECK-P7-NEXT:    vperm v2, v3, v3, v2
 ; CHECK-P7-NEXT:    blr
 ;
@@ -722,7 +731,8 @@ define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI15_0@toc@l
-; CHECK-P8-NEXT:    lvx v3, 0, r3
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    vmrgow v2, v3, v2
 ; CHECK-P8-NEXT:    blr
 ;
@@ -761,9 +771,11 @@ define dso_local <4 x i32> @replace_undefs_in_splat(<4 x i32> %a) local_unnamed_
 ; CHECK-P7-NEXT:    addis r3, r2, .LCPI15_0@toc@ha
 ; CHECK-P7-NEXT:    addis r4, r2, .LCPI15_1@toc@ha
 ; CHECK-P7-NEXT:    addi r3, r3, .LCPI15_0@toc@l
-; CHECK-P7-NEXT:    lvx v3, 0, r3
+; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P7-NEXT:    addi r3, r4, .LCPI15_1@toc@l
-; CHECK-P7-NEXT:    lvx v4, 0, r3
+; CHECK-P7-NEXT:    lxvd2x vs1, 0, r3
+; CHECK-P7-NEXT:    xxswapd v3, vs0
+; CHECK-P7-NEXT:    xxswapd v4, vs1
 ; CHECK-P7-NEXT:    vperm v2, v4, v2, v3
 ; CHECK-P7-NEXT:    blr
 ;
@@ -1096,8 +1108,8 @@ entry:
 define <2 x i64> @testSplati64_1(<2 x i64>* nocapture readonly %ptr) #0 {
 ; CHECK-P8-LABEL: testSplati64_1:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    xxspltd v2, vs0, 1
+; CHECK-P8-NEXT:    addi r3, r3, 8
+; CHECK-P8-NEXT:    lxvdsx v2, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testSplati64_1:
@@ -1128,8 +1140,8 @@ define <2 x i64> @testSplati64_1(<2 x i64>* nocapture readonly %ptr) #0 {
 ;
 ; CHECK-P7-LABEL: testSplati64_1:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P7-NEXT:    xxspltd v2, vs0, 1
+; CHECK-P7-NEXT:    addi r3, r3, 8
+; CHECK-P7-NEXT:    lxvdsx v2, 0, r3
 ; CHECK-P7-NEXT:    blr
 ;
 ; P8-AIX-LABEL: testSplati64_1:
@@ -1149,7 +1161,8 @@ define dso_local void @testByteSplat() #0 {
 ; CHECK-P8-NEXT:    lbzx r3, 0, r3
 ; CHECK-P8-NEXT:    mtvsrwz v2, r3
 ; CHECK-P8-NEXT:    vspltb v2, v2, 7
-; CHECK-P8-NEXT:    stvx v2, 0, r3
+; CHECK-P8-NEXT:    xxswapd vs0, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testByteSplat:
@@ -1182,7 +1195,8 @@ define dso_local void @testByteSplat() #0 {
 ; CHECK-P7-NEXT:    lvx v3, 0, r3
 ; CHECK-P7-NEXT:    vperm v2, v3, v3, v2
 ; CHECK-P7-NEXT:    vspltb v2, v2, 15
-; CHECK-P7-NEXT:    stvx v2, 0, r3
+; CHECK-P7-NEXT:    xxswapd vs0, v2
+; CHECK-P7-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P7-NEXT:    blr
 ;
 ; P8-AIX-LABEL: testByteSplat:

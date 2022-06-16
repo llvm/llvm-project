@@ -4,9 +4,11 @@
 define void @VPKUDUM_unary(<2 x i64>* %A) {
 ; CHECK-LABEL: VPKUDUM_unary:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lvx 2, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxswapd 34, 0
 ; CHECK-NEXT:    vpkudum 2, 2, 2
-; CHECK-NEXT:    stvx 2, 0, 3
+; CHECK-NEXT:    xxswapd 0, 34
+; CHECK-NEXT:    stxvd2x 0, 0, 3
 ; CHECK-NEXT:    blr
 entry:
 	%tmp = load <2 x i64>, <2 x i64>* %A
@@ -25,10 +27,13 @@ entry:
 define void @VPKUDUM(<2 x i64>* %A, <2 x i64>* %B) {
 ; CHECK-LABEL: VPKUDUM:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lvx 2, 0, 3
-; CHECK-NEXT:    lvx 3, 0, 4
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    lxvd2x 1, 0, 4
+; CHECK-NEXT:    xxswapd 34, 0
+; CHECK-NEXT:    xxswapd 35, 1
 ; CHECK-NEXT:    vpkudum 2, 3, 2
-; CHECK-NEXT:    stvx 2, 0, 3
+; CHECK-NEXT:    xxswapd 0, 34
+; CHECK-NEXT:    stxvd2x 0, 0, 3
 ; CHECK-NEXT:    blr
 entry:
 	%tmp = load <2 x i64>, <2 x i64>* %A

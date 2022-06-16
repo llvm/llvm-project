@@ -47,11 +47,13 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    mullw 4, 4, 5
 ; CHECK-NEXT:    vsplth 2, 2, 3
-; CHECK-NEXT:    stvx 2, 0, 3
+; CHECK-NEXT:    xxswapd 0, 34
 ; CHECK-NEXT:    neg 4, 4
 ; CHECK-NEXT:    mtvsrd 35, 4
+; CHECK-NEXT:    stxvd2x 0, 0, 3
 ; CHECK-NEXT:    vsplth 3, 3, 3
-; CHECK-NEXT:    stvx 3, 0, 3
+; CHECK-NEXT:    xxswapd 1, 35
+; CHECK-NEXT:    stxvd2x 1, 0, 3
 bb:
   br i1 undef, label %bb22, label %bb3
 

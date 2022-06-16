@@ -217,7 +217,8 @@ define <1 x i128> @call_v1i128_increment_by_one() nounwind {
        ret <1 x i128> %ret
 
 ; CHECK-LE-LABEL: @call_v1i128_increment_by_one
-; CHECK-LE: lvx 2, {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE: lxvd2x [[VAL:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE: xxswapd 34, [[VAL]]
 ; CHECK-LE: bl v1i128_increment_by_one
 ; CHECK-LE: blr
 
@@ -246,8 +247,10 @@ define <1 x i128> @call_v1i128_increment_by_val() nounwind {
        ret <1 x i128> %ret
 
 ; CHECK-LE-LABEL: @call_v1i128_increment_by_val
-; CHECK-LE: lvx 2, {{[0-9]+}}, {{[0-9]+}}
-; CHECK-LE: lvx 3, {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE: lxvd2x [[VAL1:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE-DAG: lxvd2x [[VAL2:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}
+; CHECK-LE-DAG: xxswapd 34, [[VAL1]]
+; CHECK-LE: xxswapd 35, [[VAL2]]
 ; CHECK-LE: bl v1i128_increment_by_val
 ; CHECK-LE: blr
 
