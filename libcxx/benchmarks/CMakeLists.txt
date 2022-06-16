@@ -82,7 +82,7 @@ set(BENCHMARK_NATIVE_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-native)
 
 add_library(               cxx-benchmarks-flags INTERFACE)
 target_compile_features(   cxx-benchmarks-flags INTERFACE cxx_std_20)
-target_compile_options(    cxx-benchmarks-flags INTERFACE -O2 -fsized-deallocation -nostdinc++)
+target_compile_options(    cxx-benchmarks-flags INTERFACE -fsized-deallocation -nostdinc++)
 target_include_directories(cxx-benchmarks-flags INTERFACE "${LIBCXX_GENERATED_INCLUDE_DIR}"
                                                 INTERFACE "${BENCHMARK_LIBCXX_INSTALL}/include"
                                                 INTERFACE "${LIBCXX_SOURCE_DIR}/test/support")
