@@ -375,8 +375,7 @@ AVRToolChain::AVRToolChain(const Driver &D, const llvm::Triple &Triple,
 
   // Only add default libraries if the user hasn't explicitly opted out.
   if (!Args.hasArg(options::OPT_nostdlib) &&
-      !Args.hasArg(options::OPT_nodefaultlibs) &&
-      GCCInstallation.isValid()) {
+      !Args.hasArg(options::OPT_nodefaultlibs) && GCCInstallation.isValid()) {
     GCCInstallPath = GCCInstallation.getInstallPath();
     std::string GCCParentPath(GCCInstallation.getParentLibPath());
     getProgramPaths().push_back(GCCParentPath + "/../bin");
@@ -429,9 +428,14 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Compute information about the target AVR.
   std::string CPU = getCPUName(D, Args, getToolChain().getTriple());
   llvm::Optional<StringRef> FamilyName = GetMCUFamilyName(CPU);
+  llvm::Optional<std::string> AVRLibcRoot = TC.findAVRLibcInstallation();
   llvm::Optional<unsigned> SectionAddressData = GetMCUSectionAddressData(CPU);
 
-  std::string Linker = getToolChain().GetProgramPath(getShortName());
+  // Compute the linker program path, and use GNU "avr-ld" as default.
+  const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
+  std::string Linker = A ? getToolChain().GetLinkerPath(nullptr)
+                         : getToolChain().GetProgramPath(getShortName());
+
   ArgStringList CmdArgs;
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
@@ -450,17 +454,11 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib) &&
       !Args.hasArg(options::OPT_nodefaultlibs)) {
     if (!CPU.empty()) {
-        Optional<StringRef> FamilyName = GetMCUFamilyName(CPU);
-        Optional<std::string> AVRLibcRoot = TC.findAVRLibcInstallation();
-
       if (!FamilyName) {
         // We do not have an entry for this CPU in the family
         // mapping table yet.
         D.Diag(diag::warn_drv_avr_family_linking_stdlibs_not_implemented)
             << CPU;
-      } else if (TC.getGCCInstallPath().empty()) {
-        // We can not link since there is no avr-ld.
-        D.Diag(diag::warn_drv_avr_gcc_not_found);
       } else if (!AVRLibcRoot) {
         // No avr-libc found and so no runtime linked.
         D.Diag(diag::warn_drv_avr_libc_not_found);
@@ -473,7 +471,6 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         LinkStdlib = true;
       }
     }
-
     if (!LinkStdlib)
       D.Diag(diag::warn_drv_avr_stdlib_not_linked);
   }
@@ -508,11 +505,15 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     CmdArgs.push_back("--end-group");
 
+    // Add user specified linker script.
+    Args.AddAllArgs(CmdArgs, options::OPT_T);
+
     // Specify the family name as the emulation mode to use.
     // This is almost always required because otherwise avr-ld
     // will assume 'avr2' and warn about the program being larger
     // than the bare minimum supports.
-    CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
+    if (Linker.find("avr-ld") != std::string::npos)
+      CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
   }
 
   C.addCommand(std::make_unique<Command>(

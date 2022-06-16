@@ -151,6 +151,38 @@ def Transform_Dialect : Dialect {
     transform operations can return _new_ handles that can be read or consumed
     by subsequent operations.
 
+    ## Execution Model
+
+    The transformation starts at the specifed top-level transform IR operation
+    and applies to some payload IR scope, identified by the payload IR op that
+    contains the IR to transform. It is the responsibility of the user to
+    properly select the scope and/or to avoid the transformations to modify the
+    IR outside of the given scope. The top-level transform IR operation may
+    contain further transform operations and execute them in the desired order.
+
+    Transformation application functions produce a tri-state status:
+
+    - success;
+    - recoverable (silencable) failure;
+    - irrecoverable failure.
+
+    Transformation container operations may intercept recoverable failures and
+    perform the required recovery steps thus succeeding themselves. On
+    the other hand, they must propagate irrecoverable failures. For such
+    failures, the diagnostics are emitted immediately whereas their emission is
+    postponed for recoverable faliures. Transformation container operations may
+    also fail to recover from a theoretically recoverable failure, in which case
+    they are expected to emit the diagnostic and turn the failure into an
+    irrecoverable one. A recoverable failure produced by applying the top-level
+    transform IR operation is considered irrecoverable.
+
+    Transformation container operations are allowed to "step over" some nested
+    operations if the application of some previous operation produced a failure.
+    This can be conceptually thought of as having a global "recoverable error
+    register" that is read/write accessed by each transform operation as a side
+    effect. The transformation is skipped if the register already contains an
+    error description, and the control flow proceeds to the following operation.
+
     ## Handle Invalidation
 
     The execution model of the transform dialect expects that a payload IR

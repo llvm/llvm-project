@@ -10,6 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+def imm_to_tile8   : ComplexPattern<i64, 1, "ImmToTile<AArch64::ZAB0>", []>;
+def imm_to_tile16  : ComplexPattern<i64, 1, "ImmToTile<AArch64::ZAH0>", []>;
+def imm_to_tile32  : ComplexPattern<i64, 1, "ImmToTile<AArch64::ZAS0>", []>;
+def imm_to_tile64  : ComplexPattern<i64, 1, "ImmToTile<AArch64::ZAD0>", []>;
+def imm_to_tile128 : ComplexPattern<i64, 1, "ImmToTile<AArch64::ZAQ0>", []>;
+
+def tileslice8   : ComplexPattern<i32 , 2, "SelectSMETileSlice<4>", []>;
+def tileslice16  : ComplexPattern<i32 , 2, "SelectSMETileSlice<3>", []>;
+def tileslice32  : ComplexPattern<i32 , 2, "SelectSMETileSlice<2>", []>;
+def tileslice64  : ComplexPattern<i32 , 2, "SelectSMETileSlice<1>", []>;
+def tileslice128 : ComplexPattern<i32 , 2, "SelectSMETileSlice<0>", []>; // nop
+
+def am_sme_indexed_b4 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0,15>", [], [SDNPWantRoot]>;
+
 //===----------------------------------------------------------------------===//
 // SME Outer Products
 //===----------------------------------------------------------------------===//
@@ -233,6 +247,45 @@ multiclass sme_mem_ld_ss_aliases<string inst, bit is_col> {
   defm NAME : sme_mem_ss_aliases<"ld1", inst, is_col, "/z">;
 }
 
+multiclass sme_mem_ld_ss_patterns<Instruction Inst, SDPatternOperator Load,
+                                  Operand tile_ty, Operand offset_ty,
+                                  ComplexPattern addr,
+                                  ComplexPattern tileslice> {
+  // base
+  def : Pat<(Load PPR3bAny:$pg, GPR64sp:$base, tile_ty:$tile,
+                  MatrixIndexGPR32Op12_15:$idx),
+            (Inst tile_ty:$tile, $idx, 0, $pg, $base, XZR)>;
+  // reg + reg
+  let AddedComplexity = 1 in {
+    def : Pat<(Load PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
+                    tile_ty:$tile, MatrixIndexGPR32Op12_15:$idx),
+              (Inst tile_ty:$tile, $idx, 0, $pg, $base, $offset)>;
+  }
+
+  // base, tileslice
+  let AddedComplexity = 1 in {
+    def : Pat<(Load PPR3bAny:$pg, GPR64sp:$base, tile_ty:$tile,
+                    (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
+              (Inst tile_ty:$tile, $idx, $imm, $pg, $base, XZR)>;
+  }
+  // reg + reg, tileslice
+  let AddedComplexity = 2 in {
+    def : Pat<(Load PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
+                    tile_ty:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$idx,
+                                              offset_ty:$imm))),
+              (Inst tile_ty:$tile, $idx, $imm, $pg, $base, $offset)>;
+  }
+}
+
+class sme_load_pseudo
+    : Pseudo<(outs), (ins i64imm:$tile, MatrixIndexGPR32Op12_15:$idx,
+                          i64imm:$imm, PPR3bAny:$pg, GPR64sp:$base, GPR64:$offset), []>,
+      Sched<[]> {
+  // Translated to the actual instructions in AArch64ISelLowering.cpp
+  let usesCustomInserter = 1;
+  let mayLoad = 1;
+}
+
 multiclass sme_mem_ld_v_ss<string mnemonic, bit is_col> {
   def _B : sme_mem_ld_ss_inst<0b0, 0b00, mnemonic # "b",
                               !if(is_col, TileVectorOpV8, TileVectorOpH8),
@@ -272,6 +325,40 @@ multiclass sme_mem_ld_v_ss<string mnemonic, bit is_col> {
   }
 
   defm : sme_mem_ld_ss_aliases<NAME, is_col>;
+
+  // Pseudo instructions for lowering intrinsics, using immediates instead of
+  // tile registers.
+  def _PSEUDO_B : sme_load_pseudo;
+  def _PSEUDO_H : sme_load_pseudo;
+  def _PSEUDO_S : sme_load_pseudo;
+  def _PSEUDO_D : sme_load_pseudo;
+  def _PSEUDO_Q : sme_load_pseudo;
+
+  defm : sme_mem_ld_ss_patterns<!cast<Instruction>(NAME # _PSEUDO_B),
+                                !if(is_col, int_aarch64_sme_ld1b_vert,
+                                            int_aarch64_sme_ld1b_horiz),
+                                sme_elm_idx0_0, imm0_15, am_sve_regreg_lsl0,
+                                tileslice8>;
+  defm : sme_mem_ld_ss_patterns<!cast<Instruction>(NAME # _PSEUDO_H),
+                                !if(is_col, int_aarch64_sme_ld1h_vert,
+                                            int_aarch64_sme_ld1h_horiz),
+                                imm0_1, imm0_7, am_sve_regreg_lsl1,
+                                tileslice16>;
+  defm : sme_mem_ld_ss_patterns<!cast<Instruction>(NAME # _PSEUDO_S),
+                                !if(is_col, int_aarch64_sme_ld1w_vert,
+                                            int_aarch64_sme_ld1w_horiz),
+                                imm0_3, imm0_3, am_sve_regreg_lsl2,
+                                tileslice32>;
+  defm : sme_mem_ld_ss_patterns<!cast<Instruction>(NAME # _PSEUDO_D),
+                                !if(is_col, int_aarch64_sme_ld1d_vert,
+                                            int_aarch64_sme_ld1d_horiz),
+                                imm0_7, imm0_1, am_sve_regreg_lsl3,
+                                tileslice64>;
+  defm : sme_mem_ld_ss_patterns<!cast<Instruction>(NAME # _PSEUDO_Q),
+                                !if(is_col, int_aarch64_sme_ld1q_vert,
+                                            int_aarch64_sme_ld1q_horiz),
+                                imm0_15, sme_elm_idx0_0, am_sve_regreg_lsl4,
+                                tileslice128>;
 }
 
 multiclass sme_mem_ld_ss<string mnemonic> {
@@ -318,6 +405,36 @@ multiclass sme_mem_st_ss_aliases<string inst, bit is_col> {
   defm NAME : sme_mem_ss_aliases<"st1", inst, is_col>;
 }
 
+multiclass sme_mem_st_ss_patterns<Instruction Inst, SDPatternOperator Store,
+                                  Operand offset_ty,
+                                  ComplexPattern imm2tile,
+                                  ComplexPattern addr,
+                                  ComplexPattern tileslice> {
+  // base
+  def : Pat<(Store PPR3bAny:$pg, GPR64sp:$base, (imm2tile untyped:$tile),
+                   MatrixIndexGPR32Op12_15:$idx),
+            (Inst $tile, $idx, 0, $pg, $base, XZR)>;
+  // reg + reg
+  let AddedComplexity = 1 in {
+    def : Pat<(Store PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
+                     (imm2tile untyped:$tile), MatrixIndexGPR32Op12_15:$idx),
+              (Inst $tile, $idx, 0, $pg, $base, $offset)>;
+  }
+  // base, tileslice
+  let AddedComplexity = 1 in {
+    def : Pat<(Store PPR3bAny:$pg, GPR64sp:$base, (imm2tile untyped:$tile),
+                     (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
+              (Inst $tile, $idx, $imm, $pg, $base, XZR)>;
+  }
+  // reg + reg, tileslice
+  let AddedComplexity = 2 in {
+    def : Pat<(Store PPR3bAny:$pg, (addr GPR64sp:$base, GPR64:$offset),
+                     (imm2tile untyped:$tile),
+                     (i32 (tileslice MatrixIndexGPR32Op12_15:$idx, offset_ty:$imm))),
+              (Inst $tile, $idx, $imm, $pg, $base, $offset)>;
+  }
+}
+
 multiclass sme_mem_st_v_ss<string mnemonic, bit is_col> {
   def _B : sme_mem_st_ss_inst<0b0, 0b00, mnemonic # "b",
                               !if(is_col, TileVectorOpV8, TileVectorOpH8),
@@ -357,6 +474,32 @@ multiclass sme_mem_st_v_ss<string mnemonic, bit is_col> {
   }
 
   defm : sme_mem_st_ss_aliases<NAME, is_col>;
+
+  defm : sme_mem_st_ss_patterns<!cast<Instruction>(NAME # _B),
+                                !if(is_col, int_aarch64_sme_st1b_vert,
+                                            int_aarch64_sme_st1b_horiz),
+                                imm0_15, imm_to_tile8, am_sve_regreg_lsl0,
+                                tileslice8>;
+  defm : sme_mem_st_ss_patterns<!cast<Instruction>(NAME # _H),
+                                !if(is_col, int_aarch64_sme_st1h_vert,
+                                            int_aarch64_sme_st1h_horiz),
+                                imm0_7, imm_to_tile16, am_sve_regreg_lsl1,
+                                tileslice16>;
+  defm : sme_mem_st_ss_patterns<!cast<Instruction>(NAME # _S),
+                                !if(is_col, int_aarch64_sme_st1w_vert,
+                                            int_aarch64_sme_st1w_horiz),
+                                imm0_3, imm_to_tile32, am_sve_regreg_lsl2,
+                                tileslice32>;
+  defm : sme_mem_st_ss_patterns<!cast<Instruction>(NAME # _D),
+                                !if(is_col, int_aarch64_sme_st1d_vert,
+                                            int_aarch64_sme_st1d_horiz),
+                                imm0_1, imm_to_tile64, am_sve_regreg_lsl3,
+                                tileslice64>;
+  defm : sme_mem_st_ss_patterns<!cast<Instruction>(NAME # _Q),
+                                !if(is_col, int_aarch64_sme_st1q_vert,
+                                            int_aarch64_sme_st1q_horiz),
+                                sme_elm_idx0_0, imm_to_tile128,
+                                am_sve_regreg_lsl4, tileslice128>;
 }
 
 multiclass sme_mem_st_ss<string mnemonic> {
@@ -368,7 +511,7 @@ multiclass sme_mem_st_ss<string mnemonic> {
 // SME Save and Restore Array
 //===----------------------------------------------------------------------===//
 
-class sme_spill_fill_inst<bit isStore, dag outs, dag ins, string opcodestr>
+class sme_spill_fill_base<bit isStore, dag outs, dag ins, string opcodestr>
     : I<outs, ins, opcodestr, "\t$ZAt[$Rv, $imm4], [$Rn, $offset, mul vl]", "",
         []>,
       Sched<[]> {
@@ -383,33 +526,61 @@ class sme_spill_fill_inst<bit isStore, dag outs, dag ins, string opcodestr>
   let Inst{9-5}   = Rn;
   let Inst{4}     = 0b0;
   let Inst{3-0}   = imm4;
-
-  let mayLoad = !not(isStore);
-  let mayStore = isStore;
 }
 
-multiclass sme_spill_fill<bit isStore, dag outs, dag ins, string opcodestr> {
-  def NAME : sme_spill_fill_inst<isStore, outs, ins, opcodestr>;
-
+let mayStore = 1 in
+class sme_spill_inst<string opcodestr>
+    : sme_spill_fill_base<0b1, (outs),
+                          (ins MatrixOp:$ZAt, MatrixIndexGPR32Op12_15:$Rv,
+                               sme_elm_idx0_15:$imm4, GPR64sp:$Rn,
+                               imm0_15:$offset),
+                          opcodestr>;
+let mayLoad = 1 in
+class sme_fill_inst<string opcodestr>
+    : sme_spill_fill_base<0b0, (outs MatrixOp:$ZAt),
+                          (ins MatrixIndexGPR32Op12_15:$Rv,
+                               sme_elm_idx0_15:$imm4, GPR64sp:$Rn,
+                               imm0_15:$offset),
+                          opcodestr>;
+multiclass sme_spill<string opcodestr> {
+  def NAME : sme_spill_inst<opcodestr>;
   def : InstAlias<opcodestr # "\t$ZAt[$Rv, $imm4], [$Rn]",
                   (!cast<Instruction>(NAME) MatrixOp:$ZAt,
                    MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_15:$imm4, GPR64sp:$Rn, 0), 1>;
-}
-
-multiclass sme_spill<string opcodestr> {
-  defm NAME : sme_spill_fill<0b1, (outs),
-                             (ins MatrixOp:$ZAt, MatrixIndexGPR32Op12_15:$Rv,
-                                  sme_elm_idx0_15:$imm4, GPR64sp:$Rn,
-                                  imm0_15:$offset),
-                             opcodestr>;
+  // base
+  def : Pat<(int_aarch64_sme_str MatrixIndexGPR32Op12_15:$idx, GPR64sp:$base),
+            (!cast<Instruction>(NAME) ZA, $idx, 0, $base, 0)>;
+  // scalar + immediate (mul vl)
+  let AddedComplexity = 2 in {
+    def : Pat<(int_aarch64_sme_str MatrixIndexGPR32Op12_15:$idx,
+                                   (am_sme_indexed_b4 GPR64sp:$base, imm0_15:$imm4)),
+              (!cast<Instruction>(NAME) ZA, $idx, 0, $base, $imm4)>;
+  }
 }
 
 multiclass sme_fill<string opcodestr> {
-  defm NAME : sme_spill_fill<0b0, (outs MatrixOp:$ZAt),
-                             (ins MatrixIndexGPR32Op12_15:$Rv,
-                                  sme_elm_idx0_15:$imm4, GPR64sp:$Rn,
-                                  imm0_15:$offset),
-                             opcodestr>;
+  def NAME : sme_fill_inst<opcodestr>;
+  def : InstAlias<opcodestr # "\t$ZAt[$Rv, $imm4], [$Rn]",
+                  (!cast<Instruction>(NAME) MatrixOp:$ZAt,
+                   MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_15:$imm4, GPR64sp:$Rn, 0), 1>;
+  def NAME # _PSEUDO
+      : Pseudo<(outs),
+               (ins MatrixIndexGPR32Op12_15:$idx, imm0_15:$imm4,
+                    GPR64sp:$base), []>,
+        Sched<[]> {
+    // Translated to actual instruction in AArch64ISelLowering.cpp
+    let usesCustomInserter = 1;
+    let mayLoad = 1;
+  }
+  // base
+  def : Pat<(int_aarch64_sme_ldr MatrixIndexGPR32Op12_15:$idx, GPR64sp:$base),
+            (!cast<Instruction>(NAME # _PSEUDO) $idx, 0, $base)>;
+  // scalar + immediate (mul vl)
+  let AddedComplexity = 2 in {
+    def : Pat<(int_aarch64_sme_ldr MatrixIndexGPR32Op12_15:$idx,
+                                   (am_sme_indexed_b4 GPR64sp:$base, imm0_15:$imm4)),
+              (!cast<Instruction>(NAME # _PSEUDO) $idx, $imm4, $base)>;
+  }
 }
 
 //===----------------------------------------------------------------------===//

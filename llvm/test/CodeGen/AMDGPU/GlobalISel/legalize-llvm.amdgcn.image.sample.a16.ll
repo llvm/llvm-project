@@ -5,56 +5,58 @@
 define amdgpu_ps <4 x float> @sample_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s) {
   ; GFX9-LABEL: name: sample_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f16(i32 15, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -63,58 +65,60 @@ main_body:
 define amdgpu_ps <4 x float> @sample_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t) {
   ; GFX9-LABEL: name: sample_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f16(i32 15, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -123,66 +127,68 @@ main_body:
 define amdgpu_ps <4 x float> @sample_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %r) {
   ; GFX9-LABEL: name: sample_3d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.3d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.3d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_3d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.3d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.3d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.3d.v4f32.f16(i32 15, half %s, half %t, half %r, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -191,66 +197,68 @@ main_body:
 define amdgpu_ps <4 x float> @sample_cube(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %face) {
   ; GFX9-LABEL: name: sample_cube
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cube), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cube), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_cube
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cube), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cube), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.cube.v4f32.f16(i32 15, half %s, half %t, half %face, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -259,58 +267,60 @@ main_body:
 define amdgpu_ps <4 x float> @sample_1darray(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %slice) {
   ; GFX9-LABEL: name: sample_1darray
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1darray), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1darray), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_1darray
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1darray), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.1darray), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.1darray.v4f32.f16(i32 15, half %s, half %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -319,66 +329,68 @@ main_body:
 define amdgpu_ps <4 x float> @sample_2darray(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %slice) {
   ; GFX9-LABEL: name: sample_2darray
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.2darray), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.2darray), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_2darray
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.2darray), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.2darray), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.2darray.v4f32.f16(i32 15, half %s, half %t, half %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -387,64 +399,66 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s) {
   ; GFX9-LABEL: name: sample_c_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f16(i32 15, float %zcompare, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -453,64 +467,66 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t) {
   ; GFX9-LABEL: name: sample_c_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.2d.v4f32.f16(i32 15, float %zcompare, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -519,58 +535,60 @@ main_body:
 define amdgpu_ps <4 x float> @sample_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %clamp) {
   ; GFX9-LABEL: name: sample_cl_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cl.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cl.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_cl_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cl.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cl.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.cl.1d.v4f32.f16(i32 15, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -579,66 +597,68 @@ main_body:
 define amdgpu_ps <4 x float> @sample_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %clamp) {
   ; GFX9-LABEL: name: sample_cl_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cl.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cl.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_cl_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cl.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cl.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.cl.2d.v4f32.f16(i32 15, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -647,64 +667,66 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %clamp) {
   ; GFX9-LABEL: name: sample_c_cl_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cl.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cl.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_cl_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cl.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cl.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.cl.1d.v4f32.f16(i32 15, float %zcompare, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -713,69 +735,71 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t, half %clamp) {
   ; GFX9-LABEL: name: sample_c_cl_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cl.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cl.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_cl_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cl.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cl.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.cl.2d.v4f32.f16(i32 15, float %zcompare, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -784,64 +808,66 @@ main_body:
 define amdgpu_ps <4 x float> @sample_b_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, half %s) {
   ; GFX9-LABEL: name: sample_b_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_b_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.b.1d.v4f32.f16.f16(i32 15, half %bias, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -850,66 +876,68 @@ main_body:
 define amdgpu_ps <4 x float> @sample_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, half %s, half %t) {
   ; GFX9-LABEL: name: sample_b_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_b_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.b.2d.v4f32.f16.f16(i32 15, half %bias, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -918,67 +946,69 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_b_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, float %zcompare, half %s) {
   ; GFX9-LABEL: name: sample_c_b_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_b_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.1d.v4f32.f16.f16(i32 15, half %bias, float %zcompare, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -987,69 +1017,71 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, float %zcompare, half %s, half %t) {
   ; GFX9-LABEL: name: sample_c_b_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_b_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.2d.v4f32.f16.f16(i32 15, half %bias, float %zcompare, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1058,66 +1090,68 @@ main_body:
 define amdgpu_ps <4 x float> @sample_b_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, half %s, half %clamp) {
   ; GFX9-LABEL: name: sample_b_cl_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.cl.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.cl.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_b_cl_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.cl.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.cl.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.b.cl.1d.v4f32.f16.f16(i32 15, half %bias, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1126,69 +1160,71 @@ main_body:
 define amdgpu_ps <4 x float> @sample_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, half %s, half %t, half %clamp) {
   ; GFX9-LABEL: name: sample_b_cl_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.cl.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.cl.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_b_cl_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.cl.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.b.cl.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.b.cl.2d.v4f32.f16.f16(i32 15, half %bias, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1197,69 +1233,71 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_b_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, float %zcompare, half %s, half %clamp) {
   ; GFX9-LABEL: name: sample_c_b_cl_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.cl.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.cl.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_b_cl_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.cl.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.cl.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.1d.v4f32.f16.f16(i32 15, half %bias, float %zcompare, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1268,73 +1306,75 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %bias, float %zcompare, half %s, half %t, half %clamp) {
   ; GFX9-LABEL: name: sample_c_b_cl_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.cl.2d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.cl.2d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_b_cl_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.cl.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.b.cl.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.b.cl.2d.v4f32.f16.f16(i32 15, half %bias, float %zcompare, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1343,67 +1383,69 @@ main_body:
 define amdgpu_ps <4 x float> @sample_d_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s) {
   ; GFX9-LABEL: name: sample_d_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_d_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.d.1d.v4f32.f16.f16(i32 15, half %dsdh, half %dsdv, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1412,71 +1454,73 @@ main_body:
 define amdgpu_ps <4 x float> @sample_d_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
   ; GFX9-LABEL: name: sample_d_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_d_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f16.f16(i32 15, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1485,86 +1529,88 @@ main_body:
 define amdgpu_ps <4 x float> @sample_d_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %drdh, half %dsdv, half %dtdv, half %drdv, half %s, half %t, half %r) {
   ; GFX9-LABEL: name: sample_d_3d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX9:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX9:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX9:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC4:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC5:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), [[BUILD_VECTOR_TRUNC4]](<2 x s16>), [[BUILD_VECTOR_TRUNC5]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.3d), 15, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX9-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX9-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX9-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC4:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC5:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), [[BUILD_VECTOR_TRUNC4]](<2 x s16>), [[BUILD_VECTOR_TRUNC5]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.3d), 15, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_d_3d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX10:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX10:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX10:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC4:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC5:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), [[BUILD_VECTOR_TRUNC4]](<2 x s16>), [[BUILD_VECTOR_TRUNC5]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.3d), 15, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX10-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX10-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC4:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC5:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), [[BUILD_VECTOR_TRUNC4]](<2 x s16>), [[BUILD_VECTOR_TRUNC5]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.3d), 15, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f16.f16(i32 15, half %dsdh, half %dtdh, half %drdh, half %dsdv, half %dtdv, half %drdv, half %s, half %t, half %r, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1573,71 +1619,73 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_d_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, half %s) {
   ; GFX9-LABEL: name: sample_c_d_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.1d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.1d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_d_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.1d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.1d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.1d.v4f32.f32.f16(i32 15, float %zcompare, half %dsdh, half %dsdv, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1646,75 +1694,77 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_d_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
   ; GFX9-LABEL: name: sample_c_d_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX9:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.2d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX9-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.2d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_d_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX10:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.2d.v4f32.f32.f16(i32 15, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1723,69 +1773,71 @@ main_body:
 define amdgpu_ps <4 x float> @sample_d_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s, half %clamp) {
   ; GFX9-LABEL: name: sample_d_cl_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.cl.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.cl.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_d_cl_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.cl.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.cl.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.d.cl.1d.v4f32.f16.f16(i32 15, half %dsdh, half %dsdv, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1794,77 +1846,79 @@ main_body:
 define amdgpu_ps <4 x float> @sample_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
   ; GFX9-LABEL: name: sample_d_cl_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX9:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.cl.2d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX9-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.cl.2d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_d_cl_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX10:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.cl.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.d.cl.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.d.cl.2d.v4f32.f16.f16(i32 15, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1873,73 +1927,75 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_d_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, half %s, half %clamp) {
   ; GFX9-LABEL: name: sample_c_d_cl_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.cl.1d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.cl.1d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_d_cl_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.cl.1d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.cl.1d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.1d.v4f32.f32.f16(i32 15, float %zcompare, half %dsdh, half %dsdv, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -1948,81 +2004,83 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
   ; GFX9-LABEL: name: sample_c_d_cl_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX9:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX9:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY19]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<10 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.cl.2d), 15, [[CONCAT_VECTORS]](<10 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX9-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX9-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY19]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<10 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.cl.2d), 15, [[CONCAT_VECTORS]](<10 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_d_cl_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX10:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX10:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY19]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.cl.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX10-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY19]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.cl.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.d.cl.2d.v4f32.f32.f16(i32 15, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2031,67 +2089,69 @@ main_body:
 define amdgpu_ps <4 x float> @sample_cd_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s) {
   ; GFX9-LABEL: name: sample_cd_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_cd_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.cd.1d.v4f32.f16.f16(i32 15, half %dsdh, half %dsdv, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2100,71 +2160,73 @@ main_body:
 define amdgpu_ps <4 x float> @sample_cd_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
   ; GFX9-LABEL: name: sample_cd_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_cd_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.cd.2d.v4f32.f16.f16(i32 15, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2173,71 +2235,73 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_cd_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, half %s) {
   ; GFX9-LABEL: name: sample_c_cd_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.1d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.1d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_cd_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.1d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.1d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.1d.v4f32.f32.f16(i32 15, float %zcompare, half %dsdh, half %dsdv, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2246,75 +2310,77 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_cd_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t) {
   ; GFX9-LABEL: name: sample_c_cd_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX9:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.2d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX9-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.2d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_cd_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX10:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.2d.v4f32.f32.f16(i32 15, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2323,69 +2389,71 @@ main_body:
 define amdgpu_ps <4 x float> @sample_cd_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dsdv, half %s, half %clamp) {
   ; GFX9-LABEL: name: sample_cd_cl_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.cl.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.cl.1d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_cd_cl_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.cl.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.cl.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.1d.v4f32.f16.f16(i32 15, half %dsdh, half %dsdv, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2394,77 +2462,79 @@ main_body:
 define amdgpu_ps <4 x float> @sample_cd_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
   ; GFX9-LABEL: name: sample_cd_cl_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX9:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.cl.2d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX9-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.cl.2d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_cd_cl_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX10:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.cl.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.cd.cl.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.cd.cl.2d.v4f32.f16.f16(i32 15, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2473,73 +2543,75 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_cd_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, half %s, half %clamp) {
   ; GFX9-LABEL: name: sample_c_cd_cl_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.cl.1d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.cl.1d), 15, [[CONCAT_VECTORS]](<8 x s16>), $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_cd_cl_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.cl.1d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.cl.1d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.1d.v4f32.f32.f16(i32 15, float %zcompare, half %dsdh, half %dsdv, half %s, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2548,81 +2620,83 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_cd_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp) {
   ; GFX9-LABEL: name: sample_c_cd_cl_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX9:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX9:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY19]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<10 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.cl.2d), 15, [[CONCAT_VECTORS]](<10 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX9-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX9-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY19]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<10 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.cl.2d), 15, [[CONCAT_VECTORS]](<10 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_cd_cl_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX10:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX10:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY19]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.cl.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX10-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[COPY16]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY17]](s32), [[COPY18]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY19]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.cd.cl.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.cd.cl.2d.v4f32.f32.f16(i32 15, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2631,58 +2705,60 @@ main_body:
 define amdgpu_ps <4 x float> @sample_l_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %lod) {
   ; GFX9-LABEL: name: sample_l_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.l.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.l.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_l_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.l.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.l.1d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f16(i32 15, half %s, half %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2691,66 +2767,68 @@ main_body:
 define amdgpu_ps <4 x float> @sample_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t, half %lod) {
   ; GFX9-LABEL: name: sample_l_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.l.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.l.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_l_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.l.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.l.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.l.2d.v4f32.f16(i32 15, half %s, half %t, half %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2759,64 +2837,66 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_l_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %lod) {
   ; GFX9-LABEL: name: sample_c_l_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.l.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.l.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_l_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.l.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.l.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.1d.v4f32.f16(i32 15, float %zcompare, half %s, half %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2825,69 +2905,71 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t, half %lod) {
   ; GFX9-LABEL: name: sample_c_l_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.l.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.l.2d), 15, [[CONCAT_VECTORS]](<6 x s16>), $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_l_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.l.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY15]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.l.2d), 15, [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.l.2d.v4f32.f16(i32 15, float %zcompare, half %s, half %t, half %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2896,56 +2978,58 @@ main_body:
 define amdgpu_ps <4 x float> @sample_lz_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s) {
   ; GFX9-LABEL: name: sample_lz_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.lz.1d), 15, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.lz.1d), 15, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_lz_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.lz.1d), 15, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY12]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.lz.1d), 15, [[TRUNC]](s16), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.lz.1d.v4f32.f16(i32 15, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -2954,58 +3038,60 @@ main_body:
 define amdgpu_ps <4 x float> @sample_lz_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, half %s, half %t) {
   ; GFX9-LABEL: name: sample_lz_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.lz.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.lz.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_lz_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.lz.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY12]](s32), [[COPY13]](s32)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.lz.2d), 15, [[BUILD_VECTOR_TRUNC]](<2 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.lz.2d.v4f32.f16(i32 15, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -3014,64 +3100,66 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_lz_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s) {
   ; GFX9-LABEL: name: sample_c_lz_1d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.lz.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.lz.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_lz_1d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.lz.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.lz.1d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.lz.1d.v4f32.f16(i32 15, float %zcompare, half %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -3080,64 +3168,66 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_lz_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t) {
   ; GFX9-LABEL: name: sample_c_lz_2d
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.lz.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX9:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.lz.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX9-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   ; GFX10-LABEL: name: sample_c_lz_2d
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.lz.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   $vgpr2 = COPY [[UV2]](s32)
-  ; GFX10:   $vgpr3 = COPY [[UV3]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY13]](s32), [[COPY14]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.lz.2d), 15, [[CONCAT_VECTORS]](<4 x s16>), $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<4 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GFX10-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.c.lz.2d.v4f32.f16(i32 15, float %zcompare, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <4 x float> %v
@@ -3146,78 +3236,80 @@ main_body:
 define amdgpu_ps float @sample_c_d_o_2darray_V1(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %slice) {
   ; GFX9-LABEL: name: sample_c_d_o_2darray_V1
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX9:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX9:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX9:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.o.2darray), 4, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (s32) from custom "ImageResource")
-  ; GFX9:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX9-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX9-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX9-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.o.2darray), 4, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (s32) from custom "ImageResource")
+  ; GFX9-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX10-LABEL: name: sample_c_d_o_2darray_V1
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX10:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX10:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX10:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.o.2darray), 4, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (s32) from custom "ImageResource")
-  ; GFX10:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX10-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX10-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.o.2darray), 4, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (s32) from custom "ImageResource")
+  ; GFX10-NEXT:   $vgpr0 = COPY [[AMDGPU_INTRIN_IMAGE_LOAD]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
 main_body:
   %v = call float @llvm.amdgcn.image.sample.c.d.o.2darray.f32.f16.f16(i32 4, i32 %offset, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret float %v
@@ -3226,82 +3318,84 @@ main_body:
 define amdgpu_ps <2 x float> @sample_c_d_o_2darray_V2(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, i32 %offset, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %slice) {
   ; GFX9-LABEL: name: sample_c_d_o_2darray_V2
   ; GFX9: bb.1.main_body:
-  ; GFX9:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-  ; GFX9:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX9:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX9:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX9:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX9:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX9:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX9:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX9:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX9:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX9:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX9:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX9:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX9:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX9:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX9:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX9:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX9:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX9:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX9:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX9:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX9:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX9:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX9:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
-  ; GFX9:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX9:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX9:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
-  ; GFX9:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX9:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
-  ; GFX9:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
-  ; GFX9:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.o.2darray), 6, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<2 x s32>) from custom "ImageResource")
-  ; GFX9:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
-  ; GFX9:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX9:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX9:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
+  ; GFX9-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX9-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX9-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX9-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX9-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX9-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX9-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX9-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX9-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX9-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX9-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX9-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX9-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX9-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX9-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX9-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX9-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX9-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX9-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX9-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX9-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX9-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
+  ; GFX9-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX9-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
+  ; GFX9-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX9-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
+  ; GFX9-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
+  ; GFX9-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.o.2darray), 6, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<2 x s32>) from custom "ImageResource")
+  ; GFX9-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
+  ; GFX9-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX9-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX9-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ; GFX10-LABEL: name: sample_c_d_o_2darray_V2
   ; GFX10: bb.1.main_body:
-  ; GFX10:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-  ; GFX10:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; GFX10:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; GFX10:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
-  ; GFX10:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
-  ; GFX10:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
-  ; GFX10:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
-  ; GFX10:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
-  ; GFX10:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
-  ; GFX10:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
-  ; GFX10:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
-  ; GFX10:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
-  ; GFX10:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
-  ; GFX10:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
-  ; GFX10:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
-  ; GFX10:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; GFX10:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GFX10:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; GFX10:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; GFX10:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
-  ; GFX10:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
-  ; GFX10:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
-  ; GFX10:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
-  ; GFX10:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
-  ; GFX10:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
-  ; GFX10:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
-  ; GFX10:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
-  ; GFX10:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; GFX10:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
-  ; GFX10:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
-  ; GFX10:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.o.2darray), 6, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<2 x s32>) from custom "ImageResource")
-  ; GFX10:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
-  ; GFX10:   $vgpr0 = COPY [[UV]](s32)
-  ; GFX10:   $vgpr1 = COPY [[UV1]](s32)
-  ; GFX10:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
+  ; GFX10-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $vgpr4
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $vgpr5
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $vgpr6
+  ; GFX10-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr7
+  ; GFX10-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY $vgpr8
+  ; GFX10-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY12]](s32)
+  ; GFX10-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[COPY13]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY14]](s32), [[COPY15]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY16]](s32), [[COPY17]](s32)
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY18]](s32), [[COPY19]](s32)
+  ; GFX10-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GFX10-NEXT:   [[BUILD_VECTOR_TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY20]](s32), [[DEF]](s32)
+  ; GFX10-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[BUILD_VECTOR_TRUNC2]](<2 x s16>), [[BUILD_VECTOR_TRUNC3]](<2 x s16>)
+  ; GFX10-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.sample.c.d.o.2darray), 6, [[CONCAT_VECTORS]](<12 x s16>), $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, $noreg, [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0, 3 :: (dereferenceable load (<2 x s32>) from custom "ImageResource")
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
+  ; GFX10-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; GFX10-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GFX10-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
 main_body:
   %v = call <2 x float> @llvm.amdgcn.image.sample.c.d.o.2darray.v2f32.f32.f16(i32 6, i32 %offset, float %zcompare, half %dsdh, half %dtdh, half %dsdv, half %dtdv, half %s, half %t, half %slice, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   ret <2 x float> %v

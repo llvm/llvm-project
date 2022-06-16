@@ -4,7 +4,7 @@
 // RUN:  -verify=non-nested %s
 //
 // RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -fblocks -std=c++11    \
-// RUN:  -analyzer-store=region -analyzer-checker=deadcode.DeadStores           \
+// RUN:  -analyzer-checker=deadcode.DeadStores           \
 // RUN:  -analyzer-config deadcode.DeadStores:WarnForDeadNestedAssignments=false\
 // RUN:  -Wno-unreachable-code -verify=non-nested %s
 //

@@ -16,6 +16,7 @@ add_mlir_library(MLIRAnalysis
   BufferViewFlowAnalysis.cpp
   CallGraph.cpp
   DataFlowAnalysis.cpp
+  DataFlowFramework.cpp
   DataLayoutAnalysis.cpp
   IntRangeAnalysis.cpp
   Liveness.cpp
