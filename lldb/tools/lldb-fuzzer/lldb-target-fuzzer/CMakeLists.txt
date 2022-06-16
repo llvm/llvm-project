@@ -14,4 +14,10 @@ if(TARGET lldb-target-fuzzer)
     liblldb
     lldbFuzzerUtils
     )
+
+  add_custom_target(fuzz-lldb-target
+    COMMENT "Running the LLDB target fuzzer..."
+    COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR} && $<TARGET_FILE:lldb-target-fuzzer>
+    USES_TERMINAL
+    )
 endif()
