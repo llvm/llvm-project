@@ -363,14 +363,21 @@ void ParseSymbolizePCOutput(const char *str, SymbolizedStack *res) {
   }
 }
 
-// Parses a two-line string in the following format:
+// Parses a two- or three-line string in the following format:
 //   <symbol_name>
 //   <start_address> <size>
-// Used by LLVMSymbolizer and InternalSymbolizer.
+//   <filename>:<column>
+// Used by LLVMSymbolizer and InternalSymbolizer. LLVMSymbolizer added support
+// for symbolizing the third line in D123538, but we support the older two-line
+// information as well.
 void ParseSymbolizeDataOutput(const char *str, DataInfo *info) {
   str = ExtractToken(str, "\n", &info->name);
   str = ExtractUptr(str, " ", &info->start);
   str = ExtractUptr(str, "\n", &info->size);
+  // Note: If the third line isn't present, these calls will set info.{file,
+  // line} to empty strings.
+  str = ExtractToken(str, ":", &info->file);
+  str = ExtractUptr(str, "\n", &info->line);
 }
 
 static void ParseSymbolizeFrameOutput(const char *str,
