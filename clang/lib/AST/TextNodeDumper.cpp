@@ -1681,6 +1681,9 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (D->isTrivial())
     OS << " trivial";
 
+  if (D->isIneligibleOrNotSelected())
+    OS << (isa<CXXDestructorDecl>(D) ? " not_selected" : " ineligible");
+
   if (const auto *FPT = D->getType()->getAs<FunctionProtoType>()) {
     FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
     switch (EPI.ExceptionSpec.Type) {

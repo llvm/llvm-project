@@ -6693,7 +6693,7 @@ static bool canPassInRegisters(Sema &S, CXXRecordDecl *D,
     return false;
 
   for (const CXXMethodDecl *MD : D->methods()) {
-    if (MD->isDeleted())
+    if (MD->isDeleted() || MD->isIneligibleOrNotSelected())
       continue;
 
     auto *CD = dyn_cast<CXXConstructorDecl>(MD);
