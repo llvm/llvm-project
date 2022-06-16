@@ -94,6 +94,55 @@ static unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
   return (SEW * 8) / LMul;
 }
 
+/// Which subfields of VL or VTYPE have values we need to preserve?
+struct DemandedFields {
+  bool VL = false;
+  bool SEW = false;
+  bool LMUL = false;
+  bool SEWLMULRatio = false;
+  bool TailPolicy = false;
+  bool MaskPolicy = false;
+
+  // Return true if any part of VTYPE was used
+  bool usedVTYPE() {
+    return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy;
+  }
+};
+
+/// Return true if the two values of the VTYPE register provided are
+/// indistinguishable from the perspective of an instruction (or set of
+/// instructions) which use only the Used subfields and properties.
+static bool areCompatibleVTYPEs(uint64_t VType1,
+                                uint64_t VType2,
+                                const DemandedFields &Used) {
+  if (Used.SEW &&
+      RISCVVType::getSEW(VType1) != RISCVVType::getSEW(VType2))
+    return false;
+
+  if (Used.LMUL &&
+      RISCVVType::getVLMUL(VType1) != RISCVVType::getVLMUL(VType2))
+    return false;
+
+  if (Used.SEWLMULRatio) {
+    auto Ratio1 = getSEWLMULRatio(RISCVVType::getSEW(VType1),
+                                  RISCVVType::getVLMUL(VType1));
+    auto Ratio2 = getSEWLMULRatio(RISCVVType::getSEW(VType2),
+                                  RISCVVType::getVLMUL(VType2));
+    if (Ratio1 != Ratio2)
+      return false;
+  }
+
+  if (Used.TailPolicy &&
+      RISCVVType::isTailAgnostic(VType1) != RISCVVType::isTailAgnostic(VType2))
+    return false;
+  if (Used.MaskPolicy &&
+      RISCVVType::isMaskAgnostic(VType1) != RISCVVType::isMaskAgnostic(VType2))
+    return false;
+  return true;
+}
+
+/// Defines the abstract state with which the forward dataflow models the
+/// values of the VL and VTYPE registers after insertion.
 class VSETVLIInfo {
   union {
     Register AVLReg;
@@ -1364,21 +1413,6 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
                 AvailableInfo, OldInfo);
 }
 
-/// Which subfields of VL or VTYPE have values we need to preserve?
-struct DemandedFields {
-  bool VL = false;
-  bool SEW = false;
-  bool LMUL = false;
-  bool SEWLMULRatio = false;
-  bool TailPolicy = false;
-  bool MaskPolicy = false;
-
-  // Return true if any part of VTYPE was used
-  bool usedVTYPE() {
-    return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy;
-  }
-};
-
 static void doUnion(DemandedFields &A, DemandedFields B) {
   A.VL |= B.VL;
   A.SEW |= B.SEW;
@@ -1436,31 +1470,7 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
 
   auto PriorVType = PrevMI.getOperand(2).getImm();
   auto VType = MI.getOperand(2).getImm();
-
-  if (Used.SEW &&
-      RISCVVType::getSEW(VType) != RISCVVType::getSEW(PriorVType))
-    return false;
-
-  if (Used.LMUL &&
-      RISCVVType::getVLMUL(VType) != RISCVVType::getVLMUL(PriorVType))
-    return false;
-
-  if (Used.SEWLMULRatio) {
-    auto PriorRatio = getSEWLMULRatio(RISCVVType::getSEW(PriorVType),
-                                      RISCVVType::getVLMUL(PriorVType));
-    auto Ratio = getSEWLMULRatio(RISCVVType::getSEW(VType),
-                                 RISCVVType::getVLMUL(VType));
-    if (PriorRatio != Ratio)
-      return false;
-  }
-
-  if (Used.TailPolicy &&
-      RISCVVType::isTailAgnostic(VType) != RISCVVType::isTailAgnostic(PriorVType))
-    return false;
-  if (Used.MaskPolicy &&
-      RISCVVType::isMaskAgnostic(VType) != RISCVVType::isMaskAgnostic(PriorVType))
-    return false;
-  return true;
+  return areCompatibleVTYPEs(PriorVType, VType, Used);
 }
 
 void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
