@@ -1097,7 +1097,8 @@ class VPseudoTiedBinaryNoMask<VReg RetClass,
                               DAGOperand Op2Class,
                               string Constraint> :
         Pseudo<(outs RetClass:$rd),
-               (ins RetClass:$rs2, Op2Class:$rs1, AVL:$vl, ixlenimm:$sew), []>,
+               (ins RetClass:$rs2, Op2Class:$rs1, AVL:$vl, ixlenimm:$sew,
+                    ixlenimm:$policy), []>,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -1106,26 +1107,8 @@ class VPseudoTiedBinaryNoMask<VReg RetClass,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
-  let ForceTailAgnostic = 1;
+  let HasVecPolicyOp = 1;
   let isConvertibleToThreeAddress = 1;
-}
-
-class VPseudoTiedBinaryNoMaskTU<VReg RetClass,
-                                DAGOperand Op2Class,
-                                string Constraint> :
-        Pseudo<(outs RetClass:$rd),
-               (ins RetClass:$merge,
-                    Op2Class:$rs1,
-                    AVL:$vl, ixlenimm:$sew), []>,
-        RISCVVPseudo {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
-  let HasMergeOp = 0; // Merge is also rs2.
-  let HasDummyMask = 1;
 }
 
 class VPseudoIStoreNoMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
@@ -1891,8 +1874,6 @@ multiclass VPseudoTiedBinary<VReg RetClass,
   let VLMul = MInfo.value in {
     def "_" # MInfo.MX # "_TIED": VPseudoTiedBinaryNoMask<RetClass, Op2Class,
                                                           Constraint>;
-    def "_" # MInfo.MX # "_TIED_TU": VPseudoTiedBinaryNoMaskTU<RetClass, Op2Class,
-                                                               Constraint>;
     def "_" # MInfo.MX # "_MASK_TIED" : VPseudoTiedBinaryMask<RetClass, Op2Class,
                                                          Constraint>;
   }
@@ -3256,7 +3237,7 @@ class VPatTiedBinaryNoMask<string intrinsic_name,
                    (!cast<Instruction>(inst#"_TIED")
                    (result_type result_reg_class:$rs1),
                    (op2_type op2_kind:$rs2),
-                   GPR:$vl, sew)>;
+                   GPR:$vl, sew, TAIL_AGNOSTIC)>;
 
 class VPatTiedBinaryNoMaskTU<string intrinsic_name,
                              string inst,
@@ -3270,10 +3251,10 @@ class VPatTiedBinaryNoMaskTU<string intrinsic_name,
                    (result_type result_reg_class:$merge),
                    (op2_type op2_kind:$rs2),
                    VLOpFrag)),
-                   (!cast<Instruction>(inst#"_TIED_TU")
+                   (!cast<Instruction>(inst#"_TIED")
                    (result_type result_reg_class:$merge),
                    (op2_type op2_kind:$rs2),
-                   GPR:$vl, sew)>;
+                   GPR:$vl, sew, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
 
 class VPatTiedBinaryMask<string intrinsic_name,
                          string inst,
