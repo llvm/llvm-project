@@ -1339,20 +1339,24 @@ void Process::SynchronizeThreadPlans() {
 
 ThreadPlanSP Process::FindDetachedPlanExplainingStop(Thread &thread,
                                                      Event *event_ptr) {
-  std::vector<ThreadPlanStack *> &detached_plans 
-      = m_thread_plans.GetDetachedPlanStacks();
-  size_t num_detached_plans = detached_plans.size();
-  for (size_t idx = 0; idx < num_detached_plans; idx++) {
-    ThreadPlanStack *cur_stack = detached_plans[idx];
-    ThreadPlanSP plan_sp = cur_stack->GetCurrentPlan();
-    plan_sp->SetTID(thread.GetID());
-    if (!plan_sp->DoPlanExplainsStop(event_ptr)) {
-      plan_sp->ClearTID();
-      continue;
-    }
-    m_thread_plans.Activate(*cur_stack);
+  return m_thread_plans.FindThreadPlanInStack(
+      [&](ThreadPlanStack &stack) -> ThreadPlanSP {
+        return DoesStackExplainStopNoLock(stack, thread, event_ptr);
+      });
+}
+
+// This extracted function only exists so that it can be marked a friend of
+// `ThreadPlan`, which is needed to call `DoPlanExplainsStop`.
+ThreadPlanSP Process::DoesStackExplainStopNoLock(ThreadPlanStack &stack,
+                                                 Thread &thread,
+                                                 Event *event_ptr) {
+  ThreadPlanSP plan_sp = stack.GetCurrentPlan();
+  plan_sp->SetTID(thread.GetID());
+  if (plan_sp->DoPlanExplainsStop(event_ptr)) {
+    m_thread_plans.Activate(stack);
     return plan_sp;
   }
+  plan_sp->ClearTID();
   return {};
 }
 

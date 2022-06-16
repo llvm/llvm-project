@@ -222,11 +222,15 @@ public:
   // plans that represent asynchronous operations waiting to be
   // scheduled.
   // The vector will never have null ThreadPlanStacks in it.
-  std::vector<ThreadPlanStack *> &GetDetachedPlanStacks() {
+  lldb::ThreadPlanSP FindThreadPlanInStack(
+      llvm::function_ref<lldb::ThreadPlanSP(ThreadPlanStack &)> fn) {
     std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
-    return m_detached_plans;
+    for (auto *stack : m_detached_plans)
+      if (auto plan = fn(*stack))
+        return plan;
+    return {};
   }
-  
+
   void Clear() {
     std::lock_guard<std::recursive_mutex> guard(m_stack_map_mutex);
     for (auto &plan : m_plans_list)
@@ -263,7 +267,7 @@ private:
   PlansStore m_plans_up_container;
   std::vector<ThreadPlanStack *> m_detached_plans;
   mutable std::recursive_mutex m_stack_map_mutex;
-  using PlansList = std::unordered_map<lldb::tid_t, ThreadPlanStack>;
+  using PlansList = std::unordered_map<lldb::tid_t, ThreadPlanStack *>;
   PlansList m_plans_list;
   
 };
