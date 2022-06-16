@@ -104,6 +104,13 @@ protected:
 public:
   void SetUp() override;
 };
+
+static std::string GetDumpAsString(const RotatingLogHandler &handler) {
+  std::string buffer;
+  llvm::raw_string_ostream stream(buffer);
+  handler.Dump(stream);
+  return buffer;
+}
 } // end anonymous namespace
 
 void LogChannelEnabledTest::SetUp() {
@@ -169,6 +176,21 @@ TEST(LogTest, CallbackLogHandler) {
   CallbackLogHandler handler(TestCallback, &test_baton);
   handler.Emit("Foobar");
   EXPECT_EQ(1u, callback_count);
+}
+
+TEST(LogHandlerTest, RotatingLogHandler) {
+  RotatingLogHandler handler(3);
+
+  handler.Emit("foo");
+  handler.Emit("bar");
+  EXPECT_EQ(GetDumpAsString(handler), "foobar");
+
+  handler.Emit("baz");
+  handler.Emit("qux");
+  EXPECT_EQ(GetDumpAsString(handler), "barbazqux");
+
+  handler.Emit("quux");
+  EXPECT_EQ(GetDumpAsString(handler), "bazquxquux");
 }
 
 TEST_F(LogChannelTest, Enable) {
