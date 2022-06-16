@@ -9382,6 +9382,51 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
+const Constant *
+RISCVTargetLowering::getTargetConstantFromLoad(LoadSDNode *Ld) const {
+  assert(Ld && "Unexpected null LoadSDNode");
+  if (!ISD::isNormalLoad(Ld))
+    return nullptr;
+
+  SDValue Ptr = Ld->getBasePtr();
+
+  // Only constant pools with no offset are supported.
+  auto GetSupportedConstantPool = [](SDValue Ptr) -> ConstantPoolSDNode * {
+    auto *CNode = dyn_cast<ConstantPoolSDNode>(Ptr);
+    if (!CNode || CNode->isMachineConstantPoolEntry() ||
+        CNode->getOffset() != 0)
+      return nullptr;
+
+    return CNode;
+  };
+
+  // Simple case, LLA.
+  if (Ptr.getOpcode() == RISCVISD::LLA) {
+    auto *CNode = GetSupportedConstantPool(Ptr);
+    if (!CNode || CNode->getTargetFlags() != 0)
+      return nullptr;
+
+    return CNode->getConstVal();
+  }
+
+  // Look for a HI and ADD_LO pair.
+  if (Ptr.getOpcode() != RISCVISD::ADD_LO ||
+      Ptr.getOperand(0).getOpcode() != RISCVISD::HI)
+    return nullptr;
+
+  auto *CNodeLo = GetSupportedConstantPool(Ptr.getOperand(1));
+  auto *CNodeHi = GetSupportedConstantPool(Ptr.getOperand(0).getOperand(0));
+
+  if (!CNodeLo || CNodeLo->getTargetFlags() != RISCVII::MO_LO ||
+      !CNodeHi || CNodeHi->getTargetFlags() != RISCVII::MO_HI)
+    return nullptr;
+
+  if (CNodeLo->getConstVal() != CNodeHi->getConstVal())
+    return nullptr;
+
+  return CNodeLo->getConstVal();
+}
+
 static MachineBasicBlock *emitReadCycleWidePseudo(MachineInstr &MI,
                                                   MachineBasicBlock *BB) {
   assert(MI.getOpcode() == RISCV::ReadCycleWide && "Unexpected instruction");
