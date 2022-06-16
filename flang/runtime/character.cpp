@@ -953,8 +953,12 @@ void RTNAME(Scan)(Descriptor &result, const Descriptor &string,
 }
 
 void RTNAME(Repeat)(Descriptor &result, const Descriptor &string,
-    std::size_t ncopies, const char *sourceFile, int sourceLine) {
+    std::int64_t ncopies, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
+  if (ncopies < 0) {
+    terminator.Crash(
+        "REPEAT has negative NCOPIES=%jd", static_cast<std::intmax_t>(ncopies));
+  }
   std::size_t origBytes{string.ElementBytes()};
   result.Establish(string.type(), origBytes * ncopies, nullptr, 0, nullptr,
       CFI_attribute_allocatable);
