@@ -286,11 +286,8 @@ def LLVM_ICmpOp : LLVM_Op<"icmp", [NoSideEffect]> {
     $res = builder.CreateICmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
   }];
   let builders = [
-    OpBuilder<(ins "ICmpPredicate":$predicate, "Value":$lhs, "Value":$rhs),
-    [{
-      build($_builder, $_state, IntegerType::get(lhs.getType().getContext(), 1),
-            predicate, lhs, rhs);
-    }]>];
+    OpBuilder<(ins "ICmpPredicate":$predicate, "Value":$lhs, "Value":$rhs)>
+  ];
   let hasCustomAssemblyFormat = 1;
 }
 

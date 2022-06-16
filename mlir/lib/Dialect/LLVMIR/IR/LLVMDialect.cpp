@@ -90,8 +90,28 @@ static LogicalResult verifySymbolAttrUse(FlatSymbolRefAttr symbol,
 }
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::CmpOp.
+// Printing, parsing and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
+
+void ICmpOp::build(OpBuilder &builder, OperationState &result,
+                   ICmpPredicate predicate, Value lhs, Value rhs) {
+  auto boolType = IntegerType::get(lhs.getType().getContext(), 1);
+  if (LLVM::isCompatibleVectorType(lhs.getType()) ||
+      LLVM::isCompatibleVectorType(rhs.getType())) {
+    int64_t numLHSElements = 1, numRHSElements = 1;
+    if (LLVM::isCompatibleVectorType(lhs.getType()))
+      numLHSElements =
+          LLVM::getVectorNumElements(lhs.getType()).getFixedValue();
+    if (LLVM::isCompatibleVectorType(rhs.getType()))
+      numRHSElements =
+          LLVM::getVectorNumElements(rhs.getType()).getFixedValue();
+    build(builder, result,
+          VectorType::get({std::max(numLHSElements, numRHSElements)}, boolType),
+          predicate, lhs, rhs);
+  } else {
+    build(builder, result, boolType, predicate, lhs, rhs);
+  }
+}
 
 void ICmpOp::print(OpAsmPrinter &p) {
   p << " \"" << stringifyICmpPredicate(getPredicate()) << "\" " << getOperand(0)

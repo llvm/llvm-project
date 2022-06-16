@@ -14,9 +14,12 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: {{.*}} = llvm.sdiv %[[I32]], %[[I32]] : i32
 // CHECK: {{.*}} = llvm.urem %[[I32]], %[[I32]] : i32
 // CHECK: {{.*}} = llvm.srem %[[I32]], %[[I32]] : i32
-// CHECK: {{.*}} = llvm.icmp "ne" %[[I32]], %[[I32]] : i32
-// CHECK: {{.*}} = llvm.icmp "ne" %[[I8PTR1]], %[[I8PTR1]] : !llvm.ptr<i8>
-// CHECK: {{.*}} = llvm.icmp "ne" %[[VI8PTR1]], %[[VI8PTR1]] : !llvm.vec<2 x ptr<i8>>
+// CHECK: %[[SCALAR_PRED0:.+]] = llvm.icmp "ne" %[[I32]], %[[I32]] : i32
+// CHECK: {{.*}} = llvm.add %[[SCALAR_PRED0]], %[[SCALAR_PRED0]] : i1
+// CHECK: %[[SCALAR_PRED1:.+]] = llvm.icmp "ne" %[[I8PTR1]], %[[I8PTR1]] : !llvm.ptr<i8>
+// CHECK: {{.*}} = llvm.add %[[SCALAR_PRED1]], %[[SCALAR_PRED1]] : i1
+// CHECK: %[[VEC_PRED:.+]] = llvm.icmp "ne" %[[VI8PTR1]], %[[VI8PTR1]] : !llvm.vec<2 x ptr<i8>>
+// CHECK: {{.*}} = llvm.add %[[VEC_PRED]], %[[VEC_PRED]] : vector<2xi1>
   %0 = llvm.add %arg0, %arg0 : i32
   %1 = llvm.sub %arg0, %arg0 : i32
   %2 = llvm.mul %arg0, %arg0 : i32
@@ -25,8 +28,11 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %5 = llvm.urem %arg0, %arg0 : i32
   %6 = llvm.srem %arg0, %arg0 : i32
   %7 = llvm.icmp "ne" %arg0, %arg0 : i32
+  %typecheck_7 = llvm.add %7, %7 : i1
   %ptrcmp = llvm.icmp "ne" %arg2, %arg2 : !llvm.ptr<i8>
+  %typecheck_ptrcmp = llvm.add %ptrcmp, %ptrcmp : i1
   %vptrcmp = llvm.icmp "ne" %arg5, %arg5 : !llvm.vec<2 x ptr<i8>>
+  %typecheck_vptrcmp = llvm.add %vptrcmp, %vptrcmp : vector<2 x i1>
 
 // Floating point binary operations.
 //
