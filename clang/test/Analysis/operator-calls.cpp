@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,alpha.core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,alpha.core,debug.ExprInspection -analyzer-output=text -verify %s
 void clang_analyzer_eval(bool);
 
 struct X0 { };
@@ -29,6 +29,7 @@ struct IntComparable {
 
 void testMemberOperator(IntComparable B) {
   clang_analyzer_eval(B == 0); // expected-warning{{TRUE}}
+  // expected-note@-1{{TRUE}}
 }
 
 
@@ -46,7 +47,9 @@ namespace UserDefinedConversions {
 
   void test(const Convertible &obj) {
     clang_analyzer_eval((int)obj == 42); // expected-warning{{TRUE}}
+    // expected-note@-1{{TRUE}}
     clang_analyzer_eval(obj); // expected-warning{{TRUE}}
+    // expected-note@-1{{TRUE}}
   }
 }
 
@@ -82,7 +85,15 @@ namespace RValues {
     // Force a cache-out when we try to conjure a temporary region for the operator call.
     // ...then, don't crash.
     clang_analyzer_eval(+(coin ? getSmallOpaque() : getSmallOpaque())); // expected-warning{{UNKNOWN}}
+    // expected-note@-1{{Assuming 'coin' is 0}}
+    // expected-note@-2{{'?' condition is false}}
+    // expected-note@-3{{UNKNOWN}}
+    // expected-note@-4{{Assuming 'coin' is 0}}
+    // expected-note@-5{{'?' condition is false}}
     clang_analyzer_eval(+(coin ? getLargeOpaque() : getLargeOpaque())); // expected-warning{{UNKNOWN}}
+    // expected-note@-1{{'coin' is 0}}
+    // expected-note@-2{{'?' condition is false}}
+    // expected-note@-3{{UNKNOWN}}
   }
 }
 
@@ -102,31 +113,53 @@ namespace SynthesizedAssignment {
 
   // This used to produce a warning about the iteration variable in the
   // synthesized assignment operator being undefined.
+  //
+  // Note: The warning we want to avoid can be found in https://bugs.llvm.org/show_bug.cgi?id=16745.
+  // Back in the day, this function was created we couldn't evaluate non-POD type array construction,
+  // so we couldn't evaluate the copy assignment either, hence we didn't detect that a field is
+  // uninitialized.
   void testNoWarning() {
+
     B v, u;
-    u = v;
+    u = v; // expected-warning@110{{Assigned value is garbage or undefined}}
+    // expected-note@-1{{Calling defaulted copy assignment operator for 'B'}}
+    // expected-note@110{{Assigned value is garbage or undefined}}
   }
 
   void testNoWarningMove() {
     B v, u;
-    u = static_cast<B &&>(v);
+    u = static_cast<B &&>(v); // expected-warning@111{{Assigned value is garbage or undefined}}
+    // expected-note@-1{{Calling defaulted move assignment operator for 'B'}}
+    // expected-note@111{{Assigned value is garbage or undefined}}
   }
 
   void testConsistency() {
     B v, u;
+    v.x = 0;
+    v.a[0].a = 24;
     v.a[1].a = 47;
     v.a[2].a = 42;
     u = v;
+    clang_analyzer_eval(u.a[0].a == -24); // expected-warning{{TRUE}}
+    // expected-note@-1{{TRUE}}
     clang_analyzer_eval(u.a[1].a == -47); // expected-warning{{TRUE}}
+    // expected-note@-1{{TRUE}}
     clang_analyzer_eval(u.a[2].a == -42); // expected-warning{{TRUE}}
+    // expected-note@-1{{TRUE}}
   }
 
   void testConsistencyMove() {
     B v, u;
+    v.x = 0;
+    v.a[0].a = 24;
     v.a[1].a = 47;
     v.a[2].a = 42;
     u = static_cast<B &&>(v);
+    clang_analyzer_eval(u.a[0].a == 25); // expected-warning{{TRUE}}
+    // expected-note@-1{{TRUE}}
     clang_analyzer_eval(u.a[1].a == 48); // expected-warning{{TRUE}}
+    // expected-note@-1{{TRUE}}
     clang_analyzer_eval(u.a[2].a == 43); // expected-warning{{TRUE}}
+    // expected-note@-1{{TRUE}}
   }
 }
