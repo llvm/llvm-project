@@ -59,6 +59,9 @@ enum ImageKind : uint16_t {
 /// offsets from the beginning of the file.
 class OffloadBinary : public Binary {
 public:
+  using string_iterator = StringMap<StringRef>::const_iterator;
+  using string_iterator_range = iterator_range<string_iterator>;
+
   /// The offloading metadata that will be serialized to a memory buffer.
   struct OffloadingImage {
     ImageKind TheImageKind;
@@ -86,6 +89,11 @@ public:
   StringRef getArch() const { return getString("arch"); }
   StringRef getImage() const {
     return StringRef(&Buffer[TheEntry->ImageOffset], TheEntry->ImageSize);
+  }
+
+  // Iterator over all the key and value pairs in the binary.
+  string_iterator_range strings() const {
+    return string_iterator_range(StringData.begin(), StringData.end());
   }
 
   StringRef getString(StringRef Key) const { return StringData.lookup(Key); }
