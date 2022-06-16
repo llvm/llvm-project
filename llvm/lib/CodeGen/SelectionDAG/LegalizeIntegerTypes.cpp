@@ -5277,7 +5277,8 @@ SDValue DAGTypeLegalizer::PromoteIntRes_STEP_VECTOR(SDNode *N) {
   SDLoc dl(N);
   EVT OutVT = N->getValueType(0);
   EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
-  assert(NOutVT.isVector() && "Type must be promoted to a vector type");
+  assert(NOutVT.isScalableVector() &&
+         "Type must be promoted to a scalable vector type");
   APInt StepVal = cast<ConstantSDNode>(N->getOperand(0))->getAPIntValue();
   return DAG.getStepVector(dl, NOutVT,
                            StepVal.sext(NOutVT.getScalarSizeInBits()));
