@@ -116,6 +116,10 @@ def run_one_line(local_dict, input_string):
         input_string = strip_and_check_exit(input_string)
         repl = code.InteractiveConsole(local_dict)
         if input_string:
+            # A newline is appended to support one-line statements containing
+            # control flow. For example "if True: print(1)" silently does
+            # nothing, but works with a newline: "if True: print(1)\n".
+            input_string += "\n"
             repl.runsource(input_string)
         elif g_run_one_line_str:
             repl.runsource(g_run_one_line_str)
