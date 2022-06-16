@@ -1224,7 +1224,7 @@ bool InterleavedLoadCombineImpl::combine(std::list<VectorInfo> &InterleavedLoad,
   auto MSSAU = MemorySSAUpdater(&MSSA);
   MemoryUse *MSSALoad = cast<MemoryUse>(MSSAU.createMemoryAccessBefore(
       LI, nullptr, MSSA.getMemoryAccess(InsertionPoint)));
-  MSSAU.insertUse(MSSALoad);
+  MSSAU.insertUse(MSSALoad, /*RenameUses=*/ true);
 
   // Create the final SVIs and replace all uses.
   int i = 0;
