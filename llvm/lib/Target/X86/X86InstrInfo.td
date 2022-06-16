@@ -1013,8 +1013,8 @@ def NotWin64WithoutFP : Predicate<"!Subtarget->isTargetWin64() ||"
                                   "Subtarget->getFrameLowering()->hasFP(*MF)"> {
   let RecomputePerFunction = 1;
 }
-def IsPS4        : Predicate<"Subtarget->isTargetPS4()">;
-def NotPS4       : Predicate<"!Subtarget->isTargetPS4()">;
+def IsPS         : Predicate<"Subtarget->isTargetPS()">;
+def NotPS        : Predicate<"!Subtarget->isTargetPS()">;
 def IsNaCl       : Predicate<"Subtarget->isTargetNaCl()">;
 def NotNaCl      : Predicate<"!Subtarget->isTargetNaCl()">;
 def SmallCode    : Predicate<"TM.getCodeModel() == CodeModel::Small">;
