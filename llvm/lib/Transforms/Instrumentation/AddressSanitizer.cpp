@@ -110,7 +110,7 @@ static const uint64_t kFreeBSDKasan_ShadowOffset64 = 0xdffff7c000000000;
 static const uint64_t kNetBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kNetBSD_ShadowOffset64 = 1ULL << 46;
 static const uint64_t kNetBSDKasan_ShadowOffset64 = 0xdfff900000000000;
-static const uint64_t kPS4_ShadowOffset64 = 1ULL << 40;
+static const uint64_t kPS_ShadowOffset64 = 1ULL << 40;
 static const uint64_t kWindowsShadowOffset32 = 3ULL << 28;
 static const uint64_t kEmscriptenShadowOffset = 0;
 
@@ -469,7 +469,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   bool IsMacOS = TargetTriple.isMacOSX();
   bool IsFreeBSD = TargetTriple.isOSFreeBSD();
   bool IsNetBSD = TargetTriple.isOSNetBSD();
-  bool IsPS4 = TargetTriple.isPS4();
+  bool IsPS = TargetTriple.isPS();
   bool IsLinux = TargetTriple.isOSLinux();
   bool IsPPC64 = TargetTriple.getArch() == Triple::ppc64 ||
                  TargetTriple.getArch() == Triple::ppc64le;
@@ -528,8 +528,8 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
         Mapping.Offset = kNetBSDKasan_ShadowOffset64;
       else
         Mapping.Offset = kNetBSD_ShadowOffset64;
-    } else if (IsPS4)
-      Mapping.Offset = kPS4_ShadowOffset64;
+    } else if (IsPS)
+      Mapping.Offset = kPS_ShadowOffset64;
     else if (IsLinux && IsX86_64) {
       if (IsKasan)
         Mapping.Offset = kLinuxKasan_ShadowOffset64;
@@ -568,7 +568,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   // offset is not necessary 1/8-th of the address space.  On SystemZ,
   // we could OR the constant in a single instruction, but it's more
   // efficient to load it once and use indexed addressing.
-  Mapping.OrShadowOffset = !IsAArch64 && !IsPPC64 && !IsSystemZ && !IsPS4 &&
+  Mapping.OrShadowOffset = !IsAArch64 && !IsPPC64 && !IsSystemZ && !IsPS &&
                            !IsRISCV64 &&
                            !(Mapping.Offset & (Mapping.Offset - 1)) &&
                            Mapping.Offset != kDynamicShadowSentinel;
