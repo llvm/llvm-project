@@ -284,6 +284,7 @@ module std [system] {
       module lexicographical_compare         { private header "__algorithm/lexicographical_compare.h" }
       module lower_bound                     { private header "__algorithm/lower_bound.h" }
       module make_heap                       { private header "__algorithm/make_heap.h" }
+      module make_projected                  { private header "__algorithm/make_projected.h" }
       module max                             { private header "__algorithm/max.h" }
       module max_element                     { private header "__algorithm/max_element.h" }
       module merge                           { private header "__algorithm/merge.h" }
@@ -341,6 +342,7 @@ module std [system] {
       module ranges_replace                  { private header "__algorithm/ranges_replace.h" }
       module ranges_replace_if               { private header "__algorithm/ranges_replace_if.h" }
       module ranges_reverse                  { private header "__algorithm/ranges_reverse.h" }
+      module ranges_sort                     { private header "__algorithm/ranges_sort.h" }
       module ranges_swap_ranges              { private header "__algorithm/ranges_swap_ranges.h" }
       module ranges_transform                { private header "__algorithm/ranges_transform.h" }
       module ranges_upper_bound              { private header "__algorithm/ranges_upper_bound.h" }
