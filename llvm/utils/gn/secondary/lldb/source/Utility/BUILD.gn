@@ -38,7 +38,6 @@ static_library("Utility") {
     "State.cpp",
     "Status.cpp",
     "Stream.cpp",
-    "StreamCallback.cpp",
     "StreamString.cpp",
     "StringExtractor.cpp",
     "StringExtractorGDBRemote.cpp",
