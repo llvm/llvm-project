@@ -8472,6 +8472,10 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
         if (auto *FTy = dyn_cast<FixedVectorType>(User->getType())) {
           Optional<unsigned> InsertIdx = getInsertIndex(VU);
           if (InsertIdx) {
+            // Need to use original vector, if the root is truncated.
+            if (MinBWs.count(Scalar) &&
+                VectorizableTree[0]->VectorizedValue == Vec)
+              Vec = VectorRoot;
             auto *It =
                 find_if(ShuffledInserts, [VU](const ShuffledInsertData &Data) {
                   // Checks if 2 insertelements are from the same buildvector.
