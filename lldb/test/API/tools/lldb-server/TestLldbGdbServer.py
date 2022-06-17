@@ -525,7 +525,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @expectedFailureDarwin
     @skipIfWindows # no SIGSEGV support
-    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48419")
     @expectedFailureNetBSD
     def test_Hc_then_Csignal_signals_correct_thread_launch(self):
         self.build()
