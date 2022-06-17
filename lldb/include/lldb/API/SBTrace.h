@@ -12,8 +12,6 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
 
-class TraceImpl;
-
 namespace lldb {
 
 class LLDB_API SBTrace {
@@ -22,6 +20,10 @@ public:
   SBTrace();
 
   SBTrace(const lldb::TraceSP &trace_sp);
+
+  /// See SBDebugger::LoadTraceFromFile.
+  static SBTrace LoadTraceFromFile(SBError &error, SBDebugger &debugger,
+                                   const SBFileSpec &trace_description_file);
 
   /// \return
   ///     A description of the parameters to use for the \a SBTrace::Start

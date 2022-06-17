@@ -27,6 +27,7 @@
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/API/SBTrace.h"
 #include "lldb/API/SBTypeCategory.h"
 #include "lldb/API/SBTypeFilter.h"
 #include "lldb/API/SBTypeFormat.h"
@@ -1632,4 +1633,11 @@ void SBDebugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
   if (m_opaque_sp) {
     return m_opaque_sp->SetLoggingCallback(log_callback, baton);
   }
+}
+
+SBTrace
+SBDebugger::LoadTraceFromFile(SBError &error,
+                              const SBFileSpec &trace_description_file) {
+  LLDB_INSTRUMENT_VA(this, error, trace_description_file);
+  return SBTrace::LoadTraceFromFile(error, *this, trace_description_file);
 }
