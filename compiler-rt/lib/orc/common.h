@@ -13,8 +13,8 @@
 #ifndef ORC_RT_COMMON_H
 #define ORC_RT_COMMON_H
 
-#include "c_api.h"
 #include "compiler.h"
+#include "orc/c_api.h"
 #include <type_traits>
 
 /// This macro should be used to define tags that will be associated with

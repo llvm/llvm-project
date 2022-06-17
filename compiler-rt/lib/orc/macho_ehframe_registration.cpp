@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "adt.h"
-#include "c_api.h"
 #include "common.h"
 #include "executor_address.h"
+#include "orc/c_api.h"
 #include "wrapper_function_utils.h"
 
 using namespace __orc_rt;
