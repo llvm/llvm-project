@@ -24,7 +24,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/ParseAST.h"
-#include "clang/Sema/HLSLExternalSemaSource.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
@@ -1013,13 +1012,6 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       Override(new LayoutOverrideSource(
                      CI.getFrontendOpts().OverrideRecordLayoutsFile));
     CI.getASTContext().setExternalSource(Override);
-  }
-
-  // Setup HLSL External Sema Source
-  if (CI.getLangOpts().HLSL && CI.hasASTContext()) {
-    IntrusiveRefCntPtr<ExternalASTSource> HLSLSema(
-        new HLSLExternalSemaSource());
-    CI.getASTContext().setExternalSource(HLSLSema);
   }
 
   FailureCleanup.release();
