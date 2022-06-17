@@ -2226,14 +2226,14 @@ cc_library(
         "lib/Dialect/NVGPU/Transforms/PassDetail.h",
     ],
     hdrs = [
-        "include/mlir/Dialect/NVGPU/Transforms/Transforms.h",
         "include/mlir/Dialect/NVGPU/Passes.h",
+        "include/mlir/Dialect/NVGPU/Transforms/Transforms.h",
     ],
     includes = ["include"],
     deps = [
-        ":FuncDialect",
         ":AffineDialect",
         ":ArithmeticDialect",
+        ":FuncDialect",
         ":GPUDialect",
         ":IR",
         ":MemRefDialect",
@@ -6264,8 +6264,8 @@ cc_library(
         ":MemRefTransforms",
         ":NVGPUDialect",
         ":NVGPUPassIncGen",
-        ":NVGPUTransforms",
         ":NVGPUToNVVM",
+        ":NVGPUTransforms",
         ":NVVMDialect",
         ":OpenACCDialect",
         ":OpenMPDialect",
@@ -6409,9 +6409,6 @@ cc_library(
         "include/mlir/ExecutionEngine/SparseTensorUtils.h",
     ],
     includes = ["include"],
-    deps = [
-        "//llvm:Support",
-    ],
 )
 
 cc_library(

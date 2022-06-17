@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/Float16bits.h"
-#include "llvm/Support/Compiler.h"
 
 namespace {
 
@@ -145,13 +144,23 @@ std::ostream &operator<<(std::ostream &os, const bf16 &d) {
 
 // Provide a float->bfloat conversion routine in case the runtime doesn't have
 // one.
-extern "C" uint16_t LLVM_ATTRIBUTE_WEAK __truncsfbf2(float f) {
+extern "C" uint16_t
+#if defined(__has_attribute) && __has_attribute(weak) &&                       \
+    !defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(_WIN32)
+    __attribute__((__weak__))
+#endif
+    __truncsfbf2(float f) {
   return float2bfloat(f);
 }
 
 // Provide a double->bfloat conversion routine in case the runtime doesn't have
 // one.
-extern "C" uint16_t LLVM_ATTRIBUTE_WEAK __truncdfbf2(double d) {
+extern "C" uint16_t
+#if defined(__has_attribute) && __has_attribute(weak) &&                       \
+    !defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(_WIN32)
+    __attribute__((__weak__))
+#endif
+    __truncdfbf2(double d) {
   // This does a double rounding step, but it's precise enough for our use
   // cases.
   return __truncsfbf2(static_cast<float>(d));
