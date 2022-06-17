@@ -151,10 +151,9 @@ private:
   bool selectSMFMACIntrin(MachineInstr &I) const;
   bool selectWaveAddress(MachineInstr &I) const;
 
-  std::pair<Register, unsigned> selectVOP3ModsImpl(MachineOperand &Root,
-                                                   bool AllowAbs = true,
-                                                   bool OpSel = false,
-                                                   bool ForceVGPR = false) const;
+  std::pair<Register, unsigned>
+  selectVOP3ModsImpl(MachineOperand &Root, bool AllowAbs = true,
+                     bool OpSel = false, bool ForceVGPR = false) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;

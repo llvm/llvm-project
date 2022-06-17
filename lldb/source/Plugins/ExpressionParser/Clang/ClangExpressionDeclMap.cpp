@@ -806,7 +806,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
     TypeFromUser class_user_type(class_qual_type.getAsOpaquePtr(),
                                  function_decl_ctx.GetTypeSystem());
 
-    LLDB_LOG(log, "  CEDM::FEVD Adding type for $__lldb_class: {1}",
+    LLDB_LOG(log, "  CEDM::FEVD Adding type for $__lldb_class: {0}",
              class_qual_type.getAsString());
 
     AddContextClassType(context, class_user_type);
@@ -848,7 +848,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
     TypeFromUser pointee_type =
         this_type->GetForwardCompilerType().GetPointeeType();
 
-    LLDB_LOG(log, "  FEVD Adding type for $__lldb_class: {1}",
+    LLDB_LOG(log, "  FEVD Adding type for $__lldb_class: {0}",
              ClangUtil::GetQualType(pointee_type).getAsString());
 
     AddContextClassType(context, pointee_type);
@@ -1037,7 +1037,7 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
 
   LLDB_LOG(log,
            "  CAS::FEVD Matching decl found for "
-           "\"{1}\" in the modules",
+           "\"{0}\" in the modules",
            name);
 
   clang::Decl *copied_decl = CopyDecl(decl_from_modules);
@@ -1595,7 +1595,7 @@ void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
   if (is_reference)
     entity->m_flags |= ClangExpressionVariable::EVTypeIsReference;
 
-  LLDB_LOG(log, "  CEDM::FEVD Found variable {1}, returned\n{2} (original {3})",
+  LLDB_LOG(log, "  CEDM::FEVD Found variable {0}, returned\n{1} (original {2})",
            decl_name, ClangUtil::DumpDecl(var_decl), ClangUtil::ToString(ut));
 }
 
@@ -1626,7 +1626,7 @@ void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_value.Clear();
 
-  LLDB_LOG(log, "  CEDM::FEVD Added pvar {1}, returned\n{2}",
+  LLDB_LOG(log, "  CEDM::FEVD Added pvar {0}, returned\n{1}",
            pvar_sp->GetName(), ClangUtil::DumpDecl(var_decl));
 }
 
@@ -1678,7 +1678,7 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_sym = &symbol;
 
-  LLDB_LOG(log, "  CEDM::FEVD Found variable {1}, returned\n{2}", decl_name,
+  LLDB_LOG(log, "  CEDM::FEVD Found variable {0}, returned\n{1}", decl_name,
            ClangUtil::DumpDecl(var_decl));
 }
 
@@ -1717,7 +1717,7 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
   parser_vars->m_lldb_value.Clear();
   entity->m_flags |= ClangExpressionVariable::EVBareRegister;
 
-  LLDB_LOG(log, "  CEDM::FEVD Added register {1}, returned\n{2}",
+  LLDB_LOG(log, "  CEDM::FEVD Added register {0}, returned\n{1}",
            context.m_decl_name.getAsString(), ClangUtil::DumpDecl(var_decl));
 }
 
@@ -1767,7 +1767,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
 
               LLDB_LOG(log,
                        "  CEDM::FEVD Imported decl for function template"
-                       " {1} (description {2}), returned\n{3}",
+                       " {0} (description {1}), returned\n{2}",
                        copied_function_template->getNameAsString(),
                        ss.GetData(),
                        ClangUtil::DumpDecl(copied_function_template));
@@ -1785,8 +1785,8 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
               function->DumpSymbolContext(&ss);
 
               LLDB_LOG(log,
-                       "  CEDM::FEVD Imported decl for function {1} "
-                       "(description {2}), returned\n{3}",
+                       "  CEDM::FEVD Imported decl for function {0} "
+                       "(description {1}), returned\n{2}",
                        copied_function_decl->getNameAsString(), ss.GetData(),
                        ClangUtil::DumpDecl(copied_function_decl));
             }
@@ -1885,8 +1885,8 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
                      Address::DumpStyleResolvedDescription);
 
     LLDB_LOG(log,
-             "  CEDM::FEVD Found {1} function {2} (description {3}), "
-             "returned\n{4}",
+             "  CEDM::FEVD Found {0} function {1} (description {2}), "
+             "returned\n{3}",
              (function ? "specific" : "generic"), decl_name, ss.GetData(),
              ClangUtil::DumpDecl(function_decl));
   }

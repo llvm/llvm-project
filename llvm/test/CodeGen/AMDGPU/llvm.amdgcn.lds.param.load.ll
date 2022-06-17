@@ -1,6 +1,8 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11 %s
 
 ; GFX11-LABEL: {{^}}lds_param_load:
+; GFX11: s_mov_b32 m0
 ; GFX11-DAG: lds_param_load v{{[0-9]+}}, attr0.x
 ; GFX11-DAG: lds_param_load v{{[0-9]+}}, attr0.y
 ; GFX11-DAG: lds_param_load v{{[0-9]+}}, attr0.z

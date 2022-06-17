@@ -211,7 +211,6 @@ namespace std {
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__variant/monostate.h>
-#include <compare>
 #include <exception>
 #include <initializer_list>
 #include <limits>
@@ -219,6 +218,9 @@ namespace std {
 #include <tuple>
 #include <type_traits>
 #include <version>
+
+// standard-mandated includes
+#include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
