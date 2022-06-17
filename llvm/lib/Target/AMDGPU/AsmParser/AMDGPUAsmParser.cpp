@@ -5001,6 +5001,9 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
                        Val, ValRange);
+    } else if (ID == ".amdhsa_uses_dynamic_stack") {
+      PARSE_BITS_ENTRY(KD.kernel_code_properties,
+                       KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK, Val, ValRange);
     } else if (ID == ".amdhsa_system_sgpr_private_segment_wavefront_offset") {
       if (hasArchitectedFlatScratch())
         return Error(IDRange.Start,
