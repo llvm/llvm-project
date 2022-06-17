@@ -113,16 +113,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasVInstructions()) {
     auto addRegClassForRVV = [this](MVT VT) {
       unsigned Size = VT.getSizeInBits().getKnownMinValue();
-      assert(Size <= 512 && isPowerOf2_32(Size));
       const TargetRegisterClass *RC;
-      if (Size <= 64)
+      if (Size <= RISCV::RVVBitsPerBlock)
         RC = &RISCV::VRRegClass;
-      else if (Size == 128)
+      else if (Size == 2 * RISCV::RVVBitsPerBlock)
         RC = &RISCV::VRM2RegClass;
-      else if (Size == 256)
+      else if (Size == 4 * RISCV::RVVBitsPerBlock)
         RC = &RISCV::VRM4RegClass;
-      else
+      else if (Size == 8 * RISCV::RVVBitsPerBlock)
         RC = &RISCV::VRM8RegClass;
+      else
+        llvm_unreachable("Unexpected size");
 
       addRegisterClass(VT, RC);
     };
