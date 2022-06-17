@@ -1618,17 +1618,11 @@
 #   error "__cpp_lib_bounded_array_traits should not be defined before c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_boyer_moore_searcher
-#     error "__cpp_lib_boyer_moore_searcher should be defined in c++17"
-#   endif
-#   if __cpp_lib_boyer_moore_searcher != 201603L
-#     error "__cpp_lib_boyer_moore_searcher should have the value 201603L in c++17"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_boyer_moore_searcher
-#     error "__cpp_lib_boyer_moore_searcher should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_boyer_moore_searcher
+#   error "__cpp_lib_boyer_moore_searcher should be defined in c++17"
+# endif
+# if __cpp_lib_boyer_moore_searcher != 201603L
+#   error "__cpp_lib_boyer_moore_searcher should have the value 201603L in c++17"
 # endif
 
 # ifndef __cpp_lib_byte
@@ -2579,17 +2573,11 @@
 #   error "__cpp_lib_bounded_array_traits should have the value 201902L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_boyer_moore_searcher
-#     error "__cpp_lib_boyer_moore_searcher should be defined in c++20"
-#   endif
-#   if __cpp_lib_boyer_moore_searcher != 201603L
-#     error "__cpp_lib_boyer_moore_searcher should have the value 201603L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_boyer_moore_searcher
-#     error "__cpp_lib_boyer_moore_searcher should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_boyer_moore_searcher
+#   error "__cpp_lib_boyer_moore_searcher should be defined in c++20"
+# endif
+# if __cpp_lib_boyer_moore_searcher != 201603L
+#   error "__cpp_lib_boyer_moore_searcher should have the value 201603L in c++20"
 # endif
 
 # ifndef __cpp_lib_byte
@@ -3801,17 +3789,11 @@
 #   error "__cpp_lib_bounded_array_traits should have the value 201902L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_boyer_moore_searcher
-#     error "__cpp_lib_boyer_moore_searcher should be defined in c++2b"
-#   endif
-#   if __cpp_lib_boyer_moore_searcher != 201603L
-#     error "__cpp_lib_boyer_moore_searcher should have the value 201603L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_boyer_moore_searcher
-#     error "__cpp_lib_boyer_moore_searcher should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_boyer_moore_searcher
+#   error "__cpp_lib_boyer_moore_searcher should be defined in c++2b"
+# endif
+# if __cpp_lib_boyer_moore_searcher != 201603L
+#   error "__cpp_lib_boyer_moore_searcher should have the value 201603L in c++2b"
 # endif
 
 # ifndef __cpp_lib_byte

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_NO_EXPERIMENTAL_DEPRECATION_WARNING_SEARCHERS
 
 // <functional>
 
