@@ -192,7 +192,7 @@ def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
 
     ```mlir
     sparse_tensor.lex_insert %tensor, %indices, %val
-      : tensor<1024x1024xf64, #CSR>, memref<?xindex>, f64
+      : tensor<1024x1024xf64, #CSR>, memref<?xindex>, memref<f64>
     ```
   }];
   let assemblyFormat = "$tensor `,` $indices `,` $value attr-dict `:`"

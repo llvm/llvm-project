@@ -88,16 +88,8 @@ enum class PrimaryType : uint32_t {
   kC32 = 10
 };
 
-// This x-macro only specifies the non-complex `V` types, because the ABI
-// for complex types has compiler-/architecture-dependent details we need
-// to work around.  Namely, when a function takes a parameter of C/C++
-// type `complex32` (per se), then there is additional padding that causes
-// it not to match the LLVM type `!llvm.struct<(f32, f32)>`.  This only
-// happens with the `complex32` type itself, not with pointers/arrays
-// of complex values.  We also exclude `complex64` because it is in
-// principle susceptible to analogous ABI issues (even though we haven't
-// yet encountered them in practice).
-#define FOREVERY_SIMPLEX_V(DO)                                                 \
+// This x-macro includes all `V` types.
+#define FOREVERY_V(DO)                                                         \
   DO(F64, double)                                                              \
   DO(F32, float)                                                               \
   DO(F16, f16)                                                                 \
@@ -105,12 +97,7 @@ enum class PrimaryType : uint32_t {
   DO(I64, int64_t)                                                             \
   DO(I32, int32_t)                                                             \
   DO(I16, int16_t)                                                             \
-  DO(I8, int8_t)
-
-// This x-macro includes all `V` types, for when the aforementioned ABI
-// issues don't apply (e.g., because the functions take pointers/arrays).
-#define FOREVERY_V(DO)                                                         \
-  FOREVERY_SIMPLEX_V(DO)                                                       \
+  DO(I8, int8_t)                                                               \
   DO(C64, complex64)                                                           \
   DO(C32, complex32)
 
@@ -195,18 +182,11 @@ FOREVERY_O(DECL_SPARSEINDICES)
 /// Coordinate-scheme method for adding a new element.
 #define DECL_ADDELT(VNAME, V)                                                  \
   MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_addElt##VNAME(                   \
-      void *coo, V value, StridedMemRefType<index_type, 1> *iref,              \
+      void *coo,                                                               \
+      StridedMemRefType<V, 0> *vref, StridedMemRefType<index_type, 1> *iref,   \
       StridedMemRefType<index_type, 1> *pref);
-FOREVERY_SIMPLEX_V(DECL_ADDELT)
-DECL_ADDELT(C64, complex64)
+FOREVERY_V(DECL_ADDELT)
 #undef DECL_ADDELT
-// Explicitly unpack the `complex32` into a pair of `float` arguments,
-// to work around ABI issues.
-// TODO: cleaner way to avoid ABI padding problem?
-MLIR_CRUNNERUTILS_EXPORT void *
-_mlir_ciface_addEltC32(void *coo, float r, float i,
-                       StridedMemRefType<index_type, 1> *iref,
-                       StridedMemRefType<index_type, 1> *pref);
 
 /// Coordinate-scheme method for getting the next element while iterating.
 #define DECL_GETNEXT(VNAME, V)                                                 \
@@ -219,16 +199,10 @@ FOREVERY_V(DECL_GETNEXT)
 /// Tensor-storage method to insert elements in lexicographical index order.
 #define DECL_LEXINSERT(VNAME, V)                                               \
   MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_lexInsert##VNAME(                 \
-      void *tensor, StridedMemRefType<index_type, 1> *cref, V val);
-FOREVERY_SIMPLEX_V(DECL_LEXINSERT)
-DECL_LEXINSERT(C64, complex64)
+      void *tensor, StridedMemRefType<index_type, 1> *cref,                    \
+      StridedMemRefType<V, 0> *vref);
+FOREVERY_V(DECL_LEXINSERT)
 #undef DECL_LEXINSERT
-// Explicitly unpack the `complex32` into a pair of `float` arguments,
-// to work around ABI issues.
-// TODO: cleaner way to avoid ABI padding problem?
-MLIR_CRUNNERUTILS_EXPORT void
-_mlir_ciface_lexInsertC32(void *tensor, StridedMemRefType<index_type, 1> *cref,
-                          float r, float i);
 
 /// Tensor-storage method to insert using expansion.
 #define DECL_EXPINSERT(VNAME, V)                                               \
