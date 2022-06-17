@@ -303,6 +303,8 @@ static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   }
 }
 
+/// Return true if this is an operation on mask registers.  Note that
+/// this includes both arithmetic/logical ops and load/store (vlm/vsm).
 static bool isMaskRegOp(const MachineInstr &MI) {
   if (RISCVII::hasSEWOp(MI.getDesc().TSFlags)) {
     const unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
@@ -411,10 +413,25 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
     Res.LMUL = false;
   }
 
+  // Store instructions don't use the policy fields.
+  if (RISCVII::hasSEWOp(TSFlags) && MI.getNumExplicitDefs() == 0) {
+    Res.TailPolicy = false;
+    Res.MaskPolicy = false;
+  }
+
   // A splat of 0/-1 is always a splat of 0/-1, regardless of etype.
   // TODO: We're currently demanding VL + SEWLMULRatio which is sufficient
   // but not neccessary.  What we really need is VLInBytes.
   if (isSplatOfZeroOrMinusOne(MI)) {
+    Res.SEW = false;
+    Res.LMUL = false;
+  }
+
+  // If this is a mask reg operation, it only cares about VLMAX.
+  // TODO: Possible extensions to this logic
+  // * Probably ok if available VLMax is larger than demanded
+  // * The policy bits can probably be ignored..
+  if (isMaskRegOp(MI)) {
     Res.SEW = false;
     Res.LMUL = false;
   }
@@ -590,24 +607,7 @@ public:
     if (hasSameVTYPE(Require))
       return true;
 
-    // If this is a mask reg operation, it only cares about VLMAX.
-    // FIXME: Mask reg operations are probably ok if "this" VLMAX is larger
-    // than "Require".
-    // FIXME: The policy bits can probably be ignored for mask reg operations.
-    if (isMaskRegOp(MI) && hasSameVLMAX(Require) &&
-        TailAgnostic == Require.TailAgnostic &&
-        MaskAgnostic == Require.MaskAgnostic)
-      return true;
-
-    DemandedFields Used = getDemanded(MI);
-    // Store instructions don't use the policy fields.
-    // TODO: Move this into getDemanded; it is here only to avoid changing
-    // behavior of the post pass in an otherwise NFC code restructure.
-    uint64_t TSFlags = MI.getDesc().TSFlags;
-    if (RISCVII::hasSEWOp(TSFlags) && MI.getNumExplicitDefs() == 0) {
-      Used.TailPolicy = false;
-      Used.MaskPolicy = false;
-    }
+    const DemandedFields Used = getDemanded(MI);
     return areCompatibleVTYPEs(encodeVTYPE(), Require.encodeVTYPE(), Used);
   }
 
