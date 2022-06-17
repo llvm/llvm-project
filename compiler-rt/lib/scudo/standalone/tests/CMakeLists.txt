@@ -7,6 +7,7 @@ set_target_properties(ScudoUnitTests PROPERTIES
 set(SCUDO_UNITTEST_CFLAGS
   ${COMPILER_RT_UNITTEST_CFLAGS}
   ${COMPILER_RT_GTEST_CFLAGS}
+  ${SANITIZER_TEST_CXX_CFLAGS}
   -I${COMPILER_RT_SOURCE_DIR}/include
   -I${COMPILER_RT_SOURCE_DIR}/lib
   -I${COMPILER_RT_SOURCE_DIR}/lib/scudo/standalone
@@ -33,15 +34,14 @@ endif()
 set(SCUDO_TEST_ARCH ${SCUDO_STANDALONE_SUPPORTED_ARCH})
 
 # gtests requires c++
-set(LINK_FLAGS
+set(SCUDO_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
-  ${SANITIZER_TEST_CXX_LIBRARIES}
-  )
-list(APPEND LINK_FLAGS -pthread -no-pie)
+  ${SANITIZER_TEST_CXX_LIBRARIES})
+list(APPEND SCUDO_UNITTEST_LINK_FLAGS -pthread -no-pie)
 # Linking against libatomic is required with some compilers
 check_library_exists(atomic __atomic_load_8 "" COMPILER_RT_HAS_LIBATOMIC)
 if (COMPILER_RT_HAS_LIBATOMIC)
-  list(APPEND LINK_FLAGS -latomic)
+  list(APPEND SCUDO_UNITTEST_LINK_FLAGS -latomic)
 endif()
 
 set(SCUDO_TEST_HEADERS
@@ -76,7 +76,7 @@ macro(add_scudo_unittest testname)
         DEPS llvm_gtest scudo_standalone
         RUNTIME ${RUNTIME}
         CFLAGS ${SCUDO_UNITTEST_CFLAGS}
-        LINK_FLAGS ${LINK_FLAGS})
+        LINK_FLAGS ${SCUDO_UNITTEST_LINK_FLAGS})
     endforeach()
   endif()
 endmacro()

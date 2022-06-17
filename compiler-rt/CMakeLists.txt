@@ -521,6 +521,17 @@ string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}
 list(APPEND COMPILER_RT_COMMON_CFLAGS ${stdlib_flag})
 list(APPEND COMPILER_RT_COMMON_LINK_FLAGS ${stdlib_flag})
 
+# TODO: There's a lot of duplication across lib/*/tests/CMakeLists.txt files,
+# move some of the common flags to COMPILER_RT_UNITTEST_CFLAGS.
+
+# Unittests need access to C++ standard library.
+string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${stdlib_flag}")
+
+# When cross-compiling, COMPILER_RT_TEST_COMPILER_CFLAGS help in compilation
+# and linking of unittests.
+string(REPLACE " " ";" COMPILER_RT_UNITTEST_CFLAGS "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
+set(COMPILER_RT_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_CFLAGS})
+
 if(COMPILER_RT_USE_LLVM_UNWINDER)
   if (COMPILER_RT_ENABLE_STATIC_UNWINDER)
     set(unwinder_target unwind_static)
@@ -583,24 +594,17 @@ if (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libc++")
     else()
       set(cxx_target cxx_shared)
     endif()
-    list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<$<BOOL:$<TARGET_NAME_IF_EXISTS:${cxx_target}>>:$<TARGET_LINKER_FILE:${cxx_target}>>")
+    list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<$<TARGET_EXISTS:${cxx_target}>:$<TARGET_LINKER_FILE:${cxx_target}>>")
+    list(APPEND SANITIZER_TEST_CXX_CFLAGS "$<$<TARGET_EXISTS:cxx-headers>:-isystem$<JOIN:$<TARGET_PROPERTY:cxx-headers,INTERFACE_INCLUDE_DIRECTORIES>,$<SEMICOLON>-isystem>>")
+    # We are using the in tree libc++ so avoid including the default one.
+    append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ COMPILER_RT_UNITTEST_CFLAGS)
+    append_list_if(COMPILER_RT_HAS_NOSTDLIBXX_FLAG -nostdlib++ COMPILER_RT_UNITTEST_LINK_FLAGS)
   else()
     append_list_if(COMPILER_RT_HAS_LIBCXX -lc++ SANITIZER_TEST_CXX_LIBRARIES)
   endif()
 elseif (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libstdc++")
   append_list_if(COMPILER_RT_HAS_LIBSTDCXX -lstdc++ SANITIZER_TEST_CXX_LIBRARIES)
 endif()
-
-# TODO: There's a lot of duplication across lib/*/tests/CMakeLists.txt files,
-# move some of the common flags to COMPILER_RT_UNITTEST_CFLAGS.
-
-# Unittests need access to C++ standard library.
-string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${stdlib_flag}")
-
-# When cross-compiling, COMPILER_RT_TEST_COMPILER_CFLAGS help in compilation
-# and linking of unittests.
-string(REPLACE " " ";" COMPILER_RT_UNITTEST_CFLAGS "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
-set(COMPILER_RT_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_CFLAGS})
 
 # Unittests support.
 set(COMPILER_RT_GTEST_PATH ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest)
