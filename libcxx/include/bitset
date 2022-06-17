@@ -120,10 +120,12 @@ template <size_t N> struct hash<std::bitset<N>>;
 #include <__functional/unary_function.h>
 #include <climits>
 #include <cstddef>
-#include <iosfwd>
 #include <stdexcept>
-#include <string>
 #include <version>
+
+// standard-mandated includes
+#include <iosfwd>
+#include <string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -539,12 +539,10 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__utility/swap.h>
 #include <__utility/unreachable.h>
 #include <climits>
-#include <compare>
 #include <cstdint>
 #include <cstdio>  // EOF
 #include <cstdlib>
 #include <cstring>
-#include <initializer_list>
 #include <iosfwd>
 #include <limits>
 #include <memory>
@@ -556,6 +554,19 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #  include <cwchar>
 #endif
+
+// standard-mandated includes
+
+// [iterator.range]
+#include <__iterator/access.h>
+#include <__iterator/data.h>
+#include <__iterator/empty.h>
+#include <__iterator/reverse_access.h>
+#include <__iterator/size.h>
+
+// [string.syn]
+#include <compare>
+#include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

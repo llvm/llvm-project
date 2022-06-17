@@ -472,8 +472,20 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <__memory/addressof.h>
 #include <__node_handle>
 #include <__utility/forward.h>
-#include <compare>
 #include <version>
+
+// standard-mandated includes
+
+// [iterator.range]
+#include <__iterator/access.h>
+#include <__iterator/data.h>
+#include <__iterator/empty.h>
+#include <__iterator/reverse_access.h>
+#include <__iterator/size.h>
+
+// [unord.set.syn]
+#include <compare>
+#include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

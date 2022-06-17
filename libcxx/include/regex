@@ -766,20 +766,30 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__algorithm/search.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <__iterator/access.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__locale>
 #include <__utility/move.h>
 #include <__utility/swap.h>
-#include <compare>
 #include <deque>
-#include <initializer_list>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <version>
+
+// standard-mandated includes
+
+// [iterator.range]
+#include <__iterator/access.h>
+#include <__iterator/data.h>
+#include <__iterator/empty.h>
+#include <__iterator/reverse_access.h>
+#include <__iterator/size.h>
+
+// [re.syn]
+#include <compare>
+#include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

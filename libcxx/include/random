@@ -1716,8 +1716,10 @@ class piecewise_linear_distribution
 #include <__random/uniform_random_bit_generator.h>
 #include <__random/uniform_real_distribution.h>
 #include <__random/weibull_distribution.h>
-#include <initializer_list>
 #include <version>
+
+// standard-mandated includes
+#include <initializer_list>
 
 #include <cmath>       // for backward compatibility; TODO remove it
 #include <cstddef>     // for backward compatibility; TODO remove it

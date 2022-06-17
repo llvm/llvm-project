@@ -226,11 +226,14 @@ template <class T, class Container, class Compare>
 #include <__iterator/iterator_traits.h>
 #include <__memory/uses_allocator.h>
 #include <__utility/forward.h>
-#include <compare>
 #include <deque>
 #include <type_traits>
 #include <vector>
 #include <version>
+
+// standard-mandated includes
+#include <compare>
+#include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

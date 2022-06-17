@@ -147,11 +147,13 @@ template <> struct hash<std::error_condition>;
 #include <__errc>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
-#include <compare>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <version>
+
+// standard-mandated includes
+#include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
