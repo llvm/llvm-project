@@ -15,6 +15,7 @@ group("unittests") {
     "DebugInfo/GSYM:DebugInfoGSYMTests",
     "DebugInfo/MSF:DebugInfoMSFTests",
     "DebugInfo/PDB:DebugInfoPDBTests",
+    "DebugInfo/Symbolizer:DebugInfoSymbolizerTests",
     "Debuginfod:DebuginfodTests",
     "Demangle:DemangleTests",
     "ExecutionEngine:ExecutionEngineTests",
