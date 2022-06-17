@@ -517,6 +517,22 @@ void CodeGenAction::generateLLVMIR() {
   }
 }
 
+static llvm::CodeGenOpt::Level
+getCGOptLevel(const Fortran::frontend::CodeGenOptions &opts) {
+  switch (opts.OptimizationLevel) {
+  default:
+    llvm_unreachable("Invalid optimization level!");
+  case 0:
+    return llvm::CodeGenOpt::None;
+  case 1:
+    return llvm::CodeGenOpt::Less;
+  case 2:
+    return llvm::CodeGenOpt::Default;
+  case 3:
+    return llvm::CodeGenOpt::Aggressive;
+  }
+}
+
 void CodeGenAction::setUpTargetMachine() {
   CompilerInstance &ci = this->getInstance();
 
@@ -535,9 +551,12 @@ void CodeGenAction::setUpTargetMachine() {
   assert(theTarget && "Failed to create Target");
 
   // Create `TargetMachine`
-  tm.reset(theTarget->createTargetMachine(theTriple, /*CPU=*/"",
-                                          /*Features=*/"",
-                                          llvm::TargetOptions(), llvm::None));
+  llvm::CodeGenOpt::Level OptLevel =
+      getCGOptLevel(ci.getInvocation().getCodeGenOpts());
+  tm.reset(theTarget->createTargetMachine(
+      theTriple, /*CPU=*/"",
+      /*Features=*/"", llvm::TargetOptions(), /*Reloc::Model=*/llvm::None,
+      /*CodeModel::Model=*/llvm::None, OptLevel));
   assert(tm && "Failed to create TargetMachine");
 }
 
