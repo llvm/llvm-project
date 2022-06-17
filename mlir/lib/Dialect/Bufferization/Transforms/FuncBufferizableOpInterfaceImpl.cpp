@@ -306,12 +306,8 @@ struct CallOpInterface
 
       // Retrieve buffers for tensor operands.
       Value buffer = newOperands[idx];
-      if (!buffer) {
-        FailureOr<Value> bufferOrFailure = state.getBuffer(rewriter, opOperand);
-        if (failed(bufferOrFailure))
-          return failure();
-        buffer = *bufferOrFailure;
-      }
+      if (!buffer)
+        buffer = state.getBuffer(rewriter, opOperand.get());
 
       // Caller / callee type mismatch is handled with a CastOp.
       auto memRefType = funcType.getInput(idx);

@@ -43,30 +43,49 @@ using namespace bufferization;
 constexpr const ::llvm::StringLiteral
     bufferization::BufferizableOpInterface::kInplaceableAttrName;
 
-/// Create an AllocTensorOp for the given shaped value. Only ranked tensors are
-/// supported at the moment. If `copy` is set, the shaped value is copied.
-/// Otherwise, a tensor with undefined contents is allocated.
-static Value allocateTensorForShapedValue(OpBuilder &b, Location loc,
-                                          Value shapedValue, bool escape,
-                                          bool copy = true) {
-  auto tensorType = shapedValue.getType().dyn_cast<RankedTensorType>();
-  assert(tensorType && "only RankedTensorType supported at the moment");
-  Value alloc;
-  if (!copy) {
-    // No copy needed: Just allocate.
-    SmallVector<Value> dynamicSizes;
-    for (int64_t i = 0; i < tensorType.getRank(); ++i)
-      if (tensorType.isDynamicDim(i))
-        dynamicSizes.push_back(b.create<tensor::DimOp>(loc, shapedValue, i));
-    alloc = b.create<AllocTensorOp>(loc, tensorType, dynamicSizes,
-                                    /*copy=*/Value(), escape);
+/// Create an AllocTensorOp for the given shaped value. If `copy` is set, the
+/// shaped value is copied. Otherwise, a tensor with undefined contents is
+/// allocated.
+Value bufferization::allocateTensorForShapedValue(OpBuilder &b, Location loc,
+                                                  Value shapedValue,
+                                                  bool escape, bool copy) {
+  Value tensor;
+  if (shapedValue.getType().isa<RankedTensorType>()) {
+    tensor = shapedValue;
+  } else if (shapedValue.getType().isa<MemRefType>()) {
+    tensor = b.create<ToTensorOp>(loc, shapedValue);
   } else {
-    // Allocate and copy.
-    alloc = b.create<AllocTensorOp>(loc, tensorType,
-                                    /*dynamicSizes=*/ValueRange(), shapedValue,
-                                    escape);
+    llvm_unreachable("expected RankedTensorType or MemRefType");
   }
-  return alloc;
+  RankedTensorType tensorType = tensor.getType().cast<RankedTensorType>();
+  SmallVector<Value> dynamicSizes;
+  if (!copy) {
+    // Compute the dynamic part of the shape.
+    // First try to query the shape via ReifyRankedShapedTypeOpInterface.
+    bool reifiedShapes = false;
+    if (shapedValue.getType().isa<RankedTensorType>() &&
+        shapedValue.isa<OpResult>()) {
+      if (auto rankedOp = dyn_cast_or_null<ReifyRankedShapedTypeOpInterface>(
+              shapedValue.getDefiningOp())) {
+        ReifiedRankedShapedTypeDims resultDims;
+        if (succeeded(rankedOp.reifyResultShapes(b, resultDims))) {
+          reifiedShapes = true;
+          auto &shape =
+              resultDims[shapedValue.cast<OpResult>().getResultNumber()];
+          for (const auto &dim : enumerate(tensorType.getShape()))
+            if (ShapedType::isDynamic(dim.value()))
+              dynamicSizes.push_back(shape[dim.index()]);
+        }
+      }
+    }
+
+    // If the shape could not be reified, create DimOps.
+    if (!reifiedShapes)
+      populateDynamicDimSizes(b, loc, tensor, dynamicSizes);
+  }
+
+  return b.create<AllocTensorOp>(loc, tensorType, dynamicSizes,
+                                 copy ? tensor : Value(), escape);
 }
 
 LogicalResult BufferizableOpInterface::resolveTensorOpOperandConflicts(
@@ -379,6 +398,10 @@ bool AnalysisState::canOmitTensorCopy(OpOperand &opOperand) const {
 }
 
 bool AnalysisState::isInPlace(OpOperand &opOperand) const {
+  // ToMemrefOps are always in-place.
+  if (isa<ToMemrefOp>(opOperand.getOwner()))
+    return true;
+
   // In the absence of analysis information, OpOperands that bufferize to a
   // memory write are out-of-place, i.e., an alloc and copy is inserted.
   return !bufferizesToMemoryWrite(opOperand);
@@ -454,85 +477,21 @@ static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
 #endif
 }
 
-Value mlir::bufferization::lookupBuffer(RewriterBase &rewriter, Value tensor,
-                                        const BufferizationOptions &options) {
-  auto tensorType = tensor.getType().dyn_cast<TensorType>();
+Value BufferizationState::getBuffer(RewriterBase &rewriter, Value value) {
+  auto tensorType = value.getType().dyn_cast<TensorType>();
   assert(tensorType && "unexpected non-tensor type");
 
   // Replace "%t = to_tensor %m" with %m.
-  if (auto toTensorOp = tensor.getDefiningOp<bufferization::ToTensorOp>())
+  if (auto toTensorOp = value.getDefiningOp<bufferization::ToTensorOp>())
     return toTensorOp.memref();
 
   // Insert to_memref op.
   OpBuilder::InsertionGuard g(rewriter);
-  setInsertionPointAfter(rewriter, tensor);
-  Type memrefType = getMemRefType(tensorType, options);
-  ensureToMemrefOpIsValid(tensor, memrefType);
-  return rewriter.create<bufferization::ToMemrefOp>(tensor.getLoc(), memrefType,
-                                                    tensor);
-}
-
-/// Return the buffer (memref) for a given OpOperand (tensor). Allocate
-/// a new buffer and copy over data from the existing buffer if out-of-place
-/// bufferization was decided.
-FailureOr<Value>
-BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
-                              Optional<ForceInPlacability> overrideInPlace,
-                              Optional<Operation *> customCopyInsertionPoint) {
-  const BufferizationOptions &options = analysisState.getOptions();
-  OpBuilder::InsertionGuard guard(rewriter);
-  Operation *op = opOperand.getOwner();
-  Location loc = op->getLoc();
-  SmallVector<OpResult> aliasingOpResults =
-      analysisState.getAliasingOpResult(opOperand);
-  Value operand = opOperand.get();
-  Value operandBuffer = lookupBuffer(rewriter, operand, options);
-
-  // Can `operandBuffer` be used directly or do we need a copy?
-  bool inplace =
-      overrideInPlace != FORCE_OUT_OF_PLACE &&
-      (overrideInPlace == FORCE_INPLACE || analysisState.isInPlace(opOperand));
-  if (inplace)
-    return operandBuffer;
-
-  // Bufferizing out-of-place: Allocate a new buffer.
-  // Move insertion point right after `operandBuffer`. That is where the
-  // allocation should be inserted (in the absence of allocation hoisting).
-  setInsertionPointAfter(rewriter, operandBuffer);
-  // Allocate the result buffer. The buffer should be deallocated if the tensor
-  // is not yielded and deallocs are enabled in general.
-  bool dealloc = llvm::none_of(aliasingOpResults, [&](Value v) {
-    return getAnalysisState().isTensorYielded(v);
-  });
-  FailureOr<Value> resultBuffer = createAlloc(
-      rewriter, loc, operandBuffer, dealloc && getOptions().createDeallocs);
-  if (failed(resultBuffer))
-    return failure();
-  // Do not copy the buffer if its contents are undefined.
-  if (analysisState.hasUndefinedContents(&opOperand))
-    return resultBuffer;
-  // Do not copy if the copied data is never read.
-  if (!aliasingOpResults.empty() &&
-      !analysisState.bufferizesToMemoryRead(opOperand) &&
-      llvm::none_of(aliasingOpResults, [&](OpResult opResult) {
-        return analysisState.isValueRead(opResult);
-      }))
-    return resultBuffer;
-  // Do not copy if this op does not read the data, but writes it.
-  if (analysisState.bufferizesToMemoryWrite(opOperand) &&
-      !analysisState.bufferizesToMemoryRead(opOperand))
-    return resultBuffer;
-
-  if (customCopyInsertionPoint) {
-    rewriter.setInsertionPoint(*customCopyInsertionPoint);
-  } else {
-    // The copy happens right before the op that is bufferized.
-    rewriter.setInsertionPoint(op);
-  }
-  if (failed(options.createMemCpy(rewriter, loc, operandBuffer, *resultBuffer)))
-    return failure();
-
-  return resultBuffer;
+  setInsertionPointAfter(rewriter, value);
+  Type memrefType = getMemRefType(tensorType, getOptions());
+  ensureToMemrefOpIsValid(value, memrefType);
+  return rewriter.create<bufferization::ToMemrefOp>(value.getLoc(), memrefType,
+                                                    value);
 }
 
 /// Return the buffer type for a given Value (tensor) after bufferization.
@@ -588,9 +547,12 @@ FailureOr<Value> BufferizationOptions::createAlloc(OpBuilder &b, Location loc,
     return (*allocationFn)(b, loc, type, dynShape, bufferAlignment);
 
   // Default bufferallocation via AllocOp.
-  Value allocated = b.create<memref::AllocOp>(
-      loc, type, dynShape, b.getI64IntegerAttr(bufferAlignment));
-  return allocated;
+  if (bufferAlignment != 0)
+    return b
+        .create<memref::AllocOp>(loc, type, dynShape,
+                                 b.getI64IntegerAttr(bufferAlignment))
+        .getResult();
+  return b.create<memref::AllocOp>(loc, type, dynShape).getResult();
 }
 
 /// Creates a memref deallocation. The given memref buffer must have been
@@ -603,93 +565,6 @@ LogicalResult BufferizationOptions::createDealloc(OpBuilder &b, Location loc,
   // Default buffer deallocation via DeallocOp.
   b.create<memref::DeallocOp>(loc, allocatedBuffer);
   return success();
-}
-
-static MemRefType getContiguousMemRefType(ShapedType shapedType,
-                                          Attribute memorySpace = {}) {
-  MemRefLayoutAttrInterface layout = {};
-  return MemRefType::get(shapedType.getShape(), shapedType.getElementType(),
-                         layout, memorySpace);
-}
-
-/// Compute the type of the `memref` to use for allocating the buffer for
-/// `shapedValue`. Also returns (by reference in `dynShape`), the value for the
-/// dynamic dimensions in the returned `memref` type.
-static MemRefType getAllocationTypeAndShape(OpBuilder &b, Location loc,
-                                            Value shapedValue,
-                                            SmallVectorImpl<Value> &dynShape) {
-  MemRefType allocMemRefType =
-      getContiguousMemRefType(shapedValue.getType().cast<ShapedType>());
-
-  // Compute the dynamic part of the shape.
-  bool reifiedShapes = false;
-  if (auto rankedOp = dyn_cast_or_null<ReifyRankedShapedTypeOpInterface>(
-          shapedValue.getDefiningOp())) {
-    ReifiedRankedShapedTypeDims resultDims;
-    if (succeeded(rankedOp.reifyResultShapes(b, resultDims))) {
-      reifiedShapes = true;
-      OpResult resultValue = shapedValue.dyn_cast<OpResult>();
-      auto &shape = resultDims[resultValue.getResultNumber()];
-      for (const auto &dim : enumerate(allocMemRefType.getShape()))
-        if (ShapedType::isDynamic(dim.value()))
-          dynShape.push_back(shape[dim.index()]);
-    }
-  }
-
-  if (!reifiedShapes) {
-    for (const auto &dim : enumerate(allocMemRefType.getShape()))
-      if (ShapedType::isDynamic(dim.value())) {
-        assert((shapedValue.getType().isa<UnrankedMemRefType>() ||
-                shapedValue.getType().isa<MemRefType>()) &&
-               "expected MemRef type");
-        dynShape.push_back(
-            b.create<memref::DimOp>(loc, shapedValue, dim.index()));
-      }
-  }
-
-  return allocMemRefType;
-}
-
-/// Create an allocation after `shapedValue.getDefiningOp` (or at the top of the
-/// block in case of a bbArg).
-FailureOr<Value> BufferizationState::createAlloc(OpBuilder &b, Location loc,
-                                                 Value shapedValue,
-                                                 Optional<bool> dealloc) {
-  // Take a guard before anything else.
-  OpBuilder::InsertionGuard g(b);
-
-  // Compute allocation memref type.
-  assert(shapedValue.getType().isa<ShapedType>());
-  SmallVector<Value> dynShape;
-  MemRefType allocMemRefType =
-      getAllocationTypeAndShape(b, loc, shapedValue, dynShape);
-
-  // Create the buffer allocation.
-  FailureOr<Value> buffer =
-      getOptions().createAlloc(b, loc, allocMemRefType, dynShape);
-  if (failed(buffer))
-    return failure();
-
-  // Should be the buffer be deallocated again or should we let it leak?
-  if (dealloc) {
-    if (!dealloc.getValue())
-      return *buffer;
-  } else {
-    assert(shapedValue.getType().isa<TensorType>() &&
-           "must specify `dealloc` if non-tensor value is passed");
-    // Buffer should be not be deallocated if deallocs are generally deactivated
-    // or if the tensor is yielded from a block.
-    if (!getOptions().createDeallocs ||
-        getAnalysisState().isTensorYielded(shapedValue))
-      return *buffer;
-  }
-
-  // Create buffer deallocation.
-  b.setInsertionPoint(b.getInsertionBlock()->getTerminator());
-  if (failed(getOptions().createDealloc(b, loc, *buffer)))
-    return failure();
-
-  return *buffer;
 }
 
 /// Create a memory copy between two memref buffers.

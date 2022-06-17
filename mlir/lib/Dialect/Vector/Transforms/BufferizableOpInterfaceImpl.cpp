@@ -50,10 +50,7 @@ struct TransferReadOpInterface
     auto readOp = cast<vector::TransferReadOp>(op);
     assert(readOp.getShapedType().isa<TensorType>() &&
            "only tensor types expected");
-
-    // TransferReadOp always reads from the bufferized op.source().
-    Value buffer =
-        *state.getBuffer(rewriter, readOp->getOpOperand(0) /*source*/);
+    Value buffer = state.getBuffer(rewriter, readOp.getSource());
     replaceOpWithNewBufferizedOp<vector::TransferReadOp>(
         rewriter, readOp, readOp.getVectorType(), buffer, readOp.getIndices(),
         readOp.getPermutationMap(), readOp.getPadding(), readOp.getMask(),
@@ -100,17 +97,12 @@ struct TransferWriteOpInterface
            "only tensor types expected");
 
     // Create a new transfer_write on buffer that doesn't have a return value.
-    // Leave the previous transfer_write to dead code as it still has uses at
-    // this point.
-    FailureOr<Value> resultBuffer =
-        state.getBuffer(rewriter, op->getOpOperand(1) /*source*/);
-    if (failed(resultBuffer))
-      return failure();
+    Value resultBuffer = state.getBuffer(rewriter, writeOp.getSource());
     rewriter.create<vector::TransferWriteOp>(
-        writeOp.getLoc(), writeOp.getVector(), *resultBuffer,
+        writeOp.getLoc(), writeOp.getVector(), resultBuffer,
         writeOp.getIndices(), writeOp.getPermutationMapAttr(),
         writeOp.getInBoundsAttr());
-    replaceOpWithBufferizedValues(rewriter, op, *resultBuffer);
+    replaceOpWithBufferizedValues(rewriter, op, resultBuffer);
 
     return success();
   }
