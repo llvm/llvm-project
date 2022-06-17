@@ -418,7 +418,7 @@ public:
     RegParmMax = 3;
 
     // Use fpret for all types.
-    RealTypeUsesObjCFPRet =
+    RealTypeUsesObjCFPRetMask =
         ((1 << (int)FloatModeKind::Float) | (1 << (int)FloatModeKind::Double) |
          (1 << (int)FloatModeKind::LongDouble));
 
@@ -699,7 +699,7 @@ public:
                                         "64-i64:64-f80:128-n8:16:32:64-S128");
 
     // Use fpret only for long double.
-    RealTypeUsesObjCFPRet = (1 << (int)FloatModeKind::LongDouble);
+    RealTypeUsesObjCFPRetMask = (1 << (int)FloatModeKind::LongDouble);
 
     // Use fp2ret for _Complex long double.
     ComplexLongDoubleUsesFP2Ret = true;

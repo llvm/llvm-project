@@ -53,11 +53,13 @@ namespace Builtin { struct Info; }
 
 enum class FloatModeKind {
   NoFloat = 255,
-  Float = 0,
+  Half = 0,
+  Float,
   Double,
   LongDouble,
   Float128,
-  Ibm128
+  Ibm128,
+  Last = Ibm128
 };
 
 /// Fields controlling how types are laid out in memory; these may need to
@@ -219,7 +221,7 @@ protected:
   mutable VersionTuple PlatformMinVersion;
 
   unsigned HasAlignMac68kSupport : 1;
-  unsigned RealTypeUsesObjCFPRet : 3;
+  unsigned RealTypeUsesObjCFPRetMask : (int)FloatModeKind::Last + 1;
   unsigned ComplexLongDoubleUsesFP2Ret : 1;
 
   unsigned HasBuiltinMSVaList : 1;
@@ -888,7 +890,9 @@ public:
   /// Check whether the given real type should use the "fpret" flavor of
   /// Objective-C message passing on this target.
   bool useObjCFPRetForRealType(FloatModeKind T) const {
-    return RealTypeUsesObjCFPRet & (1 << (int)T);
+    assert(T <= FloatModeKind::Last &&
+           "T value is larger than RealTypeUsesObjCFPRetMask can handle");
+    return RealTypeUsesObjCFPRetMask & (1 << (int)T);
   }
 
   /// Check whether _Complex long double should use the "fp2ret" flavor
