@@ -5789,18 +5789,17 @@ SDValue DAGTypeLegalizer::WidenVecOp_CONCAT_VECTORS(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_INSERT_SUBVECTOR(SDNode *N) {
+  EVT VT = N->getValueType(0);
   SDValue SubVec = N->getOperand(1);
   SDValue InVec = N->getOperand(0);
-
-  if (getTypeAction(InVec.getValueType()) == TargetLowering::TypeWidenVector)
-    InVec = GetWidenedVector(InVec);
 
   if (getTypeAction(SubVec.getValueType()) == TargetLowering::TypeWidenVector)
     SubVec = GetWidenedVector(SubVec);
 
-  if (SubVec.getValueType() == InVec.getValueType() && InVec.isUndef() &&
+  if (SubVec.getValueType().knownBitsLE(VT) && InVec.isUndef() &&
       N->getConstantOperandVal(2) == 0)
-    return SubVec;
+    return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT, InVec, SubVec,
+                       N->getOperand(2));
 
   report_fatal_error("Don't know how to widen the operands for "
                      "INSERT_SUBVECTOR");
