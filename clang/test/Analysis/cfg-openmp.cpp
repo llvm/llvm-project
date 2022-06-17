@@ -893,4 +893,18 @@ void targetparallelloop(int argc) {
     argc = x;
 }
 
+// CHECK-LABEL:  void parallelmasked(int argc)
+void parallelmasked(int argc) {
+  int x = 0;
+// CHECK:        [B1]
+// CHECK-NEXT:   1: 0
+// CHECK-NEXT:   2: int x = 0;
+// CHECK-NEXT:   [[#MASKED:]]: x
+// CHECK-NEXT:   [[#MASKED+1]]: [B1.[[#MASKED]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-NEXT:   [[#MASKED+2]]: argc
+// CHECK-NEXT:   [[#MASKED+3]]: [B1.[[#MASKED+2]]] = [B1.[[#MASKED+1]]]
+// CHECK-NEXT:   [[#MASKED+4]]: #pragma omp parallel masked
+#pragma omp parallel masked
+  argc = x;
+}
 #endif  // _OPENMP

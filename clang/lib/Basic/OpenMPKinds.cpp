@@ -535,7 +535,7 @@ bool clang::isOpenMPParallelDirective(OpenMPDirectiveKind DKind) {
          DKind == OMPD_teams_distribute_parallel_for_simd ||
          DKind == OMPD_target_teams_distribute_parallel_for ||
          DKind == OMPD_target_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_parallel_master ||
+         DKind == OMPD_parallel_master || DKind == OMPD_parallel_masked ||
          DKind == OMPD_parallel_master_taskloop ||
          DKind == OMPD_parallel_master_taskloop_simd ||
          DKind == OMPD_parallel_loop || DKind == OMPD_target_parallel_loop;
@@ -652,6 +652,7 @@ void clang::getOpenMPCaptureRegions(
   case OMPD_parallel_for:
   case OMPD_parallel_for_simd:
   case OMPD_parallel_master:
+  case OMPD_parallel_masked:
   case OMPD_parallel_sections:
   case OMPD_distribute_parallel_for:
   case OMPD_distribute_parallel_for_simd:
