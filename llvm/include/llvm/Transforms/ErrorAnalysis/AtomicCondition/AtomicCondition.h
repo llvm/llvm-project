@@ -27,11 +27,10 @@ enum Operation {
   Exp,
   Log,
   Sqrt,
+  TruncToFloat
 };
 
 using namespace std;
-
-
 
 // Atomic Condition storage
 template<typename FloatType>
@@ -91,148 +90,8 @@ public:
 
 ACTable *StorageTable;
 
-float fACfp32BinaryAdd(string XName, float X, string YName, float Y, int WRTOperand);
-float fACfp32BinarySub(string XName, float X, string YName, float Y, int WRTOperand);
-float fACfp32BinaryMul(string XName, float X, string YName, float Y, int WRTOperand);
-float fACfp32BinaryDiv(string XName, float X, string YName, float Y, int WRTOperand);
-
-float fACfp32UnarySin(string XName, float X);
-float fACfp32UnaryCos(string XName, float X);
-float fACfp32UnaryTan(string XName, float X);
-float fACfp32UnaryArcSin(string XName, float X);
-float fACfp32UnaryArcCos(string XName, float X);
-float fACfp32UnaryArcTan(string XName, float X);
-float fACfp32UnarySinh(string XName, float X);
-float fACfp32UnaryCosh(string XName, float X);
-float fACfp32UnaryTanh(string XName, float X);
-float fACfp32UnaryExp(string XName, float X);
-float fACfp32UnaryLog(string XName, float X);
-float fACfp32UnarySqrt(string XName, float X);
-
-
-
-double fACfp64BinaryAdd(string XName, double X, string YName, double Y, int WRTOperand);
-double fACfp64BinarySub(string XName, double X, string YName, double Y, int WRTOperand);
-double fACfp64BinaryMul(string XName, double X, string YName, double Y, int WRTOperand);
-double fACfp64BinaryDiv(string XName, double X, string YName, double Y, int WRTOperand);
-
-double fACfp64UnarySin(string XName, double X);
-double fACfp64UnaryCos(string XName, double X);
-double fACfp64UnaryTan(string XName, double X);
-double fACfp64UnaryArcSin(string XName, double X);
-double fACfp64UnaryArcCos(string XName, double X);
-double fACfp64UnaryArcTan(string XName, double X);
-double fACfp64UnarySinh(string XName, double X);
-double fACfp64UnaryCosh(string XName, double X);
-double fACfp64UnaryTanh(string XName, double X);
-double fACfp64UnaryExp(string XName, double X);
-double fACfp64UnaryLog(string XName, double X);
-double fACfp64UnarySqrt(string XName, double X);
-
-
-
 void fACCreate(uint64_t NumItems) {
   StorageTable = new ACTable(NumItems);
-}
-
-// Driver function selecting atomic condition function for unary float operation
-float fACfp32UnaryDriver(string XName, float X, Operation OP) {
-  switch (OP) {
-  case 4:
-    return fACfp32UnarySin(XName, X);
-  case 5:
-    return fACfp32UnaryCos(XName, X);
-  case 6:
-    return fACfp32UnaryTan(XName, X);
-  case 7:
-    return fACfp32UnaryArcSin(XName, X);
-  case 8:
-    return fACfp32UnaryArcCos(XName, X);
-  case 9:
-    return fACfp32UnaryArcTan(XName, X);
-  case 10:
-    return fACfp32UnarySinh(XName, X);
-  case 11:
-    return fACfp32UnaryCosh(XName, X);
-  case 12:
-    return fACfp32UnaryTanh(XName, X);
-  case 13:
-    return fACfp32UnaryExp(XName, X);
-  case 14:
-    return fACfp32UnaryLog(XName, X);
-  case 15:
-    return fACfp32UnarySqrt(XName, X);
-  default:
-    printf("No such operation\n");
-  }
-  return 0.0;
-}
-
-// Driver function selecting atomic condition function for binary float operation
-float fACfp32BinaryDriver(string XName, float X, string YName, float Y, Operation OP, int WRTOperand) {
-  switch (OP) {
-  case 0:
-    return fACfp32BinaryAdd(XName, X, YName, Y, WRTOperand);
-  case 1:
-    return fACfp32BinarySub(XName, X, YName, Y, WRTOperand);
-  case 2:
-    return fACfp32BinaryMul(XName, X, YName, Y, WRTOperand);
-  case 3:
-    return fACfp32BinaryDiv(XName, X, YName, Y, WRTOperand);
-  default:
-    printf("No such operation\n");
-  }
-  return 0.0;
-}
-
-// Driver function selecting atomic condition function for unary double operation
-double fACfp64UnaryDriver(string XName, double X, Operation OP) {
-  switch (OP) {
-  case 4:
-    return fACfp64UnarySin(XName, X);
-  case 5:
-    return fACfp64UnaryCos(XName, X);
-  case 6:
-    return fACfp64UnaryTan(XName, X);
-  case 7:
-    return fACfp64UnaryArcSin(XName, X);
-  case 8:
-    return fACfp64UnaryArcCos(XName, X);
-  case 9:
-    return fACfp64UnaryArcTan(XName, X);
-  case 10:
-    return fACfp64UnarySinh(XName, X);
-  case 11:
-    return fACfp64UnaryCosh(XName, X);
-  case 12:
-    return fACfp64UnaryTanh(XName, X);
-  case 13:
-    return fACfp64UnaryExp(XName, X);
-  case 14:
-    return fACfp64UnaryLog(XName, X);
-  case 15:
-    return fACfp64UnarySqrt(XName, X);
-  default:
-    printf("No such operation\n");
-  }
-  return 0.0;
-}
-
-// Driver function selecting atomic condition function for binary double operation
-double fACfp64BinaryDriver(string XName, double X, string YName, double Y, Operation OP, int WRTOperand) {
-  switch (OP) {
-  case 0:
-    return fACfp64BinaryAdd(XName, X, YName, Y, WRTOperand);
-  case 1:
-    return fACfp64BinarySub(XName, X, YName, Y, WRTOperand);
-  case 2:
-    return fACfp64BinaryMul(XName, X, YName, Y, WRTOperand);
-  case 3:
-    return fACfp64BinaryDiv(XName, X, YName, Y, WRTOperand);
-  default:
-    printf("No such operation\n");
-  }
-  return 0.0;
 }
 
 // ---------------------------------------------------------------------------
@@ -241,7 +100,7 @@ double fACfp64BinaryDriver(string XName, double X, string YName, double Y, Opera
 
 // ---------------------------- Binary Operations ----------------------------
 
-float fACfp32BinaryAdd(string XName, float X, string YName, float Y, int WRTOperand) {
+void fACfp32BinaryAdd(const char *XName, float X, const char *YName, float Y, int WRTOperand) {
   float AC;
   if(WRTOperand == 1) {
     AC = abs(X / (X+Y));
@@ -249,17 +108,17 @@ float fACfp32BinaryAdd(string XName, float X, string YName, float Y, int WRTOper
     AC = abs(Y / (X+Y));
   } else {
     printf("There is no operand %d.\n", WRTOperand);
-    return AC;
+    return ;
   }
   printf("AC of x+y | x=%f, y=%f WRT %c is %f.\n",
          X, Y, (WRTOperand==1?'x':'y'), AC);
   
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, YName, Y, Operation::Add, WRTOperand, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32BinarySub(string XName, float X, string YName, float Y, int WRTOperand) {
+void fACfp32BinarySub(const char *XName, float X, const char *YName, float Y, int WRTOperand) {
   float AC;
   if(WRTOperand == 1) {
     AC = abs(X / (X-Y));
@@ -267,160 +126,160 @@ float fACfp32BinarySub(string XName, float X, string YName, float Y, int WRTOper
     AC = abs(Y / (Y-X));
   } else {
     printf("There is no operand %d.\n", WRTOperand);
-    return AC;
+    return ;
   }
   printf("AC of x-y | x=%f, y=%f WRT %c is %f.\n",
          X, Y, (WRTOperand==1?'x':'y'), AC);
   
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, YName, Y, Operation::Sub, WRTOperand, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32BinaryMul(string XName, float X, string YName, float Y, int WRTOperand) {
+void fACfp32BinaryMul(const char *XName, float X, const char *YName, float Y, int WRTOperand) {
   float AC=1.0;
   printf("AC of x*y | x=%f, y=%f WRT %c is %f.\n",
          X, Y, (WRTOperand==1?'x':'y'), AC);
   if (WRTOperand != 1 && WRTOperand != 2)
-    return AC;
+    return ;
   
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, YName, Y, Operation::Mul, WRTOperand, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32BinaryDiv(string XName, float X, string YName, float Y, int WRTOperand) {
+void fACfp32BinaryDiv(const char *XName, float X, const char *YName, float Y, int WRTOperand) {
   float AC=1.0;
   printf("AC of x/y | x=%f, y=%f WRT %c is %f.\n",
          X, Y, (WRTOperand==1?'x':'y'), AC);
   if (WRTOperand != 1 && WRTOperand != 2)
-    return AC;
+    return ;
   
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, YName, Y, Operation::Div, WRTOperand, AC));
 
-  return AC;
+  return ;
 }
 
 // ---------------------------- Unary Operations ----------------------------
 
-float fACfp32UnarySin(string XName, float X) {
+void fACfp32UnarySin(const char *XName, float X) {
   float AC = abs(X * (cos(X)/sin(X)));
 
   printf("AC of sin(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Sin, 1, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32UnaryCos(string XName, float X) {
+void fACfp32UnaryCos(const char *XName, float X) {
   float AC = abs(X * tan(X));
 
   printf("AC of cos(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Cos, 1, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32UnaryTan(string XName, float X) {
+void fACfp32UnaryTan(const char *XName, float X) {
   float AC = abs(X / (sin(X)*cos(X)));
 
   printf("AC of tan(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Tan, 1, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32UnaryArcSin(string XName, float X) {
+void fACfp32UnaryArcSin(const char *XName, float X) {
   float AC = abs(X / (sqrt(1-pow(X,2)) * asin(X)));
 
   printf("AC of asin(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::ArcSin, 1, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32UnaryArcCos(string XName, float X) {
+void fACfp32UnaryArcCos(const char *XName, float X) {
   float AC = abs(-X / (sqrt(1-pow(X,2)) * acos(X)));
 
   printf("AC of acos(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::ArcCos, 1, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32UnaryArcTan(string XName, float X) {
+void fACfp32UnaryArcTan(const char *XName, float X) {
   float AC = abs(X / (pow(X,2)+1 * atan(X)));
 
   printf("AC of atan(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::ArcTan, 1, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32UnarySinh(string XName, float X) {
+void fACfp32UnarySinh(const char *XName, float X) {
   float AC = abs(X * (cosh(X)/sinh(X)));
 
   printf("AC of sinh(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Sinh, 1, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32UnaryCosh(string XName, float X) {
+void fACfp32UnaryCosh(const char *XName, float X) {
   float AC = abs(X * tanh(X));
 
   printf("AC of cosh(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Cosh, 1, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32UnaryTanh(string XName, float X) {
+void fACfp32UnaryTanh(const char *XName, float X) {
   float AC = abs(X / (sinh(X)*cosh(X)));
 
   printf("AC of tanh(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Tanh, 1, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32UnaryExp(string XName, float X) {
+void fACfp32UnaryExp(const char *XName, float X) {
   float AC = abs(X );
 
   printf("AC of exp(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Exp, 1, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32UnaryLog(string XName, float X) {
+void fACfp32UnaryLog(const char *XName, float X) {
   float AC = abs(1/log(X));
 
   printf("AC of log(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Log, 1, AC));
 
-  return AC;
+  return ;
 }
 
-float fACfp32UnarySqrt(string XName, float X) {
+void fACfp32UnarySqrt(const char *XName, float X) {
   float AC = 0.5;
 
   printf("AC of sqrt(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP32ACItems.push_back(ACItem<float>(XName, X, "", 0, Operation::Sqrt, 1, AC));
 
-  return AC;
+  return ;
 }
 
 
@@ -430,25 +289,25 @@ float fACfp32UnarySqrt(string XName, float X) {
 
 // ---------------------------- Binary Operations ----------------------------
 
-double fACfp64BinaryAdd(string XName, double X, string YName, double Y, int WRTOperand) {
-  double AC = 0;
+void fACfp64BinaryAdd(const char *XName, double X, const char *YName, double Y, int WRTOperand) {
+  double AC;
   if(WRTOperand == 1) {
     AC = abs(X / (X+Y));
   } else if(WRTOperand == 2) {
     AC = abs(Y / (X+Y));
   } else {
     printf("There is no operand %d.\n", WRTOperand);
-    return AC;
+    return ;
   }
   printf("AC of x+y | x=%lf, y=%lf WRT %c is %lf.\n",
          X, Y, (WRTOperand==1?'x':'y'), AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, YName, Y, Operation::Add, WRTOperand, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64BinarySub(string XName, double X, string YName, double Y, int WRTOperand) {
+void fACfp64BinarySub(const char *XName, double X, const char *YName, double Y, int WRTOperand) {
   double AC;
   if(WRTOperand == 1) {
     AC = abs(X / (X-Y));
@@ -456,162 +315,314 @@ double fACfp64BinarySub(string XName, double X, string YName, double Y, int WRTO
     AC = abs(Y / (Y-X));
   } else {
     printf("There is no operand %d.\n", WRTOperand);
-    return AC;
+    return ;
   }
   printf("AC of x-y | x=%lf, y=%lf WRT %c is %lf.\n",
          X, Y, (WRTOperand==1?'x':'y'), AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, YName, Y, Operation::Sub, WRTOperand, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64BinaryMul(string XName, double X, string YName, double Y, int WRTOperand) {
+void fACfp64BinaryMul(const char *XName, double X, const char *YName, double Y, int WRTOperand) {
   double AC=1.0;
   printf("AC of x*y | x=%lf, y=%lf WRT %c is %lf.\n",
          X, Y, (WRTOperand==1?'x':'y'), AC);
   if (WRTOperand != 1 && WRTOperand != 2)
-    return AC;
+    return ;
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, YName, Y, Operation::Mul, WRTOperand, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64BinaryDiv(string XName, double X, string YName, double Y, int WRTOperand) {
+void fACfp64BinaryDiv(const char *XName, double X, const char *YName, double Y, int WRTOperand) {
   double AC=1.0;
   printf("AC of x/y | x=%lf, y=%lf WRT %c is %lf.\n",
          X, Y, (WRTOperand==1?'x':'y'), AC);
   if (WRTOperand != 1 && WRTOperand != 2)
-    return AC;
+    return ;
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, YName, Y, Operation::Div, WRTOperand, AC));
 
-  return AC;
+  return ;
 }
 
 // ---------------------------- Unary Operations ----------------------------
 
-double fACfp64UnarySin(string XName, double X) {
+void fACfp64UnarySin(const char *XName, double X) {
   double AC = abs(X * (cos(X)/sin(X)));
 
   printf("AC of sin(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Sin, 1, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64UnaryCos(string XName, double X) {
+void fACfp64UnaryCos(const char *XName, double X) {
   double AC = abs(X * tan(X));
 
   printf("AC of cos(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Cos, 1, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64UnaryTan(string XName, double X) {
+void fACfp64UnaryTan(const char *XName, double X) {
   double AC = abs(X / (sin(X)*cos(X)));
 
   printf("AC of tan(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Tan, 1, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64UnaryArcSin(string XName, double X) {
+void fACfp64UnaryArcSin(const char *XName, double X) {
   double AC = abs(X / (sqrt(1-pow(X,2)) * asin(X)));
 
   printf("AC of asin(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::ArcSin, 1, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64UnaryArcCos(string XName, double X) {
+void fACfp64UnaryArcCos(const char *XName, double X) {
   double AC = abs(-X / (sqrt(1-pow(X,2)) * acos(X)));
 
   printf("AC of acos(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::ArcCos, 1, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64UnaryArcTan(string XName, double X) {
+void fACfp64UnaryArcTan(const char *XName, double X) {
   double AC = abs(X / (pow(X,2)+1 * atan(X)));
 
   printf("AC of atan(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::ArcTan, 1, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64UnarySinh(string XName, double X) {
+void fACfp64UnarySinh(const char *XName, double X) {
   double AC = abs(X * (cosh(X)/sinh(X)));
 
   printf("AC of sinh(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Sinh, 1, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64UnaryCosh(string XName, double X) {
+void fACfp64UnaryCosh(const char *XName, double X) {
   double AC = abs(X * tanh(X));
 
   printf("AC of cosh(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Cosh, 1, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64UnaryTanh(string XName, double X) {
+void fACfp64UnaryTanh(const char *XName, double X) {
   double AC = abs(X / (sinh(X)*cosh(X)));
 
   printf("AC of tanh(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Tanh, 1, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64UnaryExp(string XName, double X) {
+void fACfp64UnaryExp(const char *XName, double X) {
   double AC = abs(X );
 
   printf("AC of exp(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Exp, 1, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64UnaryLog(string XName, double X) {
+void fACfp64UnaryLog(const char *XName, double X) {
   double AC = abs(1/log(X));
 
   printf("AC of log(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Log, 1, AC));
 
-  return AC;
+  return ;
 }
 
-double fACfp64UnarySqrt(string XName, double X) {
+void fACfp64UnarySqrt(const char *XName, double X) {
   double AC = 0.5;
 
   printf("AC of sqrt(x) | x=%f is %f.\n", X, AC);
 
   StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::Sqrt, 1, AC));
 
-  return AC;
+  return ;
 }
 
+void fACfp64TruncToFloat(const char *XName, double X) {
+  float AC = 1.0;
+  
+  printf("AC of trunc(x, fp32) | x=%f is %f.\n", X, AC);
+  
+  StorageTable->FP64ACItems.push_back(ACItem<double>(XName, X, "", 0, Operation::TruncToFloat, 1, AC));
 
+  return ;
+}
+
+// Driver function selecting atomic condition function for unary float operation
+void fACfp32UnaryDriver(const char *XName, float X, Operation OP) {
+  switch (OP) {
+  case 4:
+    fACfp32UnarySin(XName, X);
+    break;
+  case 5:
+    fACfp32UnaryCos(XName, X);
+    break;
+  case 6:
+    fACfp32UnaryTan(XName, X);
+    break;
+  case 7:
+    fACfp32UnaryArcSin(XName, X);
+    break;
+  case 8:
+    fACfp32UnaryArcCos(XName, X);
+    break;
+  case 9:
+    fACfp32UnaryArcTan(XName, X);
+    break;
+  case 10:
+    fACfp32UnarySinh(XName, X);
+    break;
+  case 11:
+    fACfp32UnaryCosh(XName, X);
+    break;
+  case 12:
+    fACfp32UnaryTanh(XName, X);
+    break;
+  case 13:
+    fACfp32UnaryExp(XName, X);
+    break;
+  case 14:
+    fACfp32UnaryLog(XName, X);
+    break;
+  case 15:
+    fACfp32UnarySqrt(XName, X);
+    break;
+  default:
+    printf("No such operation\n");
+    break;
+  }
+
+  return ;
+}
+
+// Driver function selecting atomic condition function for binary float operation
+void fACfp32BinaryDriver(const char *XName, float X, const char *YName, float Y, Operation OP, int WRTOperand) {
+  switch (OP) {
+  case 0:
+    fACfp32BinaryAdd(XName, X, YName, Y, WRTOperand);
+    break;
+  case 1:
+    fACfp32BinarySub(XName, X, YName, Y, WRTOperand);
+    break;
+  case 2:
+    fACfp32BinaryMul(XName, X, YName, Y, WRTOperand);
+    break;
+  case 3:
+    fACfp32BinaryDiv(XName, X, YName, Y, WRTOperand);
+    break;
+  default:
+    printf("No such operation\n");
+    break;
+  }
+
+  return ;
+}
+
+// Driver function selecting atomic condition function for unary double operation
+void fACfp64UnaryDriver(const char *XName, double X, Operation OP) {
+  switch (OP) {
+  case 4:
+    fACfp64UnarySin(XName, X);
+    break;
+  case 5:
+    fACfp64UnaryCos(XName, X);
+    break;
+  case 6:
+    fACfp64UnaryTan(XName, X);
+    break;
+  case 7:
+    fACfp64UnaryArcSin(XName, X);
+    break;
+  case 8:
+    fACfp64UnaryArcCos(XName, X);
+    break;
+  case 9:
+    fACfp64UnaryArcTan(XName, X);
+    break;
+  case 10:
+    fACfp64UnarySinh(XName, X);
+    break;
+  case 11:
+    fACfp64UnaryCosh(XName, X);
+    break;
+  case 12:
+    fACfp64UnaryTanh(XName, X);
+    break;
+  case 13:
+    fACfp64UnaryExp(XName, X);
+    break;
+  case 14:
+    fACfp64UnaryLog(XName, X);
+    break;
+  case 15:
+    fACfp64UnarySqrt(XName, X);
+    break;
+  case 16:
+    fACfp64TruncToFloat(XName, X);
+    break;
+  default:
+    printf("No such operation\n");
+    break;
+  }
+
+  return ;
+}
+
+// Driver function selecting atomic condition function for binary double operation
+void fACfp64BinaryDriver(const char *XName, double X, const char *YName, double Y, Operation OP, int WRTOperand) {
+  switch (OP) {
+  case 0:
+    fACfp64BinaryAdd(XName, X, YName, Y, WRTOperand);
+    break;
+  case 1:
+    fACfp64BinarySub(XName, X, YName, Y, WRTOperand);
+    break;
+  case 2:
+    fACfp64BinaryMul(XName, X, YName, Y, WRTOperand);
+    break;
+  case 3:
+    fACfp64BinaryDiv(XName, X, YName, Y, WRTOperand);
+    break;
+  default:
+    printf("No such operation\n");
+    break;
+  }
+
+  return ;
+}
 
 #endif // LLVM_ATOMICCONDITION_H
+
