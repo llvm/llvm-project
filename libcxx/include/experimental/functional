@@ -79,10 +79,20 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_LFTS
 
+#ifdef _LIBCPP_NO_EXPERIMENTAL_DEPRECATION_WARNING_SEARCHERS
+#  define _LIBCPP_DEPRECATED_DEFAULT_SEARCHER
+#  define _LIBCPP_DEPRECATED_BOYER_MOORE_SEARCHER
+#  define _LIBCPP_DEPRECATED_BOYER_MOORE_HORSPOOL_SEARCHER
+#else
+#  define _LIBCPP_DEPRECATED_DEFAULT_SEARCHER _LIBCPP_DEPRECATED_("std::exprerimental::default_searcher will be removed in LLVM 17. Use std::default_searcher instead")
+#  define _LIBCPP_DEPRECATED_BOYER_MOORE_SEARCHER _LIBCPP_DEPRECATED_("std::exprerimental::boyer_moore_searcher will be removed in LLVM 17. Use std::boyer_moore_searcher instead")
+#  define _LIBCPP_DEPRECATED_BOYER_MOORE_HORSPOOL_SEARCHER _LIBCPP_DEPRECATED_("std::exprerimental::boyer_moore_horspool_searcher will be removed in LLVM 17. Use std::boyer_moore_horspool_searcher instead")
+#endif
+
 #if _LIBCPP_STD_VER > 11
 // default searcher
 template<class _ForwardIterator, class _BinaryPredicate = equal_to<>>
-class _LIBCPP_TEMPLATE_VIS default_searcher {
+class _LIBCPP_DEPRECATED_DEFAULT_SEARCHER _LIBCPP_TEMPLATE_VIS default_searcher {
 public:
     _LIBCPP_INLINE_VISIBILITY
     default_searcher(_ForwardIterator __f, _ForwardIterator __l,
@@ -106,7 +116,7 @@ private:
     };
 
 template<class _ForwardIterator, class _BinaryPredicate = equal_to<>>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_DEFAULT_SEARCHER _LIBCPP_INLINE_VISIBILITY
 default_searcher<_ForwardIterator, _BinaryPredicate>
 make_default_searcher( _ForwardIterator __f, _ForwardIterator __l, _BinaryPredicate __p = _BinaryPredicate ())
 {
@@ -152,7 +162,7 @@ private:
     typedef _Key   key_type;
 
     typedef typename make_unsigned<key_type>::type unsigned_key_type;
-    typedef std::array<value_type, numeric_limits<unsigned_key_type>::max()> skip_map;
+    typedef std::array<value_type, 256> skip_map;
     skip_map __table;
 
 public:
@@ -179,7 +189,7 @@ public:
 template <class _RandomAccessIterator1,
           class _Hash = hash<typename iterator_traits<_RandomAccessIterator1>::value_type>,
           class _BinaryPredicate = equal_to<>>
-class _LIBCPP_TEMPLATE_VIS boyer_moore_searcher {
+class _LIBCPP_DEPRECATED_BOYER_MOORE_SEARCHER _LIBCPP_TEMPLATE_VIS boyer_moore_searcher {
 private:
     typedef typename std::iterator_traits<_RandomAccessIterator1>::difference_type difference_type;
     typedef typename std::iterator_traits<_RandomAccessIterator1>::value_type      value_type;
@@ -291,7 +301,7 @@ private:
         vector<difference_type> & __suffix = *__suffix_.get();
         if (__count > 0)
         {
-            vector<value_type> __scratch(__count);
+            vector<difference_type> __scratch(__count);
 
             __compute_bm_prefix(__f, __l, __pred, __scratch);
             for ( size_t __i = 0; __i <= __count; __i++ )
@@ -316,7 +326,7 @@ private:
 template<class _RandomAccessIterator,
          class _Hash = hash<typename iterator_traits<_RandomAccessIterator>::value_type>,
          class _BinaryPredicate = equal_to<>>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_BOYER_MOORE_SEARCHER _LIBCPP_INLINE_VISIBILITY
 boyer_moore_searcher<_RandomAccessIterator, _Hash, _BinaryPredicate>
 make_boyer_moore_searcher( _RandomAccessIterator __f, _RandomAccessIterator __l,
                     _Hash __hf = _Hash(), _BinaryPredicate __p = _BinaryPredicate ())
@@ -328,7 +338,7 @@ make_boyer_moore_searcher( _RandomAccessIterator __f, _RandomAccessIterator __l,
 template <class _RandomAccessIterator1,
           class _Hash = hash<typename iterator_traits<_RandomAccessIterator1>::value_type>,
           class _BinaryPredicate = equal_to<>>
-class _LIBCPP_TEMPLATE_VIS boyer_moore_horspool_searcher {
+class _LIBCPP_DEPRECATED_BOYER_MOORE_HORSPOOL_SEARCHER _LIBCPP_TEMPLATE_VIS boyer_moore_horspool_searcher {
 private:
     typedef typename std::iterator_traits<_RandomAccessIterator1>::difference_type difference_type;
     typedef typename std::iterator_traits<_RandomAccessIterator1>::value_type      value_type;
@@ -409,7 +419,7 @@ private:
 template<class _RandomAccessIterator,
          class _Hash = hash<typename iterator_traits<_RandomAccessIterator>::value_type>,
          class _BinaryPredicate = equal_to<>>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_BOYER_MOORE_HORSPOOL_SEARCHER _LIBCPP_INLINE_VISIBILITY
 boyer_moore_horspool_searcher<_RandomAccessIterator, _Hash, _BinaryPredicate>
 make_boyer_moore_horspool_searcher( _RandomAccessIterator __f, _RandomAccessIterator __l,
                     _Hash __hf = _Hash(), _BinaryPredicate __p = _BinaryPredicate ())

@@ -176,7 +176,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_boyer_moore_searcher",
     "values": { "c++17": 201603 },
     "headers": ["functional"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_byte",
     "values": { "c++17": 201603 },

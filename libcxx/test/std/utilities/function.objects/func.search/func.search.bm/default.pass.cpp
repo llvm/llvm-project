@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: stdlib=libc++
 
 // <functional>
 
@@ -33,8 +32,9 @@
 
 
 #include <algorithm>
-#include <functional>
 #include <cassert>
+#include <functional>
+#include <string>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -123,9 +123,19 @@ test2()
     do_search(Iter1(ij), Iter1(ij+sj), Iter2(ik), Iter2(ik+sk), Iter1(ij+6));
 }
 
+void test_custom_pred() {
+    std::string long_string(1024, '0');
+    std::boyer_moore_searcher searcher(std::begin(long_string), std::end(long_string));
+    const char str[] = "1234";
+    auto ret = searcher(std::begin(str), std::end(str));
+    assert(ret.first == std::end(str));
+    assert(ret.second == std::end(str));
+}
+
 int main(int, char**) {
     test<random_access_iterator<const int*>, random_access_iterator<const int*> >();
     test2<random_access_iterator<const char*>, random_access_iterator<const char*> >();
+    test_custom_pred();
 
   return 0;
 }

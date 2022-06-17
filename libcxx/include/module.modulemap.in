@@ -624,6 +624,7 @@ module std [system] {
       module bind_front                 { private header "__functional/bind_front.h" }
       module binder1st                  { private header "__functional/binder1st.h" }
       module binder2nd                  { private header "__functional/binder2nd.h" }
+      module boyer_moore_searcher       { private header "__functional/boyer_moore_searcher.h" }
       module compose                    { private header "__functional/compose.h" }
       module default_searcher           { private header "__functional/default_searcher.h" }
       module function                   { private header "__functional/function.h" }

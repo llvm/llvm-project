@@ -237,7 +237,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_as_const                             201510L
 # define __cpp_lib_atomic_is_always_lock_free           201603L
 # define __cpp_lib_bool_constant                        201505L
-// # define __cpp_lib_boyer_moore_searcher                 201603L
+# define __cpp_lib_boyer_moore_searcher                 201603L
 # define __cpp_lib_byte                                 201603L
 # define __cpp_lib_chrono                               201611L
 # define __cpp_lib_clamp                                201603L

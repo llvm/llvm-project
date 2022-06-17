@@ -290,6 +290,7 @@ END-SCRIPT
 #include <__functional/bind_front.h> // expected-error@*:* {{use of private header from outside its module: '__functional/bind_front.h'}}
 #include <__functional/binder1st.h> // expected-error@*:* {{use of private header from outside its module: '__functional/binder1st.h'}}
 #include <__functional/binder2nd.h> // expected-error@*:* {{use of private header from outside its module: '__functional/binder2nd.h'}}
+#include <__functional/boyer_moore_searcher.h> // expected-error@*:* {{use of private header from outside its module: '__functional/boyer_moore_searcher.h'}}
 #include <__functional/compose.h> // expected-error@*:* {{use of private header from outside its module: '__functional/compose.h'}}
 #include <__functional/default_searcher.h> // expected-error@*:* {{use of private header from outside its module: '__functional/default_searcher.h'}}
 #include <__functional/function.h> // expected-error@*:* {{use of private header from outside its module: '__functional/function.h'}}
