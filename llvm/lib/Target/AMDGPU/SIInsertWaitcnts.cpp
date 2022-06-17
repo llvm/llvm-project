@@ -87,31 +87,29 @@ struct RegisterEncoding {
 };
 
 enum WaitEventType {
-  VMEM_ACCESS,      // vector-memory read & write
-  VMEM_READ_ACCESS, // vector-memory read
-  VMEM_WRITE_ACCESS,// vector-memory write
-  LDS_ACCESS,       // lds read & write
-  GDS_ACCESS,       // gds read & write
-  SQ_MESSAGE,       // send message
-  SMEM_ACCESS,      // scalar-memory read & write
-  EXP_GPR_LOCK,     // export holding on its data src
-  GDS_GPR_LOCK,     // GDS holding on its data and addr src
-  EXP_POS_ACCESS,   // write to export position
-  EXP_PARAM_ACCESS, // write to export parameter
-  VMW_GPR_LOCK,     // vector-memory write holding on its data src
-  EXP_LDS_ACCESS,   // read by ldsdir counting as export
+  VMEM_ACCESS,       // vector-memory read & write
+  VMEM_READ_ACCESS,  // vector-memory read
+  VMEM_WRITE_ACCESS, // vector-memory write
+  LDS_ACCESS,        // lds read & write
+  GDS_ACCESS,        // gds read & write
+  SQ_MESSAGE,        // send message
+  SMEM_ACCESS,       // scalar-memory read & write
+  EXP_GPR_LOCK,      // export holding on its data src
+  GDS_GPR_LOCK,      // GDS holding on its data and addr src
+  EXP_POS_ACCESS,    // write to export position
+  EXP_PARAM_ACCESS,  // write to export parameter
+  VMW_GPR_LOCK,      // vector-memory write holding on its data src
+  EXP_LDS_ACCESS,    // read by ldsdir counting as export
   NUM_WAIT_EVENTS,
 };
 
 static const unsigned WaitEventMaskForInst[NUM_INST_CNTS] = {
-  (1 << VMEM_ACCESS) | (1 << VMEM_READ_ACCESS),
-  (1 << SMEM_ACCESS) | (1 << LDS_ACCESS) | (1 << GDS_ACCESS) |
-      (1 << SQ_MESSAGE),
-  (1 << EXP_GPR_LOCK) | (1 << GDS_GPR_LOCK) | (1 << VMW_GPR_LOCK) |
-      (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS) |
-      (1 << EXP_LDS_ACCESS),
-  (1 << VMEM_WRITE_ACCESS)
-};
+    (1 << VMEM_ACCESS) | (1 << VMEM_READ_ACCESS),
+    (1 << SMEM_ACCESS) | (1 << LDS_ACCESS) | (1 << GDS_ACCESS) |
+        (1 << SQ_MESSAGE),
+    (1 << EXP_GPR_LOCK) | (1 << GDS_GPR_LOCK) | (1 << VMW_GPR_LOCK) |
+        (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS) | (1 << EXP_LDS_ACCESS),
+    (1 << VMEM_WRITE_ACCESS)};
 
 // The mapping is:
 //  0                .. SQ_MAX_PGM_VGPRS-1               real VGPRs
