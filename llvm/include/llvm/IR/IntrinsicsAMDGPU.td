@@ -1505,33 +1505,29 @@ def int_amdgcn_lds_param_load :
             [IntrNoMem, IntrSpeculatable, IntrWillReturn,
              ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
-// __builtin_amdgcn_interp_inreg_p10 <p>, <i>, <p0>
+// __int_amdgcn_interp_inreg_p10 <p>, <i>, <p0>
 def int_amdgcn_interp_inreg_p10 :
-  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p10">,
   Intrinsic<[llvm_float_ty],
             [llvm_float_ty, llvm_float_ty, llvm_float_ty],
             [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
-// __builtin_amdgcn_interp_inreg_p2 <p>, <j>, <tmp>
+// __int_amdgcn_interp_inreg_p2 <p>, <j>, <tmp>
 def int_amdgcn_interp_inreg_p2 :
-  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p2">,
   Intrinsic<[llvm_float_ty],
             [llvm_float_ty, llvm_float_ty, llvm_float_ty],
             [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
-// __builtin_amdgcn_interp_inreg_p10_f16 <p>, <i>, <p0>, <high>
+// __int_amdgcn_interp_inreg_p10_f16 <p>, <i>, <p0>, <high>
 // high selects whether high or low 16-bits are used for p and p0 operands
 def int_amdgcn_interp_inreg_p10_f16:
-  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p10_f16">,
   Intrinsic<[llvm_float_ty],
             [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
             [IntrNoMem, IntrSpeculatable, IntrWillReturn,
              ImmArg<ArgIndex<3>>]>;
 
-// __builtin_amdgcn_interp_inreg_p2_f16 <p>, <j>, <tmp>, <high>
+// __int_amdgcn_interp_inreg_p2_f16 <p>, <j>, <tmp>, <high>
 // high selects whether high or low 16-bits are used for p operand
 def int_amdgcn_interp_inreg_p2_f16 :
-  GCCBuiltin<"__builtin_amdgcn_interp_inreg_p2_f16">,
   Intrinsic<[llvm_half_ty],
             [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
             [IntrNoMem, IntrSpeculatable, IntrWillReturn,

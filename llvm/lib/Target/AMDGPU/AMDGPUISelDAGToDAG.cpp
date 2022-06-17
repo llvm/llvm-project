@@ -2643,7 +2643,7 @@ bool AMDGPUDAGToDAGISel::SelectVINTERPMods(SDValue In, SDValue &Src,
 }
 
 bool AMDGPUDAGToDAGISel::SelectVINTERPModsHi(SDValue In, SDValue &Src,
-                                              SDValue &SrcMods) const {
+                                             SDValue &SrcMods) const {
   return SelectVINTERPModsImpl(In, Src, SrcMods, /* OpSel */ true);
 }
 
