@@ -5,6 +5,7 @@ copy("include") {
     "fuzzer/FuzzedDataProvider.h",
     "orc/c_api.h",
     "profile/InstrProfData.inc",
+    "profile/MemProfData.inc",
     "sanitizer/allocator_interface.h",
     "sanitizer/asan_interface.h",
     "sanitizer/common_interface_defs.h",
