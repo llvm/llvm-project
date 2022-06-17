@@ -603,10 +603,6 @@ public:
 
   bool hasCompatibleVTYPE(const MachineInstr &MI,
                           const VSETVLIInfo &Require) const {
-    // Simple case, see if full VTYPE matches.
-    if (hasSameVTYPE(Require))
-      return true;
-
     const DemandedFields Used = getDemanded(MI);
     return areCompatibleVTYPEs(encodeVTYPE(), Require.encodeVTYPE(), Used);
   }
