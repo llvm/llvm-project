@@ -321,6 +321,7 @@ private:
 
   void Select_FREEZE(SDNode *N);
   void Select_ARITH_FENCE(SDNode *N);
+  void Select_STACKMAP(SDNode *N);
 
 private:
   void DoInstructionSelection();
