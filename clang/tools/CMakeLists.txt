@@ -50,6 +50,9 @@ endif()
 # It also may be included by LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR.
 add_llvm_external_project(clang-tools-extra extra)
 
+# add tapi.
+add_llvm_external_project(tapi)
+
 # libclang may require clang-tidy in clang-tools-extra.
 add_clang_subdirectory(libclang)
 
