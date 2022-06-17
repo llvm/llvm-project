@@ -78,14 +78,6 @@ struct FormatSection {
     return true;
   }
 };
-
-#define RET_IF_RESULT_NEGATIVE(func)                                           \
-  {                                                                            \
-    int result = (func);                                                       \
-    if (result < 0)                                                            \
-      return result;                                                           \
-  }
-
 } // namespace printf_core
 } // namespace __llvm_libc
 

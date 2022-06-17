@@ -7,7 +7,7 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
 // RUN:        | llvm-objdump -d --mattr=+sve - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
-// RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN:   | llvm-objdump -d --mattr=-sve - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 add     z31.s, z31.s, z31.s
 // CHECK-INST: add     z31.s, z31.s, z31.s

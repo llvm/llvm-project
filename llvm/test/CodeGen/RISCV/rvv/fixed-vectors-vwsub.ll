@@ -352,10 +352,9 @@ define <32 x i64> @vwsub_v32i64(<32 x i32>* %x, <32 x i32>* %y) nounwind {
 define <2 x i32> @vwsub_v2i32_v2i8(<2 x i8>* %x, <2 x i8>* %y) {
 ; CHECK-LABEL: vwsub_v2i32_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vsext.vf2 v10, v8
 ; CHECK-NEXT:    vsext.vf2 v11, v9
 ; CHECK-NEXT:    vwsub.vv v8, v11, v10
@@ -371,10 +370,9 @@ define <2 x i32> @vwsub_v2i32_v2i8(<2 x i8>* %x, <2 x i8>* %y) {
 define <4 x i32> @vwsub_v4i32_v4i8_v4i16(<4 x i8>* %x, <4 x i16>* %y) {
 ; CHECK-LABEL: vwsub_v4i32_v4i8_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vsext.vf2 v10, v8
 ; CHECK-NEXT:    vwsub.vv v8, v10, v9
 ; CHECK-NEXT:    ret
@@ -649,10 +647,9 @@ define <16 x i64> @vwsub_vx_v16i64(<16 x i32>* %x, i32 %y) {
 define <8 x i16> @vwsub_vx_v8i16_i8(<8 x i8>* %x, i8* %y) {
 ; CHECK-LABEL: vwsub_vx_v8i16_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    lb a1, 0(a1)
 ; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v10, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    vwsub.wv v8, v10, v9
@@ -687,10 +684,9 @@ define <8 x i16> @vwsub_vx_v8i16_i16(<8 x i8>* %x, i16* %y) {
 define <4 x i32> @vwsub_vx_v4i32_i8(<4 x i16>* %x, i8* %y) {
 ; CHECK-LABEL: vwsub_vx_v4i32_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    lb a1, 0(a1)
 ; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v10, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vwsub.wv v8, v10, v9
@@ -708,10 +704,9 @@ define <4 x i32> @vwsub_vx_v4i32_i8(<4 x i16>* %x, i8* %y) {
 define <4 x i32> @vwsub_vx_v4i32_i16(<4 x i16>* %x, i16* %y) {
 ; CHECK-LABEL: vwsub_vx_v4i32_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    lh a1, 0(a1)
 ; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v10, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vwsub.wv v8, v10, v9
@@ -761,10 +756,9 @@ define <2 x i64> @vwsub_vx_v2i64_i8(<2 x i32>* %x, i8* %y) nounwind {
 ;
 ; RV64-LABEL: vwsub_vx_v2i64_i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    lb a1, 0(a1)
 ; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.v.x v10, a1
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; RV64-NEXT:    vwsub.wv v8, v10, v9
@@ -797,10 +791,9 @@ define <2 x i64> @vwsub_vx_v2i64_i16(<2 x i32>* %x, i16* %y) nounwind {
 ;
 ; RV64-LABEL: vwsub_vx_v2i64_i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    lh a1, 0(a1)
 ; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.v.x v10, a1
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; RV64-NEXT:    vwsub.wv v8, v10, v9
@@ -833,10 +826,9 @@ define <2 x i64> @vwsub_vx_v2i64_i32(<2 x i32>* %x, i32* %y) nounwind {
 ;
 ; RV64-LABEL: vwsub_vx_v2i64_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    lw a1, 0(a1)
 ; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.v.x v10, a1
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; RV64-NEXT:    vwsub.wv v8, v10, v9

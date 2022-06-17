@@ -38,16 +38,16 @@ let Command = "process trace start intel pt" in {
   def process_trace_start_intel_pt_buffer_size: Option<"buffer-size", "s">,
     Group<1>,
     Arg<"Value">,
-    Desc<"Size in bytes used by each individual per-thread or per-core trace "
+    Desc<"Size in bytes used by each individual per-thread or per-cpu trace "
          "buffer. It must be a power of 2 greater than or equal to 4096 (2^12) "
          "bytes.">;
-  def process_trace_start_intel_pt_per_core_tracing:
-    Option<"per-core-tracing", "c">,
+  def process_trace_start_intel_pt_per_cpu_tracing:
+    Option<"per-cpu-tracing", "c">,
     Group<1>,
     Desc<"Instead of having an individual trace buffer per thread, which uses "
          "a number trace buffers proportional to the number of running "
          "threads, this option triggers the collection on a per cpu core "
-         "basis. This effectively traces the entire activity on all cores "
+         "basis. This effectively traces the entire activity on all cpus "
          "using a limited amount of trace buffers regardless of the number of "
          "threads. This might cause data loss for less frequent threads. This "
          "option forces the capture of TSC timestamps (see --tsc). Also, this "
@@ -57,7 +57,7 @@ let Command = "process trace start intel pt" in {
     Group<1>,
     Arg<"Value">,
     Desc<"Maximum total trace size per process in bytes. This limit applies to "
-         "the sum of the sizes of all thread and core traces of this process, "
+         "the sum of the sizes of all thread and cpu traces of this process, "
          "excluding the ones created with the \"thread trace start\" command. "
          "Whenever a thread is attempted to be traced due to this command and "
          "the limit would be reached, the process is stopped with a "

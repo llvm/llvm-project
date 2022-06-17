@@ -221,6 +221,131 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
   ASSERT_STREQ(buff, " 0127 68719476736 +002  ");
 }
 
+TEST(LlvmLibcSPrintfTest, HexConv) {
+  char buff[64];
+  int written;
+
+  // Basic Tests.
+
+  written = __llvm_libc::sprintf(buff, "%x", 0x123a);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "123a");
+
+  written = __llvm_libc::sprintf(buff, "%X", 0x456b);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "456B");
+
+  // Length Modifier Tests.
+
+  written = __llvm_libc::sprintf(buff, "%hhx", 0x10001);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "1");
+
+  written = __llvm_libc::sprintf(buff, "%llx", 0xffffffffffffffffull);
+  EXPECT_EQ(written, 16);
+  ASSERT_STREQ(buff, "ffffffffffffffff"); // ull max
+
+  written = __llvm_libc::sprintf(buff, "%tX", ~ptrdiff_t(0));
+  if (sizeof(ptrdiff_t) == 8) {
+    EXPECT_EQ(written, 16);
+    ASSERT_STREQ(buff, "FFFFFFFFFFFFFFFF");
+  } else if (sizeof(ptrdiff_t) == 4) {
+    EXPECT_EQ(written, 8);
+    ASSERT_STREQ(buff, "FFFFFFFF");
+  }
+
+  // Min Width Tests.
+
+  written = __llvm_libc::sprintf(buff, "%4x", 0x789);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, " 789");
+
+  written = __llvm_libc::sprintf(buff, "%2X", 0x987);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ(buff, "987");
+
+  // Precision Tests.
+
+  written = __llvm_libc::sprintf(buff, "%x", 0);
+  EXPECT_EQ(written, 1);
+  ASSERT_STREQ(buff, "0");
+
+  written = __llvm_libc::sprintf(buff, "%.0x", 0);
+  EXPECT_EQ(written, 0);
+  ASSERT_STREQ(buff, "");
+
+  written = __llvm_libc::sprintf(buff, "%.5x", 0x1F3);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "001f3");
+
+  written = __llvm_libc::sprintf(buff, "%.2x", 0x135);
+  EXPECT_EQ(written, 3);
+  ASSERT_STREQ(buff, "135");
+
+  // Flag Tests.
+
+  written = __llvm_libc::sprintf(buff, "%-5x", 0x246);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "246  ");
+
+  written = __llvm_libc::sprintf(buff, "%#x", 0xd3f);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "0xd3f");
+
+  written = __llvm_libc::sprintf(buff, "%#X", 0xE40);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "0XE40");
+
+  written = __llvm_libc::sprintf(buff, "%05x", 0x470);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "00470");
+
+  written = __llvm_libc::sprintf(buff, "%0#6x", 0x8c3);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "0x08c3");
+
+  written = __llvm_libc::sprintf(buff, "%-#6x", 0x5f0);
+  EXPECT_EQ(written, 6);
+  ASSERT_STREQ(buff, "0x5f0 ");
+
+  // Combined Tests.
+
+  written = __llvm_libc::sprintf(buff, "%#-07x", 0x703);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "0x703  ");
+
+  written = __llvm_libc::sprintf(buff, "%7.5x", 0x814);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "  00814");
+
+  written = __llvm_libc::sprintf(buff, "%#9.5X", 0x9d4);
+  EXPECT_EQ(written, 9);
+  ASSERT_STREQ(buff, "  0X009D4");
+
+  written = __llvm_libc::sprintf(buff, "%-7.5x", 0x260);
+  EXPECT_EQ(written, 7);
+  ASSERT_STREQ(buff, "00260  ");
+
+  written = __llvm_libc::sprintf(buff, "%5.4x", 0x10000);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "10000");
+
+  // Multiple Conversion Tests.
+
+  written = __llvm_libc::sprintf(buff, "%10X %-#10x", 0x45b, 0x789);
+  EXPECT_EQ(written, 21);
+  ASSERT_STREQ(buff, "       45B 0x789     ");
+
+  written = __llvm_libc::sprintf(buff, "%-5.4x%#.4x", 0x75, 0x25);
+  EXPECT_EQ(written, 11);
+  ASSERT_STREQ(buff, "0075 0x0025");
+
+  written = __llvm_libc::sprintf(buff, "%04hhX %#.5llx %-6.3zX", 256 + 0x7f,
+                                 0x1000000000ll, size_t(2));
+  EXPECT_EQ(written, 24);
+  ASSERT_STREQ(buff, "007F 0x1000000000 002   ");
+}
+
 #ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
 TEST(LlvmLibcSPrintfTest, IndexModeParsing) {
   char buff[64];

@@ -22,7 +22,7 @@ namespace objc {
 /// @property(nonatomic) NSString *lowerCamelCase;
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc-property-declaration.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/objc/property-declaration.html
 class PropertyDeclarationCheck : public ClangTidyCheck {
 public:
   PropertyDeclarationCheck(StringRef Name, ClangTidyContext *Context)

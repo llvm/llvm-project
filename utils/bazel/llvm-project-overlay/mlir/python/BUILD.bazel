@@ -297,6 +297,48 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# Complex dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "ComplexOpsPyTdFiles",
+    srcs = [
+        "//mlir:include/mlir/Bindings/Python/Attributes.td",
+    ],
+    includes = ["../include"],
+    deps = [
+        "//mlir:ComplexOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "ComplexOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=complex",
+            ],
+            "mlir/dialects/_complex_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/ComplexOps.td",
+    deps = [
+        ":ComplexOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "ComplexOpsPyFiles",
+    srcs = [
+        "mlir/dialects/complex.py",
+        ":ComplexOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # ControlFlow dialect.
 ##---------------------------------------------------------------------------##
 

@@ -2298,6 +2298,13 @@ void ASTStmtWriter::VisitOMPParallelMasterDirective(
   Code = serialization::STMT_OMP_PARALLEL_MASTER_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPParallelMaskedDirective(
+    OMPParallelMaskedDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_PARALLEL_MASKED_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPParallelSectionsDirective(
     OMPParallelSectionsDirective *D) {
   VisitStmt(D);

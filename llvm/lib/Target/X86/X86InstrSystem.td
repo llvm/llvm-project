@@ -71,9 +71,9 @@ def SYSEXIT64 :RI<0x35, RawFrm, (outs), (ins), "sysexitq", []>, TB,
 } // SchedRW
 
 def : Pat<(debugtrap),
-          (INT3)>, Requires<[NotPS4]>;
+          (INT3)>, Requires<[NotPS]>;
 def : Pat<(debugtrap),
-          (INT (i8 0x41))>, Requires<[IsPS4]>;
+          (INT (i8 0x41))>, Requires<[IsPS]>;
 
 //===----------------------------------------------------------------------===//
 //  Input/Output Instructions.

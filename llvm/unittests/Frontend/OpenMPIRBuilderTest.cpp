@@ -4776,8 +4776,9 @@ TEST_F(OpenMPIRBuilderTest, CreateTask) {
 
   // Verify that the argument data has been copied
   for (User *in : TaskAllocCall->users()) {
-    if (MemCpyInst *memCpyInst = dyn_cast<MemCpyInst>(in))
+    if (MemCpyInst *memCpyInst = dyn_cast<MemCpyInst>(in)) {
       EXPECT_EQ(memCpyInst->getDest(), TaskAllocCall);
+    }
   }
 }
 

@@ -9772,11 +9772,22 @@ bool Sema::SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMember CSM,
 
   case CXXCopyConstructor:
   case CXXCopyAssignment: {
-    // Trivial copy operations always have const, non-volatile parameter types.
-    ConstArg = true;
     const ParmVarDecl *Param0 = MD->getParamDecl(0);
     const ReferenceType *RT = Param0->getType()->getAs<ReferenceType>();
-    if (!RT || RT->getPointeeType().getCVRQualifiers() != Qualifiers::Const) {
+
+    // When ClangABICompat14 is true, CXX copy constructors will only be trivial
+    // if they are not user-provided and their parameter-type-list is equivalent
+    // to the parameter-type-list of an implicit declaration. This maintains the
+    // behavior before dr2171 was implemented.
+    //
+    // Otherwise, if ClangABICompat14 is false, All copy constructors can be
+    // trivial, if they are not user-provided, regardless of the qualifiers on
+    // the reference type.
+    const bool ClangABICompat14 = Context.getLangOpts().getClangABICompat() <=
+                                  LangOptions::ClangABI::Ver14;
+    if (!RT ||
+        ((RT->getPointeeType().getCVRQualifiers() != Qualifiers::Const) &&
+         ClangABICompat14)) {
       if (Diagnose)
         Diag(Param0->getLocation(), diag::note_nontrivial_param_type)
           << Param0->getSourceRange() << Param0->getType()
@@ -9784,6 +9795,8 @@ bool Sema::SpecialMemberIsTrivial(CXXMethodDecl *MD, CXXSpecialMember CSM,
                Context.getRecordType(RD).withConst());
       return false;
     }
+
+    ConstArg = RT->getPointeeType().isConstQualified();
     break;
   }
 

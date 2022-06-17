@@ -639,26 +639,6 @@ func.func @wrong_shape_fail() {
   return
 }
 
-//===----------------------------------------------------------------------===//
-// Test StructAttr
-//===----------------------------------------------------------------------===//
-
-// -----
-
-func.func @missing_fields() {
-  // expected-error @+1 {{failed to satisfy constraint: DictionaryAttr with field(s): 'some_field', 'some_other_field' (each field having its own constraints)}}
-  "test.struct_attr"() {the_struct_attr = {}} : () -> ()
-  return
-}
-
-// -----
-
-func.func @erroneous_fields() {
-  // expected-error @+1 {{failed to satisfy constraint: DictionaryAttr with field(s): 'some_field', 'some_other_field' (each field having its own constraints)}}
-  "test.struct_attr"() {the_struct_attr = {some_field = 1 : i8, some_other_field = 1}} : () -> ()
-  return
-}
-
 // -----
 
 // expected-error @+1 {{invalid dialect namespace '"string with space"'}}

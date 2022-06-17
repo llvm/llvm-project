@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-nsa-encoding -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN,NONSA,GFX10-NONSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX10-NONSA %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,GFX1010-NSA %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,GFX1030-NSA %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX11-NONSA %s

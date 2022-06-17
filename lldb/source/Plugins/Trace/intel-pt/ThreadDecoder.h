@@ -23,7 +23,7 @@ namespace trace_intel_pt {
 class ThreadDecoder {
 public:
   /// \param[in] thread_sp
-  ///     The thread whose trace buffer will be decoded.
+  ///     The thread whose intel pt trace buffer will be decoded.
   ///
   /// \param[in] trace
   ///     The main Trace object who owns this decoder and its data.

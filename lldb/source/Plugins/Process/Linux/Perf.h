@@ -80,11 +80,6 @@ using MmapUP = std::unique_ptr<void, resource_handle::MmapDeleter>;
 /// Handles the management of the event's file descriptor and mmap'ed
 /// regions.
 class PerfEvent {
-  enum class CollectionState {
-    Enabled,
-    Disabled,
-  };
-
 public:
   /// Create a new performance monitoring event via the perf_event_open syscall.
   ///
@@ -115,8 +110,8 @@ public:
   ///     instance, or an \a llvm::Error otherwise.
   static llvm::Expected<PerfEvent> Init(perf_event_attr &attr,
                                         llvm::Optional<lldb::pid_t> pid,
-                                        llvm::Optional<lldb::core_id_t> cpu,
-                                        llvm::Optional<int> group_fd,
+                                        llvm::Optional<lldb::cpu_id_t> cpu,
+                                        llvm::Optional<long> group_fd,
                                         unsigned long flags);
 
   /// Create a new performance monitoring event via the perf_event_open syscall
@@ -133,7 +128,7 @@ public:
   ///     all threads and processes are monitored.
   static llvm::Expected<PerfEvent>
   Init(perf_event_attr &attr, llvm::Optional<lldb::pid_t> pid,
-       llvm::Optional<lldb::core_id_t> core = llvm::None);
+       llvm::Optional<lldb::cpu_id_t> core = llvm::None);
 
   /// Mmap the metadata page and the data and aux buffers of the perf event and
   /// expose them through \a PerfEvent::GetMetadataPage() , \a
@@ -205,43 +200,29 @@ public:
   ///   \a ArrayRef<uint8_t> extending \a aux_size bytes from \a aux_offset.
   llvm::ArrayRef<uint8_t> GetAuxBuffer() const;
 
-  /// Read the aux buffer managed by this perf event. To ensure that the
-  /// data is up-to-date and is not corrupted by read-write race conditions, the
-  /// underlying perf_event is paused during read, and later it's returned to
-  /// its initial state. The returned data will be linear, i.e. it will fix the
-  /// circular wrapping the might exist int he buffer.
-  ///
-  /// \param[in] offset
-  ///     Offset of the data to read.
-  ///
-  /// \param[in] size
-  ///     Number of bytes to read.
+  /// Read the aux buffer managed by this perf event assuming it was configured
+  /// with PROT_READ permissions only, which indicates that the buffer is
+  /// automatically wrapped and overwritten by the kernel or hardware. To ensure
+  /// that the data is up-to-date and is not corrupted by read-write race
+  /// conditions, the underlying perf_event is paused during read, and later
+  /// it's returned to its initial state. The returned data will be linear, i.e.
+  /// it will fix the circular wrapping the might exist in the buffer.
   ///
   /// \return
-  ///     A vector with the requested binary data. The vector will have the
-  ///     size of the requested \a size. Non-available positions will be
-  ///     filled with zeroes.
-  llvm::Expected<std::vector<uint8_t>>
-  ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size);
+  ///     A vector with the requested binary data.
+  llvm::Expected<std::vector<uint8_t>> GetReadOnlyAuxBuffer();
 
-  /// Read the data buffer managed by this perf event. To ensure that the
-  /// data is up-to-date and is not corrupted by read-write race conditions, the
-  /// underlying perf_event is paused during read, and later it's returned to
-  /// its initial state. The returned data will be linear, i.e. it will fix the
-  /// circular wrapping the might exist int he buffer.
-  ///
-  /// \param[in] offset
-  ///     Offset of the data to read.
-  ///
-  /// \param[in] size
-  ///     Number of bytes to read.
+  /// Read the data buffer managed by this perf even assuming it was configured
+  /// with PROT_READ permissions only, which indicates that the buffer is
+  /// automatically wrapped and overwritten by the kernel or hardware. To ensure
+  /// that the data is up-to-date and is not corrupted by read-write race
+  /// conditions, the underlying perf_event is paused during read, and later
+  /// it's returned to its initial state. The returned data will be linear, i.e.
+  /// it will fix the circular wrapping the might exist int he buffer.
   ///
   /// \return
-  ///     A vector with the requested binary data. The vector will have the
-  ///     size of the requested \a size. Non-available positions will be
-  ///     filled with zeroes.
-  llvm::Expected<std::vector<uint8_t>>
-  ReadFlushedOutDataCyclicBuffer(size_t offset, size_t size);
+  ///     A vector with the requested binary data.
+  llvm::Expected<std::vector<uint8_t>> GetReadOnlyDataBuffer();
 
   /// Use the ioctl API to disable the perf event and all the events in its
   /// group. This doesn't terminate the perf event.
@@ -266,17 +247,21 @@ public:
   ///   data.
   size_t GetEffectiveDataBufferSize() const;
 
+  /// \return
+  ///   \b true if and only the perf event is enabled and collecting.
+  bool IsEnabled() const;
+
 private:
   /// Create new \a PerfEvent.
   ///
   /// \param[in] fd
   ///   File descriptor of the perf event.
   ///
-  /// \param[in] initial_state
+  /// \param[in] enabled
   ///   Initial collection state configured for this perf_event.
-  PerfEvent(long fd, CollectionState initial_state)
+  PerfEvent(long fd, bool enabled)
       : m_fd(new long(fd), resource_handle::FileDescriptorDeleter()),
-        m_collection_state(initial_state) {}
+        m_enabled(enabled) {}
 
   /// Wrapper for \a mmap to provide custom error messages.
   ///
@@ -319,8 +304,20 @@ private:
   /// such as IntelPT.
   resource_handle::MmapUP m_aux_base;
   /// The state of the underlying perf_event.
-  CollectionState m_collection_state;
+  bool m_enabled;
 };
+
+/// Create a perf event that tracks context switches on a cpu.
+///
+/// \param[in] cpu_id
+///   The core to trace.
+///
+/// \param[in] parent_perf_event
+///   An optional perf event that will be grouped with the
+///   new perf event.
+llvm::Expected<PerfEvent>
+CreateContextSwitchTracePerfEvent(lldb::cpu_id_t cpu_id,
+                                  const PerfEvent *parent_perf_event = nullptr);
 
 /// Load \a PerfTscConversionParameters from \a perf_event_mmap_page, if
 /// available.

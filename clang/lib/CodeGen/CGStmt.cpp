@@ -408,6 +408,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     llvm_unreachable("target parallel loop directive not supported yet.");
     break;
+  case Stmt::OMPParallelMaskedDirectiveClass:
+    llvm_unreachable("parallel masked directive not supported yet.");
+    break;
   }
 }
 

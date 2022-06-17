@@ -45,7 +45,7 @@ lldb_private::process_linux::LoadPerfTscConversionParameters() {
   perf_event_mmap_page &mmap_metada = perf_event->GetMetadataPage();
   if (mmap_metada.cap_user_time && mmap_metada.cap_user_time_zero) {
     return LinuxPerfZeroTscConversion{
-        mmap_metada.time_mult, mmap_metada.time_shift, mmap_metada.time_zero};
+        mmap_metada.time_mult, mmap_metada.time_shift, {mmap_metada.time_zero}};
   } else {
     auto err_cap =
         !mmap_metada.cap_user_time ? "cap_user_time" : "cap_user_time_zero";
@@ -73,8 +73,8 @@ void resource_handle::FileDescriptorDeleter::operator()(long *ptr) {
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
                                           Optional<lldb::pid_t> pid,
-                                          Optional<lldb::core_id_t> cpu,
-                                          Optional<int> group_fd,
+                                          Optional<lldb::cpu_id_t> cpu,
+                                          Optional<long> group_fd,
                                           unsigned long flags) {
   errno = 0;
   long fd = syscall(SYS_perf_event_open, &attr, pid.getValueOr(-1),
@@ -84,13 +84,12 @@ llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
         llvm::formatv("perf event syscall failed: {0}", std::strerror(errno));
     return llvm::createStringError(llvm::inconvertibleErrorCode(), err_msg);
   }
-  return PerfEvent(fd, attr.disabled ? CollectionState::Disabled
-                                     : CollectionState::Enabled);
+  return PerfEvent(fd, !attr.disabled);
 }
 
 llvm::Expected<PerfEvent> PerfEvent::Init(perf_event_attr &attr,
                                           Optional<lldb::pid_t> pid,
-                                          Optional<lldb::core_id_t> cpu) {
+                                          Optional<lldb::cpu_id_t> cpu) {
   return Init(attr, pid, cpu, -1, 0);
 }
 
@@ -179,16 +178,20 @@ ArrayRef<uint8_t> PerfEvent::GetAuxBuffer() const {
            static_cast<size_t>(mmap_metadata.aux_size)};
 }
 
-Expected<std::vector<uint8_t>>
-PerfEvent::ReadFlushedOutDataCyclicBuffer(size_t offset, size_t size) {
-  CollectionState previous_state = m_collection_state;
+Expected<std::vector<uint8_t>> PerfEvent::GetReadOnlyDataBuffer() {
+  // The following code assumes that the protection level of the DATA page
+  // is PROT_READ. If PROT_WRITE is used, then reading would require that
+  // this piece of code updates some pointers. See more about data_tail
+  // in https://man7.org/linux/man-pages/man2/perf_event_open.2.html.
+
+  bool was_enabled = m_enabled;
   if (Error err = DisableWithIoctl())
     return std::move(err);
 
   /**
    * The data buffer and aux buffer have different implementations
-   * with respect to their definition of head pointer. In the case
-   * of Aux data buffer the head always wraps around the aux buffer
+   * with respect to their definition of head pointer when using PROD_READ only.
+   * In the case of Aux data buffer the head always wraps around the aux buffer
    * and we don't need to care about it, whereas the data_head keeps
    * increasing and needs to be wrapped by modulus operator
    */
@@ -198,45 +201,34 @@ PerfEvent::ReadFlushedOutDataCyclicBuffer(size_t offset, size_t size) {
   uint64_t data_head = mmap_metadata.data_head;
   uint64_t data_size = mmap_metadata.data_size;
   std::vector<uint8_t> output;
-  output.reserve(size);
+  output.reserve(data.size());
 
   if (data_head > data_size) {
     uint64_t actual_data_head = data_head % data_size;
-    // The buffer has wrapped
-    for (uint64_t i = actual_data_head + offset;
-         i < data_size && output.size() < size; i++)
-      output.push_back(data[i]);
-
-    // We need to find the starting position for the left part if the offset was
-    // too big
-    uint64_t left_part_start = actual_data_head + offset >= data_size
-                                   ? actual_data_head + offset - data_size
-                                   : 0;
-    for (uint64_t i = left_part_start;
-         i < actual_data_head && output.size() < size; i++)
-      output.push_back(data[i]);
+    // The buffer has wrapped, so we first the oldest chunk of data
+    output.insert(output.end(), data.begin() + actual_data_head, data.end());
+    // And we we read the most recent chunk of data
+    output.insert(output.end(), data.begin(), data.begin() + actual_data_head);
   } else {
-    for (uint64_t i = offset; i < data_head && output.size() < size; i++)
-      output.push_back(data[i]);
+    // There's been no wrapping, so we just read linearly
+    output.insert(output.end(), data.begin(), data.begin() + data_head);
   }
 
-  if (previous_state == CollectionState::Enabled) {
+  if (was_enabled) {
     if (Error err = EnableWithIoctl())
       return std::move(err);
   }
 
-  if (output.size() != size)
-    return createStringError(inconvertibleErrorCode(),
-                             formatv("Requested {0} bytes of perf_event data "
-                                     "buffer but only {1} are available",
-                                     size, output.size()));
-
-  return data;
+  return output;
 }
 
-Expected<std::vector<uint8_t>>
-PerfEvent::ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size) {
-  CollectionState previous_state = m_collection_state;
+Expected<std::vector<uint8_t>> PerfEvent::GetReadOnlyAuxBuffer() {
+  // The following code assumes that the protection level of the AUX page
+  // is PROT_READ. If PROT_WRITE is used, then reading would require that
+  // this piece of code updates some pointers. See more about aux_tail
+  // in https://man7.org/linux/man-pages/man2/perf_event_open.2.html.
+
+  bool was_enabled = m_enabled;
   if (Error err = DisableWithIoctl())
     return std::move(err);
 
@@ -244,9 +236,8 @@ PerfEvent::ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size) {
 
   ArrayRef<uint8_t> data = GetAuxBuffer();
   uint64_t aux_head = mmap_metadata.aux_head;
-  uint64_t aux_size = mmap_metadata.aux_size;
   std::vector<uint8_t> output;
-  output.reserve(size);
+  output.reserve(data.size());
 
   /**
    * When configured as ring buffer, the aux buffer keeps wrapping around
@@ -260,33 +251,19 @@ PerfEvent::ReadFlushedOutAuxCyclicBuffer(size_t offset, size_t size) {
    *
    * */
 
-  for (uint64_t i = aux_head + offset; i < aux_size && output.size() < size;
-       i++)
-    output.push_back(data[i]);
+  output.insert(output.end(), data.begin() + aux_head, data.end());
+  output.insert(output.end(), data.begin(), data.begin() + aux_head);
 
-  // We need to find the starting position for the left part if the offset was
-  // too big
-  uint64_t left_part_start =
-      aux_head + offset >= aux_size ? aux_head + offset - aux_size : 0;
-  for (uint64_t i = left_part_start; i < aux_head && output.size() < size; i++)
-    output.push_back(data[i]);
-
-  if (previous_state == CollectionState::Enabled) {
+  if (was_enabled) {
     if (Error err = EnableWithIoctl())
       return std::move(err);
   }
 
-  if (output.size() != size)
-    return createStringError(inconvertibleErrorCode(),
-                             formatv("Requested {0} bytes of perf_event aux "
-                                     "buffer but only {1} are available",
-                                     size, output.size()));
-
-  return data;
+  return output;
 }
 
 Error PerfEvent::DisableWithIoctl() {
-  if (m_collection_state == CollectionState::Disabled)
+  if (!m_enabled)
     return Error::success();
 
   if (ioctl(*m_fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP) < 0)
@@ -294,12 +271,14 @@ Error PerfEvent::DisableWithIoctl() {
                              "Can't disable perf event. %s",
                              std::strerror(errno));
 
-  m_collection_state = CollectionState::Disabled;
+  m_enabled = false;
   return Error::success();
 }
 
+bool PerfEvent::IsEnabled() const { return m_enabled; }
+
 Error PerfEvent::EnableWithIoctl() {
-  if (m_collection_state == CollectionState::Enabled)
+  if (m_enabled)
     return Error::success();
 
   if (ioctl(*m_fd, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP) < 0)
@@ -307,14 +286,64 @@ Error PerfEvent::EnableWithIoctl() {
                              "Can't enable perf event. %s",
                              std::strerror(errno));
 
-  m_collection_state = CollectionState::Enabled;
+  m_enabled = true;
   return Error::success();
 }
 
 size_t PerfEvent::GetEffectiveDataBufferSize() const {
   perf_event_mmap_page &mmap_metadata = GetMetadataPage();
-  if (mmap_metadata.data_head <= mmap_metadata.data_size)
+  if (mmap_metadata.data_head < mmap_metadata.data_size)
     return mmap_metadata.data_head;
   else
     return mmap_metadata.data_size; // The buffer has wrapped.
+}
+
+Expected<PerfEvent>
+lldb_private::process_linux::CreateContextSwitchTracePerfEvent(
+    lldb::cpu_id_t cpu_id, const PerfEvent *parent_perf_event) {
+  Log *log = GetLog(POSIXLog::Trace);
+#ifndef PERF_ATTR_SIZE_VER5
+  return createStringError(inconvertibleErrorCode(),
+                           "Intel PT Linux perf event not supported");
+#else
+  perf_event_attr attr;
+  memset(&attr, 0, sizeof(attr));
+  attr.size = sizeof(attr);
+  attr.sample_type = PERF_SAMPLE_TID | PERF_SAMPLE_TIME;
+  attr.type = PERF_TYPE_SOFTWARE;
+  attr.context_switch = 1;
+  attr.exclude_kernel = 1;
+  attr.sample_id_all = 1;
+  attr.exclude_hv = 1;
+  attr.disabled = parent_perf_event ? !parent_perf_event->IsEnabled() : false;
+
+  // The given perf configuration will produce context switch records of 32
+  // bytes each. Assuming that every context switch will be emitted twice (one
+  // for context switch ins and another one for context switch outs), and that a
+  // context switch will happen at least every half a millisecond per core, we
+  // need 500 * 32 bytes (~16 KB) for a trace of one second, which is much more
+  // than what a regular intel pt trace can get. Pessimistically we pick as
+  // 32KiB for the size of our context switch trace.
+
+  uint64_t data_buffer_size = 32768;
+  uint64_t data_buffer_numpages = data_buffer_size / getpagesize();
+
+  LLDB_LOG(log, "Will create context switch trace buffer of size {0}",
+           data_buffer_size);
+
+  Optional<long> group_fd;
+  if (parent_perf_event)
+    group_fd = parent_perf_event->GetFd();
+
+  if (Expected<PerfEvent> perf_event =
+          PerfEvent::Init(attr, /*pid=*/None, cpu_id, group_fd, /*flags=*/0)) {
+    if (Error mmap_err = perf_event->MmapMetadataAndBuffers(
+            data_buffer_numpages, 0, /*data_buffer_write=*/false)) {
+      return std::move(mmap_err);
+    }
+    return perf_event;
+  } else {
+    return perf_event.takeError();
+  }
+#endif
 }

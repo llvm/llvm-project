@@ -7,15 +7,8 @@ using namespace llvm::support;
 namespace llvm {
 
 raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value) {
-  OS << "0x" << to_hexString(Value.Value);
+  OS << "0x" << utohexstr(Value.Value);
   return OS;
-}
-
-std::string to_hexString(uint64_t Value, bool UpperCase) {
-  std::string number;
-  llvm::raw_string_ostream stream(number);
-  stream << format_hex_no_prefix(Value, 1, UpperCase);
-  return stream.str();
 }
 
 void ScopedPrinter::printBinaryImpl(StringRef Label, StringRef Str,
