@@ -507,8 +507,8 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV32-NEXT:    vmseq.vi v0, v8, 0
-; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.v.i v8, 0
+; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
 ; RV32-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV32-NEXT:    vmv.v.i v9, 0
@@ -567,8 +567,8 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV64-NEXT:    vmseq.vi v0, v8, 0
-; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
 ; RV64-NEXT:    vmv.v.i v8, 0
+; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
 ; RV64-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; RV64-NEXT:    vmv.v.i v9, 0
@@ -635,8 +635,8 @@ define void @masked_store_v2i32_align2(<2 x i32> %val, <2 x i32>* %a, <2 x i32> 
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmseq.vi v0, v9, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v10, 0
