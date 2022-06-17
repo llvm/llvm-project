@@ -87,29 +87,29 @@ struct RegisterEncoding {
 };
 
 enum WaitEventType {
-  VMEM_ACCESS,      // vector-memory read & write
-  VMEM_READ_ACCESS, // vector-memory read
-  VMEM_WRITE_ACCESS,// vector-memory write
-  LDS_ACCESS,       // lds read & write
-  GDS_ACCESS,       // gds read & write
-  SQ_MESSAGE,       // send message
-  SMEM_ACCESS,      // scalar-memory read & write
-  EXP_GPR_LOCK,     // export holding on its data src
-  GDS_GPR_LOCK,     // GDS holding on its data and addr src
-  EXP_POS_ACCESS,   // write to export position
-  EXP_PARAM_ACCESS, // write to export parameter
-  VMW_GPR_LOCK,     // vector-memory write holding on its data src
+  VMEM_ACCESS,       // vector-memory read & write
+  VMEM_READ_ACCESS,  // vector-memory read
+  VMEM_WRITE_ACCESS, // vector-memory write
+  LDS_ACCESS,        // lds read & write
+  GDS_ACCESS,        // gds read & write
+  SQ_MESSAGE,        // send message
+  SMEM_ACCESS,       // scalar-memory read & write
+  EXP_GPR_LOCK,      // export holding on its data src
+  GDS_GPR_LOCK,      // GDS holding on its data and addr src
+  EXP_POS_ACCESS,    // write to export position
+  EXP_PARAM_ACCESS,  // write to export parameter
+  VMW_GPR_LOCK,      // vector-memory write holding on its data src
+  EXP_LDS_ACCESS,    // read by ldsdir counting as export
   NUM_WAIT_EVENTS,
 };
 
 static const unsigned WaitEventMaskForInst[NUM_INST_CNTS] = {
-  (1 << VMEM_ACCESS) | (1 << VMEM_READ_ACCESS),
-  (1 << SMEM_ACCESS) | (1 << LDS_ACCESS) | (1 << GDS_ACCESS) |
-      (1 << SQ_MESSAGE),
-  (1 << EXP_GPR_LOCK) | (1 << GDS_GPR_LOCK) | (1 << VMW_GPR_LOCK) |
-      (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS),
-  (1 << VMEM_WRITE_ACCESS)
-};
+    (1 << VMEM_ACCESS) | (1 << VMEM_READ_ACCESS),
+    (1 << SMEM_ACCESS) | (1 << LDS_ACCESS) | (1 << GDS_ACCESS) |
+        (1 << SQ_MESSAGE),
+    (1 << EXP_GPR_LOCK) | (1 << GDS_GPR_LOCK) | (1 << VMW_GPR_LOCK) |
+        (1 << EXP_PARAM_ACCESS) | (1 << EXP_POS_ACCESS) | (1 << EXP_LDS_ACCESS),
+    (1 << VMEM_WRITE_ACCESS)};
 
 // The mapping is:
 //  0                .. SQ_MAX_PGM_VGPRS-1               real VGPRs
@@ -596,6 +596,12 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
             AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data),
             CurrScore);
       }
+    } else if (TII->isLDSDIR(Inst)) {
+      // LDSDIR instructions attach the score to the destination.
+      setExpScore(
+          &Inst, TII, TRI, MRI,
+          AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::vdst),
+          CurrScore);
     } else {
       if (TII->isEXP(Inst)) {
         // For export the destination registers are really temps that
@@ -1135,7 +1141,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
                   VM_CNT, ScoreBrackets.getRegScore(RegNo, VM_CNT), Wait);
               ScoreBrackets.clearVgprVmemTypes(RegNo);
             }
-            if (Op.isDef()) {
+            if (Op.isDef() || ScoreBrackets.hasPendingEvent(EXP_LDS_ACCESS)) {
               ScoreBrackets.determineWait(
                   EXP_CNT, ScoreBrackets.getRegScore(RegNo, EXP_CNT), Wait);
             }
@@ -1190,6 +1196,19 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   } else {
     // Update waitcnt brackets after determining the required wait.
     ScoreBrackets.applyWaitcnt(Wait);
+  }
+
+  // ExpCnt can be merged into VINTERP.
+  if (Wait.ExpCnt != ~0u && SIInstrInfo::isVINTERP(MI)) {
+    MachineOperand *WaitExp = TII->getNamedOperand(MI, AMDGPU::OpName::waitexp);
+    if (Wait.ExpCnt < WaitExp->getImm()) {
+      WaitExp->setImm(Wait.ExpCnt);
+      Modified = true;
+    }
+    Wait.ExpCnt = ~0u;
+
+    LLVM_DEBUG(dbgs() << "generateWaitcntInstBefore\n"
+                      << "Update Instr: " << MI);
   }
 
   // Build new waitcnt instructions unless no wait is needed or the old waitcnt
@@ -1350,6 +1369,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
     }
+  } else if (SIInstrInfo::isLDSDIR(Inst)) {
+    ScoreBrackets->updateByEvent(TII, TRI, MRI, EXP_LDS_ACCESS, Inst);
+  } else if (TII->isVINTERP(Inst)) {
+    int64_t Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
+    ScoreBrackets->applyWaitcnt(EXP_CNT, Imm);
   } else if (SIInstrInfo::isEXP(Inst)) {
     unsigned Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)

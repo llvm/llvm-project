@@ -829,7 +829,6 @@ libc_function(
     copts = [
         "-fno-builtin-memcpy",
         "-fno-builtin-memmove",
-        "-mllvm -combiner-global-alias-analysis",
         "-mllvm --tail-merge-threshold=0",
     ],
     features = no_sanitize_features,
@@ -845,7 +844,6 @@ libc_function(
     hdrs = ["src/string/memset.h"],
     copts = [
         "-fno-builtin-memset",
-        "-mllvm -combiner-global-alias-analysis",
     ],
     features = no_sanitize_features,
     deps = [
@@ -860,7 +858,6 @@ libc_function(
     hdrs = ["src/string/memmove.h"],
     copts = [
         "-fno-builtin-memmove",
-        "-mllvm -combiner-global-alias-analysis",
     ],
     features = no_sanitize_features,
     deps = [
@@ -876,7 +873,6 @@ libc_function(
     hdrs = ["src/string/memcmp.h"],
     copts = [
         "-fno-builtin-memcmp",
-        "-mllvm -combiner-global-alias-analysis",
     ],
     features = no_sanitize_features,
     deps = [
@@ -908,7 +904,6 @@ libc_function(
     copts = [
         "-fno-builtin-bzero",
         "-fno-builtin-memset",
-        "-mllvm -combiner-global-alias-analysis",
     ],
     features = no_sanitize_features,
     deps = [

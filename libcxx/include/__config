@@ -208,8 +208,8 @@
 #    define _LIBCPP_COMPILER_MSVC
 #  endif
 
-#  if defined(_LIBCPP_COMPILER_GCC) && __cplusplus < 201103L
-#    error "libc++ does not support using GCC with C++03. Please enable C++11"
+#  if !defined(_LIBCPP_COMPILER_CLANG_BASED) && __cplusplus < 201103L
+#    error "libc++ only supports C++03 with Clang-based compilers. Please enable C++11"
 #  endif
 
 // FIXME: ABI detection should be done via compiler builtin macros. This
@@ -390,11 +390,32 @@
 #  endif
 
 #  ifndef _LIBCPP_CXX03_LANG
+
 #    define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
-#  elif defined(_LIBCPP_COMPILER_CLANG_BASED)
-#    define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
+#    define _ALIGNAS_TYPE(x) alignas(x)
+#    define _ALIGNAS(x) alignas(x)
+#    define _LIBCPP_NORETURN [[noreturn]]
+#    define _NOEXCEPT noexcept
+#    define _NOEXCEPT_(x) noexcept(x)
+
 #  else
-#    error "We don't know a correct way to implement alignof(T) in C++03 outside of Clang"
+
+#    define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
+#    define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
+#    define _ALIGNAS(x) __attribute__((__aligned__(x)))
+#    define _LIBCPP_NORETURN __attribute__((noreturn))
+#    define _LIBCPP_HAS_NO_NOEXCEPT
+#    define nullptr __nullptr
+#    define _NOEXCEPT throw()
+#    define _NOEXCEPT_(x)
+
+typedef __char16_t char16_t;
+typedef __char32_t char32_t;
+
+#  endif
+
+#  if !defined(__cpp_exceptions) || __cpp_exceptions < 199711L
+#    define _LIBCPP_NO_EXCEPTIONS
 #  endif
 
 #  define _LIBCPP_PREFERRED_ALIGNOF(_Tp) __alignof(_Tp)
@@ -403,33 +424,6 @@
 
 #    if defined(__APPLE__) && !defined(__i386__) && !defined(__x86_64__) && (!defined(__arm__) || __ARM_ARCH_7K__ >= 2)
 #      define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
-#    endif
-
-#    if __has_feature(cxx_alignas)
-#      define _ALIGNAS_TYPE(x) alignas(x)
-#      define _ALIGNAS(x) alignas(x)
-#    else
-#      define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
-#      define _ALIGNAS(x) __attribute__((__aligned__(x)))
-#    endif
-
-#    if __cplusplus < 201103L
-typedef __char16_t char16_t;
-typedef __char32_t char32_t;
-#    endif
-
-#    if !__has_feature(cxx_exceptions)
-#      define _LIBCPP_NO_EXCEPTIONS
-#    endif
-
-#    if __has_feature(cxx_attributes)
-#      define _LIBCPP_NORETURN [[noreturn]]
-#    else
-#      define _LIBCPP_NORETURN __attribute__((noreturn))
-#    endif
-
-#    ifdef _LIBCPP_CXX03_LANG
-#      define nullptr __nullptr
 #    endif
 
 // Objective-C++ features (opt-in)
@@ -449,10 +443,6 @@ typedef __char32_t char32_t;
 #      define _LIBCPP_HAS_BLOCKS_RUNTIME
 #    endif
 
-#    if !(__has_feature(cxx_noexcept))
-#      define _LIBCPP_HAS_NO_NOEXCEPT
-#    endif
-
 #    if !__has_feature(address_sanitizer)
 #      define _LIBCPP_HAS_NO_ASAN
 #    endif
@@ -467,15 +457,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_DISABLE_EXTENSION_WARNING __extension__
 
 #  elif defined(_LIBCPP_COMPILER_GCC)
-
-#    define _ALIGNAS(x) __attribute__((__aligned__(x)))
-#    define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
-
-#    define _LIBCPP_NORETURN __attribute__((noreturn))
-
-#    if !defined(__EXCEPTIONS)
-#      define _LIBCPP_NO_EXCEPTIONS
-#    endif
 
 #    if !defined(__SANITIZE_ADDRESS__)
 #      define _LIBCPP_HAS_NO_ASAN
@@ -493,10 +474,7 @@ typedef __char32_t char32_t;
 #      error "MSVC versions prior to Visual Studio 2015 are not supported"
 #    endif
 
-#    define __alignof__ __alignof
 #    define _LIBCPP_NORETURN __declspec(noreturn)
-#    define _ALIGNAS(x) __declspec(align(x))
-#    define _ALIGNAS_TYPE(x) alignas(x)
 
 #    define _LIBCPP_WEAK
 
@@ -716,14 +694,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_PREFERRED_OVERLOAD __attribute__((__enable_if__(true, "")))
 #  endif
 
-#  ifndef _LIBCPP_HAS_NO_NOEXCEPT
-#    define _NOEXCEPT noexcept
-#    define _NOEXCEPT_(x) noexcept(x)
-#  else
-#    define _NOEXCEPT throw()
-#    define _NOEXCEPT_(x)
-#  endif
-
 #  ifndef __SIZEOF_INT128__
 #    define _LIBCPP_HAS_NO_INT128
 #  endif
@@ -930,11 +900,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(const
 #  endif
 
 // Try to find out if RTTI is disabled.
-#  if defined(_LIBCPP_COMPILER_CLANG_BASED) && !__has_feature(cxx_rtti)
-#    define _LIBCPP_NO_RTTI
-#  elif defined(__GNUC__) && !defined(__GXX_RTTI)
-#    define _LIBCPP_NO_RTTI
-#  elif defined(_LIBCPP_COMPILER_MSVC) && !defined(_CPPRTTI)
+#  if !defined(__cpp_rtti) || __cpp_rtti < 199711L
 #    define _LIBCPP_NO_RTTI
 #  endif
 
@@ -1099,10 +1065,8 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(const
 #  endif
 
 // Use a function like macro to imply that it must be followed by a semicolon
-#  if _LIBCPP_STD_VER > 14 && __has_cpp_attribute(fallthrough)
+#  if __has_cpp_attribute(fallthrough)
 #    define _LIBCPP_FALLTHROUGH() [[fallthrough]]
-#  elif __has_cpp_attribute(clang::fallthrough)
-#    define _LIBCPP_FALLTHROUGH() [[clang::fallthrough]]
 #  elif __has_attribute(__fallthrough__)
 #    define _LIBCPP_FALLTHROUGH() __attribute__((__fallthrough__))
 #  else

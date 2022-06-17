@@ -59,6 +59,14 @@ def gi_vop3opselmods :
     GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
     GIComplexPatternEquiv<VOP3OpSelMods>;
 
+def gi_vinterpmods :
+    GIComplexOperandMatcher<s32, "selectVINTERPMods">,
+    GIComplexPatternEquiv<VINTERPMods>;
+
+def gi_vinterpmods_hi :
+    GIComplexOperandMatcher<s32, "selectVINTERPModsHi">,
+    GIComplexPatternEquiv<VINTERPModsHi>;
+
 // FIXME: Why do we have both VOP3OpSel and VOP3OpSelMods?
 def gi_vop3opsel :
     GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
