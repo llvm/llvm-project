@@ -9,8 +9,8 @@ define amdgpu_ps void @v_interp_f32(float inreg %i, float inreg %j, i32 inreg %m
 ; GCN-NEXT:    lds_param_load v0, attr0.y
 ; GCN-NEXT:    lds_param_load v1, attr1.x
 ; GCN-NEXT:    v_mov_b32_e32 v4, s1
-; GCN-NEXT:    v_interp_p10_f32 v3, v0, v2, v0 wait_exp:7
-; GCN-NEXT:    v_interp_p10_f32 v2, v1, v2, v1 wait_exp:7
+; GCN-NEXT:    v_interp_p10_f32 v3, v0, v2, v0 wait_exp:1
+; GCN-NEXT:    v_interp_p10_f32 v2, v1, v2, v1
 ; GCN-NEXT:    v_interp_p2_f32 v0, v0, v4, v3 wait_exp:7
 ; GCN-NEXT:    v_interp_p2_f32 v1, v1, v4, v0 wait_exp:7
 ; GCN-NEXT:    exp mrt0 v3, v2, v0, v1 done
@@ -36,10 +36,10 @@ define amdgpu_ps void @v_interp_f32_many(float inreg %i, float inreg %j, i32 inr
 ; GCN-NEXT:    lds_param_load v2, attr2.x
 ; GCN-NEXT:    lds_param_load v3, attr3.x
 ; GCN-NEXT:    v_mov_b32_e32 v5, s1
-; GCN-NEXT:    v_interp_p10_f32 v6, v0, v4, v0 wait_exp:7
-; GCN-NEXT:    v_interp_p10_f32 v7, v1, v4, v1 wait_exp:7
-; GCN-NEXT:    v_interp_p10_f32 v8, v2, v4, v2 wait_exp:7
-; GCN-NEXT:    v_interp_p10_f32 v4, v3, v4, v3 wait_exp:7
+; GCN-NEXT:    v_interp_p10_f32 v6, v0, v4, v0 wait_exp:3
+; GCN-NEXT:    v_interp_p10_f32 v7, v1, v4, v1 wait_exp:2
+; GCN-NEXT:    v_interp_p10_f32 v8, v2, v4, v2 wait_exp:1
+; GCN-NEXT:    v_interp_p10_f32 v4, v3, v4, v3
 ; GCN-NEXT:    v_interp_p2_f32 v0, v0, v5, v6 wait_exp:7
 ; GCN-NEXT:    v_interp_p2_f32 v1, v1, v5, v7 wait_exp:7
 ; GCN-NEXT:    v_interp_p2_f32 v2, v2, v5, v8 wait_exp:7
@@ -73,10 +73,10 @@ define amdgpu_ps void @v_interp_f32_many_vm(float addrspace(1)* %ptr, i32 inreg 
 ; GCN-NEXT:    lds_param_load v4, attr2.x
 ; GCN-NEXT:    lds_param_load v5, attr3.x
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_interp_p10_f32 v6, v2, v0, v2 wait_exp:7
-; GCN-NEXT:    v_interp_p10_f32 v7, v3, v0, v3 wait_exp:7
-; GCN-NEXT:    v_interp_p10_f32 v8, v4, v0, v4 wait_exp:7
-; GCN-NEXT:    v_interp_p10_f32 v0, v5, v0, v5 wait_exp:7
+; GCN-NEXT:    v_interp_p10_f32 v6, v2, v0, v2 wait_exp:3
+; GCN-NEXT:    v_interp_p10_f32 v7, v3, v0, v3 wait_exp:2
+; GCN-NEXT:    v_interp_p10_f32 v8, v4, v0, v4 wait_exp:1
+; GCN-NEXT:    v_interp_p10_f32 v0, v5, v0, v5
 ; GCN-NEXT:    v_interp_p2_f32 v2, v2, v1, v6 wait_exp:7
 ; GCN-NEXT:    v_interp_p2_f32 v3, v3, v1, v7 wait_exp:7
 ; GCN-NEXT:    v_interp_p2_f32 v4, v4, v1, v8 wait_exp:7
@@ -111,7 +111,7 @@ define amdgpu_ps half @v_interp_f16(float inreg %i, float inreg %j, i32 inreg %m
 ; GCN-NEXT:    v_mov_b32_e32 v1, s0
 ; GCN-NEXT:    lds_param_load v0, attr0.x
 ; GCN-NEXT:    v_mov_b32_e32 v2, s1
-; GCN-NEXT:    v_interp_p10_f16_f32 v3, v0, v1, v0 wait_exp:7
+; GCN-NEXT:    v_interp_p10_f16_f32 v3, v0, v1, v0
 ; GCN-NEXT:    v_interp_p10_f16_f32 v1, v0, v1, v0 op_sel:[1,0,1,0] wait_exp:7
 ; GCN-NEXT:    v_interp_p2_f16_f32 v3, v0, v2, v3 wait_exp:7
 ; GCN-NEXT:    v_interp_p2_f16_f32 v0, v0, v2, v1 op_sel:[1,0,0,0] wait_exp:7
