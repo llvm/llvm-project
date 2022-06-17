@@ -5,7 +5,7 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve,+f64mm < %s \
 // RUN:        | llvm-objdump -d --mattr=+sve,+f64mm - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve,+f64mm < %s \
-// RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN:   | llvm-objdump -d --mattr=-sve - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 // --------------------------------------------------------------------------//
 // FMMLA (SVE)

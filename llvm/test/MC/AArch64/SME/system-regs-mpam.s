@@ -9,7 +9,7 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme,+mpam < %s \
 // RUN:        | llvm-objdump -d --mattr=+sme,+mpam - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme,+mpam < %s \
-// RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN:   | llvm-objdump -d --mattr=-sme - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme,+mpam < %s \
 // RUN:        | llvm-objdump -d --mattr=+sme - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme,+mpam < %s \

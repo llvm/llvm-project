@@ -5,7 +5,7 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme-f64 < %s \
 // RUN:        | llvm-objdump -d --mattr=+sme-f64 - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme-f64 < %s \
-// RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN:   | llvm-objdump -d --mattr=-sme - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 // Disassemble encoding and check the re-encoding (-show-encoding) matches.
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sme-f64 < %s \
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
