@@ -63,6 +63,22 @@ __unwrap_iter(_Iter __i) _NOEXCEPT
     return _Impl::__apply(__i);
 }
 
+template <class _OrigIter, class _UnwrappedIter>
+struct __rewrap_iter_impl {
+  static _LIBCPP_CONSTEXPR _OrigIter __apply(_OrigIter __first, _UnwrappedIter __result) {
+    // Precondition: __result is reachable from __first
+    // Precondition: _OrigIter is a contiguous iterator
+    return __first + (__result - std::__unwrap_iter(__first));
+  }
+};
+
+template <class _OrigIter>
+struct __rewrap_iter_impl<_OrigIter, _OrigIter> {
+  static _LIBCPP_CONSTEXPR _OrigIter __apply(_OrigIter, _OrigIter __result) {
+    return __result;
+  }
+};
+
 template<class _OrigIter>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
 _OrigIter __rewrap_iter(_OrigIter, _OrigIter __result)
@@ -70,13 +86,11 @@ _OrigIter __rewrap_iter(_OrigIter, _OrigIter __result)
     return __result;
 }
 
-template<class _OrigIter, class _UnwrappedIter>
+template<class _OrigIter, class _UnwrappedIter, class _Impl = __rewrap_iter_impl<_OrigIter, _UnwrappedIter> >
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
 _OrigIter __rewrap_iter(_OrigIter __first, _UnwrappedIter __result)
 {
-    // Precondition: __result is reachable from __first
-    // Precondition: _OrigIter is a contiguous iterator
-    return __first + (__result - _VSTD::__unwrap_iter(__first));
+  return _Impl::__apply(__first, __result);
 }
 
 _LIBCPP_END_NAMESPACE_STD

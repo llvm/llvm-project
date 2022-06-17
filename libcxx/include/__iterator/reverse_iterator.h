@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___ITERATOR_REVERSE_ITERATOR_H
 #define _LIBCPP___ITERATOR_REVERSE_ITERATOR_H
 
+#include <__algorithm/unwrap_iter.h>
 #include <__compare/compare_three_way_result.h>
 #include <__compare/three_way_comparable.h>
 #include <__concepts/convertible_to.h>
@@ -320,6 +321,49 @@ reverse_iterator<_Iter> make_reverse_iterator(_Iter __i)
     return reverse_iterator<_Iter>(__i);
 }
 #endif
+
+template <class _Iter>
+using _ReverseWrapper = reverse_iterator<reverse_iterator<_Iter> >;
+
+template <class _Iter, bool __b>
+struct __unwrap_iter_impl<_ReverseWrapper<_Iter>, __b> {
+  static _LIBCPP_CONSTEXPR decltype(std::__unwrap_iter(std::declval<_Iter>()))
+  __apply(_ReverseWrapper<_Iter> __i) _NOEXCEPT {
+    return std::__unwrap_iter(__i.base().base());
+  }
+};
+
+template <class _OrigIter, class _UnwrappedIter>
+struct __rewrap_iter_impl<_ReverseWrapper<_OrigIter>, _UnwrappedIter> {
+  template <class _Iter>
+  struct _ReverseWrapperCount {
+    static _LIBCPP_CONSTEXPR const size_t value = 1;
+  };
+
+  template <class _Iter>
+  struct _ReverseWrapperCount<_ReverseWrapper<_Iter> > {
+    static _LIBCPP_CONSTEXPR const size_t value = 1 + _ReverseWrapperCount<_Iter>::value;
+  };
+
+  template <size_t _RewrapCount, class _OIter, class _UIter, __enable_if_t<_RewrapCount != 0, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR _ReverseWrapper<_OIter> __rewrap(_ReverseWrapper<_OIter> __iter1,
+                                                                                  _UIter __iter2) {
+    return _ReverseWrapper<_OIter>(
+        reverse_iterator<_OIter>(__rewrap<_RewrapCount - 1>(__iter1.base().base(), __iter2)));
+  }
+
+  template <size_t _RewrapCount, class _OIter, class _UIter, __enable_if_t<_RewrapCount == 0, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR decltype(std::__rewrap_iter(std::declval<_OIter>(),
+                                                                             std::declval<_UIter>()))
+  __rewrap(_OIter __iter1, _UIter __iter2) {
+    return std::__rewrap_iter(__iter1, __iter2);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR _ReverseWrapper<_OrigIter> __apply(_ReverseWrapper<_OrigIter> __iter1,
+                                                                                    _UnwrappedIter __iter2) {
+    return __rewrap<_ReverseWrapperCount<_OrigIter>::value>(__iter1, __iter2);
+  }
+};
 
 _LIBCPP_END_NAMESPACE_STD
 
