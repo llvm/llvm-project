@@ -22,7 +22,7 @@ SymbolFileOnDemand::SymbolFileOnDemand(
     std::unique_ptr<SymbolFile> &&symbol_file)
     : m_sym_file_impl(std::move(symbol_file)) {}
 
-SymbolFileOnDemand::~SymbolFileOnDemand() {}
+SymbolFileOnDemand::~SymbolFileOnDemand() = default;
 
 uint32_t SymbolFileOnDemand::CalculateAbilities() {
   // Explicitly allow ability checking to pass though.

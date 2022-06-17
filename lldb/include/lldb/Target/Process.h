@@ -112,7 +112,7 @@ protected:
 
 class ProcessAttachInfo : public ProcessInstanceInfo {
 public:
-  ProcessAttachInfo() {}
+  ProcessAttachInfo() = default;
 
   ProcessAttachInfo(const ProcessLaunchInfo &launch_info)
       : m_resume_count(0), m_wait_for_launch(false), m_ignore_existing(true),
