@@ -118,6 +118,8 @@ Improvements to Clang's diagnostics
 - Correctly diagnose a future keyword if it exist as a keyword in the higher
   language version and specifies in which version it will be a keyword. This
   supports both c and c++ language.
+- When diagnosing multi-level pack expansions of mismatched lengths, Clang will
+  now, in most cases, be able to point to the relevant outer parameter.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
