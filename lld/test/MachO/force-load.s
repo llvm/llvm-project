@@ -15,6 +15,16 @@
 # RUN: llvm-objdump --syms %t/test-force-load-second | FileCheck %s --check-prefix=FORCE-LOAD-SECOND
 # FORCE-LOAD-SECOND: __TEXT,obj _foo
 
+## If an archive has already been loaded w/o -force_load earlier in the command
+## line, a later -force_load argument will not have an effect.
+# RUN: %lld -lSystem %t/foo.a -force_load %t/foo.a %t/test.o -o %t/test-regular-then-force
+# RUN: llvm-objdump --syms %t/test-regular-then-force | FileCheck %s --check-prefix=REGULAR-THEN-FORCE
+# REGULAR-THEN-FORCE-NOT: _foo
+## If the -force_load comes first, then the second load will just be a no-op.
+# RUN: %lld -lSystem -force_load %t/foo.a %t/foo.a %t/test.o -o %t/test-force-then-regular
+# RUN: llvm-objdump --syms %t/test-regular-then-force | FileCheck %s --check-prefix=REGULAR-THEN-FORCE
+# FORCE-THEN-REGULAR: _foo
+
 ## Force-loading the same path twice is fine
 # RUN: %lld -lSystem %t/foo.o -force_load %t/foo.a -force_load %t/foo.a %t/test.o -o /dev/null
 
