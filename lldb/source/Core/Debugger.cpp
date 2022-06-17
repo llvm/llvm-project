@@ -757,7 +757,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_forward_listener_sp(), m_clear_once() {
   m_instance_name.SetString(llvm::formatv("debugger_{0}", GetID()).str());
   if (log_callback)
-    m_callback_handler_sp = CallbackLogHandler::Create(log_callback, baton);
+    m_callback_handler_sp =
+        std::make_shared<CallbackLogHandler>(log_callback, baton);
   m_command_interpreter_up->Initialize();
   // Always add our default platform to the platform list
   PlatformSP default_platform_sp(Platform::GetHostPlatform());
@@ -1290,7 +1291,8 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
   // For simplicity's sake, I am not going to deal with how to close down any
   // open logging streams, I just redirect everything from here on out to the
   // callback.
-  m_callback_handler_sp = CallbackLogHandler::Create(log_callback, baton);
+  m_callback_handler_sp =
+      std::make_shared<CallbackLogHandler>(log_callback, baton);
 }
 
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
@@ -1417,8 +1419,8 @@ bool Debugger::EnableLog(llvm::StringRef channel,
     log_options |=
         LLDB_LOG_OPTION_PREPEND_TIMESTAMP | LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
   } else if (log_file.empty()) {
-    log_handler_sp = StreamLogHandler::Create(GetOutputFile().GetDescriptor(),
-                                              !should_close);
+    log_handler_sp = std::make_shared<StreamLogHandler>(
+        GetOutputFile().GetDescriptor(), !should_close);
   } else {
     auto pos = m_stream_handlers.find(log_file);
     if (pos != m_stream_handlers.end())
@@ -1438,8 +1440,8 @@ bool Debugger::EnableLog(llvm::StringRef channel,
         return false;
       }
 
-      log_handler_sp =
-          StreamLogHandler::Create((*file)->GetDescriptor(), should_close);
+      log_handler_sp = std::make_shared<StreamLogHandler>(
+          (*file)->GetDescriptor(), should_close);
       m_stream_handlers[log_file] = log_handler_sp;
     }
   }
