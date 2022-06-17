@@ -221,7 +221,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       InterfaceMethod<
         /*desc=*/[{
           Bufferize this op, i.e., rewrite it into a memref-based equivalent.
-          Buffers of tensor SSA values can be retrieved via `state.getBuffer`.
+          Buffers of tensor SSA values can be retrieved via `getBuffer`.
           Uses of tensor results of the existing tensor op can be replaced with
           `replaceOpWithBufferizedValues` or `replaceOpWithNewBufferizedOp`.
           These two functions automatically handle the tensor-to-memref type
@@ -232,12 +232,6 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           tensor result `r` may only be replaced with:
           a) A buffer that aliases one of buffers in getAliasingOpOperand(r).
           b) Or: A newly allocated buffer.
-
-          Regions of an op should be inlined into the new op instead of cloning
-          them. This is not only more efficient, but also necessary so that no
-          analysis results are lost. (Bufferization decisions are tracked via
-          OpOperand pointers and cloned ops have new OpOperands.) If regions are
-          cloned instead of inlined, additional buffer copies may be inserted.
 
           This method will never be called on ops that do not have at least one
           tensor operand/result.
@@ -252,7 +246,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*retType=*/"LogicalResult",
         /*methodName=*/"bufferize",
         /*args=*/(ins "RewriterBase &":$rewriter,
-                      "BufferizationState &":$state),
+                      "const BufferizationOptions &":$options),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           llvm_unreachable("bufferize not implemented");

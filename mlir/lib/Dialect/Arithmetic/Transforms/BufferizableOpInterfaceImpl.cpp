@@ -23,7 +23,7 @@ struct ConstantOpInterface
     : public BufferizableOpInterface::ExternalModel<ConstantOpInterface,
                                                     arith::ConstantOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto constantOp = cast<arith::ConstantOp>(op);
 
     // Only ranked tensors are supported.
@@ -38,7 +38,7 @@ struct ConstantOpInterface
     // Create global memory segment and replace tensor with memref pointing to
     // that memory segment.
     FailureOr<memref::GlobalOp> globalOp =
-        getGlobalFor(constantOp, state.getOptions().bufferAlignment);
+        getGlobalFor(constantOp, options.bufferAlignment);
     if (failed(globalOp))
       return failure();
     memref::GlobalOp globalMemref = globalOp.getValue();
@@ -80,11 +80,11 @@ struct IndexCastOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto castOp = cast<arith::IndexCastOp>(op);
     auto resultTensorType = castOp.getType().cast<TensorType>();
 
-    Value source = state.getBuffer(rewriter, castOp.getIn());
+    Value source = getBuffer(rewriter, castOp.getIn(), options);
     auto sourceType = source.getType().cast<BaseMemRefType>();
 
     // Result type should have same layout and address space as the source type.
@@ -132,7 +132,7 @@ struct SelectOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto selectOp = cast<arith::SelectOp>(op);
     Location loc = selectOp.getLoc();
 
@@ -140,8 +140,8 @@ struct SelectOpInterface
     // instead of its OpOperands. In the worst case, 2 copies are inserted at
     // the moment (one for each tensor). When copying the op result, only one
     // copy would be needed.
-    Value trueBuffer = state.getBuffer(rewriter, selectOp.getTrueValue());
-    Value falseBuffer = state.getBuffer(rewriter, selectOp.getFalseValue());
+    Value trueBuffer = getBuffer(rewriter, selectOp.getTrueValue(), options);
+    Value falseBuffer = getBuffer(rewriter, selectOp.getFalseValue(), options);
 
     // The "true" and the "false" operands must have the same type. If the
     // buffers have different types, they differ only in their layout map. Cast

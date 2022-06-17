@@ -15,7 +15,6 @@ struct LogicalResult;
 class ModuleOp;
 
 namespace bufferization {
-struct BufferizationState;
 class OneShotAnalysisState;
 struct OneShotBufferizationOptions;
 

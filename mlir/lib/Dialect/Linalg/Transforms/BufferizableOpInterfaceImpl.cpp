@@ -20,11 +20,9 @@ using namespace mlir::bufferization;
 
 namespace {
 
-// TODO: Ops in the linalg dialect can directly implement this interface.
-
 /// Generic conversion for any LinalgOp on tensors.
 static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
-                                       BufferizationState &state) {
+                                       const BufferizationOptions &options) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);
@@ -46,14 +44,14 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
       newInputBuffers.push_back(opOperand->get());
       continue;
     }
-    newInputBuffers.push_back(state.getBuffer(rewriter, opOperand->get()));
+    newInputBuffers.push_back(getBuffer(rewriter, opOperand->get(), options));
   }
 
   // New output operands for the cloned op.
   SmallVector<Value> newOutputBuffers;
   for (OpResult opResult : op->getOpResults()) {
     OpOperand *opOperand = op.getOutputOperand(opResult.getResultNumber());
-    Value resultBuffer = state.getBuffer(rewriter, opOperand->get());
+    Value resultBuffer = getBuffer(rewriter, opOperand->get(), options);
     newOutputBuffers.push_back(resultBuffer);
   }
 
@@ -123,8 +121,8 @@ struct LinalgOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
-    return bufferizeLinalgOp(rewriter, cast<LinalgOp>(op), state);
+                          const BufferizationOptions &options) const {
+    return bufferizeLinalgOp(rewriter, cast<LinalgOp>(op), options);
   }
 };
 

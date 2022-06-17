@@ -25,7 +25,6 @@ namespace mlir {
 namespace bufferization {
 
 class AnalysisState;
-struct BufferizationState;
 struct BufferizationOptions;
 class OpFilter;
 
