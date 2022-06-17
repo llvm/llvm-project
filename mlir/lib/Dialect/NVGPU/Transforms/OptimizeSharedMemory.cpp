@@ -64,7 +64,7 @@ static Value permuteVectorOffset(OpBuilder &b, Location loc,
   int64_t M = llvm::Log2_64(memrefTy.getDimSize(tgtDim));
 
   // Capture bits[0:(M-N)] of src by first creating a (M-N) mask.
-  int64_t mask = (1 << (M - N)) - 1;
+  int64_t mask = (1LL << (M - N)) - 1;
   if (permuteEveryN > 1)
     mask = mask << llvm::Log2_64(permuteEveryN);
   Value srcBits = b.create<arith::ConstantIndexOp>(loc, mask);
@@ -191,7 +191,7 @@ mlir::nvgpu::optimizeSharedMemoryReadsAndWrites(Operation *parentOp,
       (8 * kSharedMemoryLineSizeBytes / memRefType.getElementTypeBitWidth()) /
       rowSize;
   const int64_t threadGroupSize =
-      1 << (7 - llvm::Log2_64(kDefaultVectorSizeBits / 8));
+      1LL << (7 - llvm::Log2_64(kDefaultVectorSizeBits / 8));
   if (rowsPerLine >= threadGroupSize)
     return failure();
 
