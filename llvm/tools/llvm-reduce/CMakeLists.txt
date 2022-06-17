@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsCodeGens
   AllTargetsDescs
   AllTargetsInfos
+  Analysis
   BitReader
   BitWriter
   CodeGen
