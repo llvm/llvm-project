@@ -2076,6 +2076,11 @@ struct XArrayCoorOpConversion
     assert(coor.shift().empty() || coor.shift().size() == rank);
     assert(coor.slice().empty() || coor.slice().size() == 3 * rank);
     mlir::Type idxTy = lowerTy().indexType();
+    unsigned indexOffset = coor.indicesOffset();
+    unsigned shapeOffset = coor.shapeOffset();
+    unsigned shiftOffset = coor.shiftOffset();
+    unsigned sliceOffset = coor.sliceOffset();
+    auto sliceOps = coor.slice().begin();
     mlir::Value one = genConstantIndex(loc, idxTy, rewriter, 1);
     mlir::Value prevExt = one;
     mlir::Value zero = genConstantIndex(loc, idxTy, rewriter, 0);
@@ -2085,29 +2090,30 @@ struct XArrayCoorOpConversion
     const bool baseIsBoxed = coor.memref().getType().isa<fir::BoxType>();
 
     // For each dimension of the array, generate the offset calculation.
-    for (unsigned i = 0; i < rank; ++i) {
+    for (unsigned i = 0; i < rank; ++i, ++indexOffset, ++shapeOffset,
+                  ++shiftOffset, sliceOffset += 3, sliceOps += 3) {
       mlir::Value index =
-          integerCast(loc, rewriter, idxTy, operands[coor.indicesOffset() + i]);
-      mlir::Value lb = isShifted ? integerCast(loc, rewriter, idxTy,
-                                               operands[coor.shiftOffset() + i])
-                                 : one;
+          integerCast(loc, rewriter, idxTy, operands[indexOffset]);
+      mlir::Value lb =
+          isShifted ? integerCast(loc, rewriter, idxTy, operands[shiftOffset])
+                    : one;
       mlir::Value step = one;
       bool normalSlice = isSliced;
       // Compute zero based index in dimension i of the element, applying
       // potential triplets and lower bounds.
       if (isSliced) {
-        mlir::Value ub = operands[coor.sliceOffset() + i + 1];
-        normalSlice = !mlir::isa_and_nonnull<fir::UndefOp>(ub.getDefiningOp());
+        mlir::Value originalUb = *(sliceOps + 1);
+        normalSlice =
+            !mlir::isa_and_nonnull<fir::UndefOp>(originalUb.getDefiningOp());
         if (normalSlice)
-          step = integerCast(loc, rewriter, idxTy,
-                             operands[coor.sliceOffset() + i + 2]);
+          step = integerCast(loc, rewriter, idxTy, operands[sliceOffset + 2]);
       }
       auto idx = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, index, lb);
       mlir::Value diff =
           rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, idx, step);
       if (normalSlice) {
         mlir::Value sliceLb =
-            integerCast(loc, rewriter, idxTy, operands[coor.sliceOffset() + i]);
+            integerCast(loc, rewriter, idxTy, operands[sliceOffset]);
         auto adj = rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, sliceLb, lb);
         diff = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, diff, adj);
       }
@@ -2125,8 +2131,7 @@ struct XArrayCoorOpConversion
         offset = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, offset);
         // Compute next stride assuming contiguity of the base array
         // (in element number).
-        auto nextExt =
-            integerCast(loc, rewriter, idxTy, operands[coor.shapeOffset() + i]);
+        auto nextExt = integerCast(loc, rewriter, idxTy, operands[shapeOffset]);
         prevExt =
             rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, prevExt, nextExt);
       }
