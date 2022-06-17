@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 using namespace llvm;
 
-using OptionalStatistic = Optional<std::pair<StringRef, unsigned>>;
+using OptionalStatistic = Optional<std::pair<StringRef, uint64_t>>;
 
 namespace {
 #define DEBUG_TYPE "unittest"
@@ -21,7 +21,7 @@ ALWAYS_ENABLED_STATISTIC(AlwaysCounter, "Counts things always");
 
 #if LLVM_ENABLE_STATS
 static void
-extractCounters(const std::vector<std::pair<StringRef, unsigned>> &Range,
+extractCounters(const std::vector<std::pair<StringRef, uint64_t>> &Range,
                 OptionalStatistic &S1, OptionalStatistic &S2) {
   for (const auto &S : Range) {
     if (S.first == "Counter")
@@ -36,20 +36,21 @@ TEST(StatisticTest, Count) {
   EnableStatistics();
 
   Counter = 0;
-  EXPECT_EQ(Counter, 0u);
+  EXPECT_EQ(Counter, 0ull);
   Counter++;
   Counter++;
+  Counter += (std::numeric_limits<uint64_t>::max() - 3);
 #if LLVM_ENABLE_STATS
-  EXPECT_EQ(Counter, 2u);
+  EXPECT_EQ(Counter, std::numeric_limits<uint64_t>::max() - 1);
 #else
-  EXPECT_EQ(Counter, 0u);
+  EXPECT_EQ(Counter, UINT64_C(0));
 #endif
 
   AlwaysCounter = 0;
-  EXPECT_EQ(AlwaysCounter, 0u);
+  EXPECT_EQ(AlwaysCounter, 0ull);
   AlwaysCounter++;
   ++AlwaysCounter;
-  EXPECT_EQ(AlwaysCounter, 2u);
+  EXPECT_EQ(AlwaysCounter, 2ull);
 }
 
 TEST(StatisticTest, Assign) {

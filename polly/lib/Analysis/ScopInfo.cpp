@@ -2559,7 +2559,7 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
   NumScops++;
   NumLoopsInScop += Stats.NumLoops;
   MaxNumLoopsInScop =
-      std::max(MaxNumLoopsInScop.getValue(), (unsigned)Stats.NumLoops);
+      std::max(MaxNumLoopsInScop.getValue(), (uint64_t)Stats.NumLoops);
 
   if (Stats.MaxDepth == 0)
     NumScopsDepthZero++;

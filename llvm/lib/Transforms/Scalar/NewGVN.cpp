@@ -3356,7 +3356,7 @@ void NewGVN::verifyStoreExpressions() const {
 // instruction set, propagating value numbers, marking things touched, etc,
 // until the set of touched instructions is completely empty.
 void NewGVN::iterateTouchedInstructions() {
-  unsigned int Iterations = 0;
+  uint64_t Iterations = 0;
   // Figure out where touchedinstructions starts
   int FirstInstr = TouchedInstructions.find_first();
   // Nothing set, nothing to iterate, just return.
