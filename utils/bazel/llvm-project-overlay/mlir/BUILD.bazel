@@ -6409,6 +6409,9 @@ cc_library(
         "include/mlir/ExecutionEngine/SparseTensorUtils.h",
     ],
     includes = ["include"],
+    deps = [
+        "//llvm:Support",
+    ],
 )
 
 cc_library(
