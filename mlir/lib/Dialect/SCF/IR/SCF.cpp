@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -23,7 +23,7 @@
 using namespace mlir;
 using namespace mlir::scf;
 
-#include "mlir/Dialect/SCF/SCFOpsDialect.cpp.inc"
+#include "mlir/Dialect/SCF/IR/SCFOpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // SCFDialect Dialect Interfaces
@@ -66,7 +66,7 @@ struct SCFInlinerInterface : public DialectInlinerInterface {
 void SCFDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/SCF/SCFOps.cpp.inc"
+#include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"
       >();
   addInterfaces<SCFInlinerInterface>();
 }
@@ -3325,4 +3325,4 @@ void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/SCF/SCFOps.cpp.inc"
+#include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"

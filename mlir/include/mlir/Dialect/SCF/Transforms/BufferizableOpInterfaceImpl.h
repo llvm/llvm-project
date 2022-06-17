@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SCF_BUFFERIZABLEOPINTERFACEIMPL_H
-#define MLIR_DIALECT_SCF_BUFFERIZABLEOPINTERFACEIMPL_H
+#ifndef MLIR_DIALECT_SCF_TRANSFORMS_BUFFERIZABLEOPINTERFACEIMPL_H
+#define MLIR_DIALECT_SCF_TRANSFORMS_BUFFERIZABLEOPINTERFACEIMPL_H
 
 namespace mlir {
 class DialectRegistry;

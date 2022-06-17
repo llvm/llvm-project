@@ -36,7 +36,7 @@ class TensorDialect;
 } // namespace tensor
 
 #define GEN_PASS_CLASSES
-#include "mlir/Dialect/SCF/Passes.h.inc"
+#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
 
 } // namespace mlir
 
