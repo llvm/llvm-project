@@ -39,11 +39,11 @@ namespace __llvm_libc {
 
 static inline void inline_memcpy(char *__restrict dst,
                                  const char *__restrict src, size_t count) {
+  using namespace __llvm_libc::builtin;
 #if defined(LLVM_LIBC_ARCH_X86)
   /////////////////////////////////////////////////////////////////////////////
   // LLVM_LIBC_ARCH_X86
   /////////////////////////////////////////////////////////////////////////////
-  using namespace __llvm_libc::x86;
 
   // Whether to use only rep;movsb.
   constexpr bool USE_ONLY_REP_MOVSB =
@@ -69,7 +69,7 @@ static inline void inline_memcpy(char *__restrict dst,
 #endif
 
   if (USE_ONLY_REP_MOVSB)
-    return copy<Accelerator>(dst, src, count);
+    return copy<x86::Accelerator>(dst, src, count);
 
   if (count == 0)
     return;
@@ -96,12 +96,11 @@ static inline void inline_memcpy(char *__restrict dst,
   if (count <= REP_MOVS_B_SIZE)
     return copy<Align<_32, Arg::Dst>::Then<Loop<LoopBlockSize>>>(dst, src,
                                                                  count);
-  return copy<Accelerator>(dst, src, count);
+  return copy<x86::Accelerator>(dst, src, count);
 #elif defined(LLVM_LIBC_ARCH_AARCH64)
   /////////////////////////////////////////////////////////////////////////////
   // LLVM_LIBC_ARCH_AARCH64
   /////////////////////////////////////////////////////////////////////////////
-  using namespace __llvm_libc::scalar;
   if (count == 0)
     return;
   if (count == 1)
@@ -127,7 +126,6 @@ static inline void inline_memcpy(char *__restrict dst,
   /////////////////////////////////////////////////////////////////////////////
   // Default
   /////////////////////////////////////////////////////////////////////////////
-  using namespace __llvm_libc::scalar;
   if (count == 0)
     return;
   if (count == 1)

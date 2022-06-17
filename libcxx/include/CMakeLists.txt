@@ -258,6 +258,7 @@ set(files
   __functional/bind_front.h
   __functional/binder1st.h
   __functional/binder2nd.h
+  __functional/boyer_moore_searcher.h
   __functional/compose.h
   __functional/default_searcher.h
   __functional/function.h

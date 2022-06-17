@@ -82,6 +82,38 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   }
 }
 
+static bool isSplatMoveInstr(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case RISCV::PseudoVMV_V_X_M1:
+  case RISCV::PseudoVMV_V_X_M2:
+  case RISCV::PseudoVMV_V_X_M4:
+  case RISCV::PseudoVMV_V_X_M8:
+  case RISCV::PseudoVMV_V_X_MF2:
+  case RISCV::PseudoVMV_V_X_MF4:
+  case RISCV::PseudoVMV_V_X_MF8:
+  case RISCV::PseudoVMV_V_I_M1:
+  case RISCV::PseudoVMV_V_I_M2:
+  case RISCV::PseudoVMV_V_I_M4:
+  case RISCV::PseudoVMV_V_I_M8:
+  case RISCV::PseudoVMV_V_I_MF2:
+  case RISCV::PseudoVMV_V_I_MF4:
+  case RISCV::PseudoVMV_V_I_MF8:
+    return true;
+  }
+}
+
+static bool isSplatOfZeroOrMinusOne(const MachineInstr &MI) {
+  if (!isSplatMoveInstr(MI))
+    return false;
+
+  const MachineOperand &SrcMO = MI.getOperand(1);
+  if (SrcMO.isImm())
+    return SrcMO.getImm() == 0 || SrcMO.getImm() == -1;
+  return SrcMO.isReg() && SrcMO.getReg() == RISCV::X0;
+}
+
 /// Get the EEW for a load or store instruction.  Return None if MI is not
 /// a load or store which ignores SEW.
 static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
@@ -271,6 +303,17 @@ static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   }
 }
 
+/// Return true if this is an operation on mask registers.  Note that
+/// this includes both arithmetic/logical ops and load/store (vlm/vsm).
+static bool isMaskRegOp(const MachineInstr &MI) {
+  if (RISCVII::hasSEWOp(MI.getDesc().TSFlags)) {
+    const unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
+    // A Log2SEW of 0 is an operation on mask registers only.
+    return Log2SEW == 0;
+  }
+  return false;
+}
+
 static unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
   unsigned LMul;
   bool Fractional;
@@ -366,6 +409,29 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
   // EMUL, but which allows us the flexibility to change SEW and LMUL
   // provided we don't change the ratio.
   if (getEEWForLoadStore(MI)) {
+    Res.SEW = false;
+    Res.LMUL = false;
+  }
+
+  // Store instructions don't use the policy fields.
+  if (RISCVII::hasSEWOp(TSFlags) && MI.getNumExplicitDefs() == 0) {
+    Res.TailPolicy = false;
+    Res.MaskPolicy = false;
+  }
+
+  // A splat of 0/-1 is always a splat of 0/-1, regardless of etype.
+  // TODO: We're currently demanding VL + SEWLMULRatio which is sufficient
+  // but not neccessary.  What we really need is VLInBytes.
+  if (isSplatOfZeroOrMinusOne(MI)) {
+    Res.SEW = false;
+    Res.LMUL = false;
+  }
+
+  // If this is a mask reg operation, it only cares about VLMAX.
+  // TODO: Possible extensions to this logic
+  // * Probably ok if available VLMax is larger than demanded
+  // * The policy bits can probably be ignored..
+  if (isMaskRegOp(MI)) {
     Res.SEW = false;
     Res.LMUL = false;
   }
@@ -537,31 +603,7 @@ public:
 
   bool hasCompatibleVTYPE(const MachineInstr &MI,
                           const VSETVLIInfo &Require) const {
-    // Simple case, see if full VTYPE matches.
-    if (hasSameVTYPE(Require))
-      return true;
-
-    // If this is a mask reg operation, it only cares about VLMAX.
-    // FIXME: Mask reg operations are probably ok if "this" VLMAX is larger
-    // than "Require".
-    // FIXME: The policy bits can probably be ignored for mask reg operations.
-    const unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
-    // A Log2SEW of 0 is an operation on mask registers only.
-    const bool MaskRegOp = Log2SEW == 0;
-    if (MaskRegOp && hasSameVLMAX(Require) &&
-        TailAgnostic == Require.TailAgnostic &&
-        MaskAgnostic == Require.MaskAgnostic)
-      return true;
-
-    DemandedFields Used = getDemanded(MI);
-    // Store instructions don't use the policy fields.
-    // TODO: Move this into getDemanded; it is here only to avoid changing
-    // behavior of the post pass in an otherwise NFC code restructure.
-    uint64_t TSFlags = MI.getDesc().TSFlags;
-    if (RISCVII::hasSEWOp(TSFlags) && MI.getNumExplicitDefs() == 0) {
-      Used.TailPolicy = false;
-      Used.MaskPolicy = false;
-    }
+    const DemandedFields Used = getDemanded(MI);
     return areCompatibleVTYPEs(encodeVTYPE(), Require.encodeVTYPE(), Used);
   }
 
@@ -775,19 +817,6 @@ static bool isVLPreservingConfig(const MachineInstr &MI) {
   return RISCV::X0 == MI.getOperand(0).getReg();
 }
 
-static MachineInstr *elideCopies(MachineInstr *MI,
-                                 const MachineRegisterInfo *MRI) {
-  while (true) {
-    if (!MI->isFullCopy())
-      return MI;
-    if (!Register::isVirtualRegister(MI->getOperand(1).getReg()))
-      return nullptr;
-    MI = MRI->getVRegDef(MI->getOperand(1).getReg());
-    if (!MI)
-      return nullptr;
-  }
-}
-
 static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
                                        const MachineRegisterInfo *MRI) {
   VSETVLIInfo InstrInfo;
@@ -823,13 +852,10 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
     // If the tied operand is an IMPLICIT_DEF we can keep TailAgnostic.
     const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
     MachineInstr *UseMI = MRI->getVRegDef(UseMO.getReg());
-    if (UseMI) {
-      UseMI = elideCopies(UseMI, MRI);
-      if (UseMI && UseMI->isImplicitDef()) {
-        TailAgnostic = true;
-        if (UsesMaskPolicy)
-          MaskAgnostic = true;
-      }
+    if (UseMI && UseMI->isImplicitDef()) {
+      TailAgnostic = true;
+      if (UsesMaskPolicy)
+        MaskAgnostic = true;
     }
     // Some pseudo instructions force a tail agnostic policy despite having a
     // tied def.

@@ -15,7 +15,7 @@ namespace printf_core {
 
 int FileWriter::write(const char *__restrict to_write, size_t len) {
   int written = file->write_unlocked(to_write, len);
-  if (written != len)
+  if (written != static_cast<int>(len))
     written = -1;
   if (file->error_unlocked())
     written = -2;

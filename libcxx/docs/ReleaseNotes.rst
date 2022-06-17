@@ -142,6 +142,10 @@ API Changes
   ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS``, this ensures that the members of
   ``allocator<void>`` removed in C++20 can be accessed.
 
+- The experimental versions of ``boyer_moore_searcher`` and ``boyer_moore_horspool_searcher``
+  will be removed in LLVM 17. You can disable the deprecation warnings by defining
+  ``_LIBCPP_NO_EXPERIMENTAL_DEPRECATION_WARNING_SEARCHERS``.
+
 ABI Changes
 -----------
 
