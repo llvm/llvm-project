@@ -24,19 +24,17 @@ bb1:
 
   %a.3 = alloca [6 x i16], align 1
 ; slice 1: [2,6)
-  %_tmp3 = getelementptr inbounds [6 x i16], [6 x i16]* %a.3, i16 0, i16 1
-  %_tmp5 = bitcast i16* %_tmp3 to i32*
-  store i32 131074, i32* %_tmp5, align 1
+  %_tmp3 = getelementptr inbounds [6 x i16], ptr %a.3, i16 0, i16 1
+  store i32 131074, ptr %_tmp3, align 1
 ; slice 2: [8,12)
-  %_tmp8 = getelementptr inbounds [6 x i16], [6 x i16]* %a.3, i16 0, i16 4
-  %_tmp10 = bitcast i16* %_tmp8 to i32*
-  store i32 131074, i32* %_tmp10, align 1
+  %_tmp8 = getelementptr inbounds [6 x i16], ptr %a.3, i16 0, i16 4
+  store i32 131074, ptr %_tmp8, align 1
 ; slice 3: [8,10)
-  %_tmp12 = getelementptr inbounds [6 x i16], [6 x i16]* %a.3, i16 0, i16 4
-  %_tmp13 = load i16, i16* %_tmp12, align 1
+  %_tmp12 = getelementptr inbounds [6 x i16], ptr %a.3, i16 0, i16 4
+  %_tmp13 = load i16, ptr %_tmp12, align 1
 ; slice 4: [2,4)
-  %_tmp15 = getelementptr inbounds [6 x i16], [6 x i16]* %a.3, i16 0, i16 1
-  %_tmp16 = load i16, i16* %_tmp15, align 1
+  %_tmp15 = getelementptr inbounds [6 x i16], ptr %a.3, i16 0, i16 1
+  %_tmp16 = load i16, ptr %_tmp15, align 1
 
   %rc = add i16 %_tmp13, %_tmp16
   ret i16 %rc
@@ -67,19 +65,17 @@ bb1:
 
   %a.3 = alloca [6 x i16], align 1
 ; slice 1: [2,6)
-  %_tmp3 = getelementptr inbounds [6 x i16], [6 x i16]* %a.3, i16 0, i16 1
-  %_tmp5 = bitcast i16* %_tmp3 to i32*
-  %_tmp6 = load i32, i32* %_tmp5, align 1
+  %_tmp3 = getelementptr inbounds [6 x i16], ptr %a.3, i16 0, i16 1
+  %_tmp6 = load i32, ptr %_tmp3, align 1
 ; slice 2: [8,12)
-  %_tmp8 = getelementptr inbounds [6 x i16], [6 x i16]* %a.3, i16 0, i16 4
-  %_tmp10 = bitcast i16* %_tmp8 to i32*
-  store i32 131074, i32* %_tmp10, align 1
+  %_tmp8 = getelementptr inbounds [6 x i16], ptr %a.3, i16 0, i16 4
+  store i32 131074, ptr %_tmp8, align 1
 ; slice 3: [8,10)
-  %_tmp12 = getelementptr inbounds [6 x i16], [6 x i16]* %a.3, i16 0, i16 4
-  %_tmp13 = load i16, i16* %_tmp12, align 1
+  %_tmp12 = getelementptr inbounds [6 x i16], ptr %a.3, i16 0, i16 4
+  %_tmp13 = load i16, ptr %_tmp12, align 1
 ; slice 4: [2,4)
-  %_tmp15 = getelementptr inbounds [6 x i16], [6 x i16]* %a.3, i16 0, i16 1
-  %_tmp16 = load i16, i16* %_tmp15, align 1
+  %_tmp15 = getelementptr inbounds [6 x i16], ptr %a.3, i16 0, i16 1
+  %_tmp16 = load i16, ptr %_tmp15, align 1
 
   %rc = add i16 %_tmp13, %_tmp16
   ret i16 %rc
