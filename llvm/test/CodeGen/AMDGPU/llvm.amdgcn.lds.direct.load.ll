@@ -1,4 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11 %s
 
 ; GFX11-LABEL: {{^}}lds_direct_load:
 ; GFX11: s_mov_b32 m0
