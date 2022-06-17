@@ -16,7 +16,7 @@ public:
   RegisterContextMach_arm(lldb_private::Thread &thread,
                           uint32_t concrete_frame_idx);
 
-  virtual ~RegisterContextMach_arm();
+  ~RegisterContextMach_arm() override;
 
 protected:
   int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override;
