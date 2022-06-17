@@ -4,13 +4,30 @@
 define void @f(<4 x half>* %a, <4 x half>* %b, <8 x half>* %c) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movdqa -{{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    movq (%rsi), %rax
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; CHECK-NEXT:    movdqa %xmm0, (%rdx)
+; CHECK-NEXT:    pinsrw $0, (%rdi), %xmm0
+; CHECK-NEXT:    pinsrw $0, 2(%rdi), %xmm1
+; CHECK-NEXT:    pinsrw $0, 4(%rdi), %xmm2
+; CHECK-NEXT:    pinsrw $0, 6(%rdi), %xmm3
+; CHECK-NEXT:    pinsrw $0, (%rsi), %xmm4
+; CHECK-NEXT:    pinsrw $0, 2(%rsi), %xmm5
+; CHECK-NEXT:    pinsrw $0, 4(%rsi), %xmm6
+; CHECK-NEXT:    pinsrw $0, 6(%rsi), %xmm7
+; CHECK-NEXT:    pextrw $0, %xmm7, %eax
+; CHECK-NEXT:    movw %ax, 14(%rdx)
+; CHECK-NEXT:    pextrw $0, %xmm3, %eax
+; CHECK-NEXT:    movw %ax, 12(%rdx)
+; CHECK-NEXT:    pextrw $0, %xmm6, %eax
+; CHECK-NEXT:    movw %ax, 10(%rdx)
+; CHECK-NEXT:    pextrw $0, %xmm2, %eax
+; CHECK-NEXT:    movw %ax, 8(%rdx)
+; CHECK-NEXT:    pextrw $0, %xmm5, %eax
+; CHECK-NEXT:    movw %ax, 6(%rdx)
+; CHECK-NEXT:    pextrw $0, %xmm1, %eax
+; CHECK-NEXT:    movw %ax, 4(%rdx)
+; CHECK-NEXT:    pextrw $0, %xmm4, %eax
+; CHECK-NEXT:    movw %ax, 2(%rdx)
+; CHECK-NEXT:    pextrw $0, %xmm0, %eax
+; CHECK-NEXT:    movw %ax, (%rdx)
 ; CHECK-NEXT:    retq
   %tmp4 = load <4 x half>, <4 x half>* %a
   %tmp5 = load <4 x half>, <4 x half>* %b

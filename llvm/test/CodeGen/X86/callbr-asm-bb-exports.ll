@@ -17,7 +17,7 @@
 ; CHECK-NEXT: t2: i32,ch = CopyFromReg t0, Register:i32 %2
 ; CHECK-NEXT: t8: i32 = add t2, Constant:i32<4>
 ; CHECK-NEXT: t22: ch,glue = CopyToReg t17, Register:i32 %5, t8
-; CHECK-NEXT: t30: ch,glue = inlineasm_br t22, TargetExternalSymbol:i64'xorl $0, $0; jmp ${1:l}', MDNode:ch<null>, TargetConstant:i64<8>, TargetConstant:i32<2293769>, Register:i32 %5, TargetConstant:i64<13>, TargetBlockAddress:i64<@test, %fail> 0, TargetConstant:i32<12>, Register:i32 $df, TargetConstant:i32<12>, Register:i16 $fpsw, TargetConstant:i32<12>, Register:i32 $eflags, t22:1
+; CHECK-NEXT: t30: ch,glue = inlineasm_br t22, TargetExternalSymbol:i64'xorl $0, $0; jmp ${1:l}', MDNode:ch<null>, TargetConstant:i64<8>, TargetConstant:i32<2359305>, Register:i32 %5, TargetConstant:i64<13>, TargetBlockAddress:i64<@test, %fail> 0, TargetConstant:i32<12>, Register:i32 $df, TargetConstant:i32<12>, Register:i16 $fpsw, TargetConstant:i32<12>, Register:i32 $eflags, t22:1
 
 define i32 @test(i32 %a, i32 %b, i32 %c) {
 entry:
