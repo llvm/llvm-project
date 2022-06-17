@@ -470,6 +470,8 @@ class targetCommandTestCase(TestBase):
                     substrs=["query requires one argument"])
 
     @no_debug_info_test
+    @expectedFailureAll(oslist=["freebsd"],
+                        bugnumber="github.com/llvm/llvm-project/issues/56079")
     def test_target_modules_type(self):
         self.buildB()
         self.runCmd("file " + self.getBuildArtifact("b.out"),

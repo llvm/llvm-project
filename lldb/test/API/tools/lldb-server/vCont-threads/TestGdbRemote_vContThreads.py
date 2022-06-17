@@ -58,6 +58,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfWindows
     @expectedFailureNetBSD
     @expectedFailureDarwin # No signals delivered
+    @expectedFailureAll(oslist=["freebsd"],
+                        bugnumber="github.com/llvm/llvm-project/issues/56086")
     @skipIfAsan # Times out under asan
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_process_without_tid(self):
@@ -85,6 +87,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd"],
+                        bugnumber="github.com/llvm/llvm-project/issues/56086")
     @expectedFailureDarwin # Only one signal delivered
     @skipIfAsan # Times out under asan
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
@@ -102,6 +106,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd"],
+                        bugnumber="github.com/llvm/llvm-project/issues/56086")
     @add_test_categories(["llgs"])
     @skipIfAsan # Times out under asan
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
@@ -118,6 +124,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd"],
+                        bugnumber="github.com/llvm/llvm-project/issues/56086")
     @add_test_categories(["llgs"])
     @skipIfAsan # Times out under asan
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
@@ -133,6 +141,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd"],
+                        bugnumber="github.com/llvm/llvm-project/issues/56086")
     @add_test_categories(["llgs"])
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
     def test_signal_minus_one(self):
@@ -146,6 +156,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd"],
+                        bugnumber="github.com/llvm/llvm-project/issues/56086")
     @add_test_categories(["llgs"])
     @skipIfAsan # Times out under asan
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
@@ -164,6 +176,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd"],
+                        bugnumber="github.com/llvm/llvm-project/issues/56086")
     @add_test_categories(["llgs"])
     @skipIfAsan # Times out under asan
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
@@ -180,6 +194,8 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @expectedFailureAll(oslist=["freebsd"],
+                        bugnumber="github.com/llvm/llvm-project/issues/56086")
     @add_test_categories(["llgs"])
     @skipIfAsan # Times out under asan
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"]) # Randomly fails on buildbot
