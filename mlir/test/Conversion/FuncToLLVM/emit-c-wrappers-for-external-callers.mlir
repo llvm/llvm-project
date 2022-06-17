@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-func-to-llvm='emit-c-wrappers=1' %s | FileCheck %s
+// RUN: mlir-opt -llvm-request-c-wrappers -convert-func-to-llvm %s | FileCheck %s
 
 // CHECK: llvm.func @res_attrs_with_memref_return() -> (!llvm.struct{{.*}} {test.returnOne})
 // CHECK-LABEL: llvm.func @_mlir_ciface_res_attrs_with_memref_return

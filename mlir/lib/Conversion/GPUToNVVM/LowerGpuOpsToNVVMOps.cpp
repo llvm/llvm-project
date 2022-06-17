@@ -166,18 +166,23 @@ struct LowerGpuOpsToNVVMOpsPass
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 
-    /// Customize the bitwidth used for the device side index computations.
+    // Request C wrapper emission.
+    for (auto func : m.getOps<func::FuncOp>()) {
+      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                    UnitAttr::get(&getContext()));
+    }
+
+    // Customize the bitwidth used for the device side index computations.
     LowerToLLVMOptions options(
         m.getContext(),
         DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
-    options.emitCWrappers = true;
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
-    /// MemRef conversion for GPU to NVVM lowering. The GPU dialect uses memory
-    /// space 5 for private memory attributions, but NVVM represents private
-    /// memory allocations as local `alloca`s in the default address space. This
-    /// converter drops the private memory space to support the use case above.
+    // MemRef conversion for GPU to NVVM lowering. The GPU dialect uses memory
+    // space 5 for private memory attributions, but NVVM represents private
+    // memory allocations as local `alloca`s in the default address space. This
+    // converter drops the private memory space to support the use case above.
     LLVMTypeConverter converter(m.getContext(), options);
     converter.addConversion([&](MemRefType type) -> Optional<Type> {
       if (type.getMemorySpaceAsInt() !=

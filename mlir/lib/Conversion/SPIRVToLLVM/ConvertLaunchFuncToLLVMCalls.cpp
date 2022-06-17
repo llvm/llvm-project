@@ -20,6 +20,7 @@
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVM.h"
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVMPass.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
@@ -280,9 +281,14 @@ public:
          llvm::make_early_inc_range(module.getOps<gpu::GPUModuleOp>()))
       gpuModule.erase();
 
+    // Request C wrapper emission.
+    for (auto func : module.getOps<func::FuncOp>()) {
+      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                    UnitAttr::get(&getContext()));
+    }
+
     // Specify options to lower to LLVM and pull in the conversion patterns.
     LowerToLLVMOptions options(module.getContext());
-    options.emitCWrappers = true;
     auto *context = module.getContext();
     RewritePatternSet patterns(context);
     LLVMTypeConverter typeConverter(context, options);

@@ -361,7 +361,6 @@ protected:
 /// FuncOp legalization pattern that converts MemRef arguments to pointers to
 /// MemRef descriptors (LLVM struct data types) containing all the MemRef type
 /// information.
-static constexpr StringRef kEmitIfaceAttrName = "llvm.emit_c_interface";
 struct FuncOpConversion : public FuncOpConversionBase {
   FuncOpConversion(LLVMTypeConverter &converter)
       : FuncOpConversionBase(converter) {}
@@ -373,8 +372,8 @@ struct FuncOpConversion : public FuncOpConversionBase {
     if (!newFuncOp)
       return failure();
 
-    if (getTypeConverter()->getOptions().emitCWrappers ||
-        funcOp->getAttrOfType<UnitAttr>(kEmitIfaceAttrName)) {
+    if (funcOp->getAttrOfType<UnitAttr>(
+            LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
       if (newFuncOp.isExternal())
         wrapExternalFunction(rewriter, funcOp.getLoc(), *getTypeConverter(),
                              funcOp, newFuncOp);
@@ -676,24 +675,16 @@ namespace {
 struct ConvertFuncToLLVMPass
     : public ConvertFuncToLLVMBase<ConvertFuncToLLVMPass> {
   ConvertFuncToLLVMPass() = default;
-  ConvertFuncToLLVMPass(bool useBarePtrCallConv, bool emitCWrappers,
-                        unsigned indexBitwidth, bool useAlignedAlloc,
+  ConvertFuncToLLVMPass(bool useBarePtrCallConv, unsigned indexBitwidth,
+                        bool useAlignedAlloc,
                         const llvm::DataLayout &dataLayout) {
     this->useBarePtrCallConv = useBarePtrCallConv;
-    this->emitCWrappers = emitCWrappers;
     this->indexBitwidth = indexBitwidth;
     this->dataLayout = dataLayout.getStringRepresentation();
   }
 
   /// Run the dialect converter on the module.
   void runOnOperation() override {
-    if (useBarePtrCallConv && emitCWrappers) {
-      getOperation().emitError()
-          << "incompatible conversion options: bare-pointer calling convention "
-             "and C wrapper emission";
-      signalPassFailure();
-      return;
-    }
     if (failed(LLVM::LLVMDialect::verifyDataLayoutString(
             this->dataLayout, [this](const Twine &message) {
               getOperation().emitError() << message.str();
@@ -708,7 +699,6 @@ struct ConvertFuncToLLVMPass
     LowerToLLVMOptions options(&getContext(),
                                dataLayoutAnalysis.getAtOrAbove(m));
     options.useBarePtrCallConv = useBarePtrCallConv;
-    options.emitCWrappers = emitCWrappers;
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
     options.dataLayout = llvm::DataLayout(this->dataLayout);
@@ -747,6 +737,6 @@ mlir::createConvertFuncToLLVMPass(const LowerToLLVMOptions &options) {
   bool useAlignedAlloc =
       (allocLowering == LowerToLLVMOptions::AllocLowering::AlignedAlloc);
   return std::make_unique<ConvertFuncToLLVMPass>(
-      options.useBarePtrCallConv, options.emitCWrappers,
-      options.getIndexBitwidth(), useAlignedAlloc, options.dataLayout);
+      options.useBarePtrCallConv, options.getIndexBitwidth(), useAlignedAlloc,
+      options.dataLayout);
 }

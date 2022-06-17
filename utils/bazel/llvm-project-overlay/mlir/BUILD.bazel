@@ -3397,6 +3397,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/LLVMIR/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":FuncDialect",
         ":IR",
         ":LLVMDialect",
         ":LLVMPassIncGen",
@@ -6484,6 +6485,7 @@ cc_binary(
         ":GPUTransforms",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":LLVMIRTransforms",
         ":LLVMToLLVMIRTranslation",
         ":MemRefDialect",
         ":MemRefToLLVM",
@@ -7273,6 +7275,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":FuncDialect",
         ":IR",
+        ":LLVMDialect",
         ":LinalgDialect",
         ":LinalgTransforms",
         ":MemRefDialect",

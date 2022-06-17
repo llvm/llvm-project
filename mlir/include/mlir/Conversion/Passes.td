@@ -294,9 +294,6 @@ def ConvertFuncToLLVM : Pass<"convert-func-to-llvm", "ModuleOp"> {
            /*default=*/"false",
            "Replace FuncOp's MemRef arguments with bare pointers to the MemRef "
            "element types">,
-    Option<"emitCWrappers", "emit-c-wrappers", "bool", /*default=*/"false",
-           "Emit wrappers for C-compatible pointer-to-struct memref "
-           "descriptors">,
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
