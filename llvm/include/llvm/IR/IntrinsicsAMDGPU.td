@@ -1488,7 +1488,7 @@ def int_amdgcn_interp_p2_f16 :
             [IntrNoMem, IntrSpeculatable, IntrWillReturn,
              ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
-// __int_amdgcn_lds_direct_load <m0>
+// llvm.amdgcn.lds.direct.load <m0>
 // The input argument is m0, which contains a packed combination of address
 // offset and flags describing the data type.
 def int_amdgcn_lds_direct_load :
@@ -1496,7 +1496,7 @@ def int_amdgcn_lds_direct_load :
             [llvm_i32_ty],
             [IntrReadMem, IntrSpeculatable, IntrWillReturn]>;
 
-// __int_amdgcn_lds_param_load <attr_chan>, <attr>, <m0>
+// llvm.amdgcn.lds.param.load <attr_chan>, <attr>, <m0>
 // Like interp intrinsics, this reads from lds, but the memory values are constant,
 // so it behaves like IntrNoMem.
 def int_amdgcn_lds_param_load :
@@ -1505,19 +1505,19 @@ def int_amdgcn_lds_param_load :
             [IntrNoMem, IntrSpeculatable, IntrWillReturn,
              ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
-// __int_amdgcn_interp_inreg_p10 <p>, <i>, <p0>
+// llvm.amdgcn.interp.inreg.p10 <p>, <i>, <p0>
 def int_amdgcn_interp_inreg_p10 :
   Intrinsic<[llvm_float_ty],
             [llvm_float_ty, llvm_float_ty, llvm_float_ty],
             [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
-// __int_amdgcn_interp_inreg_p2 <p>, <j>, <tmp>
+// llvm.amdgcn.interp.inreg.p2 <p>, <j>, <tmp>
 def int_amdgcn_interp_inreg_p2 :
   Intrinsic<[llvm_float_ty],
             [llvm_float_ty, llvm_float_ty, llvm_float_ty],
             [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
 
-// __int_amdgcn_interp_inreg_p10_f16 <p>, <i>, <p0>, <high>
+// llvm.amdgcn.interp.inreg.p10.f16 <p>, <i>, <p0>, <high>
 // high selects whether high or low 16-bits are used for p and p0 operands
 def int_amdgcn_interp_inreg_p10_f16:
   Intrinsic<[llvm_float_ty],
@@ -1525,7 +1525,7 @@ def int_amdgcn_interp_inreg_p10_f16:
             [IntrNoMem, IntrSpeculatable, IntrWillReturn,
              ImmArg<ArgIndex<3>>]>;
 
-// __int_amdgcn_interp_inreg_p2_f16 <p>, <j>, <tmp>, <high>
+// llvm.amdgcn.interp.inreg.p2.f16 <p>, <j>, <tmp>, <high>
 // high selects whether high or low 16-bits are used for p operand
 def int_amdgcn_interp_inreg_p2_f16 :
   Intrinsic<[llvm_half_ty],
