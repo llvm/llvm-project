@@ -1682,6 +1682,32 @@ void VPReductionPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPWidenPHIRecipe::execute(VPTransformState &State) {
+  assert(EnableVPlanNativePath &&
+         "Non-native vplans are not expected to have VPWidenPHIRecipes.");
+
+  // Currently we enter here in the VPlan-native path for non-induction
+  // PHIs where all control flow is uniform. We simply widen these PHIs.
+  // Create a vector phi with no operands - the vector phi operands will be
+  // set at the end of vector code generation.
+  VPBasicBlock *Parent = getParent();
+  VPRegionBlock *LoopRegion = Parent->getEnclosingLoopRegion();
+  unsigned StartIdx = 0;
+  // For phis in header blocks of loop regions, use the index of the value
+  // coming from the preheader.
+  if (LoopRegion->getEntryBasicBlock() == Parent) {
+    for (unsigned I = 0; I < getNumOperands(); ++I) {
+      if (getIncomingBlock(I) ==
+          LoopRegion->getSinglePredecessor()->getExitingBasicBlock())
+        StartIdx = I;
+    }
+  }
+  Value *Op0 = State.get(getOperand(StartIdx), 0);
+  Type *VecTy = Op0->getType();
+  Value *VecPhi = State.Builder.CreatePHI(VecTy, 2, "vec.phi");
+  State.set(this, VecPhi, 0);
+}
+
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
 
 void VPValue::replaceAllUsesWith(VPValue *New) {

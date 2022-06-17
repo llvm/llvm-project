@@ -918,11 +918,13 @@ int ExternalFileUnit::GetAsynchronousId(IoErrorHandler &handler) {
 }
 
 bool ExternalFileUnit::Wait(int id) {
-  if (id < 0 || asyncIdAvailable_.test(id)) {
+  if (static_cast<std::size_t>(id) >= asyncIdAvailable_.size() ||
+      asyncIdAvailable_.test(id)) {
     return false;
   } else {
-    if (id == 0) {
+    if (id == 0) { // means "all IDs"
       asyncIdAvailable_.set();
+      asyncIdAvailable_.reset(0);
     } else {
       asyncIdAvailable_.set(id);
     }

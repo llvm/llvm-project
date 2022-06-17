@@ -43,7 +43,7 @@ int convert(Writer *writer, const FormatSection &to_conv) {
     // return convert_oct(writer, to_conv);
   case 'x':
   case 'X':
-    // return convert_hex(writer, to_conv);
+    return convert_hex(writer, to_conv);
   // TODO(michaelrj): add a flag to disable float point values here
   case 'f':
   case 'F':

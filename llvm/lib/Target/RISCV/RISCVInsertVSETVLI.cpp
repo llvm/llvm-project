@@ -82,7 +82,283 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   }
 }
 
+/// Get the EEW for a load or store instruction.  Return None if MI is not
+/// a load or store which ignores SEW.
+static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    return None;
+  case RISCV::PseudoVLE8_V_M1:
+  case RISCV::PseudoVLE8_V_M1_MASK:
+  case RISCV::PseudoVLE8_V_M2:
+  case RISCV::PseudoVLE8_V_M2_MASK:
+  case RISCV::PseudoVLE8_V_M4:
+  case RISCV::PseudoVLE8_V_M4_MASK:
+  case RISCV::PseudoVLE8_V_M8:
+  case RISCV::PseudoVLE8_V_M8_MASK:
+  case RISCV::PseudoVLE8_V_MF2:
+  case RISCV::PseudoVLE8_V_MF2_MASK:
+  case RISCV::PseudoVLE8_V_MF4:
+  case RISCV::PseudoVLE8_V_MF4_MASK:
+  case RISCV::PseudoVLE8_V_MF8:
+  case RISCV::PseudoVLE8_V_MF8_MASK:
+  case RISCV::PseudoVLSE8_V_M1:
+  case RISCV::PseudoVLSE8_V_M1_MASK:
+  case RISCV::PseudoVLSE8_V_M2:
+  case RISCV::PseudoVLSE8_V_M2_MASK:
+  case RISCV::PseudoVLSE8_V_M4:
+  case RISCV::PseudoVLSE8_V_M4_MASK:
+  case RISCV::PseudoVLSE8_V_M8:
+  case RISCV::PseudoVLSE8_V_M8_MASK:
+  case RISCV::PseudoVLSE8_V_MF2:
+  case RISCV::PseudoVLSE8_V_MF2_MASK:
+  case RISCV::PseudoVLSE8_V_MF4:
+  case RISCV::PseudoVLSE8_V_MF4_MASK:
+  case RISCV::PseudoVLSE8_V_MF8:
+  case RISCV::PseudoVLSE8_V_MF8_MASK:
+  case RISCV::PseudoVSE8_V_M1:
+  case RISCV::PseudoVSE8_V_M1_MASK:
+  case RISCV::PseudoVSE8_V_M2:
+  case RISCV::PseudoVSE8_V_M2_MASK:
+  case RISCV::PseudoVSE8_V_M4:
+  case RISCV::PseudoVSE8_V_M4_MASK:
+  case RISCV::PseudoVSE8_V_M8:
+  case RISCV::PseudoVSE8_V_M8_MASK:
+  case RISCV::PseudoVSE8_V_MF2:
+  case RISCV::PseudoVSE8_V_MF2_MASK:
+  case RISCV::PseudoVSE8_V_MF4:
+  case RISCV::PseudoVSE8_V_MF4_MASK:
+  case RISCV::PseudoVSE8_V_MF8:
+  case RISCV::PseudoVSE8_V_MF8_MASK:
+  case RISCV::PseudoVSSE8_V_M1:
+  case RISCV::PseudoVSSE8_V_M1_MASK:
+  case RISCV::PseudoVSSE8_V_M2:
+  case RISCV::PseudoVSSE8_V_M2_MASK:
+  case RISCV::PseudoVSSE8_V_M4:
+  case RISCV::PseudoVSSE8_V_M4_MASK:
+  case RISCV::PseudoVSSE8_V_M8:
+  case RISCV::PseudoVSSE8_V_M8_MASK:
+  case RISCV::PseudoVSSE8_V_MF2:
+  case RISCV::PseudoVSSE8_V_MF2_MASK:
+  case RISCV::PseudoVSSE8_V_MF4:
+  case RISCV::PseudoVSSE8_V_MF4_MASK:
+  case RISCV::PseudoVSSE8_V_MF8:
+  case RISCV::PseudoVSSE8_V_MF8_MASK:
+    return 8;
+  case RISCV::PseudoVLE16_V_M1:
+  case RISCV::PseudoVLE16_V_M1_MASK:
+  case RISCV::PseudoVLE16_V_M2:
+  case RISCV::PseudoVLE16_V_M2_MASK:
+  case RISCV::PseudoVLE16_V_M4:
+  case RISCV::PseudoVLE16_V_M4_MASK:
+  case RISCV::PseudoVLE16_V_M8:
+  case RISCV::PseudoVLE16_V_M8_MASK:
+  case RISCV::PseudoVLE16_V_MF2:
+  case RISCV::PseudoVLE16_V_MF2_MASK:
+  case RISCV::PseudoVLE16_V_MF4:
+  case RISCV::PseudoVLE16_V_MF4_MASK:
+  case RISCV::PseudoVLSE16_V_M1:
+  case RISCV::PseudoVLSE16_V_M1_MASK:
+  case RISCV::PseudoVLSE16_V_M2:
+  case RISCV::PseudoVLSE16_V_M2_MASK:
+  case RISCV::PseudoVLSE16_V_M4:
+  case RISCV::PseudoVLSE16_V_M4_MASK:
+  case RISCV::PseudoVLSE16_V_M8:
+  case RISCV::PseudoVLSE16_V_M8_MASK:
+  case RISCV::PseudoVLSE16_V_MF2:
+  case RISCV::PseudoVLSE16_V_MF2_MASK:
+  case RISCV::PseudoVLSE16_V_MF4:
+  case RISCV::PseudoVLSE16_V_MF4_MASK:
+  case RISCV::PseudoVSE16_V_M1:
+  case RISCV::PseudoVSE16_V_M1_MASK:
+  case RISCV::PseudoVSE16_V_M2:
+  case RISCV::PseudoVSE16_V_M2_MASK:
+  case RISCV::PseudoVSE16_V_M4:
+  case RISCV::PseudoVSE16_V_M4_MASK:
+  case RISCV::PseudoVSE16_V_M8:
+  case RISCV::PseudoVSE16_V_M8_MASK:
+  case RISCV::PseudoVSE16_V_MF2:
+  case RISCV::PseudoVSE16_V_MF2_MASK:
+  case RISCV::PseudoVSE16_V_MF4:
+  case RISCV::PseudoVSE16_V_MF4_MASK:
+  case RISCV::PseudoVSSE16_V_M1:
+  case RISCV::PseudoVSSE16_V_M1_MASK:
+  case RISCV::PseudoVSSE16_V_M2:
+  case RISCV::PseudoVSSE16_V_M2_MASK:
+  case RISCV::PseudoVSSE16_V_M4:
+  case RISCV::PseudoVSSE16_V_M4_MASK:
+  case RISCV::PseudoVSSE16_V_M8:
+  case RISCV::PseudoVSSE16_V_M8_MASK:
+  case RISCV::PseudoVSSE16_V_MF2:
+  case RISCV::PseudoVSSE16_V_MF2_MASK:
+  case RISCV::PseudoVSSE16_V_MF4:
+  case RISCV::PseudoVSSE16_V_MF4_MASK:
+    return 16;
+  case RISCV::PseudoVLE32_V_M1:
+  case RISCV::PseudoVLE32_V_M1_MASK:
+  case RISCV::PseudoVLE32_V_M2:
+  case RISCV::PseudoVLE32_V_M2_MASK:
+  case RISCV::PseudoVLE32_V_M4:
+  case RISCV::PseudoVLE32_V_M4_MASK:
+  case RISCV::PseudoVLE32_V_M8:
+  case RISCV::PseudoVLE32_V_M8_MASK:
+  case RISCV::PseudoVLE32_V_MF2:
+  case RISCV::PseudoVLE32_V_MF2_MASK:
+  case RISCV::PseudoVLSE32_V_M1:
+  case RISCV::PseudoVLSE32_V_M1_MASK:
+  case RISCV::PseudoVLSE32_V_M2:
+  case RISCV::PseudoVLSE32_V_M2_MASK:
+  case RISCV::PseudoVLSE32_V_M4:
+  case RISCV::PseudoVLSE32_V_M4_MASK:
+  case RISCV::PseudoVLSE32_V_M8:
+  case RISCV::PseudoVLSE32_V_M8_MASK:
+  case RISCV::PseudoVLSE32_V_MF2:
+  case RISCV::PseudoVLSE32_V_MF2_MASK:
+  case RISCV::PseudoVSE32_V_M1:
+  case RISCV::PseudoVSE32_V_M1_MASK:
+  case RISCV::PseudoVSE32_V_M2:
+  case RISCV::PseudoVSE32_V_M2_MASK:
+  case RISCV::PseudoVSE32_V_M4:
+  case RISCV::PseudoVSE32_V_M4_MASK:
+  case RISCV::PseudoVSE32_V_M8:
+  case RISCV::PseudoVSE32_V_M8_MASK:
+  case RISCV::PseudoVSE32_V_MF2:
+  case RISCV::PseudoVSE32_V_MF2_MASK:
+  case RISCV::PseudoVSSE32_V_M1:
+  case RISCV::PseudoVSSE32_V_M1_MASK:
+  case RISCV::PseudoVSSE32_V_M2:
+  case RISCV::PseudoVSSE32_V_M2_MASK:
+  case RISCV::PseudoVSSE32_V_M4:
+  case RISCV::PseudoVSSE32_V_M4_MASK:
+  case RISCV::PseudoVSSE32_V_M8:
+  case RISCV::PseudoVSSE32_V_M8_MASK:
+  case RISCV::PseudoVSSE32_V_MF2:
+  case RISCV::PseudoVSSE32_V_MF2_MASK:
+    return 32;
+  case RISCV::PseudoVLE64_V_M1:
+  case RISCV::PseudoVLE64_V_M1_MASK:
+  case RISCV::PseudoVLE64_V_M2:
+  case RISCV::PseudoVLE64_V_M2_MASK:
+  case RISCV::PseudoVLE64_V_M4:
+  case RISCV::PseudoVLE64_V_M4_MASK:
+  case RISCV::PseudoVLE64_V_M8:
+  case RISCV::PseudoVLE64_V_M8_MASK:
+  case RISCV::PseudoVLSE64_V_M1:
+  case RISCV::PseudoVLSE64_V_M1_MASK:
+  case RISCV::PseudoVLSE64_V_M2:
+  case RISCV::PseudoVLSE64_V_M2_MASK:
+  case RISCV::PseudoVLSE64_V_M4:
+  case RISCV::PseudoVLSE64_V_M4_MASK:
+  case RISCV::PseudoVLSE64_V_M8:
+  case RISCV::PseudoVLSE64_V_M8_MASK:
+  case RISCV::PseudoVSE64_V_M1:
+  case RISCV::PseudoVSE64_V_M1_MASK:
+  case RISCV::PseudoVSE64_V_M2:
+  case RISCV::PseudoVSE64_V_M2_MASK:
+  case RISCV::PseudoVSE64_V_M4:
+  case RISCV::PseudoVSE64_V_M4_MASK:
+  case RISCV::PseudoVSE64_V_M8:
+  case RISCV::PseudoVSE64_V_M8_MASK:
+  case RISCV::PseudoVSSE64_V_M1:
+  case RISCV::PseudoVSSE64_V_M1_MASK:
+  case RISCV::PseudoVSSE64_V_M2:
+  case RISCV::PseudoVSSE64_V_M2_MASK:
+  case RISCV::PseudoVSSE64_V_M4:
+  case RISCV::PseudoVSSE64_V_M4_MASK:
+  case RISCV::PseudoVSSE64_V_M8:
+  case RISCV::PseudoVSSE64_V_M8_MASK:
+    return 64;
+  }
+}
 
+static unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
+  unsigned LMul;
+  bool Fractional;
+  std::tie(LMul, Fractional) = RISCVVType::decodeVLMUL(VLMul);
+
+  // Convert LMul to a fixed point value with 3 fractional bits.
+  LMul = Fractional ? (8 / LMul) : (LMul * 8);
+
+  assert(SEW >= 8 && "Unexpected SEW value");
+  return (SEW * 8) / LMul;
+}
+
+/// Which subfields of VL or VTYPE have values we need to preserve?
+struct DemandedFields {
+  bool VL = false;
+  bool SEW = false;
+  bool LMUL = false;
+  bool SEWLMULRatio = false;
+  bool TailPolicy = false;
+  bool MaskPolicy = false;
+
+  // Return true if any part of VTYPE was used
+  bool usedVTYPE() {
+    return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy;
+  }
+};
+
+/// Return true if the two values of the VTYPE register provided are
+/// indistinguishable from the perspective of an instruction (or set of
+/// instructions) which use only the Used subfields and properties.
+static bool areCompatibleVTYPEs(uint64_t VType1,
+                                uint64_t VType2,
+                                const DemandedFields &Used) {
+  if (Used.SEW &&
+      RISCVVType::getSEW(VType1) != RISCVVType::getSEW(VType2))
+    return false;
+
+  if (Used.LMUL &&
+      RISCVVType::getVLMUL(VType1) != RISCVVType::getVLMUL(VType2))
+    return false;
+
+  if (Used.SEWLMULRatio) {
+    auto Ratio1 = getSEWLMULRatio(RISCVVType::getSEW(VType1),
+                                  RISCVVType::getVLMUL(VType1));
+    auto Ratio2 = getSEWLMULRatio(RISCVVType::getSEW(VType2),
+                                  RISCVVType::getVLMUL(VType2));
+    if (Ratio1 != Ratio2)
+      return false;
+  }
+
+  if (Used.TailPolicy &&
+      RISCVVType::isTailAgnostic(VType1) != RISCVVType::isTailAgnostic(VType2))
+    return false;
+  if (Used.MaskPolicy &&
+      RISCVVType::isMaskAgnostic(VType1) != RISCVVType::isMaskAgnostic(VType2))
+    return false;
+  return true;
+}
+
+/// Return the fields and properties demanded by the provided instruction.
+static DemandedFields getDemanded(const MachineInstr &MI) {
+  // Most instructions don't use any of these subfeilds.
+  DemandedFields Res;
+  // Start conservative if registers are used
+  if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VL))
+    Res.VL = true;
+  if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VTYPE)) {
+    Res.SEW = true;
+    Res.LMUL = true;
+    Res.SEWLMULRatio = true;
+    Res.TailPolicy = true;
+    Res.MaskPolicy = true;
+  }
+
+  // Loads and stores with implicit EEW do not demand SEW or LMUL directly.
+  // They instead demand the ratio of the two which is used in computing
+  // EMUL, but which allows us the flexibility to change SEW and LMUL
+  // provided we don't change the ratio.
+  if (getEEWForLoadStore(MI)) {
+    Res.SEW = false;
+    Res.LMUL = false;
+  }
+
+  return Res;
+}
+
+/// Defines the abstract state with which the forward dataflow models the
+/// values of the VL and VTYPE registers after insertion.
 class VSETVLIInfo {
   union {
     Register AVLReg;
@@ -216,22 +492,10 @@ public:
                     Other.MaskAgnostic);
   }
 
-  static unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
-    unsigned LMul;
-    bool Fractional;
-    std::tie(LMul, Fractional) = RISCVVType::decodeVLMUL(VLMul);
-
-    // Convert LMul to a fixed point value with 3 fractional bits.
-    LMul = Fractional ? (8 / LMul) : (LMul * 8);
-
-    assert(SEW >= 8 && "Unexpected SEW value");
-    return (SEW * 8) / LMul;
-  }
-
   unsigned getSEWLMULRatio() const {
     assert(isValid() && !isUnknown() &&
            "Can't use VTYPE for uninitialized or unknown");
-    return getSEWLMULRatio(SEW, VLMul);
+    return ::getSEWLMULRatio(SEW, VLMul);
   }
 
   // Check if the VTYPE for these two VSETVLIInfos produce the same VLMAX.
@@ -337,7 +601,7 @@ public:
     if (!hasSameAVL(Require))
       return false;
 
-    return getSEWLMULRatio() == getSEWLMULRatio(EEW, Require.VLMul);
+    return getSEWLMULRatio() == ::getSEWLMULRatio(EEW, Require.VLMul);
   }
 
   bool operator==(const VSETVLIInfo &Other) const {
@@ -701,195 +965,6 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
   NewInfo.setVTYPE(MI.getOperand(2).getImm());
 
   return NewInfo;
-}
-
-/// Get the EEW for a load or store instruction.  Return None if MI is not
-/// a load or store which ignores SEW.
-static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    return None;
-  case RISCV::PseudoVLE8_V_M1:
-  case RISCV::PseudoVLE8_V_M1_MASK:
-  case RISCV::PseudoVLE8_V_M2:
-  case RISCV::PseudoVLE8_V_M2_MASK:
-  case RISCV::PseudoVLE8_V_M4:
-  case RISCV::PseudoVLE8_V_M4_MASK:
-  case RISCV::PseudoVLE8_V_M8:
-  case RISCV::PseudoVLE8_V_M8_MASK:
-  case RISCV::PseudoVLE8_V_MF2:
-  case RISCV::PseudoVLE8_V_MF2_MASK:
-  case RISCV::PseudoVLE8_V_MF4:
-  case RISCV::PseudoVLE8_V_MF4_MASK:
-  case RISCV::PseudoVLE8_V_MF8:
-  case RISCV::PseudoVLE8_V_MF8_MASK:
-  case RISCV::PseudoVLSE8_V_M1:
-  case RISCV::PseudoVLSE8_V_M1_MASK:
-  case RISCV::PseudoVLSE8_V_M2:
-  case RISCV::PseudoVLSE8_V_M2_MASK:
-  case RISCV::PseudoVLSE8_V_M4:
-  case RISCV::PseudoVLSE8_V_M4_MASK:
-  case RISCV::PseudoVLSE8_V_M8:
-  case RISCV::PseudoVLSE8_V_M8_MASK:
-  case RISCV::PseudoVLSE8_V_MF2:
-  case RISCV::PseudoVLSE8_V_MF2_MASK:
-  case RISCV::PseudoVLSE8_V_MF4:
-  case RISCV::PseudoVLSE8_V_MF4_MASK:
-  case RISCV::PseudoVLSE8_V_MF8:
-  case RISCV::PseudoVLSE8_V_MF8_MASK:
-  case RISCV::PseudoVSE8_V_M1:
-  case RISCV::PseudoVSE8_V_M1_MASK:
-  case RISCV::PseudoVSE8_V_M2:
-  case RISCV::PseudoVSE8_V_M2_MASK:
-  case RISCV::PseudoVSE8_V_M4:
-  case RISCV::PseudoVSE8_V_M4_MASK:
-  case RISCV::PseudoVSE8_V_M8:
-  case RISCV::PseudoVSE8_V_M8_MASK:
-  case RISCV::PseudoVSE8_V_MF2:
-  case RISCV::PseudoVSE8_V_MF2_MASK:
-  case RISCV::PseudoVSE8_V_MF4:
-  case RISCV::PseudoVSE8_V_MF4_MASK:
-  case RISCV::PseudoVSE8_V_MF8:
-  case RISCV::PseudoVSE8_V_MF8_MASK:
-  case RISCV::PseudoVSSE8_V_M1:
-  case RISCV::PseudoVSSE8_V_M1_MASK:
-  case RISCV::PseudoVSSE8_V_M2:
-  case RISCV::PseudoVSSE8_V_M2_MASK:
-  case RISCV::PseudoVSSE8_V_M4:
-  case RISCV::PseudoVSSE8_V_M4_MASK:
-  case RISCV::PseudoVSSE8_V_M8:
-  case RISCV::PseudoVSSE8_V_M8_MASK:
-  case RISCV::PseudoVSSE8_V_MF2:
-  case RISCV::PseudoVSSE8_V_MF2_MASK:
-  case RISCV::PseudoVSSE8_V_MF4:
-  case RISCV::PseudoVSSE8_V_MF4_MASK:
-  case RISCV::PseudoVSSE8_V_MF8:
-  case RISCV::PseudoVSSE8_V_MF8_MASK:
-    return 8;
-  case RISCV::PseudoVLE16_V_M1:
-  case RISCV::PseudoVLE16_V_M1_MASK:
-  case RISCV::PseudoVLE16_V_M2:
-  case RISCV::PseudoVLE16_V_M2_MASK:
-  case RISCV::PseudoVLE16_V_M4:
-  case RISCV::PseudoVLE16_V_M4_MASK:
-  case RISCV::PseudoVLE16_V_M8:
-  case RISCV::PseudoVLE16_V_M8_MASK:
-  case RISCV::PseudoVLE16_V_MF2:
-  case RISCV::PseudoVLE16_V_MF2_MASK:
-  case RISCV::PseudoVLE16_V_MF4:
-  case RISCV::PseudoVLE16_V_MF4_MASK:
-  case RISCV::PseudoVLSE16_V_M1:
-  case RISCV::PseudoVLSE16_V_M1_MASK:
-  case RISCV::PseudoVLSE16_V_M2:
-  case RISCV::PseudoVLSE16_V_M2_MASK:
-  case RISCV::PseudoVLSE16_V_M4:
-  case RISCV::PseudoVLSE16_V_M4_MASK:
-  case RISCV::PseudoVLSE16_V_M8:
-  case RISCV::PseudoVLSE16_V_M8_MASK:
-  case RISCV::PseudoVLSE16_V_MF2:
-  case RISCV::PseudoVLSE16_V_MF2_MASK:
-  case RISCV::PseudoVLSE16_V_MF4:
-  case RISCV::PseudoVLSE16_V_MF4_MASK:
-  case RISCV::PseudoVSE16_V_M1:
-  case RISCV::PseudoVSE16_V_M1_MASK:
-  case RISCV::PseudoVSE16_V_M2:
-  case RISCV::PseudoVSE16_V_M2_MASK:
-  case RISCV::PseudoVSE16_V_M4:
-  case RISCV::PseudoVSE16_V_M4_MASK:
-  case RISCV::PseudoVSE16_V_M8:
-  case RISCV::PseudoVSE16_V_M8_MASK:
-  case RISCV::PseudoVSE16_V_MF2:
-  case RISCV::PseudoVSE16_V_MF2_MASK:
-  case RISCV::PseudoVSE16_V_MF4:
-  case RISCV::PseudoVSE16_V_MF4_MASK:
-  case RISCV::PseudoVSSE16_V_M1:
-  case RISCV::PseudoVSSE16_V_M1_MASK:
-  case RISCV::PseudoVSSE16_V_M2:
-  case RISCV::PseudoVSSE16_V_M2_MASK:
-  case RISCV::PseudoVSSE16_V_M4:
-  case RISCV::PseudoVSSE16_V_M4_MASK:
-  case RISCV::PseudoVSSE16_V_M8:
-  case RISCV::PseudoVSSE16_V_M8_MASK:
-  case RISCV::PseudoVSSE16_V_MF2:
-  case RISCV::PseudoVSSE16_V_MF2_MASK:
-  case RISCV::PseudoVSSE16_V_MF4:
-  case RISCV::PseudoVSSE16_V_MF4_MASK:
-    return 16;
-  case RISCV::PseudoVLE32_V_M1:
-  case RISCV::PseudoVLE32_V_M1_MASK:
-  case RISCV::PseudoVLE32_V_M2:
-  case RISCV::PseudoVLE32_V_M2_MASK:
-  case RISCV::PseudoVLE32_V_M4:
-  case RISCV::PseudoVLE32_V_M4_MASK:
-  case RISCV::PseudoVLE32_V_M8:
-  case RISCV::PseudoVLE32_V_M8_MASK:
-  case RISCV::PseudoVLE32_V_MF2:
-  case RISCV::PseudoVLE32_V_MF2_MASK:
-  case RISCV::PseudoVLSE32_V_M1:
-  case RISCV::PseudoVLSE32_V_M1_MASK:
-  case RISCV::PseudoVLSE32_V_M2:
-  case RISCV::PseudoVLSE32_V_M2_MASK:
-  case RISCV::PseudoVLSE32_V_M4:
-  case RISCV::PseudoVLSE32_V_M4_MASK:
-  case RISCV::PseudoVLSE32_V_M8:
-  case RISCV::PseudoVLSE32_V_M8_MASK:
-  case RISCV::PseudoVLSE32_V_MF2:
-  case RISCV::PseudoVLSE32_V_MF2_MASK:
-  case RISCV::PseudoVSE32_V_M1:
-  case RISCV::PseudoVSE32_V_M1_MASK:
-  case RISCV::PseudoVSE32_V_M2:
-  case RISCV::PseudoVSE32_V_M2_MASK:
-  case RISCV::PseudoVSE32_V_M4:
-  case RISCV::PseudoVSE32_V_M4_MASK:
-  case RISCV::PseudoVSE32_V_M8:
-  case RISCV::PseudoVSE32_V_M8_MASK:
-  case RISCV::PseudoVSE32_V_MF2:
-  case RISCV::PseudoVSE32_V_MF2_MASK:
-  case RISCV::PseudoVSSE32_V_M1:
-  case RISCV::PseudoVSSE32_V_M1_MASK:
-  case RISCV::PseudoVSSE32_V_M2:
-  case RISCV::PseudoVSSE32_V_M2_MASK:
-  case RISCV::PseudoVSSE32_V_M4:
-  case RISCV::PseudoVSSE32_V_M4_MASK:
-  case RISCV::PseudoVSSE32_V_M8:
-  case RISCV::PseudoVSSE32_V_M8_MASK:
-  case RISCV::PseudoVSSE32_V_MF2:
-  case RISCV::PseudoVSSE32_V_MF2_MASK:
-    return 32;
-  case RISCV::PseudoVLE64_V_M1:
-  case RISCV::PseudoVLE64_V_M1_MASK:
-  case RISCV::PseudoVLE64_V_M2:
-  case RISCV::PseudoVLE64_V_M2_MASK:
-  case RISCV::PseudoVLE64_V_M4:
-  case RISCV::PseudoVLE64_V_M4_MASK:
-  case RISCV::PseudoVLE64_V_M8:
-  case RISCV::PseudoVLE64_V_M8_MASK:
-  case RISCV::PseudoVLSE64_V_M1:
-  case RISCV::PseudoVLSE64_V_M1_MASK:
-  case RISCV::PseudoVLSE64_V_M2:
-  case RISCV::PseudoVLSE64_V_M2_MASK:
-  case RISCV::PseudoVLSE64_V_M4:
-  case RISCV::PseudoVLSE64_V_M4_MASK:
-  case RISCV::PseudoVLSE64_V_M8:
-  case RISCV::PseudoVLSE64_V_M8_MASK:
-  case RISCV::PseudoVSE64_V_M1:
-  case RISCV::PseudoVSE64_V_M1_MASK:
-  case RISCV::PseudoVSE64_V_M2:
-  case RISCV::PseudoVSE64_V_M2_MASK:
-  case RISCV::PseudoVSE64_V_M4:
-  case RISCV::PseudoVSE64_V_M4_MASK:
-  case RISCV::PseudoVSE64_V_M8:
-  case RISCV::PseudoVSE64_V_M8_MASK:
-  case RISCV::PseudoVSSE64_V_M1:
-  case RISCV::PseudoVSSE64_V_M1_MASK:
-  case RISCV::PseudoVSSE64_V_M2:
-  case RISCV::PseudoVSSE64_V_M2_MASK:
-  case RISCV::PseudoVSSE64_V_M4:
-  case RISCV::PseudoVSSE64_V_M4_MASK:
-  case RISCV::PseudoVSSE64_V_M8:
-  case RISCV::PseudoVSSE64_V_M8_MASK:
-    return 64;
-  }
 }
 
 static bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
@@ -1365,21 +1440,6 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
                 AvailableInfo, OldInfo);
 }
 
-/// Which subfields of VL or VTYPE have values we need to preserve?
-struct DemandedFields {
-  bool VL = false;
-  bool SEW = false;
-  bool LMUL = false;
-  bool SEWLMULRatio = false;
-  bool TailPolicy = false;
-  bool MaskPolicy = false;
-
-  // Return true if any part of VTYPE was used
-  bool usedVTYPE() {
-    return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy;
-  }
-};
-
 static void doUnion(DemandedFields &A, DemandedFields B) {
   A.VL |= B.VL;
   A.SEW |= B.SEW;
@@ -1389,22 +1449,28 @@ static void doUnion(DemandedFields &A, DemandedFields B) {
   A.MaskPolicy |= B.MaskPolicy;
 }
 
-// Return which fields are demanded by the given instruction.
-static DemandedFields getDemanded(const MachineInstr &MI) {
-  // Most instructions don't use any of these subfeilds.
-  DemandedFields Res;
-  // Start conservative if registers are used
-  if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VL))
-    Res.VL = true;
-  if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VTYPE)) {
-    Res.SEW = true;
-    Res.LMUL = true;
-    Res.SEWLMULRatio = true;
-    Res.TailPolicy = true;
-    Res.MaskPolicy = true;
-  }
+// Return true if we can mutate PrevMI's VTYPE to match MI's
+// without changing any the fields which have been used.
+// TODO: Restructure code to allow code reuse between this and isCompatible
+// above.
+static bool canMutatePriorConfig(const MachineInstr &PrevMI,
+                                 const MachineInstr &MI,
+                                 const DemandedFields &Used) {
+  // TODO: Extend this to handle cases where VL does change, but VL
+  // has not been used.  (e.g. over a vmv.x.s)
+  if (!isVLPreservingConfig(MI))
+    // Note: `vsetvli x0, x0, vtype' is the canonical instruction
+    // for this case.  If you find yourself wanting to add other forms
+    // to this "unused VTYPE" case, we're probably missing a
+    // canonicalization earlier.
+    return false;
 
-  return Res;
+  if (!PrevMI.getOperand(2).isImm() || !MI.getOperand(2).isImm())
+    return false;
+
+  auto PriorVType = PrevMI.getOperand(2).getImm();
+  auto VType = MI.getOperand(2).getImm();
+  return areCompatibleVTYPEs(PriorVType, VType, Used);
 }
 
 void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
@@ -1423,14 +1489,7 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
       if (!Used.VL && !Used.usedVTYPE()) {
         ToDelete.push_back(PrevMI);
         // fallthrough
-      } else if (!Used.usedVTYPE() && isVLPreservingConfig(MI)) {
-        // Note: `vsetvli x0, x0, vtype' is the canonical instruction
-        // for this case.  If you find yourself wanting to add other forms
-        // to this "unused VTYPE" case, we're probably missing a
-        // canonicalization earlier.
-        // Note: We don't need to explicitly check vtype compatibility
-        // here because this form is only legal (per ISA) when not
-        // changing VL.
+      } else if (canMutatePriorConfig(*PrevMI, MI, Used)) {
         PrevMI->getOperand(2).setImm(MI.getOperand(2).getImm());
         ToDelete.push_back(&MI);
         // Leave PrevMI unchanged
