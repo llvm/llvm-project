@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class ExprCharTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def do_test(self, dictionary=None):
         """These basic expression commands should work as expected."""
         self.build(dictionary=dictionary)

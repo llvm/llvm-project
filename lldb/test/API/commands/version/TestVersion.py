@@ -4,8 +4,6 @@ from lldbsuite.test.decorators import *
 
 class VersionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_version(self):
         # Should work even when people patch the output,

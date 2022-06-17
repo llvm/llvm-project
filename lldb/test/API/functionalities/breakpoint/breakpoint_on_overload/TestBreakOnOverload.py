@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class TestBreakpointOnOverload(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def check_breakpoint(self, name):
         bkpt = self.target.BreakpointCreateByName(name)
         self.assertEqual(bkpt.num_locations, 1, "Got one location")
