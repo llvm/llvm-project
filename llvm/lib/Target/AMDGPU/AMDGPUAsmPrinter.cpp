@@ -417,6 +417,10 @@ uint16_t AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
 
+  if (CurrentProgramInfo.DynamicCallStack) {
+    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK;
+  }
+
   return KernelCodeProperties;
 }
 

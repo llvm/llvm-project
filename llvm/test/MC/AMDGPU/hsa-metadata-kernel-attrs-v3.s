@@ -20,6 +20,7 @@
 // CHECK-NEXT:       - 4
 // CHECK:          .sgpr_count:     14
 // CHECK:          .symbol:         'test_kernel@kd'
+// CHECK:          .uses_dynamic_stack: true
 // CHECK:          .vec_type_hint:  int
 // CHECK:          .vgpr_count:     40
 // CHECK:          .wavefront_size: 128
@@ -51,6 +52,7 @@
       .kernarg_segment_size: 8
       .group_segment_fixed_size: 16
       .private_segment_fixed_size: 32
+      .uses_dynamic_stack: true
       .kernarg_segment_align: 64
       .wavefront_size: 128
       .sgpr_count: 14
