@@ -345,6 +345,16 @@ private:
   /// To disable all small-struct-dependent behavior, set the option to "0".
   unsigned SmallStructLimit;
 
+  /// The largest number of element an array can have and still be
+  /// considered "small".
+  ///
+  /// This is currently used to decide whether or not it is worth "forcing" a
+  /// LazyCompoundVal on bind.
+  ///
+  /// This is controlled by 'region-store-small-struct-limit' option.
+  /// To disable all small-struct-dependent behavior, set the option to "0".
+  unsigned SmallArrayLimit;
+
   /// A helper used to populate the work list with the given set of
   /// regions.
   void populateWorkList(InvalidateRegionsWorker &W,
@@ -354,10 +364,11 @@ private:
 public:
   RegionStoreManager(ProgramStateManager &mgr)
       : StoreManager(mgr), RBFactory(mgr.getAllocator()),
-        CBFactory(mgr.getAllocator()), SmallStructLimit(0) {
+        CBFactory(mgr.getAllocator()), SmallStructLimit(0), SmallArrayLimit(0) {
     ExprEngine &Eng = StateMgr.getOwningEngine();
     AnalyzerOptions &Options = Eng.getAnalysisManager().options;
     SmallStructLimit = Options.RegionStoreSmallStructLimit;
+    SmallArrayLimit = Options.RegionStoreSmallArrayLimit;
   }
 
   /// setImplicitDefaultValue - Set the default binding for the provided
@@ -486,6 +497,11 @@ public: // Part of public interface to class.
   /// BindVector - Bind a compound value to a vector.
   RegionBindingsRef bindVector(RegionBindingsConstRef B,
                                const TypedValueRegion* R, SVal V);
+
+  Optional<RegionBindingsRef> tryBindSmallArray(RegionBindingsConstRef B,
+                                                const TypedValueRegion *R,
+                                                const ArrayType *AT,
+                                                nonloc::LazyCompoundVal LCV);
 
   RegionBindingsRef bindArray(RegionBindingsConstRef B,
                               const TypedValueRegion* R,
@@ -2392,6 +2408,40 @@ RegionStoreManager::setImplicitDefaultValue(RegionBindingsConstRef B,
   return B.addBinding(R, BindingKey::Default, V);
 }
 
+Optional<RegionBindingsRef> RegionStoreManager::tryBindSmallArray(
+    RegionBindingsConstRef B, const TypedValueRegion *R, const ArrayType *AT,
+    nonloc::LazyCompoundVal LCV) {
+
+  auto CAT = dyn_cast<ConstantArrayType>(AT);
+
+  // If we don't know the size, create a lazyCompoundVal instead.
+  if (!CAT)
+    return None;
+
+  QualType Ty = CAT->getElementType();
+  if (!(Ty->isScalarType() || Ty->isReferenceType()))
+    return None;
+
+  // If the array is too big, create a LCV instead.
+  uint64_t ArrSize = CAT->getSize().getLimitedValue();
+  if (ArrSize > SmallArrayLimit)
+    return None;
+
+  RegionBindingsRef NewB = B;
+
+  for (uint64_t i = 0; i < ArrSize; ++i) {
+    auto Idx = svalBuilder.makeArrayIndex(i);
+    const ElementRegion *SrcER =
+        MRMgr.getElementRegion(Ty, Idx, LCV.getRegion(), Ctx);
+    SVal V = getBindingForElement(getRegionBindings(LCV.getStore()), SrcER);
+
+    const ElementRegion *DstER = MRMgr.getElementRegion(Ty, Idx, R, Ctx);
+    NewB = bind(NewB, loc::MemRegionVal(DstER), V);
+  }
+
+  return NewB;
+}
+
 RegionBindingsRef
 RegionStoreManager::bindArray(RegionBindingsConstRef B,
                               const TypedValueRegion* R,
@@ -2413,8 +2463,13 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
   }
 
   // Handle lazy compound values.
-  if (isa<nonloc::LazyCompoundVal>(Init))
+  if (Optional<nonloc::LazyCompoundVal> LCV =
+          Init.getAs<nonloc::LazyCompoundVal>()) {
+    if (Optional<RegionBindingsRef> NewB = tryBindSmallArray(B, R, AT, *LCV))
+      return *NewB;
+
     return bindAggregate(B, R, Init);
+  }
 
   if (Init.isUnknown())
     return bindAggregate(B, R, UnknownVal());
