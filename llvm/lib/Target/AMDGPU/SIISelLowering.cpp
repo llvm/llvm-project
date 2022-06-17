@@ -6430,7 +6430,6 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   // TODO: we can actually allow partial NSA where the final register is a
   // contiguous set of the remaining addresses.
   // This could help where there are more addresses than supported.
-  //
   bool UseNSA = ST->hasFeature(AMDGPU::FeatureNSAEncoding) &&
                 VAddrs.size() >= 3 &&
                 VAddrs.size() <= (unsigned)ST->getNSAMaxSize();
@@ -7610,8 +7609,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     const unsigned NumVDataDwords = 4;
     const unsigned NumVAddrDwords = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
     const unsigned NumVAddrs = IsGFX11Plus ? (IsA16 ? 4 : 5) : NumVAddrDwords;
-    const bool UseNSA = Subtarget->hasNSAEncoding() &&
-                        NumVAddrs <= Subtarget->getNSAMaxSize();
+    const bool UseNSA =
+        Subtarget->hasNSAEncoding() && NumVAddrs <= Subtarget->getNSAMaxSize();
     const unsigned BaseOpcodes[2][2] = {
         {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
         {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
@@ -7623,11 +7622,11 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                  : AMDGPU::MIMGEncGfx10NSA,
                                      NumVDataDwords, NumVAddrDwords);
     } else {
-      Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                     IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default
-                                                 : AMDGPU::MIMGEncGfx10Default,
-                                     NumVDataDwords,
-                                     PowerOf2Ceil(NumVAddrDwords));
+      Opcode =
+          AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
+                                IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default
+                                            : AMDGPU::MIMGEncGfx10Default,
+                                NumVDataDwords, PowerOf2Ceil(NumVAddrDwords));
     }
     assert(Opcode != -1);
 
@@ -7669,9 +7668,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         DAG.ExtractVectorElements(RayDir, DirLanes, 0, 3);
         DAG.ExtractVectorElements(RayInvDir, InvDirLanes, 0, 3);
         for (unsigned I = 0; I < 3; ++I) {
-          MergedLanes.push_back(DAG.getBitcast(MVT::i32,
-            DAG.getBuildVector(MVT::v2f16, DL,
-                               { DirLanes[I], InvDirLanes[I] })));
+          MergedLanes.push_back(DAG.getBitcast(
+              MVT::i32, DAG.getBuildVector(MVT::v2f16, DL,
+                                           {DirLanes[I], InvDirLanes[I]})));
         }
         Ops.push_back(DAG.getBuildVector(MVT::v3i32, DL, MergedLanes));
       } else {
@@ -7680,7 +7679,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       }
     } else {
       if (Is64)
-        DAG.ExtractVectorElements(DAG.getBitcast(MVT::v2i32, NodePtr), Ops, 0, 2);
+        DAG.ExtractVectorElements(DAG.getBitcast(MVT::v2i32, NodePtr), Ops, 0,
+                                  2);
       else
         Ops.push_back(NodePtr);
 

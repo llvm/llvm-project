@@ -7,7 +7,7 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
 // RUN:        | llvm-objdump -d --mattr=+sve - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
-// RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN:   | llvm-objdump -d --mattr=-sve - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 ld2b    { z0.b, z1.b }, p0/z, [x0, x0]
 // CHECK-INST: ld2b    { z0.b, z1.b }, p0/z, [x0, x0]

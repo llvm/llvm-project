@@ -7589,6 +7589,12 @@ def warn_deprecated_altivec_src_compat : Warning<
   "'-altivec-compat=xl' option">,
   InGroup<DiagGroup<"deprecated-altivec-src-compat">>;
 
+def warn_deprecated_lax_vec_conv_all : Warning<
+  "Implicit conversion between vector types ('%0' and '%1') is deprecated. "
+  "In the future, the behavior implied by '-fno-lax-vector-conversions' "
+  "will be the default.">,
+  InGroup<DiagGroup<"deprecate-lax-vec-conv-all">>;
+
 def err_catch_incomplete_ptr : Error<
   "cannot catch pointer to incomplete type %0">;
 def err_catch_incomplete_ref : Error<

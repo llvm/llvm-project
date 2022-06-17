@@ -37,16 +37,13 @@ IntelPTCollector::IntelPTCollector(NativeProcessProtocol &process)
 
 llvm::Expected<LinuxPerfZeroTscConversion &>
 IntelPTCollector::FetchPerfTscConversionParameters() {
-  if (!m_cached_tsc_conversion) {
-    if (Expected<LinuxPerfZeroTscConversion> tsc_conversion =
-            LoadPerfTscConversionParameters())
-      m_cached_tsc_conversion = std::move(*tsc_conversion);
-    else
-      return createStringError(inconvertibleErrorCode(),
-                               "Unable to load TSC to wall time conversion: %s",
-                               toString(tsc_conversion.takeError()).c_str());
-  }
-  return *m_cached_tsc_conversion;
+  if (Expected<LinuxPerfZeroTscConversion> tsc_conversion =
+          LoadPerfTscConversionParameters())
+    return *tsc_conversion;
+  else
+    return createStringError(inconvertibleErrorCode(),
+                             "Unable to load TSC to wall time conversion: %s",
+                             toString(tsc_conversion.takeError()).c_str());
 }
 
 Error IntelPTCollector::TraceStop(lldb::tid_t tid) {
@@ -75,7 +72,7 @@ Error IntelPTCollector::TraceStart(const TraceIntelPTStartRequest &request) {
           inconvertibleErrorCode(),
           "Process currently traced. Stop process tracing first");
     }
-    if (request.IsPerCoreTracing()) {
+    if (request.IsPerCpuTracing()) {
       if (m_thread_traces.GetTracedThreadsCount() > 0)
         return createStringError(
             inconvertibleErrorCode(),
@@ -173,9 +170,9 @@ Expected<json::Value> IntelPTCollector::GetState() {
 
   m_thread_traces.ForEachThread(
       [&](lldb::tid_t tid, const IntelPTSingleBufferTrace &thread_trace) {
-        state.traced_threads.push_back({tid,
-                                        {{IntelPTDataKinds::kTraceBuffer,
-                                          thread_trace.GetTraceBufferSize()}}});
+        state.traced_threads.push_back(
+            {tid,
+             {{IntelPTDataKinds::kIptTrace, thread_trace.GetIptTraceSize()}}});
       });
 
   if (Expected<LinuxPerfZeroTscConversion &> tsc_conversion =
@@ -211,9 +208,9 @@ IntelPTCollector::GetBinaryData(const TraceGetBinaryDataRequest &request) {
 
   return createStringError(
       inconvertibleErrorCode(),
-      formatv("Can't fetch data kind {0} for core_id {1}, tid {2} and "
+      formatv("Can't fetch data kind {0} for cpu_id {1}, tid {2} and "
               "\"process tracing\" mode {3}",
-              request.kind, request.core_id, request.tid,
+              request.kind, request.cpu_id, request.tid,
               m_process_trace_up ? "enabled" : "not enabled"));
 }
 

@@ -2134,7 +2134,7 @@ def int_amdgcn_fdot2 :
     [IntrNoMem, IntrSpeculatable, IntrWillReturn, ImmArg<ArgIndex<3>>]
   >;
 
-// f16 %r = llvm.amdgcn.fdot2.f16.f16(v2f16 %a, v2f16 %b, f16 %c, i1 %clamp)
+// f16 %r = llvm.amdgcn.fdot2.f16.f16(v2f16 %a, v2f16 %b, f16 %c)
 //   %r = %a[0] * %b[0] + %a[1] * %b[1] + %c
 def int_amdgcn_fdot2_f16_f16 :
   GCCBuiltin<"__builtin_amdgcn_fdot2_f16_f16">,
@@ -2148,7 +2148,7 @@ def int_amdgcn_fdot2_f16_f16 :
     [IntrNoMem, IntrSpeculatable, IntrWillReturn]
   >;
 
-// bf16 %r = llvm.amdgcn.fdot2.bf16.bf16(v2bf16 %a, v2bf16 %b, bf16 %c, i1 %clamp)
+// bf16 %r = llvm.amdgcn.fdot2.bf16.bf16(v2bf16 %a, v2bf16 %b, bf16 %c)
 //   %r = %a[0] * %b[0] + %a[1] * %b[1] + %c
 def int_amdgcn_fdot2_bf16_bf16 :
   GCCBuiltin<"__builtin_amdgcn_fdot2_bf16_bf16">,

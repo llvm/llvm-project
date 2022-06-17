@@ -7,7 +7,7 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
 // RUN:        | llvm-objdump -d --mattr=+sve - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sve < %s \
-// RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN:   | llvm-objdump -d --mattr=-sve - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 uabd  z31.b, p7/m, z31.b, z31.b
 // CHECK-INST: uabd	z31.b, p7/m, z31.b, z31.b

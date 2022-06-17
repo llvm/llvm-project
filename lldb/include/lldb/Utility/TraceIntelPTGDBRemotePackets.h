@@ -24,7 +24,7 @@ namespace lldb_private {
 // List of data kinds used by jLLDBGetState and jLLDBGetBinaryData.
 struct IntelPTDataKinds {
   static const char *kProcFsCpuInfo;
-  static const char *kTraceBuffer;
+  static const char *kIptTrace;
   static const char *kPerfContextSwitchTrace;
 };
 
@@ -32,7 +32,7 @@ struct IntelPTDataKinds {
 /// \{
 struct TraceIntelPTStartRequest : TraceStartRequest {
   /// Size in bytes to use for each thread's trace buffer.
-  uint64_t trace_buffer_size;
+  uint64_t ipt_trace_size;
 
   /// Whether to enable TSC
   bool enable_tsc;
@@ -47,16 +47,31 @@ struct TraceIntelPTStartRequest : TraceStartRequest {
   /// then a "tracing" stop event is triggered.
   llvm::Optional<uint64_t> process_buffer_size_limit;
 
-  /// Whether to have a trace buffer per thread or per cpu core.
-  llvm::Optional<bool> per_core_tracing;
+  /// Whether to have a trace buffer per thread or per cpu cpu.
+  llvm::Optional<bool> per_cpu_tracing;
 
-  bool IsPerCoreTracing() const;
+  bool IsPerCpuTracing() const;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceIntelPTStartRequest &packet,
               llvm::json::Path path);
 
 llvm::json::Value toJSON(const TraceIntelPTStartRequest &packet);
+/// \}
+
+/// Helper structure to help parse long numbers that can't
+/// be easily represented by a JSON number that is compatible with
+/// Javascript (52 bits) or that can also be represented as hex.
+///
+/// \{
+struct JSONUINT64 {
+  uint64_t value;
+};
+
+llvm::json::Value toJSON(const JSONUINT64 &uint64, bool hex);
+
+bool fromJSON(const llvm::json::Value &value, JSONUINT64 &uint64,
+              llvm::json::Path path);
 /// \}
 
 /// jLLDBTraceGetState gdb-remote packet
@@ -80,11 +95,13 @@ struct LinuxPerfZeroTscConversion {
   ///
   /// \return
   ///   Nanosecond wall time.
-  std::chrono::nanoseconds ToNanos(uint64_t tsc);
+  uint64_t ToNanos(uint64_t tsc) const;
+
+  uint64_t ToTSC(uint64_t nanos) const;
 
   uint32_t time_mult;
   uint16_t time_shift;
-  uint64_t time_zero;
+  JSONUINT64 time_zero;
 };
 
 struct TraceIntelPTGetStateResponse : TraceGetStateResponse {

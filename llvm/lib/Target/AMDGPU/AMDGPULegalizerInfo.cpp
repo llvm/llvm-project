@@ -5372,8 +5372,7 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   const unsigned NumVDataDwords = 4;
   const unsigned NumVAddrDwords = IsA16 ? (Is64 ? 9 : 8) : (Is64 ? 12 : 11);
   const unsigned NumVAddrs = IsGFX11Plus ? (IsA16 ? 4 : 5) : NumVAddrDwords;
-  const bool UseNSA =
-      ST.hasNSAEncoding() && NumVAddrs <= ST.getNSAMaxSize();
+  const bool UseNSA = ST.hasNSAEncoding() && NumVAddrs <= ST.getNSAMaxSize();
   const unsigned BaseOpcodes[2][2] = {
       {AMDGPU::IMAGE_BVH_INTERSECT_RAY, AMDGPU::IMAGE_BVH_INTERSECT_RAY_a16},
       {AMDGPU::IMAGE_BVH64_INTERSECT_RAY,
@@ -5385,20 +5384,19 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
                                                : AMDGPU::MIMGEncGfx10NSA,
                                    NumVDataDwords, NumVAddrDwords);
   } else {
-    Opcode = AMDGPU::getMIMGOpcode(BaseOpcodes[Is64][IsA16],
-                                   IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default
-                                               : AMDGPU::MIMGEncGfx10Default,
-                                   NumVDataDwords,
-                                   PowerOf2Ceil(NumVAddrDwords));
+    Opcode = AMDGPU::getMIMGOpcode(
+        BaseOpcodes[Is64][IsA16],
+        IsGFX11Plus ? AMDGPU::MIMGEncGfx11Default : AMDGPU::MIMGEncGfx10Default,
+        NumVDataDwords, PowerOf2Ceil(NumVAddrDwords));
   }
   assert(Opcode != -1);
 
   SmallVector<Register, 12> Ops;
   if (UseNSA && IsGFX11Plus) {
-    auto packLanes = [&Ops, &S32, &V3S32, &B] (Register Src) {
+    auto packLanes = [&Ops, &S32, &V3S32, &B](Register Src) {
       auto Unmerge = B.buildUnmerge({S32, S32, S32}, Src);
-      auto Merged = B.buildMerge(V3S32,
-        {Unmerge.getReg(0), Unmerge.getReg(1), Unmerge.getReg(2)});
+      auto Merged = B.buildMerge(
+          V3S32, {Unmerge.getReg(0), Unmerge.getReg(1), Unmerge.getReg(2)});
       Ops.push_back(Merged.getReg(0));
     };
 
@@ -5409,14 +5407,17 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     if (IsA16) {
       auto UnmergeRayDir = B.buildUnmerge({S16, S16, S16}, RayDir);
       auto UnmergeRayInvDir = B.buildUnmerge({S16, S16, S16}, RayInvDir);
-      auto MergedDir = B.buildMerge(V3S32, {
-        B.buildBitcast(S32, B.buildMerge(V2S16,
-          {UnmergeRayInvDir.getReg(0), UnmergeRayDir.getReg(0)})).getReg(0),
-        B.buildBitcast(S32, B.buildMerge(V2S16,
-          {UnmergeRayInvDir.getReg(1), UnmergeRayDir.getReg(1)})).getReg(0),
-        B.buildBitcast(S32, B.buildMerge(V2S16,
-          {UnmergeRayInvDir.getReg(2), UnmergeRayDir.getReg(2)})).getReg(0)
-      });
+      auto MergedDir = B.buildMerge(
+          V3S32,
+          {B.buildBitcast(S32, B.buildMerge(V2S16, {UnmergeRayInvDir.getReg(0),
+                                                    UnmergeRayDir.getReg(0)}))
+               .getReg(0),
+           B.buildBitcast(S32, B.buildMerge(V2S16, {UnmergeRayInvDir.getReg(1),
+                                                    UnmergeRayDir.getReg(1)}))
+               .getReg(0),
+           B.buildBitcast(S32, B.buildMerge(V2S16, {UnmergeRayInvDir.getReg(2),
+                                                    UnmergeRayDir.getReg(2)}))
+               .getReg(0)});
       Ops.push_back(MergedDir.getReg(0));
     } else {
       packLanes(RayDir);
@@ -5448,7 +5449,8 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
       Register R3 = MRI.createGenericVirtualRegister(S32);
       B.buildMerge(R1, {UnmergeRayDir.getReg(0), UnmergeRayDir.getReg(1)});
       B.buildMerge(R2, {UnmergeRayDir.getReg(2), UnmergeRayInvDir.getReg(0)});
-      B.buildMerge(R3, {UnmergeRayInvDir.getReg(1), UnmergeRayInvDir.getReg(2)});
+      B.buildMerge(R3,
+                   {UnmergeRayInvDir.getReg(1), UnmergeRayInvDir.getReg(2)});
       Ops.push_back(R1);
       Ops.push_back(R2);
       Ops.push_back(R3);

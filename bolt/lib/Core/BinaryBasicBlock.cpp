@@ -608,7 +608,7 @@ BinaryBasicBlock::getBranchInfo(const MCSymbol *Label) {
 BinaryBasicBlock *BinaryBasicBlock::splitAt(iterator II) {
   assert(II != end() && "expected iterator pointing to instruction");
 
-  BinaryBasicBlock *NewBlock = getFunction()->addBasicBlock(0);
+  BinaryBasicBlock *NewBlock = getFunction()->addBasicBlock();
 
   // Adjust successors/predecessors and propagate the execution count.
   moveAllSuccessorsTo(NewBlock);
