@@ -881,9 +881,8 @@ static Value genAddress(CodeGen &codegen, OpBuilder &builder, Location loc,
 }
 
 /// Generates an index value.
-static Value genIndexValue(Merger &merger, CodeGen &codegen, OpBuilder &builder,
-                           unsigned exp, unsigned ldx) {
-  unsigned idx = merger.exp(exp).index;
+static Value genIndexValue(CodeGen &codegen, OpBuilder &builder, unsigned idx,
+                           unsigned ldx) {
   Value ival = codegen.loops[idx];
   Type itype = ival.getType();
   // During vectorization, we either encounter:
@@ -913,6 +912,25 @@ static Value genIndexValue(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   return ival;
 }
 
+/// Semi-ring branches are simply inlined by the sparse compiler. Prior
+/// analysis has verified that all computations are "local" to the inlined
+/// branch or otherwise invariantly defined outside the loop nest, with the
+/// exception of index computations, which need to be relinked to actual
+/// inlined cloned code.
+static Value relinkBranch(CodeGen &codegen, RewriterBase &rewriter,
+                          Block *block, Value e, unsigned ldx) {
+  if (Operation *def = e.getDefiningOp()) {
+    if (auto indexOp = dyn_cast<linalg::IndexOp>(def))
+      return genIndexValue(codegen, rewriter, indexOp.dim(), ldx);
+    if (def->getBlock() == block) {
+      for (unsigned i = 0, n = def->getNumOperands(); i < n; i++)
+        def->setOperand(
+            i, relinkBranch(codegen, rewriter, block, def->getOperand(i), ldx));
+    }
+  }
+  return e;
+}
+
 /// Recursively generates tensor expression.
 static Value genExp(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
                     linalg::GenericOp op, unsigned exp, unsigned ldx) {
@@ -924,12 +942,17 @@ static Value genExp(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
   if (merger.exp(exp).kind == Kind::kInvariant)
     return genInvariantValue(merger, codegen, rewriter, exp);
   if (merger.exp(exp).kind == Kind::kIndex)
-    return genIndexValue(merger, codegen, rewriter, exp, ldx);
+    return genIndexValue(codegen, rewriter, merger.exp(exp).index, ldx);
   Value v0 =
       genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e0, ldx);
   Value v1 =
       genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e1, ldx);
-  return merger.buildExp(rewriter, loc, exp, v0, v1);
+  Value ee = merger.buildExp(rewriter, loc, exp, v0, v1);
+  if (ee && (merger.exp(exp).kind == Kind::kUnary ||
+             merger.exp(exp).kind == Kind::kBinary ||
+             merger.exp(exp).kind == Kind::kBinaryBranch))
+    ee = relinkBranch(codegen, rewriter, ee.getParentBlock(), ee, ldx);
+  return ee;
 }
 
 /// Determines if affine expression is invariant.

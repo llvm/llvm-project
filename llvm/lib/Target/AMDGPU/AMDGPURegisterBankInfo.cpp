@@ -3129,6 +3129,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(MI, MRI, MI.getNumOperands() - 1); // Index
       return;
     }
+    case Intrinsic::amdgcn_exp_row:
+      applyDefaultMapping(OpdMapper);
+      constrainOpWithReadfirstlane(MI, MRI, 8); // M0
+      return;
     default: {
       if (const AMDGPU::RsrcIntrinsic *RSrcIntrin =
               AMDGPU::lookupRsrcIntrinsic(IntrID)) {
@@ -4574,12 +4578,18 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[4] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
       break;
     case Intrinsic::amdgcn_exp:
-    case Intrinsic::amdgcn_exp_row:
       // FIXME: Could we support packed types here?
       OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
       OpdsMapping[4] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
       OpdsMapping[5] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
       OpdsMapping[6] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+      break;
+    case Intrinsic::amdgcn_exp_row:
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+      OpdsMapping[4] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+      OpdsMapping[5] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+      OpdsMapping[6] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+      OpdsMapping[8] = getSGPROpMapping(MI.getOperand(8).getReg(), MRI, *TRI);
       break;
     case Intrinsic::amdgcn_s_sendmsg:
     case Intrinsic::amdgcn_s_sendmsghalt: {
@@ -4715,11 +4725,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_ds_add_gs_reg_rtn:
-    case Intrinsic::amdgcn_ds_sub_gs_reg_rtn: {
+    case Intrinsic::amdgcn_ds_sub_gs_reg_rtn:
       OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
-    }
     case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
       OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI); // %vdst
       OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI); // %addr

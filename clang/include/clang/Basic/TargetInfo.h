@@ -1355,7 +1355,9 @@ public:
   bool supportsMultiVersioning() const { return getTriple().isX86(); }
 
   /// Identify whether this target supports IFuncs.
-  bool supportsIFunc() const { return getTriple().isOSBinFormatELF(); }
+  bool supportsIFunc() const {
+    return getTriple().isOSBinFormatELF() && !getTriple().isOSFuchsia();
+  }
 
   // Validate the contents of the __builtin_cpu_supports(const char*)
   // argument.

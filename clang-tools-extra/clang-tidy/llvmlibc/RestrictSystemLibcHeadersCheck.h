@@ -20,7 +20,7 @@ namespace llvm_libc {
 /// compiler provided.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvmlibc-restrict-system-libc-headers.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/llvmlibc/restrict-system-libc-headers.html
 class RestrictSystemLibcHeadersCheck
     : public portability::RestrictSystemIncludesCheck {
 public:

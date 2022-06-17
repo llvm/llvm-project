@@ -141,20 +141,25 @@ class CountLeadingZerosPattern final
       return failure();
 
     Location loc = countOp.getLoc();
-    Value allOneBits = getScalarOrVectorI32Constant(type, -1, rewriter, loc);
-    Value val32 = getScalarOrVectorI32Constant(type, 32, rewriter, loc);
+    Value input = adaptor.getOperand();
+    Value val1 = getScalarOrVectorI32Constant(type, 1, rewriter, loc);
     Value val31 = getScalarOrVectorI32Constant(type, 31, rewriter, loc);
-    Value msb =
-        rewriter.create<spirv::GLSLFindUMsbOp>(loc, adaptor.getOperand());
-    // We need to subtract from 31 given that the index is from the least
-    // significant bit.
-    Value sub = rewriter.create<spirv::ISubOp>(loc, val31, msb);
-    // If the integer has all zero bits, GLSL FindUMsb would return -1. So
-    // theoretically (31 - FindUMsb) should still give the correct result.
-    // However, certain Vulkan implementations have driver bugs regarding it.
-    // So handle the corner case explicity to workaround it.
-    Value cmp = rewriter.create<spirv::IEqualOp>(loc, msb, allOneBits);
-    rewriter.replaceOpWithNewOp<spirv::SelectOp>(countOp, cmp, val32, sub);
+    Value val32 = getScalarOrVectorI32Constant(type, 32, rewriter, loc);
+
+    Value msb = rewriter.create<spirv::GLSLFindUMsbOp>(loc, input);
+    // We need to subtract from 31 given that the index returned by GLSL
+    // FindUMsb is counted from the least significant bit. Theoretically this
+    // also gives the correct result even if the integer has all zero bits, in
+    // which case GLSL FindUMsb would return -1.
+    Value subMsb = rewriter.create<spirv::ISubOp>(loc, val31, msb);
+    // However, certain Vulkan implementations have driver bugs for the corner
+    // case where the input is zero. And.. it can be smart to optimize a select
+    // only involving the corner case. So separately compute the result when the
+    // input is either zero or one.
+    Value subInput = rewriter.create<spirv::ISubOp>(loc, val32, input);
+    Value cmp = rewriter.create<spirv::ULessThanEqualOp>(loc, input, val1);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(countOp, cmp, subInput,
+                                                 subMsb);
     return success();
   }
 };

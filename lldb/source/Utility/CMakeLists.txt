@@ -56,7 +56,6 @@ add_lldb_library(lldbUtility
   State.cpp
   Status.cpp
   Stream.cpp
-  StreamCallback.cpp
   StreamString.cpp
   StringExtractor.cpp
   StringExtractorGDBRemote.cpp

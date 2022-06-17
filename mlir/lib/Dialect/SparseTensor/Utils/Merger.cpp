@@ -798,7 +798,9 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
 }
 
 Optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
+  // Build the linalg semantics backward from yield.
   Operation *yield = op.region().front().getTerminator();
+  assert(isa<linalg::YieldOp>(yield));
   return buildTensorExp(op, yield->getOperand(0));
 }
 
@@ -830,6 +832,37 @@ Type Merger::inferType(unsigned e, Value src) {
   if (auto vtp = src.getType().dyn_cast<VectorType>())
     return VectorType::get(vtp.getNumElements(), dtp, vtp.getNumScalableDims());
   return dtp;
+}
+
+/// Ensures that sparse compiler can generate code for expression.
+static bool isAdmissableBranchExp(Operation *op, Block *block, Value v) {
+  // Arguments are always admissable.
+  if (auto arg = v.dyn_cast<BlockArgument>())
+    return true;
+  // Accept index anywhere.
+  Operation *def = v.getDefiningOp();
+  if (isa<linalg::IndexOp>(def))
+    return true;
+  // Operation defined outside branch.
+  if (def->getBlock() != block) {
+    return def->getBlock() != op->getBlock(); // invariant?
+  }
+  // Operation defined within branch. Anything is accepted,
+  // as long as all subexpressions are admissable.
+  for (unsigned i = 0, n = def->getNumOperands(); i < n; i++)
+    if (!isAdmissableBranchExp(op, block, def->getOperand(i)))
+      return false;
+  return true;
+}
+
+/// Ensures that sparse compiler can generate code for branch.
+static bool isAdmissableBranch(Operation *op, Region &region) {
+  if (region.empty())
+    return true;
+  // Build the semi-ring branch semantics backward from yield.
+  Operation *yield = region.front().getTerminator();
+  assert(isa<YieldOp>(yield));
+  return isAdmissableBranchExp(op, &region.front(), yield->getOperand(0));
 }
 
 Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
@@ -920,8 +953,11 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kCRe, e);
       if (isa<arith::BitcastOp>(def))
         return addExp(kBitCast, e, v);
-      if (isa<sparse_tensor::UnaryOp>(def))
-        return addExp(kUnary, e, Value(), def);
+      if (auto unop = dyn_cast<sparse_tensor::UnaryOp>(def)) {
+        if (isAdmissableBranch(unop, unop.presentRegion()) &&
+            isAdmissableBranch(unop, unop.absentRegion()))
+          return addExp(kUnary, e, Value(), def);
+      }
     }
   }
   // Construct binary operations if subexpressions can be built.
@@ -971,8 +1007,14 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kShrU, e0, e1);
       if (isa<arith::ShLIOp>(def) && isInvariant(e1))
         return addExp(kShlI, e0, e1);
-      if (isa<sparse_tensor::BinaryOp>(def))
-        return addExp(kBinary, e0, e1, Value(), def);
+      if (auto binop = dyn_cast<sparse_tensor::BinaryOp>(def)) {
+        if (isAdmissableBranch(binop, binop.overlapRegion()) &&
+            (binop.left_identity() ||
+             isAdmissableBranch(binop, binop.leftRegion())) &&
+            (binop.right_identity() ||
+             isAdmissableBranch(binop, binop.rightRegion())))
+          return addExp(kBinary, e0, e1, Value(), def);
+      }
     }
   }
   // Cannot build.
