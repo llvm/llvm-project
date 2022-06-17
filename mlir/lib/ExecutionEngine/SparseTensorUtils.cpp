@@ -1717,10 +1717,10 @@ FOREVERY_O(IMPL_SPARSEINDICES)
 #undef IMPL_GETOVERHEAD
 
 #define IMPL_ADDELT(VNAME, V)                                                  \
-  void *_mlir_ciface_addElt##VNAME(void *coo, V value,                         \
+  void *_mlir_ciface_addElt##VNAME(void *coo, StridedMemRefType<V, 0> *vref,   \
                                    StridedMemRefType<index_type, 1> *iref,     \
                                    StridedMemRefType<index_type, 1> *pref) {   \
-    assert(coo &&iref &&pref);                                                 \
+    assert(coo &&vref &&iref &&pref);                                          \
     assert(iref->strides[0] == 1 && pref->strides[0] == 1);                    \
     assert(iref->sizes[0] == pref->sizes[0]);                                  \
     const index_type *indx = iref->data + iref->offset;                        \
@@ -1729,25 +1729,12 @@ FOREVERY_O(IMPL_SPARSEINDICES)
     std::vector<index_type> indices(isize);                                    \
     for (uint64_t r = 0; r < isize; r++)                                       \
       indices[perm[r]] = indx[r];                                              \
-    static_cast<SparseTensorCOO<V> *>(coo)->add(indices, value);               \
+    V *value = vref->data + vref->offset;                                      \
+    static_cast<SparseTensorCOO<V> *>(coo)->add(indices, *value);              \
     return coo;                                                                \
   }
-FOREVERY_SIMPLEX_V(IMPL_ADDELT)
-IMPL_ADDELT(C64, complex64)
-// Marked static because it's not part of the public API.
-// NOTE: the `static` keyword confuses clang-format here, causing
-// the strange indentation of the `_mlir_ciface_addEltC32` prototype.
-// In C++11 we can add a semicolon after the call to `IMPL_ADDELT`
-// and that will correct clang-format.  Alas, this file is compiled
-// in C++98 mode where that semicolon is illegal (and there's no portable
-// macro magic to license a no-op semicolon at the top level).
-static IMPL_ADDELT(C32ABI, complex32)
+FOREVERY_V(IMPL_ADDELT)
 #undef IMPL_ADDELT
-    void *_mlir_ciface_addEltC32(void *coo, float r, float i,
-                                 StridedMemRefType<index_type, 1> *iref,
-                                 StridedMemRefType<index_type, 1> *pref) {
-  return _mlir_ciface_addEltC32ABI(coo, complex32(r, i), iref, pref);
-}
 
 #define IMPL_GETNEXT(VNAME, V)                                                 \
   bool _mlir_ciface_getNext##VNAME(void *coo,                                  \
@@ -1771,25 +1758,18 @@ FOREVERY_V(IMPL_GETNEXT)
 #undef IMPL_GETNEXT
 
 #define IMPL_LEXINSERT(VNAME, V)                                               \
-  void _mlir_ciface_lexInsert##VNAME(                                          \
-      void *tensor, StridedMemRefType<index_type, 1> *cref, V val) {           \
-    assert(tensor &&cref);                                                     \
+  void _mlir_ciface_lexInsert##VNAME(void *tensor,                             \
+                                     StridedMemRefType<index_type, 1> *cref,   \
+                                     StridedMemRefType<V, 0> *vref) {          \
+    assert(tensor &&cref &&vref);                                              \
     assert(cref->strides[0] == 1);                                             \
     index_type *cursor = cref->data + cref->offset;                            \
     assert(cursor);                                                            \
-    static_cast<SparseTensorStorageBase *>(tensor)->lexInsert(cursor, val);    \
+    V *value = vref->data + vref->offset;                                      \
+    static_cast<SparseTensorStorageBase *>(tensor)->lexInsert(cursor, *value); \
   }
-FOREVERY_SIMPLEX_V(IMPL_LEXINSERT)
-IMPL_LEXINSERT(C64, complex64)
-// Marked static because it's not part of the public API.
-// NOTE: see the note for `_mlir_ciface_addEltC32ABI`
-static IMPL_LEXINSERT(C32ABI, complex32)
+FOREVERY_V(IMPL_LEXINSERT)
 #undef IMPL_LEXINSERT
-    void _mlir_ciface_lexInsertC32(void *tensor,
-                                   StridedMemRefType<index_type, 1> *cref,
-                                   float r, float i) {
-  _mlir_ciface_lexInsertC32ABI(tensor, cref, complex32(r, i));
-}
 
 #define IMPL_EXPINSERT(VNAME, V)                                               \
   void _mlir_ciface_expInsert##VNAME(                                          \

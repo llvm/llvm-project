@@ -266,11 +266,11 @@ static void genDelCOOCall(OpBuilder &builder, Operation *op, Type elemTp,
 /// In particular, this generates code like the following:
 ///   val = a[i1,..,ik];
 ///   if val != 0
-///     t->add(val, [i1,..,ik], [p1,..,pk]);
+///     t->add(&val, [i1,..,ik], [p1,..,pk]);
 static void genAddEltCall(OpBuilder &builder, Operation *op, Type eltType,
-                          Value ptr, Value val, Value ind, Value perm) {
+                          Value ptr, Value valPtr, Value ind, Value perm) {
   SmallString<9> name{"addElt", primaryTypeFunctionSuffix(eltType)};
-  SmallVector<Value, 4> params{ptr, val, ind, perm};
+  SmallVector<Value, 4> params{ptr, valPtr, ind, perm};
   Type pTp = getOpaquePointerType(builder);
   createFuncCall(builder, op, name, pTp, params, EmitCInterface::On);
 }
@@ -674,6 +674,7 @@ public:
       }
     }
     Type eltType = stp.getElementType();
+    Value elemPtr = genAllocaScalar(rewriter, loc, eltType);
     scf::buildLoopNest(
         rewriter, op.getLoc(), lo, hi, st, {},
         [&](OpBuilder &builder, Location loc, ValueRange ivs,
@@ -684,7 +685,8 @@ public:
                                             ivs, rank);
           else
             val = genIndexAndValueForDense(rewriter, loc, src, ind, ivs);
-          genAddEltCall(rewriter, op, eltType, coo, val, ind, perm);
+          builder.create<memref::StoreOp>(loc, val, elemPtr);
+          genAddEltCall(rewriter, op, eltType, coo, elemPtr, ind, perm);
           return {};
         });
     // Final call to construct sparse tensor storage.
