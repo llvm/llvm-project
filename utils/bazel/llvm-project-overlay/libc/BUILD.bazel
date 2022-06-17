@@ -866,7 +866,6 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_integer_operations",
-        ":memcpy",
         ":string_memory_utils",
     ],
 )
