@@ -90,6 +90,30 @@ static Error createInvalidPlugInError(StringRef plugin_name) {
 }
 
 Expected<lldb::TraceSP>
+Trace::LoadPostMortemTraceFromFile(Debugger &debugger,
+                                   const FileSpec &trace_description_file) {
+
+  auto buffer_or_error =
+      MemoryBuffer::getFile(trace_description_file.GetPath());
+  if (!buffer_or_error) {
+    return createStringError(std::errc::invalid_argument,
+                             "could not open input file: %s - %s.",
+                             trace_description_file.GetPath().c_str(),
+                             buffer_or_error.getError().message().c_str());
+  }
+
+  Expected<json::Value> session_file =
+      json::parse(buffer_or_error.get()->getBuffer().str());
+  if (!session_file) {
+    return session_file.takeError();
+  }
+
+  return Trace::FindPluginForPostMortemProcess(
+      debugger, *session_file,
+      trace_description_file.GetDirectory().AsCString());
+}
+
+Expected<lldb::TraceSP>
 Trace::FindPluginForPostMortemProcess(Debugger &debugger,
                                       const json::Value &trace_session_file,
                                       StringRef session_file_dir) {

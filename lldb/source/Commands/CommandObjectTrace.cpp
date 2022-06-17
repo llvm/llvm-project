@@ -85,41 +85,26 @@ protected:
     if (command.size() != 1) {
       result.AppendError(
           "a single path to a JSON file containing a trace session"
-          "is required");
+          " is required");
       return false;
     }
 
-    auto end_with_failure = [&result](llvm::Error err) -> bool {
-      result.AppendErrorWithFormat("%s\n",
-                                   llvm::toString(std::move(err)).c_str());
+    const FileSpec trace_description_file(command[0].ref());
+
+    llvm::Expected<lldb::TraceSP> trace_or_err =
+        Trace::LoadPostMortemTraceFromFile(GetDebugger(),
+                                           trace_description_file);
+
+    if (!trace_or_err) {
+      result.AppendErrorWithFormat(
+          "%s\n", llvm::toString(trace_or_err.takeError()).c_str());
       return false;
-    };
-
-    FileSpec json_file(command[0].ref());
-
-    auto buffer_or_error = llvm::MemoryBuffer::getFile(json_file.GetPath());
-    if (!buffer_or_error) {
-      return end_with_failure(llvm::createStringError(
-          std::errc::invalid_argument, "could not open input file: %s - %s.",
-          json_file.GetPath().c_str(),
-          buffer_or_error.getError().message().c_str()));
     }
 
-    llvm::Expected<json::Value> session_file =
-        json::parse(buffer_or_error.get()->getBuffer().str());
-    if (!session_file)
-      return end_with_failure(session_file.takeError());
-
-    if (Expected<lldb::TraceSP> traceOrErr =
-            Trace::FindPluginForPostMortemProcess(
-                GetDebugger(), *session_file,
-                json_file.GetDirectory().AsCString())) {
-      lldb::TraceSP trace_sp = traceOrErr.get();
-      if (m_options.m_verbose && trace_sp)
-        result.AppendMessageWithFormatv("loading trace with plugin {0}\n",
-                                        trace_sp->GetPluginName());
-    } else
-      return end_with_failure(traceOrErr.takeError());
+    if (m_options.m_verbose) {
+      result.AppendMessageWithFormatv("loading trace with plugin {0}\n",
+                                      trace_or_err.get()->GetPluginName());
+    }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return true;

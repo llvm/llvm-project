@@ -137,6 +137,23 @@ public:
   static llvm::Expected<llvm::StringRef>
   FindPluginSchema(llvm::StringRef plugin_name);
 
+  /// Load a trace from a trace description file and create Targets,
+  /// Processes and Threads based on the contents of such file.
+  ///
+  /// \param[in] debugger
+  ///     The debugger instance where new Targets will be created as part of the
+  ///     JSON data parsing.
+  ///
+  /// \param[in] trace_description_file
+  ///   The file containing the necessary information to load the trace.
+  ///
+  /// \return
+  ///     A \a TraceSP instance, or an \a llvm::Error if loading the trace
+  ///     fails.
+  static llvm::Expected<lldb::TraceSP>
+  LoadPostMortemTraceFromFile(Debugger &debugger,
+                              const FileSpec &trace_description_file);
+
   /// Get the command handle for the "process trace start" command.
   virtual lldb::CommandObjectSP
   GetProcessTraceStartCommand(CommandInterpreter &interpreter) = 0;
