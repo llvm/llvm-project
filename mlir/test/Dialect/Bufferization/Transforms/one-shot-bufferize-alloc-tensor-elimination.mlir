@@ -9,18 +9,17 @@ func.func @buffer_forwarding_conflict(
     -> (tensor<?xf32>, tensor<?xf32>)
 {
   %f0 = arith.constant 0.0: f32
+
+  //     CHECK: %[[EXTRACT_SLICE_ALLOC:.*]] = memref.alloc(%[[sz]])
+  //     CHECK: linalg.fill ins({{.*}} : f32) outs(%[[EXTRACT_SLICE_ALLOC]] : memref<?xf32>)
   // Alloc is needed for the **first** insert_slice (due to backward traversal during analysis).
   //     CHECK: %[[DIM:.*]] = memref.dim %[[FUNC_ARG]]
   // This allocs the whole dim to allow for a full clone of t.
   //     CHECK: %[[ALLOC:.*]] = memref.alloc(%[[DIM]])
-
   // alloc_tensor itself does not alloc but forwards to the **second**
   // insert_slice. AllocTensorOp replaces the alloc_tensor with an out-of-place
   // extract_slice.
-  //     CHECK: %[[EXTRACT_SLICE_ALLOC:.*]] = memref.alloc(%[[sz]])
   %a = bufferization.alloc_tensor(%sz) : tensor<?xf32>
-
-  //     CHECK: linalg.fill ins({{.*}} : f32) outs(%[[EXTRACT_SLICE_ALLOC]] : memref<?xf32>)
   %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
 
   //     CHECK: memref.copy %[[FUNC_ARG]], %[[ALLOC]] : memref<?xf32> to memref<?xf32>

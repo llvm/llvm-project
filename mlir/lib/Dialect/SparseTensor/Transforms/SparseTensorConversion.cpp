@@ -65,7 +65,8 @@ static FlatSymbolRefAttr getFunc(Operation *op, StringRef name,
         FunctionType::get(context, operands.getTypes(), resultType));
     func.setPrivate();
     if (static_cast<bool>(emitCInterface))
-      func->setAttr("llvm.emit_c_interface", UnitAttr::get(context));
+      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                    UnitAttr::get(context));
   }
   return result;
 }

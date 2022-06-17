@@ -73,7 +73,7 @@ struct ExecuteRegionOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
 
     // Compute new result types.
@@ -81,7 +81,7 @@ struct ExecuteRegionOpInterface
     for (Type type : executeRegionOp->getResultTypes()) {
       if (auto tensorType = type.dyn_cast<TensorType>()) {
         // TODO: Infer the result type instead of computing it.
-        newResultTypes.push_back(getMemRefType(tensorType, state.getOptions()));
+        newResultTypes.push_back(getMemRefType(tensorType, options));
       } else {
         newResultTypes.push_back(type);
       }
@@ -183,7 +183,7 @@ struct IfOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto ifOp = cast<scf::IfOp>(op);
 
     // Compute new types of the bufferized scf.if op.
@@ -191,7 +191,7 @@ struct IfOpInterface
     for (Type returnType : ifOp->getResultTypes()) {
       if (auto tensorType = returnType.dyn_cast<TensorType>()) {
         // TODO: Infer the result type instead of computing it.
-        newTypes.push_back(getMemRefType(tensorType, state.getOptions()));
+        newTypes.push_back(getMemRefType(tensorType, options));
       } else {
         newTypes.push_back(returnType);
       }
@@ -309,14 +309,12 @@ static Value castBuffer(OpBuilder &b, Value buffer, Type type) {
 /// given OpOperands. If an operand is not a tensor, return the original value.
 static SmallVector<Value> getBuffers(RewriterBase &rewriter,
                                      MutableArrayRef<OpOperand> operands,
-                                     BufferizationState &state) {
+                                     const BufferizationOptions &options) {
   SmallVector<Value> result;
   for (OpOperand &opOperand : operands) {
     if (opOperand.get().getType().isa<TensorType>()) {
-      FailureOr<Value> resultBuffer = state.getBuffer(rewriter, opOperand);
-      if (failed(resultBuffer))
-        return {};
-      result.push_back(*resultBuffer);
+      Value resultBuffer = getBuffer(rewriter, opOperand.get(), options);
+      result.push_back(resultBuffer);
     } else {
       result.push_back(opOperand.get());
     }
@@ -325,55 +323,14 @@ static SmallVector<Value> getBuffers(RewriterBase &rewriter,
 }
 
 /// Helper function for loop bufferization. Compute the buffer that should be
-/// yielded from a loop block (loop body or loop condition). If the given tensor
-/// is equivalent to the corresponding block argument (as indicated by
-/// `isEquivalent`), the buffer can be yielded directly. Otherwise, a new buffer
-/// copy must be yielded.
-///
-/// According to the `BufferizableOpInterface` implementation of scf loops, a
-/// a bufferized OpResult may alias only with the corresponding bufferized
-/// init_arg and with no other buffers. I.e., the i-th OpResult may alias with
-/// the i-th init_arg; but not with any other OpOperand. If a corresponding
-/// OpResult/init_arg pair bufferized to equivalent buffers (as indicated by
-/// `isEquivalent`), this aliasing requirement is satisfied. Otherwise, we
-/// cannot be sure and must yield a new buffer copy. (New buffer copies do not
-/// alias with any buffer.)
+/// yielded from a loop block (loop body or loop condition).
 static Value getYieldedBuffer(RewriterBase &rewriter, Value tensor,
-                              BaseMemRefType type, bool isEquivalent,
-                              BufferizationState &state) {
+                              BaseMemRefType type,
+                              const BufferizationOptions &options) {
   assert(tensor.getType().isa<TensorType>() && "expected tensor");
   ensureToMemrefOpIsValid(tensor, type);
-  Value yieldedVal =
-      bufferization::lookupBuffer(rewriter, tensor, state.getOptions());
-
-  if (isEquivalent)
-    // Yielded value is equivalent to the corresponding iter_arg bbArg.
-    // Yield the value directly. Most IR should be like that. Everything
-    // else must be resolved with copies and is potentially inefficient.
-    // By default, such problematic IR would already have been rejected
-    // during `verifyAnalysis`, unless `allow-return-allocs`.
-    return castBuffer(rewriter, yieldedVal, type);
-
-  // It is not certain that the yielded value and the iter_arg bbArg
-  // have the same buffer. Allocate a new buffer and copy. The yielded
-  // buffer will get deallocated by `deallocateBuffers`.
-
-  // TODO: There are cases in which it is not neccessary to return a new
-  // buffer allocation. E.g., when equivalent values are yielded in a
-  // different order. This could be resolved with copies.
-  Optional<Value> yieldedAlloc = state.createAlloc(
-      rewriter, tensor.getLoc(), yieldedVal, /*deallocMemref=*/false);
-  // TODO: We should rollback, but for now just assume that this always
-  // succeeds.
-  assert(yieldedAlloc.hasValue() && "could not create alloc");
-  LogicalResult copyStatus = state.getOptions().createMemCpy(
-      rewriter, tensor.getLoc(), yieldedVal, *yieldedAlloc);
-  (void)copyStatus;
-  assert(succeeded(copyStatus) && "could not create memcpy");
-
-  // The iter_arg memref type may have a layout map. Cast the new buffer
-  // to the same type if needed.
-  return castBuffer(rewriter, *yieldedAlloc, type);
+  Value yieldedVal = getBuffer(rewriter, tensor, options);
+  return castBuffer(rewriter, yieldedVal, type);
 }
 
 /// Helper function for loop bufferization. Given a range of values, apply
@@ -396,13 +353,12 @@ convertTensorValues(ValueRange values, const DenseSet<int64_t> &tensorIndices,
 SmallVector<Value> getYieldedValues(RewriterBase &rewriter, ValueRange values,
                                     TypeRange bufferizedTypes,
                                     const DenseSet<int64_t> &tensorIndices,
-                                    const DenseSet<int64_t> &equivalentTensors,
-                                    BufferizationState &state) {
+                                    const BufferizationOptions &options) {
   return convertTensorValues(
       values, tensorIndices, [&](Value val, int64_t index) {
         return getYieldedBuffer(rewriter, val,
                                 bufferizedTypes[index].cast<BaseMemRefType>(),
-                                equivalentTensors.contains(index), state);
+                                options);
       });
 }
 
@@ -517,24 +473,17 @@ struct ForOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto forOp = cast<scf::ForOp>(op);
-    auto oldYieldOp =
-        cast<scf::YieldOp>(forOp.getLoopBody().front().getTerminator());
     Block *oldLoopBody = &forOp.getLoopBody().front();
 
     // Indices of all iter_args that have tensor type. These are the ones that
     // are bufferized.
     DenseSet<int64_t> indices = getTensorIndices(forOp.getInitArgs());
-    // For every yielded value, is the value equivalent to its corresponding
-    // bbArg?
-    DenseSet<int64_t> equivalentYields =
-        getEquivalentBuffers(forOp.getRegionIterArgs(), oldYieldOp.getResults(),
-                             state.getAnalysisState());
 
     // The new memref init_args of the loop.
     SmallVector<Value> initArgs =
-        getBuffers(rewriter, forOp.getIterOpOperands(), state);
+        getBuffers(rewriter, forOp.getIterOpOperands(), options);
 
     // Construct a new scf.for op with memref instead of tensor values.
     auto newForOp = rewriter.create<scf::ForOp>(
@@ -562,9 +511,8 @@ struct ForOpInterface
     // Update scf.yield of new loop.
     auto yieldOp = cast<scf::YieldOp>(loopBody->getTerminator());
     rewriter.setInsertionPoint(yieldOp);
-    SmallVector<Value> yieldValues =
-        getYieldedValues(rewriter, yieldOp.getResults(), initArgsTypes, indices,
-                         equivalentYields, state);
+    SmallVector<Value> yieldValues = getYieldedValues(
+        rewriter, yieldOp.getResults(), initArgsTypes, indices, options);
     yieldOp.getResultsMutable().assign(yieldValues);
 
     // Replace loop results.
@@ -757,7 +705,7 @@ struct WhileOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto whileOp = cast<scf::WhileOp>(op);
 
     assert(whileOp.getBefore().getBlocks().size() == 1 &&
@@ -773,23 +721,14 @@ struct WhileOpInterface
     DenseSet<int64_t> indicesAfter =
         getTensorIndices(whileOp.getAfterArguments());
 
-    // For every yielded value, is the value equivalent to its corresponding
-    // bbArg?
-    DenseSet<int64_t> equivalentYieldsBefore = getEquivalentBuffers(
-        whileOp.getBeforeArguments(), whileOp.getConditionOp().getArgs(),
-        state.getAnalysisState());
-    DenseSet<int64_t> equivalentYieldsAfter = getEquivalentBuffers(
-        whileOp.getAfterArguments(), whileOp.getYieldOp().getResults(),
-        state.getAnalysisState());
-
     // The new memref init_args of the loop.
     SmallVector<Value> initArgs =
-        getBuffers(rewriter, whileOp->getOpOperands(), state);
+        getBuffers(rewriter, whileOp->getOpOperands(), options);
 
     // The result types of a WhileOp are the same as the "after" bbArg types.
     SmallVector<Type> argsTypesAfter = llvm::to_vector(
         llvm::map_range(whileOp.getAfterArguments(), [&](BlockArgument bbArg) {
-          return state.getBufferType(bbArg).cast<Type>();
+          return getBufferType(bbArg, options).cast<Type>();
         }));
 
     // Construct a new scf.while op with memref instead of tensor values.
@@ -823,7 +762,7 @@ struct WhileOpInterface
     // TODO: This could be relaxed for better bufferization results.
     SmallVector<Value> newConditionArgs =
         getYieldedValues(rewriter, newConditionOp.getArgs(), argsTypesAfter,
-                         indicesAfter, equivalentYieldsBefore, state);
+                         indicesAfter, options);
     newConditionOp.getArgsMutable().assign(newConditionArgs);
 
     // Set up new iter_args and move the loop body block to the new op.
@@ -842,7 +781,7 @@ struct WhileOpInterface
     // TODO: This could be relaxed for better bufferization results.
     SmallVector<Value> newYieldValues =
         getYieldedValues(rewriter, newYieldOp.getResults(), argsTypesBefore,
-                         indicesBefore, equivalentYieldsAfter, state);
+                         indicesBefore, options);
     newYieldOp.getResultsMutable().assign(newYieldValues);
 
     // Replace loop results.
@@ -928,7 +867,7 @@ struct YieldOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto yieldOp = cast<scf::YieldOp>(op);
     if (!isa<scf::ExecuteRegionOp, scf::IfOp, scf::ForOp, scf::WhileOp>(
             yieldOp->getParentOp()))
@@ -1016,23 +955,19 @@ struct ForeachThreadOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &b,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     OpBuilder::InsertionGuard g(b);
     auto foreachThreadOp = cast<ForeachThreadOp>(op);
 
     // Gather new results of the ForeachThreadOp.
     SmallVector<Value> newResults;
     for (OpResult opResult : foreachThreadOp->getOpResults()) {
-      SmallVector<OpOperand *> insertDestOperands =
-          state.getAnalysisState().getAliasingOpOperand(opResult);
-      assert(insertDestOperands.size() == 1 &&
-             "expected exactly one aliasing OpOperand");
+      OpOperand *insertDest =
+          getInsertionDest(foreachThreadOp)[opResult.getResultNumber()];
       // Insert copies right before the PerformConcurrentlyOp terminator. They
       // should not be inside terminator (which would be the default insertion
       // point).
-      Value buffer = *state.getBuffer(b, *insertDestOperands.front(),
-                                      /*forceInPlace=*/llvm::None,
-                                      /*customCopyInsertionPoint=*/op);
+      Value buffer = getBuffer(b, insertDest->get(), options);
       newResults.push_back(buffer);
     }
 
@@ -1057,8 +992,7 @@ struct ForeachThreadOpInterface
         performConcurrentlyOp.walk([&](ParallelInsertSliceOp insertOp) {
           Location loc = insertOp.getLoc();
           Type srcType = getMemRefType(
-              insertOp.getSource().getType().cast<RankedTensorType>(),
-              state.getOptions());
+              insertOp.getSource().getType().cast<RankedTensorType>(), options);
           // ParallelInsertSliceOp bufferizes to a copy.
           auto srcMemref = b.create<bufferization::ToMemrefOp>(
               loc, srcType, insertOp.getSource());
@@ -1067,8 +1001,8 @@ struct ForeachThreadOpInterface
               loc, destMemref, insertOp.getMixedOffsets(),
               insertOp.getMixedSizes(), insertOp.getMixedStrides());
           // This memcpy will fold away if everything bufferizes in-place.
-          if (failed(state.getOptions().createMemCpy(b, insertOp.getLoc(),
-                                                     srcMemref, subview)))
+          if (failed(options.createMemCpy(b, insertOp.getLoc(), srcMemref,
+                                          subview)))
             return WalkResult::interrupt();
           b.eraseOp(insertOp);
           return WalkResult::advance();
@@ -1088,8 +1022,8 @@ struct PerformConcurrentlyOpInterface
     : public BufferizableOpInterface::ExternalModel<
           PerformConcurrentlyOpInterface, PerformConcurrentlyOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &b,
-                          BufferizationState &state) const {
-    assert(false && "op does not have any tensor OpOperands / OpResults");
+                          const BufferizationOptions &options) const {
+    llvm_unreachable("op does not have any tensor OpOperands / OpResults");
     return failure();
   }
 };
@@ -1176,7 +1110,7 @@ struct ParallelInsertSliceOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &b,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     // Will be bufferized as part of ForeachThreadOp.
     return failure();
   }

@@ -528,12 +528,12 @@ func.func @entry(%A : tensor<?xf32> {bufferization.buffer_layout = affine_map<(i
 // conflict. However, inside `entry`, the writes do cause a conflict because
 // %A, %B and %C are not inplaceable. This test case shows that this kind of
 // conflict detection has a "transitive" nature.
-//  CHECK-DAG: %[[ALLOC_C:.*]] = memref.alloc
-//  CHECK-DAG: %[[CASTED_C:.*]] = memref.cast %[[ALLOC_C]]
-//  CHECK-DAG: %[[ALLOC_B:.*]] = memref.alloc
-//  CHECK-DAG: %[[CASTED_B:.*]] = memref.cast %[[ALLOC_B]]
 //  CHECK-DAG: %[[ALLOC_A:.*]] = memref.alloc
 //  CHECK-DAG: %[[CASTED_A:.*]] = memref.cast %[[ALLOC_A]]
+//  CHECK-DAG: %[[ALLOC_B:.*]] = memref.alloc
+//  CHECK-DAG: %[[CASTED_B:.*]] = memref.cast %[[ALLOC_B]]
+//  CHECK-DAG: %[[ALLOC_C:.*]] = memref.alloc
+//  CHECK-DAG: %[[CASTED_C:.*]] = memref.cast %[[ALLOC_C]]
 //  CHECK-DAG: memref.copy %[[A]], %[[ALLOC_A]]
 //  CHECK-DAG: memref.copy %[[B]], %[[ALLOC_B]]
 //  CHECK-DAG: memref.copy %[[C]], %[[ALLOC_C]]

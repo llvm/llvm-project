@@ -71,7 +71,8 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
   let results = (outs AnyTensor:$result);
 
   let extraClassDeclaration = [{
-    LogicalResult bufferize(RewriterBase &rewriter, BufferizationState &state);
+    LogicalResult bufferize(RewriterBase &rewriter,
+                            const BufferizationOptions &options);
 
     bool isMemoryWrite(OpResult opResult, const AnalysisState &state);
 
@@ -242,7 +243,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     // results as not writable enforces a buffer copy and has the same effect.
 
     LogicalResult bufferize(RewriterBase &rewriter,
-                            BufferizationState &state) const {
+                            const BufferizationOptions &options) const {
       // to_tensor cannot be bufferized. However, other ops that are using
       // to_tensor's result will eventually be bufferized. At that point, they
       // will start using to_tensor's memref operand. Once all users of
@@ -334,7 +335,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     }
 
     LogicalResult bufferize(RewriterBase &rewriter,
-                            BufferizationState &state);
+                            const BufferizationOptions &options);
   }];
 
   let assemblyFormat = "$tensor attr-dict `:` type($memref)";
