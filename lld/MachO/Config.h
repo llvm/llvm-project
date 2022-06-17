@@ -130,6 +130,7 @@ struct Configuration {
   bool dedupLiterals = true;
   bool omitDebugInfo = false;
   bool warnDylibInstallName = false;
+  bool ignoreOptimizationHints = false;
   // Temporary config flag that will be removed once we have fully implemented
   // support for __eh_frame.
   bool parseEhFrames = false;
