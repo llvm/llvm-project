@@ -1314,6 +1314,10 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       BitcodeEmbed = static_cast<BitcodeEmbedMode>(Model);
   }
 
+  // Remove existing compilation database so that each job can append to it.
+  if (Arg *A = Args.getLastArg(options::OPT_MJ))
+    llvm::sys::fs::remove(A->getValue());
+
   // Setting up the jobs for some precompile cases depends on whether we are
   // treating them as PCH, implicit modules or C++20 ones.
   // TODO: inferring the mode like this seems fragile (it meets the objective
