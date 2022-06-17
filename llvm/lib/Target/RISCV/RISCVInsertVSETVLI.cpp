@@ -303,6 +303,15 @@ static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   }
 }
 
+static bool isMaskRegOp(const MachineInstr &MI) {
+  if (RISCVII::hasSEWOp(MI.getDesc().TSFlags)) {
+    const unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
+    // A Log2SEW of 0 is an operation on mask registers only.
+    return Log2SEW == 0;
+  }
+  return false;
+}
+
 static unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
   unsigned LMul;
   bool Fractional;
@@ -585,10 +594,7 @@ public:
     // FIXME: Mask reg operations are probably ok if "this" VLMAX is larger
     // than "Require".
     // FIXME: The policy bits can probably be ignored for mask reg operations.
-    const unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
-    // A Log2SEW of 0 is an operation on mask registers only.
-    const bool MaskRegOp = Log2SEW == 0;
-    if (MaskRegOp && hasSameVLMAX(Require) &&
+    if (isMaskRegOp(MI) && hasSameVLMAX(Require) &&
         TailAgnostic == Require.TailAgnostic &&
         MaskAgnostic == Require.MaskAgnostic)
       return true;
