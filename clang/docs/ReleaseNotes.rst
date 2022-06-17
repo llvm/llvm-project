@@ -279,6 +279,8 @@ Improvements to Clang's diagnostics
   unevaluated operands of a ``typeid`` expression, as they are now
   modeled correctly in the CFG. This fixes
   `Issue 21668 <https://github.com/llvm/llvm-project/issues/21668>`_.
+- Added ``-Winvalid-utf8`` which diagnoses invalid UTF-8 code unit sequences in
+  comments.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -576,7 +578,7 @@ AST Matchers
 
 - Added ``forEachTemplateArgument`` matcher which creates a match every
   time a ``templateArgument`` matches the matcher supplied to it.
-  
+
 - Added ``objcStringLiteral`` matcher which matches ObjectiveC String
   literal expressions.
 
