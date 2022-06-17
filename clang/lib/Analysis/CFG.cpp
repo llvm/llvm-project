@@ -609,6 +609,7 @@ private:
                                           AddStmtChoice asc);
   CFGBlock *VisitUnaryOperator(UnaryOperator *U, AddStmtChoice asc);
   CFGBlock *VisitWhileStmt(WhileStmt *W);
+  CFGBlock *VisitArrayInitLoopExpr(ArrayInitLoopExpr *A, AddStmtChoice asc);
 
   CFGBlock *Visit(Stmt *S, AddStmtChoice asc = AddStmtChoice::NotAlwaysAdd,
                   bool ExternallyDestructed = false);
@@ -2330,6 +2331,9 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
 
     case Stmt::WhileStmtClass:
       return VisitWhileStmt(cast<WhileStmt>(S));
+
+    case Stmt::ArrayInitLoopExprClass:
+      return VisitArrayInitLoopExpr(cast<ArrayInitLoopExpr>(S), asc);
   }
 }
 
@@ -3879,6 +3883,27 @@ CFGBlock *CFGBuilder::VisitWhileStmt(WhileStmt *W) {
   // Return the condition block, which is the dominating block for the loop.
   Succ = EntryConditionBlock;
   return EntryConditionBlock;
+}
+
+CFGBlock *CFGBuilder::VisitArrayInitLoopExpr(ArrayInitLoopExpr *A,
+                                             AddStmtChoice asc) {
+  if (asc.alwaysAdd(*this, A)) {
+    autoCreateBlock();
+    appendStmt(Block, A);
+  }
+
+  CFGBlock *B = Block;
+
+  if (CFGBlock *R = Visit(A->getSubExpr()))
+    B = R;
+
+  auto *OVE = dyn_cast<OpaqueValueExpr>(A->getCommonExpr());
+  assert(OVE && "ArrayInitLoopExpr->getCommonExpr() should be wrapped in an "
+                "OpaqueValueExpr!");
+  if (CFGBlock *R = Visit(OVE->getSourceExpr()))
+    B = R;
+
+  return B;
 }
 
 CFGBlock *CFGBuilder::VisitObjCAtCatchStmt(ObjCAtCatchStmt *CS) {

@@ -303,6 +303,15 @@ static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
   }
 }
 
+static bool isMaskRegOp(const MachineInstr &MI) {
+  if (RISCVII::hasSEWOp(MI.getDesc().TSFlags)) {
+    const unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
+    // A Log2SEW of 0 is an operation on mask registers only.
+    return Log2SEW == 0;
+  }
+  return false;
+}
+
 static unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
   unsigned LMul;
   bool Fractional;
@@ -585,10 +594,7 @@ public:
     // FIXME: Mask reg operations are probably ok if "this" VLMAX is larger
     // than "Require".
     // FIXME: The policy bits can probably be ignored for mask reg operations.
-    const unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
-    // A Log2SEW of 0 is an operation on mask registers only.
-    const bool MaskRegOp = Log2SEW == 0;
-    if (MaskRegOp && hasSameVLMAX(Require) &&
+    if (isMaskRegOp(MI) && hasSameVLMAX(Require) &&
         TailAgnostic == Require.TailAgnostic &&
         MaskAgnostic == Require.MaskAgnostic)
       return true;
@@ -815,19 +821,6 @@ static bool isVLPreservingConfig(const MachineInstr &MI) {
   return RISCV::X0 == MI.getOperand(0).getReg();
 }
 
-static MachineInstr *elideCopies(MachineInstr *MI,
-                                 const MachineRegisterInfo *MRI) {
-  while (true) {
-    if (!MI->isFullCopy())
-      return MI;
-    if (!Register::isVirtualRegister(MI->getOperand(1).getReg()))
-      return nullptr;
-    MI = MRI->getVRegDef(MI->getOperand(1).getReg());
-    if (!MI)
-      return nullptr;
-  }
-}
-
 static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
                                        const MachineRegisterInfo *MRI) {
   VSETVLIInfo InstrInfo;
@@ -863,13 +856,10 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
     // If the tied operand is an IMPLICIT_DEF we can keep TailAgnostic.
     const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
     MachineInstr *UseMI = MRI->getVRegDef(UseMO.getReg());
-    if (UseMI) {
-      UseMI = elideCopies(UseMI, MRI);
-      if (UseMI && UseMI->isImplicitDef()) {
-        TailAgnostic = true;
-        if (UsesMaskPolicy)
-          MaskAgnostic = true;
-      }
+    if (UseMI && UseMI->isImplicitDef()) {
+      TailAgnostic = true;
+      if (UsesMaskPolicy)
+        MaskAgnostic = true;
     }
     // Some pseudo instructions force a tail agnostic policy despite having a
     // tied def.
