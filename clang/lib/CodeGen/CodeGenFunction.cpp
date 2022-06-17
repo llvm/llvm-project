@@ -596,15 +596,17 @@ CodeGenFunction::DecodeAddrUsedInPrologue(llvm::Value *F,
                             "decoded_addr");
 }
 
-void CodeGenFunction::EmitOpenCLKernelMetadata(const FunctionDecl *FD,
-                                               llvm::Function *Fn)
-{
-  if (!FD->hasAttr<OpenCLKernelAttr>())
+void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
+                                         llvm::Function *Fn) {
+  if (!FD->hasAttr<OpenCLKernelAttr>() && !FD->hasAttr<CUDAGlobalAttr>())
     return;
 
   llvm::LLVMContext &Context = getLLVMContext();
 
-  CGM.GenOpenCLArgMetadata(Fn, FD, this);
+  CGM.GenKernelArgMetadata(Fn, FD, this);
+
+  if (!getLangOpts().OpenCL)
+    return;
 
   if (const VecTypeHintAttr *A = FD->getAttr<VecTypeHintAttr>()) {
     QualType HintQTy = A->getTypeHint();
@@ -919,9 +921,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (D && D->hasAttr<NoProfileFunctionAttr>())
     Fn->addFnAttr(llvm::Attribute::NoProfile);
 
-  if (FD && getLangOpts().OpenCL) {
+  if (FD && (getLangOpts().OpenCL ||
+             (getLangOpts().HIP && getLangOpts().CUDAIsDevice))) {
     // Add metadata for a kernel function.
-    EmitOpenCLKernelMetadata(FD, Fn);
+    EmitKernelMetadata(FD, Fn);
   }
 
   // If we are checking function types, emit a function type signature as

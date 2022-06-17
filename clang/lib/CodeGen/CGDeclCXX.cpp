@@ -707,7 +707,7 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
   // dynamic resource allocation on the device and program scope variables are
   // destroyed by the runtime when program is released.
   if (getLangOpts().OpenCL) {
-    GenOpenCLArgMetadata(Fn);
+    GenKernelArgMetadata(Fn);
     Fn->setCallingConv(llvm::CallingConv::SPIR_KERNEL);
   }
 

@@ -1007,6 +1007,12 @@ defm hip_fp32_correctly_rounded_divide_sqrt : BoolFOption<"hip-fp32-correctly-ro
   BothFlags<[], " that single precision floating-point divide and sqrt used in "
   "the program source are correctly rounded (HIP device compilation only)">>,
   ShouldParseIf<hip.KeyPath>;
+defm hip_kernel_arg_name : BoolFOption<"hip-kernel-arg-name",
+  CodeGenOpts<"HIPSaveKernelArgName">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Specify">,
+  NegFlag<SetFalse, [], "Don't specify">,
+  BothFlags<[], " that kernel argument names are preserved (HIP only)">>,
+  ShouldParseIf<hip.KeyPath>;
 def hipspv_pass_plugin_EQ : Joined<["--"], "hipspv-pass-plugin=">,
   Group<Link_Group>, MetaVarName<"<dsopath>">,
   HelpText<"path to a pass plugin for HIP to SPIR-V passes.">;
