@@ -206,7 +206,7 @@ body:             |
 
   bb.2:
     $vgpr0 = COPY %1
-    S_ENDPGM 0
+    S_ENDPGM 0, implicit $vgpr0
 ...
 
 # GCN: name: negated_cond_vop2_used_vcc
