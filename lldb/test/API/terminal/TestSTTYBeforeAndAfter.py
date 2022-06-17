@@ -15,8 +15,6 @@ from lldbsuite.test import lldbutil
 
 class TestSTTYBeforeAndAfter(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @classmethod
     def classCleanup(cls):
         """Cleanup the test byproducts."""

@@ -4,7 +4,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @add_test_categories(["fork"])
     def test_fork_multithreaded(self):

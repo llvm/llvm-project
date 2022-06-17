@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class DebugBreakTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(archs=no_match(["i386", "i686", "x86_64"]))
     @no_debug_info_test
     def test_asm_int_3(self):

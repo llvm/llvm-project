@@ -15,8 +15,6 @@ import os
 
 class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows
     @skipIfDarwin # Flaky
     @skipIfRemote

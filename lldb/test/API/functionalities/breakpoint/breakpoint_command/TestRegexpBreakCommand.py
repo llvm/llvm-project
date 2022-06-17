@@ -12,8 +12,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class RegexpBreakCommandTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test(self):
         """Test _regexp-break command."""
         self.build()

@@ -4,7 +4,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 class TestGdbRemoteSegFault(gdbremote_testcase.GdbRemoteTestCaseBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     GDB_REMOTE_STOP_CODE_BAD_ACCESS = 0x91
 

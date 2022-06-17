@@ -13,8 +13,6 @@ import os
 
 
 class TestVSCode_stackTrace(lldbvscode_testcase.VSCodeTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     name_key_path = ['name']
     source_key_path = ['source', 'path']
     line_key_path = ['line']

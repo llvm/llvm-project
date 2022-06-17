@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class AArch64UnwindPAC(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(archs=no_match(["aarch64"]))
     @skipIf(oslist=no_match(['linux']))

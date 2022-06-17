@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class ProcessIOTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setup_test(self):

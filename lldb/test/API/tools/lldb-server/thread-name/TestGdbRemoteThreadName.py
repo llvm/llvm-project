@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestGdbRemoteThreadName(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def run_and_check_name(self, expected_name):
         self.test_sequence.add_log_lines(["read packet: $vCont;c#a8",
                                           {"direction": "send",

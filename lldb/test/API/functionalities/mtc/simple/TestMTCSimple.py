@@ -12,8 +12,6 @@ import json
 
 class MTCSimpleTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     def test(self):

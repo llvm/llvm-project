@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class ConsecutiveBreakpointsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def prepare_test(self):
         self.build()
 

@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class SessionSaveTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def raw_transcript_builder(self, cmd, res):
         raw = "(lldb) " + cmd + "\n"
         if res.GetOutputSize():

@@ -8,8 +8,6 @@ from lldbsuite.test.lldbtest import *
 
 class ContextObjectTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_context_object(self):
         """Tests expression evaluation in context of an object."""
         self.build()

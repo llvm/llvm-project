@@ -12,7 +12,6 @@ from lldbsuite.test import lldbutil
 
 
 class SigtrampUnwind(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     # On different platforms the "_sigtramp" and "__kill" frames are likely to be different.
     # This test could probably be adapted to run on linux/*bsd easily enough.

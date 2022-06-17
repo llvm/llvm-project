@@ -11,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class FrameDisassembleTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_frame_disassemble(self):

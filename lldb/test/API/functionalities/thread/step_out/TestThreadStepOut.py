@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class ThreadStepOutTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfWindows # This test will hang on windows llvm.org/pr21753
     @expectedFailureAll(oslist=["windows"])
     @expectedFailureNetBSD

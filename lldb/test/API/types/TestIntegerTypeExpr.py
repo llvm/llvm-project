@@ -9,8 +9,6 @@ from lldbsuite.test.decorators import *
 
 class IntegerTypeExprTestCase(AbstractBase.GenericTester):
 
-    mydir = AbstractBase.GenericTester.compute_mydir(__file__)
-
     @skipUnlessDarwin
     def test_unsigned_short_type_from_block(self):
         """Test that 'unsigned short'-type variables are displayed correctly from a block."""

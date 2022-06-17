@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class ProcessListTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows  # https://bugs.llvm.org/show_bug.cgi?id=43702

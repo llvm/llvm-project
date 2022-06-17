@@ -8,8 +8,6 @@ from lldbsuite.test import lldbutil
 
 class ScopedEnumType(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(dwarf_version=['<', '4'])
     def test(self):
         self.build()

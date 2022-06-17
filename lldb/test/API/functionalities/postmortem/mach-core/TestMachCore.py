@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 class MachCoreTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # This was originally marked as expected failure on Windows, but it has
     # started timing out instead, so the expectedFailure attribute no longer
     # correctly tracks it: llvm.org/pr37371

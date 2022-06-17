@@ -130,8 +130,6 @@ def executeCommand(command, cwd=None, env=None, input=None, timeout=0):
     return out, err, exitCode
 
 class TestLuaAPI(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def get_tests(self):

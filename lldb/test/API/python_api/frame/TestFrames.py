@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class FrameAPITestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_get_arg_vals_for_call_stack(self):
         """Exercise SBFrame.GetVariables() API to get argument vals."""
         self.build()

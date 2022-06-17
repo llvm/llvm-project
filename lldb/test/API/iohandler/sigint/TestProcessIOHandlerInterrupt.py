@@ -11,8 +11,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 class TestCase(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(compiler="clang", compiler_version=['<', '11.0'])
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test(self):

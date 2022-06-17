@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestValueOfVectorVariableTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_value_of_vector_variable_using_watchpoint_set(self):

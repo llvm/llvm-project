@@ -9,7 +9,6 @@ import xml.etree.ElementTree as ET
 
 @skipIfWindows
 class PtyServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         super().setUp()

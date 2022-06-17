@@ -11,7 +11,6 @@ def find(predicate, seq):
       return item
 
 class TestTraceSave(TraceIntelPTTestCaseBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def testErrorMessages(self):
         # We first check the output when there are no targets

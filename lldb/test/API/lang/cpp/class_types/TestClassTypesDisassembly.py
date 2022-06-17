@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class IterateFrameAndDisassembleTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_and_run_command(self):
         """Disassemble each call frame when stopped on C's constructor."""
         self.build()

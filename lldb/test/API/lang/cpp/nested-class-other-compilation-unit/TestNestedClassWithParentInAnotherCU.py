@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestNestedClassWithParentInAnotherCU(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     def test_nested_class_with_parent_in_another_cu(self):
         self.main_source_file = lldb.SBFileSpec("main.cpp")

@@ -4,8 +4,6 @@ from lldbsuite.test.decorators import *
 
 class AproposTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_apropos(self):
         self.expect("apropos", error=True,

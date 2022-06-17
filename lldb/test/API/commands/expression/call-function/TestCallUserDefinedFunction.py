@@ -14,8 +14,6 @@ from lldbsuite.test import lldbutil
 
 class ExprCommandCallUserDefinedFunction(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test(self):
         """Test return values of user defined function calls."""
         self.build()

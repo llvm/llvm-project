@@ -15,8 +15,6 @@ from lldbsuite.test.gdbclientutils import *
 @skipIfRemote
 @skipIfWindows
 class TestQemuLaunch(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def set_emulator_setting(self, name, value):

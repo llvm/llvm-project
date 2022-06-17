@@ -4,8 +4,6 @@ from lldbsuite.test.decorators import *
 
 class InvalidArgsCommandTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_script_add(self):
         self.expect("command script add 1 2", error=True,

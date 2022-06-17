@@ -13,8 +13,6 @@ class BreakpointHitCountTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(['pyapi'])
     def test_breakpoint_location_hit_count(self):
         """Use Python APIs to check breakpoint hit count."""

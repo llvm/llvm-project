@@ -26,8 +26,6 @@ def ansi_color_surround_regex(inner_regex_text):
 
 class SourceManagerTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):

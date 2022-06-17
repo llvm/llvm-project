@@ -7,8 +7,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestPlatformMacOSX(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     class MyResponder(MockGDBServerResponder):
 
         def __init__(self, host):

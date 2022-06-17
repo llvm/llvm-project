@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class LibcxxSpanDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def findVariable(self, name):
         var = self.frame().FindVariable(name)
         self.assertTrue(var.IsValid())
