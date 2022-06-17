@@ -19,7 +19,7 @@ namespace readability {
 /// instances and replaces them with uses of the appropriate qualified-id.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-static-accessed-through-instance.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/static-accessed-through-instance.html
 class StaticAccessedThroughInstanceCheck : public ClangTidyCheck {
 public:
   StaticAccessedThroughInstanceCheck(StringRef Name, ClangTidyContext *Context)

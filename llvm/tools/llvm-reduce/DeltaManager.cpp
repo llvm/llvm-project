@@ -38,6 +38,7 @@
 #include "deltas/ReduceRegisterUses.h"
 #include "deltas/ReduceSpecialGlobals.h"
 #include "deltas/ReduceVirtualRegisters.h"
+#include "deltas/SimplifyInstructions.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -62,6 +63,7 @@ static cl::opt<std::string>
   DELTA_PASS("metadata", reduceMetadataDeltaPass)                              \
   DELTA_PASS("arguments", reduceArgumentsDeltaPass)                            \
   DELTA_PASS("instructions", reduceInstructionsDeltaPass)                      \
+  DELTA_PASS("simplify-instructions", simplifyInstructionsDeltaPass)           \
   DELTA_PASS("operands-zero", reduceOperandsZeroDeltaPass)                     \
   DELTA_PASS("operands-one", reduceOperandsOneDeltaPass)                       \
   DELTA_PASS("operands-undef", reduceOperandsUndefDeltaPass)                   \

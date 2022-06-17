@@ -25,6 +25,7 @@
 #include <cstdarg>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <type_traits>
 
@@ -44,6 +45,55 @@ class raw_ostream;
 
 // Logging Functions
 namespace lldb_private {
+
+class LogHandler {
+public:
+  virtual ~LogHandler() = default;
+  virtual void Emit(llvm::StringRef message) = 0;
+  void EmitThreadSafe(llvm::StringRef message);
+
+private:
+  std::mutex m_mutex;
+};
+
+class StreamLogHandler : public LogHandler {
+public:
+  StreamLogHandler(int fd, bool should_close, bool unbuffered = true);
+
+  void Emit(llvm::StringRef message) override;
+
+private:
+  llvm::raw_fd_ostream m_stream;
+};
+
+class CallbackLogHandler : public LogHandler {
+public:
+  CallbackLogHandler(lldb::LogOutputCallback callback, void *baton);
+
+  void Emit(llvm::StringRef message) override;
+
+private:
+  lldb::LogOutputCallback m_callback;
+  void *m_baton;
+};
+
+class RotatingLogHandler : public LogHandler {
+public:
+  RotatingLogHandler(size_t size);
+
+  void Emit(llvm::StringRef message) override;
+  void Dump(llvm::raw_ostream &stream) const;
+
+private:
+  size_t NormalizeIndex(size_t i) const;
+  size_t GetNumMessages() const;
+  size_t GetFirstMessageIndex() const;
+
+  std::unique_ptr<std::string[]> m_messages;
+  const size_t m_size = 0;
+  size_t m_next_index = 0;
+  size_t m_total_count = 0;
+};
 
 class Log final {
 public:
@@ -111,7 +161,7 @@ public:
   static void Unregister(llvm::StringRef name);
 
   static bool
-  EnableLogChannel(const std::shared_ptr<llvm::raw_ostream> &log_stream_sp,
+  EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
                    uint32_t log_options, llvm::StringRef channel,
                    llvm::ArrayRef<const char *> categories,
                    llvm::raw_ostream &error_stream);
@@ -188,7 +238,7 @@ private:
   // Their modification however, is still protected by this mutex.
   llvm::sys::RWMutex m_mutex;
 
-  std::shared_ptr<llvm::raw_ostream> m_stream_sp;
+  std::shared_ptr<LogHandler> m_handler;
   std::atomic<uint32_t> m_options{0};
   std::atomic<MaskType> m_mask{0};
 
@@ -199,13 +249,13 @@ private:
   void Format(llvm::StringRef file, llvm::StringRef function,
               const llvm::formatv_object_base &payload);
 
-  std::shared_ptr<llvm::raw_ostream> GetStream() {
+  std::shared_ptr<LogHandler> GetHandler() {
     llvm::sys::ScopedReader lock(m_mutex);
-    return m_stream_sp;
+    return m_handler;
   }
 
-  void Enable(const std::shared_ptr<llvm::raw_ostream> &stream_sp,
-              uint32_t options, uint32_t flags);
+  void Enable(const std::shared_ptr<LogHandler> &handler_sp, uint32_t options,
+              uint32_t flags);
 
   void Disable(uint32_t flags);
 

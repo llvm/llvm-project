@@ -20,7 +20,7 @@ namespace bugprone {
 /// swapped (or badly ordered) arguments.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-easily-swappable-parameters.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/easily-swappable-parameters.html
 class EasilySwappableParametersCheck : public ClangTidyCheck {
 public:
   EasilySwappableParametersCheck(StringRef Name, ClangTidyContext *Context);

@@ -296,6 +296,15 @@ struct DemandedFields {
   bool usedVTYPE() {
     return SEW || LMUL || SEWLMULRatio || TailPolicy || MaskPolicy;
   }
+
+  // Mark all VTYPE subfields and properties as demanded
+  void demandVTYPE() {
+    SEW = true;
+    LMUL = true;
+    SEWLMULRatio = true;
+    TailPolicy = true;
+    MaskPolicy = true;
+  }
 };
 
 /// Return true if the two values of the VTYPE register provided are
@@ -332,17 +341,24 @@ static bool areCompatibleVTYPEs(uint64_t VType1,
 
 /// Return the fields and properties demanded by the provided instruction.
 static DemandedFields getDemanded(const MachineInstr &MI) {
+  // Warning: This function has to work on both the lowered (i.e. post
+  // emitVSETVLIs) and pre-lowering forms.  The main implication of this is
+  // that it can't use the value of a SEW, VL, or Policy operand as they might
+  // be stale after lowering.
+
   // Most instructions don't use any of these subfeilds.
   DemandedFields Res;
   // Start conservative if registers are used
   if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VL))
     Res.VL = true;
-  if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VTYPE)) {
-    Res.SEW = true;
-    Res.LMUL = true;
-    Res.SEWLMULRatio = true;
-    Res.TailPolicy = true;
-    Res.MaskPolicy = true;
+  if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VTYPE))
+    Res.demandVTYPE();
+  // Start conservative on the unlowered form too
+  uint64_t TSFlags = MI.getDesc().TSFlags;
+  if (RISCVII::hasSEWOp(TSFlags)) {
+    Res.demandVTYPE();
+    if (RISCVII::hasVLOp(TSFlags))
+      Res.VL = true;
   }
 
   // Loads and stores with implicit EEW do not demand SEW or LMUL directly.
@@ -537,7 +553,16 @@ public:
         MaskAgnostic == Require.MaskAgnostic)
       return true;
 
-    return false;
+    DemandedFields Used = getDemanded(MI);
+    // Store instructions don't use the policy fields.
+    // TODO: Move this into getDemanded; it is here only to avoid changing
+    // behavior of the post pass in an otherwise NFC code restructure.
+    uint64_t TSFlags = MI.getDesc().TSFlags;
+    if (RISCVII::hasSEWOp(TSFlags) && MI.getNumExplicitDefs() == 0) {
+      Used.TailPolicy = false;
+      Used.MaskPolicy = false;
+    }
+    return areCompatibleVTYPEs(encodeVTYPE(), Require.encodeVTYPE(), Used);
   }
 
   // Determine whether the vector instructions requirements represented by
@@ -562,37 +587,7 @@ public:
       if (SEW == Require.SEW)
         return true;
 
-    // The AVL must match.
-    if (!hasSameAVL(Require))
-      return false;
-
-    if (hasCompatibleVTYPE(MI, Require))
-      return true;
-
-    // Store instructions don't use the policy fields.
-    const bool StoreOp = MI.getNumExplicitDefs() == 0;
-    if (StoreOp && VLMul == Require.VLMul && SEW == Require.SEW)
-      return true;
-
-    // Anything else is not compatible.
-    return false;
-  }
-
-  bool isCompatibleWithLoadStoreEEW(unsigned EEW,
-                                    const VSETVLIInfo &Require) const {
-    assert(isValid() && Require.isValid() &&
-           "Can't compare invalid VSETVLIInfos");
-    assert(!Require.SEWLMULRatioOnly &&
-           "Expected a valid VTYPE for instruction!");
-    assert(EEW == Require.SEW && "Mismatched EEW/SEW for store");
-
-    if (isUnknown() || hasSEWLMULRatioOnly())
-      return false;
-
-    if (!hasSameAVL(Require))
-      return false;
-
-    return getSEWLMULRatio() == ::getSEWLMULRatio(EEW, Require.VLMul);
+    return hasSameAVL(Require) && hasCompatibleVTYPE(MI, Require);
   }
 
   bool operator==(const VSETVLIInfo &Other) const {
@@ -958,21 +953,6 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
   return NewInfo;
 }
 
-static bool canSkipVSETVLIForLoadStore(const MachineInstr &MI,
-                                       const VSETVLIInfo &Require,
-                                       const VSETVLIInfo &CurInfo) {
-  Optional<unsigned> EEW = getEEWForLoadStore(MI);
-  if (!EEW)
-    return false;
-
-  // Stores can ignore the tail and mask policies.
-  const bool StoreOp = MI.getNumExplicitDefs() == 0;
-  if (!StoreOp && !CurInfo.hasSamePolicy(Require))
-    return false;
-
-  return CurInfo.isCompatibleWithLoadStoreEEW(*EEW, Require);
-}
-
 /// Return true if a VSETVLI is required to transition from CurInfo to Require
 /// before MI.
 bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
@@ -1015,9 +995,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     }
   }
 
-  // If this is a unit-stride or strided load/store, we may be able to use the
-  // EMUL=(EEW/SEW)*LMUL relationship to avoid changing VTYPE.
-  return CurInfo.isUnknown() || !canSkipVSETVLIForLoadStore(MI, Require, CurInfo);
+  return true;
 }
 
 // Given an incoming state reaching MI, modifies that state so that it is minimally
