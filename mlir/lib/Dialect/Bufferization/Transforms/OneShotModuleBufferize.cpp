@@ -64,6 +64,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
+#include "mlir/Dialect/Bufferization/Transforms/TensorCopyInsertion.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
@@ -428,7 +429,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   IRRewriter rewriter(moduleOp.getContext());
-  BufferizationState bufferizationState(analysisState);
+  BufferizationState bufferizationState(options);
 
   // A list of functions in the order in which they are analyzed + bufferized.
   SmallVector<func::FuncOp> orderedFuncOps;
@@ -443,7 +444,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   for (func::FuncOp funcOp : orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
-    if (failed(bufferizeOp(funcOp, bufferizationState)))
+    if (failed(bufferizeOp(funcOp, options, /*copyBeforeWrite=*/false)))
       return failure();
     // Change buffer return types to more precise layout maps.
     if (options.functionBoundaryTypeConversion ==
@@ -465,7 +466,7 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   OneShotAnalysisState analysisState(moduleOp, options);
-  if (failed(analyzeModuleOp(moduleOp, analysisState)))
+  if (failed(insertTensorCopies(moduleOp, options)))
     return failure();
   if (options.testAnalysisOnly)
     return success();

@@ -46,23 +46,15 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
       newInputBuffers.push_back(opOperand->get());
       continue;
     }
-    // Input operands are never written to.
-    newInputBuffers.push_back(*state.getBuffer(
-        rewriter, *opOperand,
-        BufferizationState::ForceInPlacability::FORCE_INPLACE));
+    newInputBuffers.push_back(state.getBuffer(rewriter, opOperand->get()));
   }
 
   // New output operands for the cloned op.
   SmallVector<Value> newOutputBuffers;
   for (OpResult opResult : op->getOpResults()) {
-    SmallVector<OpOperand *> aliasingOpOperands =
-        state.getAnalysisState().getAliasingOpOperand(opResult);
-    assert(aliasingOpOperands.size() == 1 && "expected 1 OpOperand");
-    FailureOr<Value> resultBuffer =
-        state.getBuffer(rewriter, *aliasingOpOperands.front());
-    if (failed(resultBuffer))
-      return failure();
-    newOutputBuffers.push_back(*resultBuffer);
+    OpOperand *opOperand = op.getOutputOperand(opResult.getResultNumber());
+    Value resultBuffer = state.getBuffer(rewriter, opOperand->get());
+    newOutputBuffers.push_back(resultBuffer);
   }
 
   // Merge input/output operands.

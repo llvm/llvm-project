@@ -467,38 +467,12 @@ private:
 /// BufferizationState provides helper functions for performing bufferization
 /// rewrites and handling memref buffers.
 struct BufferizationState {
-  enum ForceInPlacability { FORCE_INPLACE, FORCE_OUT_OF_PLACE };
+  BufferizationState(const BufferizationOptions &options) : options(options) {}
 
-  BufferizationState(const AnalysisState &analysisState)
-      : analysisState(analysisState) {}
-
-  /// Creates a memref allocation for the given shaped value. `dealloc`
-  /// indicates whether the buffer should be deallocated or not. When `dealloc`
-  /// is `false`, this would create a memory leak, unless the buffer is
-  /// deallocated through some other mechanism.
-  ///
-  /// `dealloc` is optional. By default, this function will figure out by itself
-  /// if it is safe to deallocate the buffer. In essence, when returning the
-  /// buffer from a block, it is not safe to deallocate the buffer. This
-  /// information is queried via `AnalysisState::isTensorYielded`.
-  ///
-  /// Note: `shapedValue` is typically a tensor value. However, if it is a
-  /// memref value, `dealloc` is no longer optional and must be specified.
-  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue,
-                               Optional<bool> dealloc = None);
-
-  /// Return the buffer (memref) for a given OpOperand (tensor). Allocate
-  /// a new buffer and copy over data from the existing buffer if out-of-place
-  /// bufferization was decided.
-  ///
-  /// Whether a buffer is in-place or out-of-place is queried from the analysis
-  /// state. Some analyses may always conservatively opt for out-of-place
-  /// bufferization. Inplacability decisions can be overridden with the optional
-  /// `overrideInPlace` parameter.
-  FailureOr<Value>
-  getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
-            Optional<ForceInPlacability> overrideInPlace = None,
-            Optional<Operation *> customCopyInsertionPoint = None);
+  /// Lookup the buffer for the given value. If the value was not bufferized
+  /// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
+  /// from which the memref operand is returned.
+  Value getBuffer(RewriterBase &rewriter, Value value);
 
   /// Return the buffer type for a given Value (tensor) after bufferization.
   ///
@@ -507,35 +481,27 @@ struct BufferizationState {
   BaseMemRefType getBufferType(Value value) const;
 
   /// Return a reference to the BufferizationOptions.
-  const BufferizationOptions &getOptions() const {
-    return analysisState.getOptions();
-  }
-
-  const AnalysisState &getAnalysisState() const { return analysisState; }
+  const BufferizationOptions &getOptions() const { return options; }
 
 protected:
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
 
 private:
-  const AnalysisState &analysisState;
+  const BufferizationOptions &options;
 };
+
+/// Create an AllocTensorOp for the given shaped value (memref or tensor).
+/// If `copy` is set, the shaped value is copied. Otherwise, a tensor with
+/// undefined contents is allocated.
+Value allocateTensorForShapedValue(OpBuilder &b, Location loc,
+                                   Value shapedValue, bool escape,
+                                   bool copy = true);
 
 /// Replace an op with replacement values. The op is deleted. Tensor OpResults
 /// must be replaced with memref values.
 void replaceOpWithBufferizedValues(RewriterBase &rewriter, Operation *op,
                                    ValueRange values);
-
-/// Lookup the buffer for the given value. If the value was not bufferized yet,
-/// wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp, from
-/// which the memref operand is returned.
-///
-/// Note: Use `BufferizationState::getBuffer` during bufferization.
-/// `lookupBuffer` is just for compatibility and gradual migration of
-/// bufferization patterns to BufferizableOpInterface-based bufferization. It
-/// does not insert any buffer copies.
-Value lookupBuffer(RewriterBase &rewriter, Value tensor,
-                   const BufferizationOptions &options);
 
 /// Replace an op with a new op. The new op must have the same number of
 /// results as the replaced op. The new op may not return any tensor values.

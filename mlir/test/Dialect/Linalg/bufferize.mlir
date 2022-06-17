@@ -71,8 +71,8 @@ func.func @init_tensor(%in : tensor<?xf32>, %size: index) -> tensor<?xf32> {
 #map0 = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL:   func @multiple_results
-// CHECK:           %[[RESULT1:.*]] = memref.alloc() {{.*}} : memref<4xf32>
 // CHECK:           %[[RESULT0:.*]] = memref.alloc() {{.*}} : memref<4xf32>
+// CHECK:           %[[RESULT1:.*]] = memref.alloc() {{.*}} : memref<4xf32>
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%{{.*}} : memref<4xf32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<4xf32>, memref<4xf32>)
@@ -101,11 +101,11 @@ func.func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf3
 // CHECK-SAME:                          %[[ARG:.*]]: tensor<?x?xf32>
 // CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
-// CHECK:           %[[DIM0:.*]] = tensor.dim %[[ARG]], %[[C0]] : tensor<?x?xf32>
-// CHECK:           %[[DIM1:.*]] = tensor.dim %[[ARG]], %[[C1]] : tensor<?x?xf32>
-// CHECK:           %[[RESULT1:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) {{.*}} : memref<?x?xf32>
-// CHECK:           %[[RESULT0:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) {{.*}} : memref<?x?xf32>
-// CHECK:           %[[MEMREF_ARG:.*]] = bufferization.to_memref %[[ARG]] : memref<?x?xf32>
+// CHECK-DAG:       %[[DIM0:.*]] = tensor.dim %[[ARG]], %[[C0]] : tensor<?x?xf32>
+// CHECK-DAG:       %[[DIM1:.*]] = tensor.dim %[[ARG]], %[[C1]] : tensor<?x?xf32>
+// CHECK-DAG:       %[[RESULT0:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) {{.*}} : memref<?x?xf32>
+// CHECK-DAG:       %[[RESULT1:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) {{.*}} : memref<?x?xf32>
+// CHECK-DAG:       %[[MEMREF_ARG:.*]] = bufferization.to_memref %[[ARG]] : memref<?x?xf32>
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%[[MEMREF_ARG]] : memref<?x?xf32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<?x?xf32>, memref<?x?xf32>)
