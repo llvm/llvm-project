@@ -587,14 +587,19 @@ static bool canTrapImpl(const Constant *C,
   switch (CE->getOpcode()) {
   default:
     return false;
-  case Instruction::UDiv:
   case Instruction::SDiv:
-  case Instruction::URem:
   case Instruction::SRem:
-    // Div and rem can trap if the RHS is not known to be non-zero.
-    if (!isa<ConstantInt>(CE->getOperand(1)) ||CE->getOperand(1)->isNullValue())
+    // Signed div/rem can trap for SignedMin / -1.
+    if (!CE->getOperand(0)->isNotMinSignedValue() &&
+        (!isa<ConstantInt>(CE->getOperand(1)) ||
+         CE->getOperand(1)->isAllOnesValue()))
       return true;
-    return false;
+    LLVM_FALLTHROUGH;
+  case Instruction::UDiv:
+  case Instruction::URem:
+    // Div and rem can trap if the RHS is not known to be non-zero.
+    return !isa<ConstantInt>(CE->getOperand(1)) ||
+           CE->getOperand(1)->isNullValue();
   }
 }
 
