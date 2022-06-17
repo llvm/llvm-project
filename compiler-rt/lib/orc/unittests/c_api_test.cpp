@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "c_api.h"
+#include "orc/c_api.h"
 #include "gtest/gtest.h"
 
 TEST(CAPITest, CWrapperFunctionResultInit) {

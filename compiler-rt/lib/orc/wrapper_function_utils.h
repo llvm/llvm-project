@@ -13,7 +13,7 @@
 #ifndef ORC_RT_WRAPPER_FUNCTION_UTILS_H
 #define ORC_RT_WRAPPER_FUNCTION_UTILS_H
 
-#include "c_api.h"
+#include "orc/c_api.h"
 #include "common.h"
 #include "error.h"
 #include "executor_address.h"
