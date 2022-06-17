@@ -52,7 +52,7 @@ Historically LLVM was some sort of type-safe subset of C. Having pointee types
 provided an extra layer of checks to make sure that the Clang frontend matched
 its frontend values/operations with the corresponding LLVM IR. However, as other
 languages like C++ adopted LLVM, the community realized that pointee types were
-more of a hinderance for LLVM development and that the extra type checking with
+more of a hindrance for LLVM development and that the extra type checking with
 some frontends wasn't worth it.
 
 LLVM's type system was `originally designed
