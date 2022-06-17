@@ -147,6 +147,32 @@ inline void writeStubHelperEntry(uint8_t *buf8,
   buf32[2] = sym.lazyBindOffset;
 }
 
+template <class LP>
+inline void
+writeObjCMsgSendStub(uint8_t *buf, const uint32_t objcStubsFastCode[8],
+                     Symbol *sym, uint64_t stubsAddr, uint64_t stubOffset,
+                     uint64_t selrefsVA, uint64_t selectorIndex,
+                     uint64_t gotAddr, uint64_t msgSendIndex) {
+  SymbolDiagnostic d = {sym, sym->getName()};
+  auto *buf32 = reinterpret_cast<uint32_t *>(buf);
+
+  auto pcPageBits = [stubsAddr, stubOffset](int i) {
+    return pageBits(stubsAddr + stubOffset + i * sizeof(uint32_t));
+  };
+
+  uint64_t selectorOffset = selectorIndex * LP::wordSize;
+  encodePage21(&buf32[0], d, objcStubsFastCode[0],
+               pageBits(selrefsVA + selectorOffset) - pcPageBits(0));
+  encodePageOff12(&buf32[1], objcStubsFastCode[1], selrefsVA + selectorOffset);
+  encodePage21(&buf32[2], d, objcStubsFastCode[2],
+               pageBits(gotAddr) - pcPageBits(2));
+  encodePage21(&buf32[3], d, objcStubsFastCode[3], msgSendIndex * LP::wordSize);
+  buf32[4] = objcStubsFastCode[4];
+  buf32[5] = objcStubsFastCode[5];
+  buf32[6] = objcStubsFastCode[6];
+  buf32[7] = objcStubsFastCode[7];
+}
+
 } // namespace lld::macho
 
 #endif

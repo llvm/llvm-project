@@ -34,6 +34,11 @@ struct ARM64 : ARM64Common {
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
+
+  void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                            uint64_t stubOffset, uint64_t selrefsVA,
+                            uint64_t selectorIndex, uint64_t gotAddr,
+                            uint64_t msgSendIndex) const override;
   void populateThunk(InputSection *thunk, Symbol *funcSym) override;
   void applyOptimizationHints(uint8_t *, const ConcatInputSection *,
                               ArrayRef<uint64_t>) const override;
@@ -100,6 +105,26 @@ void ARM64::writeStubHelperEntry(uint8_t *buf8, const Symbol &sym,
   ::writeStubHelperEntry(buf8, stubHelperEntryCode, sym, entryVA);
 }
 
+static constexpr uint32_t objcStubsFastCode[] = {
+    0x90000001, // adrp  x1, __objc_selrefs@page
+    0xf9400021, // ldr   x1, [x1, @selector("foo")@pageoff]
+    0x90000010, // adrp  x16, _got@page
+    0xf9400210, // ldr   x16, [x16, _objc_msgSend@pageoff]
+    0xd61f0200, // br    x16
+    0xd4200020, // brk   #0x1
+    0xd4200020, // brk   #0x1
+    0xd4200020, // brk   #0x1
+};
+
+void ARM64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                                 uint64_t stubOffset, uint64_t selrefsVA,
+                                 uint64_t selectorIndex, uint64_t gotAddr,
+                                 uint64_t msgSendIndex) const {
+  ::writeObjCMsgSendStub<LP64>(buf, objcStubsFastCode, sym, stubsAddr,
+                               stubOffset, selrefsVA, selectorIndex, gotAddr,
+                               msgSendIndex);
+}
+
 // A thunk is the relaxed variation of stubCode. We don't need the
 // extra indirection through a lazy pointer because the target address
 // is known at link time.
@@ -129,6 +154,9 @@ ARM64::ARM64() : ARM64Common(LP64()) {
 
   stubSize = sizeof(stubCode);
   thunkSize = sizeof(thunkCode);
+
+  objcStubsFastSize = sizeof(objcStubsFastCode);
+  objcStubsAlignment = 32;
 
   // Branch immediate is two's complement 26 bits, which is implicitly
   // multiplied by 4 (since all functions are 4-aligned: The branch range
