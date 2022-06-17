@@ -26,7 +26,7 @@ Implementation Requirements / Goals
   computations and produce the final results.
 
   - To test for correctness, we compare the outputs with other correctly rounded
-    multiple-precision math libraries such as the `GNU MPFR library <https://www.mpfr.org/>_`
+    multiple-precision math libraries such as the `GNU MPFR library <https://www.mpfr.org/>`_
     or the `CORE-MATH library <https://core-math.gitlabpages.inria.fr/>`_.
 
 * Our next requirement is that the outputs are consistent across all platforms.
@@ -188,7 +188,7 @@ Performance
 
 * We also use the *perf* tool from the `CORE-MATH <https://core-math.gitlabpages.inria.fr/>`_
   project: `link <https://gitlab.inria.fr/core-math/core-math/-/tree/master>`_.
-  The performance results from the CORE-MATH's perf tool is reported in the
+  The performance results from the CORE-MATH's perf tool are reported in the
   table below, using the system library as reference (such as the `GNU C library <https://www.gnu.org/software/libc/>`_
   on Linux).
 
