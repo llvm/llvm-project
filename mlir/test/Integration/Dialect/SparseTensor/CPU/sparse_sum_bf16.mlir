@@ -23,16 +23,16 @@ module {
   //
   // A kernel that sum-reduces a matrix to a single scalar.
   //
-  func.func @kernel_sum_reduce(%arga: tensor<?x?xf16, #SparseMatrix>,
-                          %argx: tensor<f16> {linalg.inplaceable = true}) -> tensor<f16> {
+  func.func @kernel_sum_reduce(%arga: tensor<?x?xbf16, #SparseMatrix>,
+                          %argx: tensor<bf16> {linalg.inplaceable = true}) -> tensor<bf16> {
     %0 = linalg.generic #trait_sum_reduce
-      ins(%arga: tensor<?x?xf16, #SparseMatrix>)
-      outs(%argx: tensor<f16>) {
-      ^bb(%a: f16, %x: f16):
-        %0 = arith.addf %x, %a : f16
-        linalg.yield %0 : f16
-    } -> tensor<f16>
-    return %0 : tensor<f16>
+      ins(%arga: tensor<?x?xbf16, #SparseMatrix>)
+      outs(%argx: tensor<bf16>) {
+      ^bb(%a: bf16, %x: bf16):
+        %0 = arith.addf %x, %a : bf16
+        linalg.yield %0 : bf16
+    } -> tensor<bf16>
+    return %0 : tensor<bf16>
   }
 
   func.func private @getTensorFilename(index) -> (!Filename)
@@ -46,32 +46,32 @@ module {
        [ 1.1,  1.2,  0.0,  1.4 ],
        [ 0.0,  0.0,  0.0,  0.0 ],
        [ 3.1,  0.0,  3.3,  3.4 ]
-    ]> : tensor<3x4xf16>
-    %a = sparse_tensor.convert %d : tensor<3x4xf16> to tensor<?x?xf16, #SparseMatrix>
+    ]> : tensor<3x4xbf16>
+    %a = sparse_tensor.convert %d : tensor<3x4xbf16> to tensor<?x?xbf16, #SparseMatrix>
 
-    %d0 = arith.constant 0.0 : f16
+    %d0 = arith.constant 0.0 : bf16
     // Setup memory for a single reduction scalar,
     // initialized to zero.
-    %xdata = memref.alloc() : memref<f16>
-    memref.store %d0, %xdata[] : memref<f16>
-    %x = bufferization.to_tensor %xdata : memref<f16>
+    %xdata = memref.alloc() : memref<bf16>
+    memref.store %d0, %xdata[] : memref<bf16>
+    %x = bufferization.to_tensor %xdata : memref<bf16>
 
     // Call the kernel.
     %0 = call @kernel_sum_reduce(%a, %x)
-      : (tensor<?x?xf16, #SparseMatrix>, tensor<f16>) -> tensor<f16>
+      : (tensor<?x?xbf16, #SparseMatrix>, tensor<bf16>) -> tensor<bf16>
 
     // Print the result for verification.
     //
     // CHECK: 13.5
     //
-    %m = bufferization.to_memref %0 : memref<f16>
-    %v = memref.load %m[] : memref<f16>
-    %vf = arith.extf %v: f16 to f32
+    %m = bufferization.to_memref %0 : memref<bf16>
+    %v = memref.load %m[] : memref<bf16>
+    %vf = arith.extf %v: bf16 to f32
     vector.print %vf : f32
 
     // Release the resources.
-    memref.dealloc %xdata : memref<f16>
-    sparse_tensor.release %a : tensor<?x?xf16, #SparseMatrix>
+    memref.dealloc %xdata : memref<bf16>
+    sparse_tensor.release %a : tensor<?x?xbf16, #SparseMatrix>
 
     return
   }
