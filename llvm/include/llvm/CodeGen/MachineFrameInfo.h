@@ -338,9 +338,9 @@ private:
   uint64_t UnsafeStackSize = 0;
 
 public:
-  explicit MachineFrameInfo(unsigned StackAlignment, bool StackRealignable,
+  explicit MachineFrameInfo(Align StackAlignment, bool StackRealignable,
                             bool ForcedRealign)
-      : StackAlignment(assumeAligned(StackAlignment)),
+      : StackAlignment(StackAlignment),
         StackRealignable(StackRealignable), ForcedRealign(ForcedRealign) {}
 
   MachineFrameInfo(const MachineFrameInfo &) = delete;
