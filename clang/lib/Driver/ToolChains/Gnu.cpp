@@ -465,6 +465,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     D.Diag(diag::err_target_unknown_triple) << Triple.str();
     return;
   }
+  if (Triple.isRISCV())
+    CmdArgs.push_back("-X");
 
   if (Args.hasArg(options::OPT_shared))
     CmdArgs.push_back("-shared");
