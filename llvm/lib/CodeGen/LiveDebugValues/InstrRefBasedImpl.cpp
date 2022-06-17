@@ -155,6 +155,8 @@ static cl::opt<unsigned>
                          cl::desc("livedebugvalues-stack-ws-limit"),
                          cl::init(250));
 
+DbgOpID DbgOpID::UndefID = DbgOpID(0xffffffff);
+
 /// Tracker for converting machine value locations and variable values into
 /// variable locations (the output of LiveDebugValues), recorded as DBG_VALUEs
 /// specifying block live-in locations and transfers within blocks.
@@ -259,7 +261,7 @@ public:
   /// object fields to track variable locations as we step through the block.
   /// FIXME: could just examine mloctracker instead of passing in \p mlocs?
   void
-  loadInlocs(MachineBasicBlock &MBB, ValueTable &MLocs,
+  loadInlocs(MachineBasicBlock &MBB, ValueTable &MLocs, DbgOpIDMap &DbgOpStore,
              const SmallVectorImpl<std::pair<DebugVariable, DbgValue>> &VLocs,
              unsigned NumLocs) {
     ActiveMLocs.clear();
@@ -284,9 +286,13 @@ public:
 
     // Initialized the preferred-location map with illegal locations, to be
     // filled in later.
-    for (const auto &VLoc : VLocs)
-      if (VLoc.second.Kind == DbgValue::Def)
-        ValueToLoc.insert({VLoc.second.ID, LocIdx::MakeIllegalLoc()});
+    for (const auto &VLoc : VLocs) {
+      if (VLoc.second.Kind == DbgValue::Def &&
+          !VLoc.second.getDbgOpID(0).isConst()) {
+        ValueToLoc.insert({DbgOpStore.find(VLoc.second.getDbgOpID(0)).ID,
+                           LocIdx::MakeIllegalLoc()});
+      }
+    }
 
     ActiveMLocs.reserve(VLocs.size());
     ActiveVLocs.reserve(VLocs.size());
@@ -320,14 +326,16 @@ public:
 
     // Now map variables to their picked LocIdxes.
     for (const auto &Var : VLocs) {
-      if (Var.second.Kind == DbgValue::Const) {
+      DbgOpID OpID = Var.second.getDbgOpID(0);
+      DbgOp Op = DbgOpStore.find(OpID);
+      if (Var.second.Kind == DbgValue::Def && OpID.isConst()) {
         PendingDbgValues.push_back(
-            emitMOLoc(*Var.second.MO, Var.first, Var.second.Properties));
+            emitMOLoc(Op.MO, Var.first, Var.second.Properties));
         continue;
       }
 
       // If the value has no location, we can't make a variable location.
-      const ValueIDNum &Num = Var.second.ID;
+      const ValueIDNum &Num = Op.ID;
       auto ValuesPreferredLoc = ValueToLoc.find(Num);
       if (ValuesPreferredLoc->second.isIllegal()) {
         // If it's a def that occurs in this block, register it as a
@@ -674,16 +682,42 @@ ValueIDNum ValueIDNum::EmptyValue = {UINT_MAX, UINT_MAX, UINT_MAX};
 ValueIDNum ValueIDNum::TombstoneValue = {UINT_MAX, UINT_MAX, UINT_MAX - 1};
 
 #ifndef NDEBUG
-void DbgValue::dump(const MLocTracker *MTrack) const {
-  if (Kind == Const) {
-    MO->dump();
-  } else if (Kind == NoVal) {
-    dbgs() << "NoVal(" << BlockNo << ")";
-  } else if (Kind == VPHI) {
-    dbgs() << "VPHI(" << BlockNo << "," << MTrack->IDAsString(ID) << ")";
+void ResolvedDbgOp::dump(const MLocTracker *MTrack) const {
+  if (IsConst) {
+    dbgs() << MO;
   } else {
-    assert(Kind == Def);
+    dbgs() << MTrack->LocIdxToName(Loc);
+  }
+}
+void DbgOp::dump(const MLocTracker *MTrack) const {
+  if (IsConst) {
+    dbgs() << MO;
+  } else if (!isUndef()) {
     dbgs() << MTrack->IDAsString(ID);
+  }
+}
+void DbgOpID::dump(const MLocTracker *MTrack, const DbgOpIDMap *OpStore) const {
+  if (!OpStore) {
+    dbgs() << "ID(" << asU32() << ")";
+  } else {
+    OpStore->find(*this).dump(MTrack);
+  }
+}
+void DbgValue::dump(const MLocTracker *MTrack,
+                    const DbgOpIDMap *OpStore) const {
+  if (Kind == NoVal) {
+    dbgs() << "NoVal(" << BlockNo << ")";
+  } else if (Kind == VPHI || Kind == Def) {
+    if (Kind == VPHI)
+      dbgs() << "VPHI(" << BlockNo << ",";
+    else
+      dbgs() << "Def(";
+    for (unsigned Idx = 0; Idx < getDbgOpIDs().size(); ++Idx) {
+      getDbgOpID(Idx).dump(MTrack, OpStore);
+      if (Idx != 0)
+        dbgs() << ",";
+    }
+    dbgs() << ")";
   }
   if (Properties.Indirect)
     dbgs() << " indir";
@@ -1076,8 +1110,9 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
   // contribute to locations in this block, but don't propagate further.
   // Interpret it like a DBG_VALUE $noreg.
   if (MI.isDebugValueList()) {
+    SmallVector<DbgOpID> EmptyDebugOps;
     if (VTracker)
-      VTracker->defVar(MI, Properties, None);
+      VTracker->defVar(MI, Properties, EmptyDebugOps);
     if (TTracker)
       TTracker->redefVar(MI, Properties, None);
     return true;
@@ -1094,16 +1129,21 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
   // locations are already solved, and we report this DBG_VALUE and the value
   // it refers to to VLocTracker.
   if (VTracker) {
-    if (MO.isReg()) {
-      // Feed defVar the new variable location, or if this is a
-      // DBG_VALUE $noreg, feed defVar None.
-      if (MO.getReg())
-        VTracker->defVar(MI, Properties, MTracker->readReg(MO.getReg()));
-      else
-        VTracker->defVar(MI, Properties, None);
-    } else if (MO.isImm() || MO.isFPImm() || MO.isCImm()) {
-      VTracker->defVar(MI, MO);
+    SmallVector<DbgOpID> DebugOps;
+    // Feed defVar the new variable location, or if this is a DBG_VALUE $noreg,
+    // feed defVar None.
+    if (!MI.isUndefDebugValue()) {
+      // There should be no undef registers here, as we've screened for undef
+      // debug values.
+      if (MO.isReg()) {
+        DebugOps.push_back(DbgOpStore.insert(MTracker->readReg(MO.getReg())));
+      } else if (MO.isImm() || MO.isFPImm() || MO.isCImm()) {
+        DebugOps.push_back(DbgOpStore.insert(MO));
+      } else {
+        llvm_unreachable("Unexpected debug operand type.");
+      }
     }
+    VTracker->defVar(MI, Properties, DebugOps);
   }
 
   // If performing final tracking of transfers, report this variable definition
@@ -1287,8 +1327,11 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // for DBG_INSTR_REFs as DBG_VALUEs (just, the former can refer to values that
   // aren't immediately available).
   DbgValueProperties Properties(Expr, false, false);
+  SmallVector<DbgOpID> DbgOpIDs;
+  if (NewID)
+    DbgOpIDs.push_back(DbgOpStore.insert(*NewID));
   if (VTracker)
-    VTracker->defVar(MI, Properties, NewID);
+    VTracker->defVar(MI, Properties, DbgOpIDs);
 
   // If we're on the final pass through the function, decompose this INSTR_REF
   // into a plain DBG_VALUE.
@@ -1334,6 +1377,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // FoundLoc is None.
   // (XXX -- could morph the DBG_INSTR_REF in the future).
   MachineInstr *DbgMI = MTracker->emitLoc(FoundLoc, V, Properties);
+
   TTracker->PendingDbgValues.push_back(DbgMI);
   TTracker->flushDbgValues(MI.getIterator(), nullptr);
   return true;
@@ -2397,7 +2441,7 @@ Optional<ValueIDNum> InstrRefBasedLDV::pickVPHILoc(
       return None;
     const DbgValue &OutVal = *OutValIt->second;
 
-    if (OutVal.Kind == DbgValue::Const || OutVal.Kind == DbgValue::NoVal)
+    if (OutVal.getDbgOpID(0).isConst() || OutVal.Kind == DbgValue::NoVal)
       // Consts and no-values cannot have locations we can join on.
       return None;
 
@@ -2410,8 +2454,8 @@ Optional<ValueIDNum> InstrRefBasedLDV::pickVPHILoc(
     // present. Do the same for VPHIs where we know the VPHI value.
     if (OutVal.Kind == DbgValue::Def ||
         (OutVal.Kind == DbgValue::VPHI && OutVal.BlockNo != MBB.getNumber() &&
-         OutVal.ID != ValueIDNum::EmptyValue)) {
-      ValueIDNum ValToLookFor = OutVal.ID;
+         !OutVal.getDbgOpID(0).isUndef())) {
+      ValueIDNum ValToLookFor = DbgOpStore.find(OutVal.getDbgOpID(0)).ID;
       // Search the live-outs of the predecessor for the specified value.
       for (unsigned int I = 0; I < NumLocs; ++I) {
         if (MOutLocs[ThisBBNum][I] == ValToLookFor)
@@ -2543,7 +2587,7 @@ bool InstrRefBasedLDV::vlocJoin(
       return false;
     if (V.second->Kind == DbgValue::NoVal)
       return false;
-    if (V.second->Kind == DbgValue::Const && FirstVal.Kind != DbgValue::Const)
+    if (!V.second->hasJoinableLocOps(FirstVal))
       return false;
   }
 
@@ -2556,7 +2600,7 @@ bool InstrRefBasedLDV::vlocJoin(
     // If both values are not equal but have equal non-empty IDs then they refer
     // to the same value from different sources (e.g. one is VPHI and the other
     // is Def), which does not cause disagreement.
-    if (V.second->ID != ValueIDNum::EmptyValue && V.second->ID == FirstVal.ID)
+    if (V.second->hasIdenticalValidLocOps(FirstVal))
       continue;
 
     // Eliminate if a backedge feeds a VPHI back into itself.
@@ -2807,8 +2851,9 @@ void InstrRefBasedLDV::buildVLocValueMap(
               pickVPHILoc(*MBB, Var, LiveOutIdx, MOutLocs, Preds);
 
           if (ValueNum) {
-            InLocsChanged |= LiveIn->ID != *ValueNum;
-            LiveIn->ID = *ValueNum;
+            DbgOpID ValueID = DbgOpStore.insert(*ValueNum);
+            InLocsChanged |= LiveIn->getDbgOpID(0) != ValueID;
+            LiveIn->setDbgOpIDs(ValueID);
           }
         }
 
@@ -2878,8 +2923,7 @@ void InstrRefBasedLDV::buildVLocValueMap(
       DbgValue *BlockLiveIn = LiveInIdx[MBB];
       if (BlockLiveIn->Kind == DbgValue::NoVal)
         continue;
-      if (BlockLiveIn->Kind == DbgValue::VPHI &&
-          BlockLiveIn->ID == ValueIDNum::EmptyValue)
+      if (BlockLiveIn->isUnjoinedPHI())
         continue;
       if (BlockLiveIn->Kind == DbgValue::VPHI)
         BlockLiveIn->Kind = DbgValue::Def;
@@ -3070,7 +3114,8 @@ bool InstrRefBasedLDV::depthFirstVLocAndEmit(
     // instructions, installing transfers.
     MTracker->reset();
     MTracker->loadFromArray(MInLocs[BBNum], BBNum);
-    TTracker->loadInlocs(MBB, MInLocs[BBNum], Output[BBNum], NumLocs);
+    TTracker->loadInlocs(MBB, MInLocs[BBNum], DbgOpStore, Output[BBNum],
+                         NumLocs);
 
     CurBB = BBNum;
     CurInst = 1;
@@ -3368,6 +3413,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   OverlapFragments.clear();
   SeenFragments.clear();
   SeenDbgPHIs.clear();
+  DbgOpStore.clear();
 
   return Changed;
 }
