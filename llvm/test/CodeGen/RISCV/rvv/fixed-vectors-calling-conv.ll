@@ -1567,7 +1567,7 @@ define <4 x i1> @pass_vector_mask_arg_via_stack(<4 x i1> %v) {
 ; LMULMAX1-NEXT:    .cfi_offset ra, -8
 ; LMULMAX1-NEXT:    li a0, 8
 ; LMULMAX1-NEXT:    sd a0, 128(sp)
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; LMULMAX1-NEXT:    vmv.v.i v8, 0
 ; LMULMAX1-NEXT:    vse32.v v8, (sp)
 ; LMULMAX1-NEXT:    addi a0, sp, 112
@@ -1584,7 +1584,6 @@ define <4 x i1> @pass_vector_mask_arg_via_stack(<4 x i1> %v) {
 ; LMULMAX1-NEXT:    vse32.v v8, (a0)
 ; LMULMAX1-NEXT:    addi a0, sp, 16
 ; LMULMAX1-NEXT:    vse32.v v8, (a0)
-; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
 ; LMULMAX1-NEXT:    vmv.v.i v9, 0
 ; LMULMAX1-NEXT:    vmerge.vim v9, v9, 1, v0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
