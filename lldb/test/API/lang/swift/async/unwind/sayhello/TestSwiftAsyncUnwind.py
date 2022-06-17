@@ -27,7 +27,8 @@ class TestSwiftAsyncUnwind(lldbtest.TestBase):
         self.assertTrue("sayHello" in thread.GetFrameAtIndex(1).GetFunctionName())
         self.assertTrue("sayGeneric" in thread.GetFrameAtIndex(2).GetFunctionName())
 
-        # Check that we can only get 2 registers for frames that unwound 
-        # with an AsyncContext.
-        self.assertEqual(thread.GetFrameAtIndex(1).GetRegisters().GetSize(), 3)
-        self.assertEqual(thread.GetFrameAtIndex(2).GetRegisters().GetSize(), 3)
+        # Check that we can only get a limited number of registers for
+        # frames that unwound with an AsyncContext, as a sanity check
+        # to see that this is really the async unwinder.
+        self.assertIn(thread.GetFrameAtIndex(1).GetRegisters().GetSize(), [2,3,4])
+        self.assertIn(thread.GetFrameAtIndex(2).GetRegisters().GetSize(), [2,3,4])
