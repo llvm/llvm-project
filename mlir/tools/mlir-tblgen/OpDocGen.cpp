@@ -316,6 +316,12 @@ static void emitDialectDoc(const Dialect &dialect,
   if (!r.match(dialect.getDescription()))
     os << "[TOC]\n\n";
 
+  if (!ops.empty()) {
+    os << "## Operation definition\n\n";
+    for (const Operator &op : ops)
+      emitOpDoc(op, os);
+  }
+
   if (!attributes.empty()) {
     os << "## Attribute constraint definition\n\n";
     for (const Attribute &attr : attributes)
@@ -333,12 +339,6 @@ static void emitDialectDoc(const Dialect &dialect,
     os << "## Type constraint definition\n\n";
     for (const Type &type : types)
       emitTypeDoc(type, os);
-  }
-
-  if (!ops.empty()) {
-    os << "## Operation definition\n\n";
-    for (const Operator &op : ops)
-      emitOpDoc(op, os);
   }
 
   if (!typeDefs.empty()) {
@@ -367,34 +367,41 @@ static bool emitDialectDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
   llvm::StringMap<std::vector<Operator>> dialectOps;
   llvm::StringMap<std::vector<Type>> dialectTypes;
   llvm::StringMap<std::vector<TypeDef>> dialectTypeDefs;
+  llvm::SmallDenseSet<Record *> seen;
+  for (Record *attrDef : attrDefDefs) {
+    AttrDef attr(attrDef);
+    dialectAttrDefs[attr.getDialect().getName()].push_back(attr);
+    dialectsWithDocs.insert(attr.getDialect());
+    seen.insert(attrDef);
+  }
   for (Record *attrDef : attrDefs) {
+    if (seen.count(attrDef))
+      continue;
     Attribute attr(attrDef);
     if (const Dialect &dialect = attr.getDialect()) {
       dialectAttrs[dialect.getName()].push_back(attr);
       dialectsWithDocs.insert(dialect);
     }
   }
-  for (Record *attrDef : attrDefDefs) {
-    AttrDef attr(attrDef);
-    dialectAttrDefs[attr.getDialect().getName()].push_back(attr);
-    dialectsWithDocs.insert(attr.getDialect());
-  }
   for (Record *opDef : opDefs) {
     Operator op(opDef);
     dialectOps[op.getDialect().getName()].push_back(op);
     dialectsWithDocs.insert(op.getDialect());
   }
+  for (Record *typeDef : typeDefDefs) {
+    TypeDef type(typeDef);
+    dialectTypeDefs[type.getDialect().getName()].push_back(type);
+    dialectsWithDocs.insert(type.getDialect());
+    seen.insert(typeDef);
+  }
   for (Record *typeDef : typeDefs) {
+    if (seen.count(typeDef))
+      continue;
     Type type(typeDef);
     if (const Dialect &dialect = type.getDialect()) {
       dialectTypes[dialect.getName()].push_back(type);
       dialectsWithDocs.insert(dialect);
     }
-  }
-  for (Record *typeDef : typeDefDefs) {
-    TypeDef type(typeDef);
-    dialectTypeDefs[type.getDialect().getName()].push_back(type);
-    dialectsWithDocs.insert(type.getDialect());
   }
 
   Optional<Dialect> dialect =
