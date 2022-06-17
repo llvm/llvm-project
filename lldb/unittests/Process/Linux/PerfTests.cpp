@@ -76,14 +76,14 @@ TEST(Perf, TscConversion) {
   if (!tsc_after_sleep)
     GTEST_SKIP() << toString(tsc_after_sleep.takeError());
 
-  std::chrono::nanoseconds converted_tsc_diff =
+  uint64_t converted_tsc_diff =
       params->ToNanos(*tsc_after_sleep) - params->ToNanos(*tsc_before_sleep);
 
   std::chrono::microseconds acceptable_overhead(500);
 
-  ASSERT_GE(converted_tsc_diff.count(), SLEEP_NANOS.count());
-  ASSERT_LT(converted_tsc_diff.count(),
-            (SLEEP_NANOS + acceptable_overhead).count());
+  ASSERT_GE(converted_tsc_diff, static_cast<uint64_t>(SLEEP_NANOS.count()));
+  ASSERT_LT(converted_tsc_diff,
+            static_cast<uint64_t>((SLEEP_NANOS + acceptable_overhead).count()));
 }
 
 #endif // __x86_64__
