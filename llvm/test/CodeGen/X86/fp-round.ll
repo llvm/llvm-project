@@ -10,18 +10,16 @@ define half @round_f16(half %h) {
 ; SSE2:       ## %bb.0: ## %entry
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
-; SSE2-NEXT:    movzwl %di, %edi
 ; SSE2-NEXT:    callq ___extendhfsf2
 ; SSE2-NEXT:    callq _roundf
 ; SSE2-NEXT:    callq ___truncsfhf2
-; SSE2-NEXT:    popq %rcx
+; SSE2-NEXT:    popq %rax
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: round_f16:
 ; SSE41:       ## %bb.0: ## %entry
 ; SSE41-NEXT:    pushq %rax
 ; SSE41-NEXT:    .cfi_def_cfa_offset 16
-; SSE41-NEXT:    movzwl %di, %edi
 ; SSE41-NEXT:    callq ___extendhfsf2
 ; SSE41-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; SSE41-NEXT:    andps %xmm0, %xmm1
@@ -30,14 +28,13 @@ define half @round_f16(half %h) {
 ; SSE41-NEXT:    xorps %xmm0, %xmm0
 ; SSE41-NEXT:    roundss $11, %xmm1, %xmm0
 ; SSE41-NEXT:    callq ___truncsfhf2
-; SSE41-NEXT:    popq %rcx
+; SSE41-NEXT:    popq %rax
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: round_f16:
 ; AVX1:       ## %bb.0: ## %entry
 ; AVX1-NEXT:    pushq %rax
 ; AVX1-NEXT:    .cfi_def_cfa_offset 16
-; AVX1-NEXT:    movzwl %di, %edi
 ; AVX1-NEXT:    callq ___extendhfsf2
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
@@ -45,12 +42,13 @@ define half @round_f16(half %h) {
 ; AVX1-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    callq ___truncsfhf2
-; AVX1-NEXT:    popq %rcx
+; AVX1-NEXT:    popq %rax
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: round_f16:
 ; AVX512F:       ## %bb.0: ## %entry
-; AVX512F-NEXT:    movzwl %di, %eax
+; AVX512F-NEXT:    vpextrw $0, %xmm0, %eax
+; AVX512F-NEXT:    movzwl %ax, %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm0
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
@@ -59,7 +57,7 @@ define half @round_f16(half %h) {
 ; AVX512F-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    ## kill: def $ax killed $ax killed $eax
+; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512FP16-LABEL: round_f16:
