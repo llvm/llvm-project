@@ -367,6 +367,8 @@ Attribute Changes in Clang
 - Added the ``clang::annotate_type`` attribute, which can be used to add
   annotations to types (see documentation for details).
 
+- Added half float to types that can be represented by ``__attribute__((mode(XX)))``.
+
 Windows Support
 ---------------
 

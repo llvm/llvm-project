@@ -859,7 +859,6 @@ template<size_t N, class T>
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/unique_ptr.h>
 #include <__memory/uses_allocator.h>
-#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -870,6 +869,9 @@ template<size_t N, class T>
 #include <type_traits>
 #include <typeinfo>
 #include <version>
+
+// standard-mandated includes
+#include <compare>
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 #   include <__memory/auto_ptr.h>

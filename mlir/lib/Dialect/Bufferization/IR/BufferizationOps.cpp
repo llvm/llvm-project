@@ -129,33 +129,84 @@ LogicalResult mlir::bufferization::foldToMemrefToTensorPair(
   return success();
 }
 
+void mlir::bufferization::populateDynamicDimSizes(
+    OpBuilder &b, Location loc, Value shapedValue,
+    SmallVector<Value> &dynamicDims) {
+  auto shapedType = shapedValue.getType().cast<ShapedType>();
+  for (int64_t i = 0; i < shapedType.getRank(); ++i) {
+    if (shapedType.isDynamicDim(i)) {
+      if (shapedType.isa<MemRefType>()) {
+        dynamicDims.push_back(b.create<memref::DimOp>(loc, shapedValue, i));
+      } else {
+        assert(shapedType.isa<RankedTensorType>() && "expected tensor");
+        dynamicDims.push_back(b.create<tensor::DimOp>(loc, shapedValue, i));
+      }
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // AllocTensorOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
-                                       BufferizationState &state) {
-  // Nothing to do for dead AllocTensorOps.
-  if (getOperation()->getUses().empty())
-    return success();
+                                       const BufferizationOptions &options) {
+  OpBuilder::InsertionGuard g(rewriter);
+  Location loc = getLoc();
 
-  Optional<bool> dealloc = llvm::None;
-  if (escape().hasValue())
-    dealloc = !*escape();
+  // Nothing to do for dead AllocTensorOps.
+  if (getOperation()->getUses().empty()) {
+    rewriter.eraseOp(getOperation());
+    return success();
+  }
+
+  // Create buffer allocation.
+  Value copyBuffer;
+  if (copy())
+    copyBuffer = getBuffer(rewriter, copy(), options);
+  auto allocType =
+      MemRefType::get(getType().getShape(), getType().getElementType());
+  SmallVector<Value> dynamicDims = dynamicSizes();
+  if (copy()) {
+    assert(dynamicDims.empty() && "expected either `copy` or `dynamicDims`");
+    populateDynamicDimSizes(rewriter, loc, copyBuffer, dynamicDims);
+  }
   FailureOr<Value> alloc =
-      state.createAlloc(rewriter, getLoc(), getResult(), dealloc);
+      options.createAlloc(rewriter, loc, allocType, dynamicDims);
   if (failed(alloc))
     return failure();
+
+  // Create memory copy (if any).
   if (copy()) {
-    FailureOr<Value> copyValueBuffer = state.getBuffer(
-        rewriter, getOperation()->getOpOperand(getNumOperands() - 1));
-    if (failed(copyValueBuffer))
-      return failure();
-    if (failed(state.getOptions().createMemCpy(rewriter, getLoc(),
-                                               *copyValueBuffer, *alloc)))
+    if (failed(options.createMemCpy(rewriter, loc, copyBuffer, *alloc)))
       return failure();
   }
+
+  // Should the buffer be deallocated?
+  AnalysisState analysisState(options);
+  bool dealloc;
+  if (escape().hasValue()) {
+    dealloc = !*escape();
+  } else {
+    // No "escape" annotation found.
+    if (options.createDeallocs) {
+      // Perform an ad-hoc analysis.
+      dealloc = !analysisState.isTensorYielded(getResult());
+    } else {
+      dealloc = false;
+    }
+  }
+
+  // Replace op.
   replaceOpWithBufferizedValues(rewriter, getOperation(), *alloc);
+
+  // Create buffer deallocation (if requested).
+  if (!dealloc)
+    return success();
+
+  rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
+  if (failed(options.createDealloc(rewriter, loc, *alloc)))
+    return failure();
   return success();
 }
 
@@ -575,7 +626,7 @@ void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
-                                    BufferizationState &state) {
+                                    const BufferizationOptions &options) {
   // Fold to_memref(to_tensor(x)) to x. Insert a cast if necessary.
   (void)foldToMemrefToTensorPair(rewriter, *this);
   // Note: The return value of `bufferize` indicates whether there was an error

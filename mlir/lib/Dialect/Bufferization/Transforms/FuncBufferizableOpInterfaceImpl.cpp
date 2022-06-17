@@ -258,7 +258,7 @@ struct CallOpInterface
   /// All function arguments are writable. It is the responsibility of the
   /// CallOp to insert buffer copies where necessary.
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     func::CallOp callOp = cast<func::CallOp>(op);
     unsigned numResults = callOp.getNumResults();
     unsigned numOperands = callOp->getNumOperands();
@@ -306,12 +306,8 @@ struct CallOpInterface
 
       // Retrieve buffers for tensor operands.
       Value buffer = newOperands[idx];
-      if (!buffer) {
-        FailureOr<Value> bufferOrFailure = state.getBuffer(rewriter, opOperand);
-        if (failed(bufferOrFailure))
-          return failure();
-        buffer = *bufferOrFailure;
-      }
+      if (!buffer)
+        buffer = getBuffer(rewriter, opOperand.get(), options);
 
       // Caller / callee type mismatch is handled with a CastOp.
       auto memRefType = funcType.getInput(idx);
@@ -368,7 +364,7 @@ struct ReturnOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
 #ifndef NDEBUG
     auto returnOp = cast<func::ReturnOp>(op);
     assert(isa<FuncOp>(returnOp->getParentOp()) &&
@@ -390,11 +386,9 @@ struct FuncOpInterface
   /// All function bbArgs are writable unless they are explicitly marked as
   /// read-only. Callers must insert copies when needed.
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationOptions &options) const {
     auto funcOp = cast<FuncOp>(op);
     FunctionType funcType = funcOp.getFunctionType();
-    const OneShotBufferizationOptions &options =
-        static_cast<const OneShotBufferizationOptions &>(state.getOptions());
 
     // Construct the bufferized function type.
     SmallVector<Type> argTypes;
