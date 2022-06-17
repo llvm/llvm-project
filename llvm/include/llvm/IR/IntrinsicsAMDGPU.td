@@ -1488,6 +1488,23 @@ def int_amdgcn_interp_p2_f16 :
             [IntrNoMem, IntrSpeculatable, IntrWillReturn,
              ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
+// __int_amdgcn_lds_direct_load <m0>
+// The input argument is m0, which contains a packed combination of address
+// offset and flags describing the data type.
+def int_amdgcn_lds_direct_load :
+  Intrinsic<[llvm_any_ty], // overloaded for types u8, u16, i32/f32, i8, i16
+            [llvm_i32_ty],
+            [IntrReadMem, IntrSpeculatable, IntrWillReturn]>;
+
+// __int_amdgcn_lds_param_load <attr_chan>, <attr>, <m0>
+// Like interp intrinsics, this reads from lds, but the memory values are constant,
+// so it behaves like IntrNoMem.
+def int_amdgcn_lds_param_load :
+  Intrinsic<[llvm_float_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+             ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+
 // Deprecated: use llvm.amdgcn.live.mask instead.
 def int_amdgcn_ps_live : Intrinsic <
   [llvm_i1_ty],

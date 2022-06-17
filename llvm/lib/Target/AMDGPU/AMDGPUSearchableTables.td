@@ -230,6 +230,8 @@ def : SourceOfDivergence<int_amdgcn_interp_p1>;
 def : SourceOfDivergence<int_amdgcn_interp_p2>;
 def : SourceOfDivergence<int_amdgcn_interp_p1_f16>;
 def : SourceOfDivergence<int_amdgcn_interp_p2_f16>;
+def : SourceOfDivergence<int_amdgcn_lds_direct_load>;
+def : SourceOfDivergence<int_amdgcn_lds_param_load>;
 def : SourceOfDivergence<int_amdgcn_mbcnt_hi>;
 def : SourceOfDivergence<int_amdgcn_mbcnt_lo>;
 def : SourceOfDivergence<int_r600_read_tidig_x>;
