@@ -29,6 +29,11 @@ def TestType : DialectType<Test_Dialect, CPred<"true">> {
 // CHECK: TOC added by tool.
 // CHECK: [TOC]
 
+// CHECK-NOT: [TOC]
+// CHECK: Traits: SingleBlockImplicitTerminator<YieldOp>
+// CHECK: Interfaces: NoSideEffect (MemoryEffectOpInterface)
+// CHECK: Effects: MemoryEffects::Effect{}
+
 // CHECK: ## Attribute constraint definition
 // CHECK: ### attribute summary
 // CHECK: attribute description
@@ -37,10 +42,6 @@ def TestType : DialectType<Test_Dialect, CPred<"true">> {
 // CHECK: ### type summary
 // CHECK: type description
 
-// CHECK-NOT: [TOC]
-// CHECK: Traits: SingleBlockImplicitTerminator<YieldOp>
-// CHECK: Interfaces: NoSideEffect (MemoryEffectOpInterface)
-// CHECK: Effects: MemoryEffects::Effect{}
 
 def Toc_Dialect : Dialect {
   let name = "test_toc";
