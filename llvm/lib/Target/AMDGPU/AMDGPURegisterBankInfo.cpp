@@ -3017,6 +3017,12 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(MI, MRI, MI.getNumOperands() - 1); // Index
       return;
     }
+    case Intrinsic::amdgcn_interp_inreg_p10:
+    case Intrinsic::amdgcn_interp_inreg_p2:
+    case Intrinsic::amdgcn_interp_inreg_p10_f16:
+    case Intrinsic::amdgcn_interp_inreg_p2_f16:
+      applyDefaultMapping(OpdMapper);
+      return;
     case Intrinsic::amdgcn_permlane16:
     case Intrinsic::amdgcn_permlanex16: {
       // Doing a waterfall loop over these wouldn't make any sense.
@@ -4467,6 +4473,17 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // Must be SGPR, but we must take whatever the original bank is and fix it
       // later.
       OpdsMapping[M0Idx] = AMDGPU::getValueMapping(M0Bank, 32);
+      break;
+    }
+    case Intrinsic::amdgcn_interp_inreg_p10:
+    case Intrinsic::amdgcn_interp_inreg_p2:
+    case Intrinsic::amdgcn_interp_inreg_p10_f16:
+    case Intrinsic::amdgcn_interp_inreg_p2_f16: {
+      unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+      OpdsMapping[4] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
       break;
     }
     case Intrinsic::amdgcn_ballot: {
