@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s
+// RUN: %clang_cc1 -std=c++11 -verify %s -fclang-abi-compat=14 -DCLANG_ABI_COMPAT=14
 
 // expected-no-diagnostics
 
@@ -31,7 +32,30 @@ using _ = not_trivially_assignable<UserProvided>;
 struct NonConstCopy {
   NonConstCopy &operator=(NonConstCopy &) = default;
 };
+#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 14
+// Up until (and including) Clang 14, non-const copy assignment operators were not trivial because
+// of dr2171
 using _ = not_trivially_assignable<NonConstCopy>;
+#else
+// In the latest Clang version, all defaulted assignment operators are trivial, even if non-const,
+// because dr2171 is fixed
+static_assert(__has_trivial_assign(NonConstCopy), "");
+static_assert(__is_trivially_assignable(NonConstCopy &, NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &, const NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &, NonConstCopy), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &, NonConstCopy &&), "");
+static_assert(__is_trivially_assignable(NonConstCopy &&, NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &&, const NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &&, NonConstCopy), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &&, NonConstCopy &&), "");
+
+struct DefaultedSpecialMembers {
+  DefaultedSpecialMembers &operator=(const DefaultedSpecialMembers &) = default;
+  DefaultedSpecialMembers &operator=(DefaultedSpecialMembers &) = default;
+  DefaultedSpecialMembers &operator=(DefaultedSpecialMembers &&) = default;
+};
+using _ = trivially_assignable<DefaultedSpecialMembers>;
+#endif
 
 // class X has no virtual functions
 struct VFn {

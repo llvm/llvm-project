@@ -10,12 +10,12 @@ struct Str {
 };
 
 // This class is non-trivially copyable because the copy-constructor and copy
-// assignment take non-const references.
+// assignment take non-const references and are user-provided.
 struct ModifiesRightSide {
   ModifiesRightSide() = default;
-  ModifiesRightSide(ModifiesRightSide &) = default;
+  ModifiesRightSide(ModifiesRightSide &);
   bool operator<(ModifiesRightSide &) const;
-  ModifiesRightSide &operator=(ModifiesRightSide &) = default;
+  ModifiesRightSide &operator=(ModifiesRightSide &);
 };
 
 template <typename T>
