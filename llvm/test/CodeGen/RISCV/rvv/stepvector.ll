@@ -167,6 +167,18 @@ define <vscale x 2 x i16> @stepvector_nxv2i16() {
   ret <vscale x 2 x i16> %v
 }
 
+declare <vscale x 2 x i15> @llvm.experimental.stepvector.nxv2i15()
+
+define <vscale x 2 x i15> @stepvector_nxv2i15() {
+; CHECK-LABEL: stepvector_nxv2i15:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    ret
+  %v = call <vscale x 2 x i15> @llvm.experimental.stepvector.nxv2i15()
+  ret <vscale x 2 x i15> %v
+}
+
 declare <vscale x 3 x i16> @llvm.experimental.stepvector.nxv3i16()
 
 define <vscale x 3 x i16> @stepvector_nxv3i16() {
@@ -514,7 +526,6 @@ entry:
   %3 = mul <vscale x 8 x i64> %2, %1
   ret <vscale x 8 x i64> %3
 }
-
 
 define <vscale x 8 x i64> @shl_stepvector_nxv8i64() {
 ; CHECK-LABEL: shl_stepvector_nxv8i64:
