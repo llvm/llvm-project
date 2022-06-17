@@ -240,6 +240,16 @@ public:
     return SelectSVEShiftImm(N, Low, High, AllowSaturation, Imm);
   }
 
+  bool SelectSVEShiftSplatImmR(SDValue N, SDValue &Imm) {
+    if (N->getOpcode() != ISD::SPLAT_VECTOR)
+      return false;
+
+    EVT EltVT = N->getValueType(0).getVectorElementType();
+    return SelectSVEShiftImm(N->getOperand(0), /* Low */ 1,
+                             /* High */ EltVT.getFixedSizeInBits(),
+                             /* AllowSaturation */ true, Imm);
+  }
+
   // Returns a suitable CNT/INC/DEC/RDVL multiplier to calculate VSCALE*N.
   template<signed Min, signed Max, signed Scale, bool Shift>
   bool SelectCntImm(SDValue N, SDValue &Imm) {
