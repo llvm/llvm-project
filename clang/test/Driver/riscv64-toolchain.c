@@ -23,6 +23,7 @@
 
 // C-RV64-BAREMETAL-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
 // C-RV64-BAREMETAL-LP64: "--sysroot={{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf"
+// C-RV64-BAREMETAL-LP64-SAME: "-X"
 // C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf/lib{{/|\\\\}}crt0.o"
 // C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtbegin.o"
 // C-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
@@ -83,7 +84,7 @@
 
 // C-RV64-LINUX-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-linux-gnu/bin{{/|\\\\}}ld"
 // C-RV64-LINUX-MULTI-LP64: "--sysroot={{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot"
-// C-RV64-LINUX-MULTI-LP64: "-m" "elf64lriscv"
+// C-RV64-LINUX-MULTI-LP64: "-m" "elf64lriscv" "-X"
 // C-RV64-LINUX-MULTI-LP64: "-dynamic-linker" "/lib/ld-linux-riscv64-lp64.so.1"
 // C-RV64-LINUX-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64{{/|\\\\}}crtbegin.o"
 // C-RV64-LINUX-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64"

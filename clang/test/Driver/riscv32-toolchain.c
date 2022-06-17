@@ -23,6 +23,7 @@
 
 // C-RV32-BAREMETAL-ILP32: "{{.*}}Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv32-unknown-elf-ld"
 // C-RV32-BAREMETAL-ILP32: "--sysroot={{.*}}/Inputs/basic_riscv32_tree/riscv32-unknown-elf"
+// C-RV64-BAREMETAL-LP64-SAME: "-X"
 // C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/riscv32-unknown-elf/lib{{/|\\\\}}crt0.o"
 // C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtbegin.o"
 // C-RV32-BAREMETAL-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1"
@@ -83,7 +84,7 @@
 
 // C-RV32-LINUX-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-linux-gnu/bin{{/|\\\\}}ld"
 // C-RV32-LINUX-MULTI-ILP32: "--sysroot={{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot"
-// C-RV32-LINUX-MULTI-ILP32: "-m" "elf32lriscv"
+// C-RV32-LINUX-MULTI-ILP32: "-m" "elf32lriscv" "-X"
 // C-RV32-LINUX-MULTI-ILP32: "-dynamic-linker" "/lib/ld-linux-riscv32-ilp32.so.1"
 // C-RV32-LINUX-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib32/ilp32{{/|\\\\}}crtbegin.o"
 // C-RV32-LINUX-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib32/ilp32"
