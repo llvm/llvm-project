@@ -1968,8 +1968,7 @@ private:
 
   /// Add OpenCL kernel arg metadata and the kernel attribute metadata to
   /// the function metadata.
-  void EmitOpenCLKernelMetadata(const FunctionDecl *FD,
-                                llvm::Function *Fn);
+  void EmitKernelMetadata(const FunctionDecl *FD, llvm::Function *Fn);
 
 public:
   CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext=false);
