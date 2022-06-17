@@ -89,3 +89,83 @@ end:
   %phi = phi <1 x i64> [ zeroinitializer, %entry ], [ <i64 srem (i64 1, i64 ptrtoint (i32* @g to i64))>, %if ]
   ret <1 x i64> %phi
 }
+
+define i64 @pt56038_sdiv_minus_one(i1 %c) {
+; CHECK-LABEL: @pt56038_sdiv_minus_one(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ sdiv (i64 ptrtoint (i32* @g to i64), i64 -1), [[IF]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i64 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %end
+
+if:
+  br label %end
+
+end:
+  %phi = phi i64 [ sdiv (i64 ptrtoint (i32* @g to i64), i64 -1), %if ], [ 0, %entry ]
+  ret i64 %phi
+}
+
+define i64 @pt56038_srem_not_minus_one(i1 %c) {
+; CHECK-LABEL: @pt56038_srem_not_minus_one(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], i64 sdiv (i64 ptrtoint (i32* @g to i64), i64 -2), i64 0
+; CHECK-NEXT:    ret i64 [[SPEC_SELECT]]
+;
+entry:
+  br i1 %c, label %if, label %end
+
+if:
+  br label %end
+
+end:
+  %phi = phi i64 [ sdiv (i64 ptrtoint (i32* @g to i64), i64 -2), %if ], [ 0, %entry ]
+  ret i64 %phi
+}
+
+define i64 @pt56038_sdiv_signed_min(i1 %c) {
+; CHECK-LABEL: @pt56038_sdiv_signed_min(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ sdiv (i64 -9223372036854775808, i64 ptrtoint (i32* @g to i64)), [[IF]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i64 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %end
+
+if:
+  br label %end
+
+end:
+  %phi = phi i64 [ sdiv (i64 -9223372036854775808, i64 ptrtoint (i32* @g to i64)), %if ], [ 0, %entry ]
+  ret i64 %phi
+}
+
+define i64 @pt56038_sdiv_not_signed_min_but_maybe_div_by_zero(i1 %c) {
+; CHECK-LABEL: @pt56038_sdiv_not_signed_min_but_maybe_div_by_zero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ sdiv (i64 -9223372036854775807, i64 ptrtoint (i32* @g to i64)), [[IF]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i64 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %end
+
+if:
+  br label %end
+
+end:
+  %phi = phi i64 [ sdiv (i64 -9223372036854775807, i64 ptrtoint (i32* @g to i64)), %if ], [ 0, %entry ]
+  ret i64 %phi
+}
