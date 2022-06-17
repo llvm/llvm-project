@@ -150,6 +150,8 @@ public:
 
   unsigned getMaxInterleaveFactor(unsigned VF);
 
+  bool prefersVectorizedAddressing() const;
+
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                         Align Alignment, unsigned AddressSpace,
                                         TTI::TargetCostKind CostKind);
