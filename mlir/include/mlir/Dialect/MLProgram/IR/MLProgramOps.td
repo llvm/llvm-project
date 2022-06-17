@@ -171,7 +171,8 @@ def MLProgram_GlobalLoadOp : MLProgram_Op<"global_load", [
     advanced cases.
 
     This op is side effecting and may not be valid to use in graph regions
-    without additional consideration to evaluation order constraints.
+    without additional consideration to evaluation order constraints. See
+    `global_load_graph` for op which allows for explicit ordering constraints.
 
     Example:
 
@@ -181,16 +182,14 @@ def MLProgram_GlobalLoadOp : MLProgram_Op<"global_load", [
   }];
 
   let arguments = (ins
-    Arg<SymbolRefAttr, "", [MemRead]>:$global,
-    Variadic<MLProgram_TokenType>:$consumeTokens
+    Arg<SymbolRefAttr, "", [MemRead]>:$global
   );
   let results = (outs
-    AnyType:$result,
-    Optional<MLProgram_TokenType>:$produceToken
+    AnyType:$result
   );
 
   let assemblyFormat = [{
-    $global `` custom<TokenOrdering>($consumeTokens, type($produceToken)) `:` type($result) attr-dict
+    $global `:` type($result) attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -239,10 +238,98 @@ def MLProgram_GlobalLoadConstOp : MLProgram_Op<"global_load_const", [
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalLoadGraphOp
+//===----------------------------------------------------------------------===//
+
+def MLProgram_GlobalLoadGraphOp : MLProgram_Op<"global_load_graph", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  ]> {
+  let summary = "Direct load of a mutable value from a global in Graph region";
+  let description = [{
+    Performs a non-atomic, non-volatile, non-synchronized load from a global
+    that may be mutable.
+
+    It is fully expected that these constraints are not suitable for all
+    situations, and alternative ops should be defined and used for more advanced
+    cases.
+
+    This op is side effecting and may not be valid to use in graph regions
+    without additional consideration to evaluation order constraints.
+
+    Example:
+
+    ```mlir
+    %0, %cstr = ml_program.global_load_graph @foobar
+      ordering (%token -> !ml_program.token) : tensor<?xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<SymbolRefAttr, "", [MemRead]>:$global,
+    Variadic<MLProgram_TokenType>:$consumeTokens
+  );
+  let results = (outs
+    AnyType:$result,
+    MLProgram_TokenType:$produceToken
+  );
+
+  let assemblyFormat = [{
+    $global `` custom<TokenOrdering>($consumeTokens, type($produceToken)) `:` type($result) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Gets the corresponding GlobalOp (or nullptr).
+    GlobalOp getGlobalOp(SymbolTableCollection &symbolTable);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalStoreOp
 //===----------------------------------------------------------------------===//
 
 def MLProgram_GlobalStoreOp : MLProgram_Op<"global_store", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  ]> {
+  let summary = "Direct store of a value into a mutable global";
+  let description = [{
+    Performs a non-atomic, non-volatile, non-synchronized store to a mutable
+    global.
+
+    It is fully expected that these constraints are not suitable for
+    all situations, and alternative ops should be defined and used for more
+    advanced cases.
+
+    This op is side effecting and may not be valid to use in graph regions
+    without additional consideration to evaluation order constraints. See
+    `global_store_graph` for op which allows for explicit ordering constraints.
+
+    Example:
+
+    ```mlir
+    ml_program.global_store @foobar = %0 : tensor<?xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<SymbolRefAttr, "", [MemWrite]>:$global,
+    AnyType:$value
+  );
+
+  let assemblyFormat = [{
+    $global `=` $value `:` type($value) attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Gets the corresponding GlobalOp (or nullptr).
+    GlobalOp getGlobalOp(SymbolTableCollection &symbolTable);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// GlobalStoreGraphOp
+//===----------------------------------------------------------------------===//
+
+def MLProgram_GlobalStoreGraphOp : MLProgram_Op<"global_store_graph", [
     DeclareOpInterfaceMethods<SymbolUserOpInterface>
   ]> {
   let summary = "Direct store of a value into a mutable global";
@@ -260,17 +347,18 @@ def MLProgram_GlobalStoreOp : MLProgram_Op<"global_store", [
     Example:
 
     ```mlir
-    ml_program.global_store @foobar = %0 : tensor<?xi32>
+    %token = ml_program.global_store @foobar = %0 : tensor<?xi32>
+      ordering (%in_token -> !ml_program.token) : tensor<?xi32>
     ```
   }];
 
   let arguments = (ins
-    Arg<SymbolRefAttr, "", [MemWrite]>:$global,
+    Arg<SymbolRefAttr, "", [MemRead]>:$global,
     AnyType:$value,
     Variadic<MLProgram_TokenType>:$consumeTokens
   );
   let results = (outs
-    Optional<MLProgram_TokenType>:$produceToken
+    MLProgram_TokenType:$produceToken
   );
 
   let assemblyFormat = [{

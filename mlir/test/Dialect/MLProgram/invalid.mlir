@@ -96,3 +96,17 @@ ml_program.func @store_immutable(%arg0: i64) {
   ml_program.global_store @var = %arg0 : i64
   ml_program.return
 }
+
+// -----
+
+ml_program.global private mutable @global_mutable_undef : tensor<?xi32>
+ml_program.subgraph @global_load_store_tokens() -> (tensor<?xi32>, !ml_program.token) {
+  %token1 = ml_program.token
+  %0, %token2 = ml_program.global_load_graph @global_mutable_undef
+      ordering(() -> !ml_program.token) : tensor<?xi32>
+  %token3 = ml_program.global_store_graph @global_mutable_undef = %0
+  // expected-error @+1 {{expected '->'}}
+      ordering(%token1, %token2) : tensor<?xi32>
+
+  ml_program.output %0, %token3 : tensor<?xi32>, !ml_program.token
+}
