@@ -46,6 +46,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/TensorCopyInsertion.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
@@ -989,9 +990,9 @@ LogicalResult
 bufferization::runOneShotBufferize(Operation *op,
                                    const OneShotBufferizationOptions &options) {
   OneShotAnalysisState state(op, options);
-  if (failed(analyzeOp(op, state)))
+  if (failed(insertTensorCopies(op, options)))
     return failure();
   if (options.testAnalysisOnly)
     return success();
-  return bufferizeOp(op, state);
+  return bufferizeOp(op, options, /*copyBeforeWrite=*/false);
 }
