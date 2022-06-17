@@ -429,7 +429,6 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   IRRewriter rewriter(moduleOp.getContext());
-  BufferizationState bufferizationState(options);
 
   // A list of functions in the order in which they are analyzed + bufferized.
   SmallVector<func::FuncOp> orderedFuncOps;

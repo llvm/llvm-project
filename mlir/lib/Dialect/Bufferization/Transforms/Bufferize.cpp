@@ -401,7 +401,6 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   DenseSet<Operation *> erasedOps;
 
   // Bufferize all ops.
-  BufferizationState bufferizationState(options);
   BufferizationRewriter rewriter(op->getContext(), erasedOps, toMemrefOps,
                                  worklist, options, opFilter);
   for (unsigned i = 0; i < worklist.size(); ++i) {
@@ -420,7 +419,7 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
       continue;
     // Bufferize the op.
     rewriter.setInsertionPoint(op);
-    if (failed(bufferizableOp.bufferize(rewriter, bufferizationState)))
+    if (failed(bufferizableOp.bufferize(rewriter, options)))
       return op->emitError("failed to bufferize op");
   }
 
@@ -433,7 +432,7 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
 
   /// Check the result of bufferization. Return an error if an op was not
   /// bufferized, unless partial bufferization is allowed.
-  if (bufferizationState.getOptions().allowUnknownOps)
+  if (options.allowUnknownOps)
     return success();
 
   for (Operation *op : worklist) {

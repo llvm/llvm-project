@@ -30,40 +30,38 @@ and with aggressive in-place bufferization.
 
 One-Shot Bufferize is:
 
-* **Monolithic**: A single MLIR pass does the entire
-work, whereas the previous bufferization in MLIR was split across multiple
-passes residing in different dialects. In One-Shot Bufferize,
-`BufferizableOpInterface` implementations are spread across different dialects.
+*   **Monolithic**: A single MLIR pass does the entire work, whereas the
+    previous bufferization in MLIR was split across multiple passes residing in
+    different dialects. In One-Shot Bufferize, `BufferizableOpInterface`
+    implementations are spread across different dialects.
 
-* A **whole-function at a time analysis**. In-place bufferization decisions are
-made by analyzing SSA use-def chains on tensors. Op interface implementations
-not only provide the rewrite logic from tensor ops to memref ops, but also
-helper methods for One-Shot Bufferize's analysis to query information about an
-op's bufferization/memory semantics.
+*   A **whole-function at a time analysis**. In-place bufferization decisions
+    are made by analyzing SSA use-def chains on tensors. Op interface
+    implementations not only provide the rewrite logic from tensor ops to memref
+    ops, but also helper methods for One-Shot Bufferize's analysis to query
+    information about an op's bufferization/memory semantics.
 
-* **Extensible** via an op interface: All
-ops that implement `BufferizableOpInterface` can be bufferized.
+*   **Extensible** via an op interface: All ops that implement
+    `BufferizableOpInterface` can be bufferized.
 
-* **2-Pass**:
-Bufferization is internally broken down into 2 steps: First, analyze the entire
-IR and make bufferization decisions. Then, bufferize (rewrite) the IR. The
-analysis has access to exact SSA use-def information. It incrementally builds
-alias and equivalence sets and does not rely on a posteriori-alias analysis from
-preallocated memory.
+*   **2-Pass**: Bufferization is internally broken down into 2 steps: First,
+    analyze the entire IR and make bufferization decisions. Then, bufferize
+    (rewrite) the IR. The analysis has access to exact SSA use-def information.
+    It incrementally builds alias and equivalence sets and does not rely on a
+    posteriori-alias analysis from preallocated memory.
 
-* **Greedy**: Operations are analyzed one-by-one and it is
-decided on the spot whether a tensor OpOperand must be copied or not. Heuristics
-determine the order of analysis.
+*   **Greedy**: Operations are analyzed one-by-one and it is decided on the spot
+    whether a tensor OpOperand must be copied or not. Heuristics determine the
+    order of analysis.
 
-* **Modular**: The current One-Shot Analysis
-can be replaced with a different analysis. The result of the analysis are
-queried by the bufferization via `BufferizationState`, in particular
-`BufferizationState::isInPlace`. Any derived class of `BufferizationState` that
-implements a small number virtual functions can serve as a custom analysis. It
-is even possible to run One-Shot Bufferize without any analysis
-(`AlwaysCopyBufferizationState`), in which case One-Shot Bufferize behaves
-exactly like the old dialect conversion-based bufferization (i.e., copy every
-buffer before writing to it).
+*   **Modular**: The current One-Shot Analysis can be replaced with a different
+    analysis. The result of the analysis are queried by the bufferization via
+    `AnalysisState`, in particular `AnalysisState::isInPlace`. Any derived class
+    of `AnalysisState` that implements a small number virtual functions can
+    serve as a custom analysis. It is even possible to run One-Shot Bufferize
+    without any analysis (`AlwaysCopyAnalysisState`), in which case One-Shot
+    Bufferize behaves exactly like the old dialect conversion-based
+    bufferization (i.e., copy every buffer before writing to it).
 
 To reduce complexity, One-Shot Bufferize should be
 [run after other transformations](https://llvm.discourse.group/t/rfc-linalg-on-tensors-update-and-comprehensive-bufferization-rfc/3373),

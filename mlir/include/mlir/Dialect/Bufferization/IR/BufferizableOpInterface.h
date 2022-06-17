@@ -236,7 +236,7 @@ struct BufferizationOptions {
   ///
   /// Note: Deactivating this flag can lead to incorrect bufferization results
   /// when used incorrectly. This flag is useful with
-  /// `AlwaysCopyBufferizationState` which bufferizes all writing tensor
+  /// `AlwaysCopyAnalysisState` which bufferizes all writing tensor
   /// OpOperands out-of-place.
   bool enforceAliasingInvariants = true;
 
@@ -464,39 +464,24 @@ private:
   const BufferizationOptions &options;
 };
 
-/// BufferizationState provides helper functions for performing bufferization
-/// rewrites and handling memref buffers.
-struct BufferizationState {
-  BufferizationState(const BufferizationOptions &options) : options(options) {}
-
-  /// Lookup the buffer for the given value. If the value was not bufferized
-  /// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
-  /// from which the memref operand is returned.
-  Value getBuffer(RewriterBase &rewriter, Value value);
-
-  /// Return the buffer type for a given Value (tensor) after bufferization.
-  ///
-  /// Note: Op implementations should preferrably call `getBuffer()->getType()`.
-  /// This function should only be used if `getBuffer` cannot be used.
-  BaseMemRefType getBufferType(Value value) const;
-
-  /// Return a reference to the BufferizationOptions.
-  const BufferizationOptions &getOptions() const { return options; }
-
-protected:
-  // BufferizationState should be passed as a reference.
-  BufferizationState(const BufferizationState &) = delete;
-
-private:
-  const BufferizationOptions &options;
-};
-
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).
 /// If `copy` is set, the shaped value is copied. Otherwise, a tensor with
 /// undefined contents is allocated.
 Value allocateTensorForShapedValue(OpBuilder &b, Location loc,
                                    Value shapedValue, bool escape,
                                    bool copy = true);
+
+/// Lookup the buffer for the given value. If the value was not bufferized
+/// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
+/// from which the memref operand is returned.
+Value getBuffer(RewriterBase &rewriter, Value value,
+                const BufferizationOptions &options);
+
+/// Return the buffer type for a given Value (tensor) after bufferization.
+///
+/// Note: Op implementations should preferrably call `getBuffer()->getType()`.
+/// This function should only be used if `getBuffer` cannot be used.
+BaseMemRefType getBufferType(Value value, const BufferizationOptions &options);
 
 /// Replace an op with replacement values. The op is deleted. Tensor OpResults
 /// must be replaced with memref values.

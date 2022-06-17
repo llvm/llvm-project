@@ -150,7 +150,7 @@ void mlir::bufferization::populateDynamicDimSizes(
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
-                                       BufferizationState &state) {
+                                       const BufferizationOptions &options) {
   OpBuilder::InsertionGuard g(rewriter);
   Location loc = getLoc();
 
@@ -163,7 +163,7 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   // Create buffer allocation.
   Value copyBuffer;
   if (copy())
-    copyBuffer = state.getBuffer(rewriter, copy());
+    copyBuffer = getBuffer(rewriter, copy(), options);
   auto allocType =
       MemRefType::get(getType().getShape(), getType().getElementType());
   SmallVector<Value> dynamicDims = dynamicSizes();
@@ -172,25 +172,24 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
     populateDynamicDimSizes(rewriter, loc, copyBuffer, dynamicDims);
   }
   FailureOr<Value> alloc =
-      state.getOptions().createAlloc(rewriter, loc, allocType, dynamicDims);
+      options.createAlloc(rewriter, loc, allocType, dynamicDims);
   if (failed(alloc))
     return failure();
 
   // Create memory copy (if any).
   if (copy()) {
-    if (failed(
-            state.getOptions().createMemCpy(rewriter, loc, copyBuffer, *alloc)))
+    if (failed(options.createMemCpy(rewriter, loc, copyBuffer, *alloc)))
       return failure();
   }
 
   // Should the buffer be deallocated?
-  AnalysisState analysisState(state.getOptions());
+  AnalysisState analysisState(options);
   bool dealloc;
   if (escape().hasValue()) {
     dealloc = !*escape();
   } else {
     // No "escape" annotation found.
-    if (state.getOptions().createDeallocs) {
+    if (options.createDeallocs) {
       // Perform an ad-hoc analysis.
       dealloc = !analysisState.isTensorYielded(getResult());
     } else {
@@ -206,7 +205,7 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
     return success();
 
   rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
-  if (failed(state.getOptions().createDealloc(rewriter, loc, *alloc)))
+  if (failed(options.createDealloc(rewriter, loc, *alloc)))
     return failure();
   return success();
 }
@@ -627,7 +626,7 @@ void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
-                                    BufferizationState &state) {
+                                    const BufferizationOptions &options) {
   // Fold to_memref(to_tensor(x)) to x. Insert a cast if necessary.
   (void)foldToMemrefToTensorPair(rewriter, *this);
   // Note: The return value of `bufferize` indicates whether there was an error
