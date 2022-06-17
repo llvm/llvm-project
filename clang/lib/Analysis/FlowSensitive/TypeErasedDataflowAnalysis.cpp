@@ -89,6 +89,12 @@ public:
     extendFlowCondition(*Cond);
   }
 
+  void VisitForStmt(const ForStmt *S) {
+    auto *Cond = S->getCond();
+    assert(Cond != nullptr);
+    extendFlowCondition(*Cond);
+  }
+
   void VisitBinaryOperator(const BinaryOperator *S) {
     assert(S->getOpcode() == BO_LAnd || S->getOpcode() == BO_LOr);
     auto *LHS = S->getLHS();
