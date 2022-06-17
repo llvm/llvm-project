@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 define void @foo(i1 %c1, i1 %c2) {
 entry:
-  %Args.i = alloca <2 x i32*>, align 16
+  %Args.i = alloca <2 x ptr>, align 16
   br i1 %c1, label %bb0.exit158, label %if.then.i.i.i.i.i138
 
 if.then.i.i.i.i.i138:
@@ -20,6 +20,6 @@ if.then.i.i.i.i.i237:
   unreachable
 
 bb0.exit257:
-  %0 = load <2 x i32*>, <2 x i32*>* %Args.i, align 16
+  %0 = load <2 x ptr>, ptr %Args.i, align 16
   ret void
 }

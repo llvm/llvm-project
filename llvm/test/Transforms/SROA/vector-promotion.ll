@@ -17,17 +17,16 @@ define i32 @test1(<4 x i32> %x, <4 x i32> %y) {
 entry:
   %a = alloca [2 x <4 x i32>]
 
-  %a.x = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0
-  store <4 x i32> %x, <4 x i32>* %a.x
-  %a.y = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1
-  store <4 x i32> %y, <4 x i32>* %a.y
+  store <4 x i32> %x, ptr %a
+  %a.y = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1
+  store <4 x i32> %y, ptr %a.y
 
-  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0, i64 2
-  %tmp1 = load i32, i32* %a.tmp1
-  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 3
-  %tmp2 = load i32, i32* %a.tmp2
-  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 0
-  %tmp3 = load i32, i32* %a.tmp3
+  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 0, i64 2
+  %tmp1 = load i32, ptr %a.tmp1
+  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 3
+  %tmp2 = load i32, ptr %a.tmp2
+  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 0
+  %tmp3 = load i32, ptr %a.tmp3
 
   %tmp4 = add i32 %tmp1, %tmp2
   %tmp5 = add i32 %tmp3, %tmp4
@@ -48,18 +47,16 @@ define i32 @test2(<4 x i32> %x, <4 x i32> %y) {
 entry:
   %a = alloca [2 x <4 x i32>]
 
-  %a.x = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0
-  store <4 x i32> %x, <4 x i32>* %a.x
-  %a.y = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1
-  store <4 x i32> %y, <4 x i32>* %a.y
+  store <4 x i32> %x, ptr %a
+  %a.y = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1
+  store <4 x i32> %y, ptr %a.y
 
-  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0, i64 2
-  %tmp1 = load i32, i32* %a.tmp1
-  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 3
-  %tmp2 = load i32, i32* %a.tmp2
-  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 0
-  %a.tmp3.cast = bitcast i32* %a.tmp3 to <2 x i32>*
-  %tmp3.vec = load <2 x i32>, <2 x i32>* %a.tmp3.cast
+  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 0, i64 2
+  %tmp1 = load i32, ptr %a.tmp1
+  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 3
+  %tmp2 = load i32, ptr %a.tmp2
+  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 0
+  %tmp3.vec = load <2 x i32>, ptr %a.tmp3
   %tmp3 = extractelement <2 x i32> %tmp3.vec, i32 0
 
   %tmp4 = add i32 %tmp1, %tmp2
@@ -81,34 +78,31 @@ define i32 @test3(<4 x i32> %x, <4 x i32> %y) {
 entry:
   %a = alloca [2 x <4 x i32>]
 
-  %a.x = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0
-  store <4 x i32> %x, <4 x i32>* %a.x
-  %a.y = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1
-  store <4 x i32> %y, <4 x i32>* %a.y
+  store <4 x i32> %x, ptr %a
+  %a.y = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1
+  store <4 x i32> %y, ptr %a.y
 
-  %a.y.cast = bitcast <4 x i32>* %a.y to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.y.cast, i8 0, i32 16, i1 false)
+  call void @llvm.memset.p0.i32(ptr %a.y, i8 0, i32 16, i1 false)
 
-  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0, i64 2
-  %a.tmp1.cast = bitcast i32* %a.tmp1 to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.tmp1.cast, i8 -1, i32 4, i1 false)
-  %tmp1 = load i32, i32* %a.tmp1
-  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 3
-  %tmp2 = load i32, i32* %a.tmp2
-  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 0
-  %tmp3 = load i32, i32* %a.tmp3
+  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 0, i64 2
+  call void @llvm.memset.p0.i32(ptr %a.tmp1, i8 -1, i32 4, i1 false)
+  %tmp1 = load i32, ptr %a.tmp1
+  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 3
+  %tmp2 = load i32, ptr %a.tmp2
+  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 0
+  %tmp3 = load i32, ptr %a.tmp3
 
   %tmp4 = add i32 %tmp1, %tmp2
   %tmp5 = add i32 %tmp3, %tmp4
   ret i32 %tmp5
 }
 
-define i32 @test4(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %z) {
+define i32 @test4(<4 x i32> %x, <4 x i32> %y, ptr %z) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_3_16_COPYLOAD:%.*]] = load <4 x i32>, <4 x i32>* [[Z:%.*]], align 1
-; CHECK-NEXT:    [[A_SROA_0_8_Z_TMP1_CAST_SROA_IDX:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[Z]], i64 0, i64 2
-; CHECK-NEXT:    [[A_SROA_0_8_COPYLOAD:%.*]] = load i32, i32* [[A_SROA_0_8_Z_TMP1_CAST_SROA_IDX]], align 1
+; CHECK-NEXT:    [[A_SROA_3_16_COPYLOAD:%.*]] = load <4 x i32>, ptr [[Z:%.*]], align 1
+; CHECK-NEXT:    [[Z_TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Z]], i64 0, i64 2
+; CHECK-NEXT:    [[A_SROA_0_8_COPYLOAD:%.*]] = load i32, ptr [[Z_TMP1]], align 1
 ; CHECK-NEXT:    [[A_SROA_0_8_VEC_INSERT:%.*]] = insertelement <4 x i32> [[X:%.*]], i32 [[A_SROA_0_8_COPYLOAD]], i32 2
 ; CHECK-NEXT:    [[A_SROA_0_8_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[A_SROA_0_8_VEC_INSERT]], i32 2
 ; CHECK-NEXT:    [[A_SROA_3_28_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[A_SROA_3_16_COPYLOAD]], i32 3
@@ -120,40 +114,35 @@ define i32 @test4(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %z) {
 entry:
   %a = alloca [2 x <4 x i32>]
 
-  %a.x = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0
-  store <4 x i32> %x, <4 x i32>* %a.x
-  %a.y = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1
-  store <4 x i32> %y, <4 x i32>* %a.y
+  store <4 x i32> %x, ptr %a
+  %a.y = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1
+  store <4 x i32> %y, ptr %a.y
 
-  %a.y.cast = bitcast <4 x i32>* %a.y to i8*
-  %z.cast = bitcast <4 x i32>* %z to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.y.cast, i8* %z.cast, i32 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %a.y, ptr %z, i32 16, i1 false)
 
-  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0, i64 2
-  %a.tmp1.cast = bitcast i32* %a.tmp1 to i8*
-  %z.tmp1 = getelementptr inbounds <4 x i32>, <4 x i32>* %z, i64 0, i64 2
-  %z.tmp1.cast = bitcast i32* %z.tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.tmp1.cast, i8* %z.tmp1.cast, i32 4, i1 false)
-  %tmp1 = load i32, i32* %a.tmp1
-  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 3
-  %tmp2 = load i32, i32* %a.tmp2
-  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 0
-  %tmp3 = load i32, i32* %a.tmp3
+  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 0, i64 2
+  %z.tmp1 = getelementptr inbounds <4 x i32>, ptr %z, i64 0, i64 2
+  call void @llvm.memcpy.p0.p0.i32(ptr %a.tmp1, ptr %z.tmp1, i32 4, i1 false)
+  %tmp1 = load i32, ptr %a.tmp1
+  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 3
+  %tmp2 = load i32, ptr %a.tmp2
+  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 0
+  %tmp3 = load i32, ptr %a.tmp3
 
   %tmp4 = add i32 %tmp1, %tmp2
   %tmp5 = add i32 %tmp3, %tmp4
   ret i32 %tmp5
 }
 
-declare void @llvm.memcpy.p0i8.p1i8.i32(i8* nocapture, i8 addrspace(1)* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p1.i32(ptr nocapture, ptr addrspace(1) nocapture, i32, i1) nounwind
 
 ; Same as test4 with a different sized address  space pointer source.
-define i32 @test4_as1(<4 x i32> %x, <4 x i32> %y, <4 x i32> addrspace(1)* %z) {
+define i32 @test4_as1(<4 x i32> %x, <4 x i32> %y, ptr addrspace(1) %z) {
 ; CHECK-LABEL: @test4_as1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_3_16_COPYLOAD:%.*]] = load <4 x i32>, <4 x i32> addrspace(1)* [[Z:%.*]], align 1
-; CHECK-NEXT:    [[A_SROA_0_8_Z_TMP1_CAST_SROA_IDX:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* [[Z]], i64 0, i64 2
-; CHECK-NEXT:    [[A_SROA_0_8_COPYLOAD:%.*]] = load i32, i32 addrspace(1)* [[A_SROA_0_8_Z_TMP1_CAST_SROA_IDX]], align 1
+; CHECK-NEXT:    [[A_SROA_3_16_COPYLOAD:%.*]] = load <4 x i32>, ptr addrspace(1) [[Z:%.*]], align 1
+; CHECK-NEXT:    [[Z_TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[Z]], i16 0, i16 2
+; CHECK-NEXT:    [[A_SROA_0_8_COPYLOAD:%.*]] = load i32, ptr addrspace(1) [[Z_TMP1]], align 1
 ; CHECK-NEXT:    [[A_SROA_0_8_VEC_INSERT:%.*]] = insertelement <4 x i32> [[X:%.*]], i32 [[A_SROA_0_8_COPYLOAD]], i32 2
 ; CHECK-NEXT:    [[A_SROA_0_8_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[A_SROA_0_8_VEC_INSERT]], i32 2
 ; CHECK-NEXT:    [[A_SROA_3_28_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[A_SROA_3_16_COPYLOAD]], i32 3
@@ -165,37 +154,32 @@ define i32 @test4_as1(<4 x i32> %x, <4 x i32> %y, <4 x i32> addrspace(1)* %z) {
 entry:
   %a = alloca [2 x <4 x i32>]
 
-  %a.x = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0
-  store <4 x i32> %x, <4 x i32>* %a.x
-  %a.y = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1
-  store <4 x i32> %y, <4 x i32>* %a.y
+  store <4 x i32> %x, ptr %a
+  %a.y = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1
+  store <4 x i32> %y, ptr %a.y
 
-  %a.y.cast = bitcast <4 x i32>* %a.y to i8*
-  %z.cast = bitcast <4 x i32> addrspace(1)* %z to i8 addrspace(1)*
-  call void @llvm.memcpy.p0i8.p1i8.i32(i8* %a.y.cast, i8 addrspace(1)* %z.cast, i32 16, i1 false)
+  call void @llvm.memcpy.p0.p1.i32(ptr %a.y, ptr addrspace(1) %z, i32 16, i1 false)
 
-  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0, i64 2
-  %a.tmp1.cast = bitcast i32* %a.tmp1 to i8*
-  %z.tmp1 = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* %z, i16 0, i16 2
-  %z.tmp1.cast = bitcast i32 addrspace(1)* %z.tmp1 to i8 addrspace(1)*
-  call void @llvm.memcpy.p0i8.p1i8.i32(i8* %a.tmp1.cast, i8 addrspace(1)* %z.tmp1.cast, i32 4, i1 false)
-  %tmp1 = load i32, i32* %a.tmp1
-  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 3
-  %tmp2 = load i32, i32* %a.tmp2
-  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 0
-  %tmp3 = load i32, i32* %a.tmp3
+  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 0, i64 2
+  %z.tmp1 = getelementptr inbounds <4 x i32>, ptr addrspace(1) %z, i16 0, i16 2
+  call void @llvm.memcpy.p0.p1.i32(ptr %a.tmp1, ptr addrspace(1) %z.tmp1, i32 4, i1 false)
+  %tmp1 = load i32, ptr %a.tmp1
+  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 3
+  %tmp2 = load i32, ptr %a.tmp2
+  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 0
+  %tmp3 = load i32, ptr %a.tmp3
 
   %tmp4 = add i32 %tmp1, %tmp2
   %tmp5 = add i32 %tmp3, %tmp4
   ret i32 %tmp5
 }
 
-define i32 @test5(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %z) {
+define i32 @test5(<4 x i32> %x, <4 x i32> %y, ptr %z) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_SROA_0_8_A_SROA_0_8_Z_TMP1_CAST_SROA_CAST_SROA_IDX:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[Z:%.*]], i64 0, i64 2
-; CHECK-NEXT:    [[A_SROA_0_8_VEC_EXTRACT2:%.*]] = extractelement <4 x i32> [[Y:%.*]], i32 2
-; CHECK-NEXT:    store i32 [[A_SROA_0_8_VEC_EXTRACT2]], i32* [[A_SROA_0_8_A_SROA_0_8_Z_TMP1_CAST_SROA_CAST_SROA_IDX]], align 1
+; CHECK-NEXT:    [[Z_TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[Z:%.*]], i64 0, i64 2
+; CHECK-NEXT:    [[A_SROA_0_8_VEC_EXTRACT3:%.*]] = extractelement <4 x i32> [[Y:%.*]], i32 2
+; CHECK-NEXT:    store i32 [[A_SROA_0_8_VEC_EXTRACT3]], ptr [[Z_TMP1]], align 1
 ; CHECK-NEXT:    [[A_SROA_0_8_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[Y]], i32 2
 ; CHECK-NEXT:    [[A_SROA_4_12_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[Y]], i32 3
 ; CHECK-NEXT:    [[A_SROA_4_0_VEC_EXTRACT:%.*]] = extractelement <4 x i32> [[Y]], i32 0
@@ -208,54 +192,49 @@ define i32 @test5(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %z) {
 entry:
   %a = alloca [2 x <4 x i32>]
 
-  %a.x = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0
-  store <4 x i32> %x, <4 x i32>* %a.x
-  %a.y = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1
-  store <4 x i32> %y, <4 x i32>* %a.y
+  store <4 x i32> %x, ptr %a
+  %a.y = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1
+  store <4 x i32> %y, ptr %a.y
 
-  %a.y.cast = bitcast <4 x i32>* %a.y to i8*
-  %a.x.cast = bitcast <4 x i32>* %a.x to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.x.cast, i8* %a.y.cast, i32 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %a.y, i32 16, i1 false)
 
-  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 0, i64 2
-  %a.tmp1.cast = bitcast i32* %a.tmp1 to i8*
-  %z.tmp1 = getelementptr inbounds <4 x i32>, <4 x i32>* %z, i64 0, i64 2
-  %z.tmp1.cast = bitcast i32* %z.tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %z.tmp1.cast, i8* %a.tmp1.cast, i32 4, i1 false)
-  %tmp1 = load i32, i32* %a.tmp1
-  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 3
-  %tmp2 = load i32, i32* %a.tmp2
-  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], [2 x <4 x i32>]* %a, i64 0, i64 1, i64 0
-  %tmp3 = load i32, i32* %a.tmp3
+  %a.tmp1 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 0, i64 2
+  %z.tmp1 = getelementptr inbounds <4 x i32>, ptr %z, i64 0, i64 2
+  call void @llvm.memcpy.p0.p0.i32(ptr %z.tmp1, ptr %a.tmp1, i32 4, i1 false)
+  %tmp1 = load i32, ptr %a.tmp1
+  %a.tmp2 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 3
+  %tmp2 = load i32, ptr %a.tmp2
+  %a.tmp3 = getelementptr inbounds [2 x <4 x i32>], ptr %a, i64 0, i64 1, i64 0
+  %tmp3 = load i32, ptr %a.tmp3
 
   %tmp4 = add i32 %tmp1, %tmp2
   %tmp5 = add i32 %tmp3, %tmp4
   ret i32 %tmp5
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
+declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) nounwind
 
 define i64 @test6(<4 x i64> %x, <4 x i64> %y, i64 %n) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca { <4 x i64>, <4 x i64> }, align 32
-; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds { <4 x i64>, <4 x i64> }, { <4 x i64>, <4 x i64> }* [[TMP]], i32 0, i32 0
-; CHECK-NEXT:    store <4 x i64> [[X:%.*]], <4 x i64>* [[P0]], align 32
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds { <4 x i64>, <4 x i64> }, { <4 x i64>, <4 x i64> }* [[TMP]], i32 0, i32 1
-; CHECK-NEXT:    store <4 x i64> [[Y:%.*]], <4 x i64>* [[P1]], align 32
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr inbounds { <4 x i64>, <4 x i64> }, { <4 x i64>, <4 x i64> }* [[TMP]], i32 0, i32 0, i64 [[N:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = load i64, i64* [[ADDR]], align 4
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds { <4 x i64>, <4 x i64> }, ptr [[TMP]], i32 0, i32 0
+; CHECK-NEXT:    store <4 x i64> [[X:%.*]], ptr [[P0]], align 32
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds { <4 x i64>, <4 x i64> }, ptr [[TMP]], i32 0, i32 1
+; CHECK-NEXT:    store <4 x i64> [[Y:%.*]], ptr [[P1]], align 32
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr inbounds { <4 x i64>, <4 x i64> }, ptr [[TMP]], i32 0, i32 0, i64 [[N:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = load i64, ptr [[ADDR]], align 4
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 ; The old scalarrepl pass would wrongly drop the store to the second alloca.
 ; PR13254
   %tmp = alloca { <4 x i64>, <4 x i64> }
-  %p0 = getelementptr inbounds { <4 x i64>, <4 x i64> }, { <4 x i64>, <4 x i64> }* %tmp, i32 0, i32 0
-  store <4 x i64> %x, <4 x i64>* %p0
-  %p1 = getelementptr inbounds { <4 x i64>, <4 x i64> }, { <4 x i64>, <4 x i64> }* %tmp, i32 0, i32 1
-  store <4 x i64> %y, <4 x i64>* %p1
-  %addr = getelementptr inbounds { <4 x i64>, <4 x i64> }, { <4 x i64>, <4 x i64> }* %tmp, i32 0, i32 0, i64 %n
-  %res = load i64, i64* %addr, align 4
+  %p0 = getelementptr inbounds { <4 x i64>, <4 x i64> }, ptr %tmp, i32 0, i32 0
+  store <4 x i64> %x, ptr %p0
+  %p1 = getelementptr inbounds { <4 x i64>, <4 x i64> }, ptr %tmp, i32 0, i32 1
+  store <4 x i64> %y, ptr %p1
+  %addr = getelementptr inbounds { <4 x i64>, <4 x i64> }, ptr %tmp, i32 0, i32 0, i64 %n
+  %res = load i64, ptr %addr, align 4
   ret i64 %res
 }
 
@@ -271,22 +250,18 @@ define <4 x i32> @test_subvec_store() {
 entry:
   %a = alloca <4 x i32>
 
-  %a.gep0 = getelementptr <4 x i32>, <4 x i32>* %a, i32 0, i32 0
-  %a.cast0 = bitcast i32* %a.gep0 to <2 x i32>*
-  store <2 x i32> <i32 0, i32 0>, <2 x i32>* %a.cast0
+  store <2 x i32> <i32 0, i32 0>, ptr %a
 
-  %a.gep1 = getelementptr <4 x i32>, <4 x i32>* %a, i32 0, i32 1
-  %a.cast1 = bitcast i32* %a.gep1 to <2 x i32>*
-  store <2 x i32> <i32 1, i32 1>, <2 x i32>* %a.cast1
+  %a.gep1 = getelementptr <4 x i32>, ptr %a, i32 0, i32 1
+  store <2 x i32> <i32 1, i32 1>, ptr %a.gep1
 
-  %a.gep2 = getelementptr <4 x i32>, <4 x i32>* %a, i32 0, i32 2
-  %a.cast2 = bitcast i32* %a.gep2 to <2 x i32>*
-  store <2 x i32> <i32 2, i32 2>, <2 x i32>* %a.cast2
+  %a.gep2 = getelementptr <4 x i32>, ptr %a, i32 0, i32 2
+  store <2 x i32> <i32 2, i32 2>, ptr %a.gep2
 
-  %a.gep3 = getelementptr <4 x i32>, <4 x i32>* %a, i32 0, i32 3
-  store i32 3, i32* %a.gep3
+  %a.gep3 = getelementptr <4 x i32>, ptr %a, i32 0, i32 3
+  store i32 3, ptr %a.gep3
 
-  %ret = load <4 x i32>, <4 x i32>* %a
+  %ret = load <4 x i32>, ptr %a
 
   ret <4 x i32> %ret
 }
@@ -303,19 +278,15 @@ define <4 x i32> @test_subvec_load() {
 ;
 entry:
   %a = alloca <4 x i32>
-  store <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32>* %a
+  store <4 x i32> <i32 0, i32 1, i32 2, i32 3>, ptr %a
 
-  %a.gep0 = getelementptr <4 x i32>, <4 x i32>* %a, i32 0, i32 0
-  %a.cast0 = bitcast i32* %a.gep0 to <2 x i32>*
-  %first = load <2 x i32>, <2 x i32>* %a.cast0
+  %first = load <2 x i32>, ptr %a
 
-  %a.gep1 = getelementptr <4 x i32>, <4 x i32>* %a, i32 0, i32 1
-  %a.cast1 = bitcast i32* %a.gep1 to <2 x i32>*
-  %second = load <2 x i32>, <2 x i32>* %a.cast1
+  %a.gep1 = getelementptr <4 x i32>, ptr %a, i32 0, i32 1
+  %second = load <2 x i32>, ptr %a.gep1
 
-  %a.gep2 = getelementptr <4 x i32>, <4 x i32>* %a, i32 0, i32 2
-  %a.cast2 = bitcast i32* %a.gep2 to <2 x i32>*
-  %third = load <2 x i32>, <2 x i32>* %a.cast2
+  %a.gep2 = getelementptr <4 x i32>, ptr %a, i32 0, i32 2
+  %third = load <2 x i32>, ptr %a.gep2
 
   %tmp = shufflevector <2 x i32> %first, <2 x i32> %second, <2 x i32> <i32 0, i32 2>
   %ret = shufflevector <2 x i32> %tmp, <2 x i32> %third, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -323,7 +294,6 @@ entry:
   ret <4 x i32> %ret
 }
 
-declare void @llvm.memset.p0i32.i32(i32* nocapture, i32, i32, i1) nounwind
 
 define <4 x float> @test_subvec_memset() {
 ; CHECK-LABEL: @test_subvec_memset(
@@ -337,72 +307,57 @@ define <4 x float> @test_subvec_memset() {
 entry:
   %a = alloca <4 x float>
 
-  %a.gep0 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 0
-  %a.cast0 = bitcast float* %a.gep0 to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.cast0, i8 0, i32 8, i1 false)
+  call void @llvm.memset.p0.i32(ptr %a, i8 0, i32 8, i1 false)
 
-  %a.gep1 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 1
-  %a.cast1 = bitcast float* %a.gep1 to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.cast1, i8 1, i32 8, i1 false)
+  %a.gep1 = getelementptr <4 x float>, ptr %a, i32 0, i32 1
+  call void @llvm.memset.p0.i32(ptr %a.gep1, i8 1, i32 8, i1 false)
 
-  %a.gep2 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 2
-  %a.cast2 = bitcast float* %a.gep2 to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.cast2, i8 3, i32 8, i1 false)
+  %a.gep2 = getelementptr <4 x float>, ptr %a, i32 0, i32 2
+  call void @llvm.memset.p0.i32(ptr %a.gep2, i8 3, i32 8, i1 false)
 
-  %a.gep3 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 3
-  %a.cast3 = bitcast float* %a.gep3 to i8*
-  call void @llvm.memset.p0i8.i32(i8* %a.cast3, i8 7, i32 4, i1 false)
+  %a.gep3 = getelementptr <4 x float>, ptr %a, i32 0, i32 3
+  call void @llvm.memset.p0.i32(ptr %a.gep3, i8 7, i32 4, i1 false)
 
-  %ret = load <4 x float>, <4 x float>* %a
+  %ret = load <4 x float>, ptr %a
 
   ret <4 x float> %ret
 }
 
-define <4 x float> @test_subvec_memcpy(i8* %x, i8* %y, i8* %z, i8* %f, i8* %out) {
+define <4 x float> @test_subvec_memcpy(ptr %x, ptr %y, ptr %z, ptr %f, ptr %out) {
 ; CHECK-LABEL: @test_subvec_memcpy(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_0_X_SROA_CAST:%.*]] = bitcast i8* [[X:%.*]] to <2 x float>*
-; CHECK-NEXT:    [[A_0_COPYLOAD:%.*]] = load <2 x float>, <2 x float>* [[A_0_X_SROA_CAST]], align 1
+; CHECK-NEXT:    [[A_0_COPYLOAD:%.*]] = load <2 x float>, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    [[A_0_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_0_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[A_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x float> [[A_0_VEC_EXPAND]], <4 x float> undef
-; CHECK-NEXT:    [[A_4_Y_SROA_CAST:%.*]] = bitcast i8* [[Y:%.*]] to <2 x float>*
-; CHECK-NEXT:    [[A_4_COPYLOAD:%.*]] = load <2 x float>, <2 x float>* [[A_4_Y_SROA_CAST]], align 1
+; CHECK-NEXT:    [[A_4_COPYLOAD:%.*]] = load <2 x float>, ptr [[Y:%.*]], align 1
 ; CHECK-NEXT:    [[A_4_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_4_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 undef>
 ; CHECK-NEXT:    [[A_4_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 false>, <4 x float> [[A_4_VEC_EXPAND]], <4 x float> [[A_0_VECBLEND]]
-; CHECK-NEXT:    [[A_8_Z_SROA_CAST:%.*]] = bitcast i8* [[Z:%.*]] to <2 x float>*
-; CHECK-NEXT:    [[A_8_COPYLOAD:%.*]] = load <2 x float>, <2 x float>* [[A_8_Z_SROA_CAST]], align 1
+; CHECK-NEXT:    [[A_8_COPYLOAD:%.*]] = load <2 x float>, ptr [[Z:%.*]], align 1
 ; CHECK-NEXT:    [[A_8_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A_8_COPYLOAD]], <2 x float> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
 ; CHECK-NEXT:    [[A_8_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x float> [[A_8_VEC_EXPAND]], <4 x float> [[A_4_VECBLEND]]
-; CHECK-NEXT:    [[A_12_F_SROA_CAST:%.*]] = bitcast i8* [[F:%.*]] to float*
-; CHECK-NEXT:    [[A_12_COPYLOAD:%.*]] = load float, float* [[A_12_F_SROA_CAST]], align 1
+; CHECK-NEXT:    [[A_12_COPYLOAD:%.*]] = load float, ptr [[F:%.*]], align 1
 ; CHECK-NEXT:    [[A_12_VEC_INSERT:%.*]] = insertelement <4 x float> [[A_8_VECBLEND]], float [[A_12_COPYLOAD]], i32 3
-; CHECK-NEXT:    [[A_8_OUT_SROA_CAST:%.*]] = bitcast i8* [[OUT:%.*]] to <2 x float>*
 ; CHECK-NEXT:    [[A_8_VEC_EXTRACT:%.*]] = shufflevector <4 x float> [[A_12_VEC_INSERT]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    store <2 x float> [[A_8_VEC_EXTRACT]], <2 x float>* [[A_8_OUT_SROA_CAST]], align 1
+; CHECK-NEXT:    store <2 x float> [[A_8_VEC_EXTRACT]], ptr [[OUT:%.*]], align 1
 ; CHECK-NEXT:    ret <4 x float> [[A_12_VEC_INSERT]]
 ;
 entry:
   %a = alloca <4 x float>
 
-  %a.gep0 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 0
-  %a.cast0 = bitcast float* %a.gep0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast0, i8* %x, i32 8, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %x, i32 8, i1 false)
 
-  %a.gep1 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 1
-  %a.cast1 = bitcast float* %a.gep1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast1, i8* %y, i32 8, i1 false)
+  %a.gep1 = getelementptr <4 x float>, ptr %a, i32 0, i32 1
+  call void @llvm.memcpy.p0.p0.i32(ptr %a.gep1, ptr %y, i32 8, i1 false)
 
-  %a.gep2 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 2
-  %a.cast2 = bitcast float* %a.gep2 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast2, i8* %z, i32 8, i1 false)
+  %a.gep2 = getelementptr <4 x float>, ptr %a, i32 0, i32 2
+  call void @llvm.memcpy.p0.p0.i32(ptr %a.gep2, ptr %z, i32 8, i1 false)
 
-  %a.gep3 = getelementptr <4 x float>, <4 x float>* %a, i32 0, i32 3
-  %a.cast3 = bitcast float* %a.gep3 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a.cast3, i8* %f, i32 4, i1 false)
+  %a.gep3 = getelementptr <4 x float>, ptr %a, i32 0, i32 3
+  call void @llvm.memcpy.p0.p0.i32(ptr %a.gep3, ptr %f, i32 4, i1 false)
 
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %out, i8* %a.cast2, i32 8, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr %out, ptr %a.gep2, i32 8, i1 false)
 
-  %ret = load <4 x float>, <4 x float>* %a
+  %ret = load <4 x float>, ptr %a
 
   ret <4 x float> %ret
 }
@@ -425,9 +380,8 @@ define i32 @PR14212(<3 x i8> %val) {
 entry:
   %retval = alloca <3 x i8>, align 4
 
-  store <3 x i8> %val, <3 x i8>* %retval, align 4
-  %cast = bitcast <3 x i8>* %retval to i32*
-  %load = load i32, i32* %cast, align 4
+  store <3 x i8> %val, ptr %retval, align 4
+  %load = load i32, ptr %retval, align 4
   ret i32 %load
 }
 
@@ -446,10 +400,9 @@ define <2 x i8> @PR14349.1(i32 %x) {
 entry:
   %a = alloca i32
 
-  store i32 %x, i32* %a
+  store i32 %x, ptr %a
 
-  %cast = bitcast i32* %a to <2 x i8>*
-  %vec = load <2 x i8>, <2 x i8>* %cast
+  %vec = load <2 x i8>, ptr %a
 
   ret <2 x i8> %vec
 }
@@ -473,10 +426,9 @@ define i32 @PR14349.2(<2 x i8> %x) {
 entry:
   %a = alloca i32
 
-  %cast = bitcast i32* %a to <2 x i8>*
-  store <2 x i8> %x, <2 x i8>* %cast
+  store <2 x i8> %x, ptr %a
 
-  %int = load i32, i32* %a
+  %int = load i32, ptr %a
 
   ret i32 %int
 }
@@ -494,19 +446,17 @@ define i32 @test7(<2 x i32> %x, <2 x i32> %y) {
 ;
 entry:
   %a = alloca [2 x i64]
-  %a.cast = bitcast [2 x i64]* %a to [2 x <2 x i32>]*
 
-  %a.x = getelementptr inbounds [2 x <2 x i32>], [2 x <2 x i32>]* %a.cast, i64 0, i64 0
-  store <2 x i32> %x, <2 x i32>* %a.x
-  %a.y = getelementptr inbounds [2 x <2 x i32>], [2 x <2 x i32>]* %a.cast, i64 0, i64 1
-  store <2 x i32> %y, <2 x i32>* %a.y
+  store <2 x i32> %x, ptr %a
+  %a.y = getelementptr inbounds [2 x <2 x i32>], ptr %a, i64 0, i64 1
+  store <2 x i32> %y, ptr %a.y
 
-  %a.tmp1 = getelementptr inbounds [2 x <2 x i32>], [2 x <2 x i32>]* %a.cast, i64 0, i64 0, i64 1
-  %tmp1 = load i32, i32* %a.tmp1
-  %a.tmp2 = getelementptr inbounds [2 x <2 x i32>], [2 x <2 x i32>]* %a.cast, i64 0, i64 1, i64 1
-  %tmp2 = load i32, i32* %a.tmp2
-  %a.tmp3 = getelementptr inbounds [2 x <2 x i32>], [2 x <2 x i32>]* %a.cast, i64 0, i64 1, i64 0
-  %tmp3 = load i32, i32* %a.tmp3
+  %a.tmp1 = getelementptr inbounds [2 x <2 x i32>], ptr %a, i64 0, i64 0, i64 1
+  %tmp1 = load i32, ptr %a.tmp1
+  %a.tmp2 = getelementptr inbounds [2 x <2 x i32>], ptr %a, i64 0, i64 1, i64 1
+  %tmp2 = load i32, ptr %a.tmp2
+  %a.tmp3 = getelementptr inbounds [2 x <2 x i32>], ptr %a, i64 0, i64 1, i64 0
+  %tmp3 = load i32, ptr %a.tmp3
 
   %tmp4 = add i32 %tmp1, %tmp2
   %tmp5 = add i32 %tmp3, %tmp4
@@ -525,14 +475,12 @@ define i32 @test8(<2 x i32> %x) {
 ;
 entry:
   %a = alloca i64
-  %a.vec = bitcast i64* %a to <2 x i32>*
-  %a.i32 = bitcast i64* %a to i32*
 
-  store <2 x i32> %x, <2 x i32>* %a.vec
+  store <2 x i32> %x, ptr %a
 
-  %tmp1 = load i32, i32* %a.i32
-  %a.tmp2 = getelementptr inbounds i32, i32* %a.i32, i64 1
-  %tmp2 = load i32, i32* %a.tmp2
+  %tmp1 = load i32, ptr %a
+  %a.tmp2 = getelementptr inbounds i32, ptr %a, i64 1
+  %tmp2 = load i32, ptr %a.tmp2
 
   %tmp4 = add i32 %tmp1, %tmp2
   ret i32 %tmp4
@@ -549,14 +497,12 @@ define <2 x i32> @test9(i32 %x, i32 %y) {
 ;
 entry:
   %a = alloca i64
-  %a.vec = bitcast i64* %a to <2 x i32>*
-  %a.i32 = bitcast i64* %a to i32*
 
-  store i32 %x, i32* %a.i32
-  %a.tmp2 = getelementptr inbounds i32, i32* %a.i32, i64 1
-  store i32 %y, i32* %a.tmp2
+  store i32 %x, ptr %a
+  %a.tmp2 = getelementptr inbounds i32, ptr %a, i64 1
+  store i32 %y, ptr %a.tmp2
 
-  %result = load <2 x i32>, <2 x i32>* %a.vec
+  %result = load <2 x i32>, ptr %a
 
   ret <2 x i32> %result
 }
@@ -572,15 +518,12 @@ define <2 x i32> @test10(<4 x i16> %x, i32 %y) {
 ;
 entry:
   %a = alloca i64
-  %a.vec1 = bitcast i64* %a to <2 x i32>*
-  %a.vec2 = bitcast i64* %a to <4 x i16>*
-  %a.i32 = bitcast i64* %a to i32*
 
-  store <4 x i16> %x, <4 x i16>* %a.vec2
-  %a.tmp2 = getelementptr inbounds i32, i32* %a.i32, i64 1
-  store i32 %y, i32* %a.tmp2
+  store <4 x i16> %x, ptr %a
+  %a.tmp2 = getelementptr inbounds i32, ptr %a, i64 1
+  store i32 %y, ptr %a.tmp2
 
-  %result = load <2 x i32>, <2 x i32>* %a.vec1
+  %result = load <2 x i32>, ptr %a
 
   ret <2 x i32> %result
 }
@@ -599,15 +542,12 @@ define <2 x float> @test11(<4 x i16> %x, i32 %y) {
 ;
 entry:
   %a = alloca i64
-  %a.vec1 = bitcast i64* %a to <2 x float>*
-  %a.vec2 = bitcast i64* %a to <4 x i16>*
-  %a.i32 = bitcast i64* %a to i32*
 
-  store <4 x i16> %x, <4 x i16>* %a.vec2
-  %a.tmp2 = getelementptr inbounds i32, i32* %a.i32, i64 1
-  store i32 %y, i32* %a.tmp2
+  store <4 x i16> %x, ptr %a
+  %a.tmp2 = getelementptr inbounds i32, ptr %a, i64 1
+  store i32 %y, ptr %a.tmp2
 
-  %result = load <2 x float>, <2 x float>* %a.vec1
+  %result = load <2 x float>, ptr %a
 
   ret <2 x float> %result
 }
@@ -619,12 +559,9 @@ define <4 x float> @test12(<4 x i32> %val) {
 ;
   %a = alloca <3 x i32>, align 16
 
-  %cast1 = bitcast <3 x i32>* %a to <4 x i32>*
-  store <4 x i32> %val, <4 x i32>* %cast1, align 16
+  store <4 x i32> %val, ptr %a, align 16
 
-  %cast2 = bitcast <3 x i32>* %a to <3 x float>*
-  %cast3 = bitcast <3 x float>* %cast2 to <4 x float>*
-  %vec = load <4 x float>, <4 x float>* %cast3
+  %vec = load <4 x float>, ptr %a
 
   ret <4 x float> %vec
 }

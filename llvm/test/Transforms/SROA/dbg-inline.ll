@@ -12,18 +12,17 @@ target triple = "x86_64-apple-macosx10.15.0"
 define i64 @_Z1g4pair(i64 %p.coerce0, i64 %p.coerce1) #0 !dbg !8 {
 entry:
   %p = alloca %struct.pair, align 8
-  %0 = getelementptr inbounds %struct.pair, %struct.pair* %p, i32 0, i32 0
-  store i64 %p.coerce0, i64* %0, align 8
-  %1 = getelementptr inbounds %struct.pair, %struct.pair* %p, i32 0, i32 1
-  store i64 %p.coerce1, i64* %1, align 8
+  %0 = getelementptr inbounds %struct.pair, ptr %p, i32 0, i32 0
+  store i64 %p.coerce0, ptr %0, align 8
+  %1 = getelementptr inbounds %struct.pair, ptr %p, i32 0, i32 1
+  store i64 %p.coerce1, ptr %1, align 8
   ; CHECK-DAG: call void @llvm.dbg.value(metadata i64 %p.coerce0, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg ![[LOC:[0-9]+]]
   ; CHECK-DAG: call void @llvm.dbg.value(metadata i64 %p.coerce1, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg ![[LOC]]
   ; CHECK-DAG: call void @llvm.dbg.value(metadata i64 %p.coerce0, metadata ![[INLINED_VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg ![[INLINED_LOC:[0-9]+]]
   ; CHECK-DAG: call void @llvm.dbg.value(metadata i64 %p.coerce1, metadata ![[INLINED_VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64)), !dbg ![[INLINED_LOC]]
-  call void @llvm.dbg.declare(metadata %struct.pair* %p, metadata !17, metadata !DIExpression()), !dbg !18
-  call void @llvm.dbg.declare(metadata %struct.pair* %p, metadata !21, metadata !DIExpression()), !dbg !23
-  %a.i = getelementptr inbounds %struct.pair, %struct.pair* %p, i32 0, i32 0, !dbg !25
-  %x2 = load i64, i64* %0, align 8, !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %p, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %p, metadata !21, metadata !DIExpression()), !dbg !23
+  %x2 = load i64, ptr %0, align 8, !dbg !25
   ret i64 %x2, !dbg !26
 }
 
@@ -31,7 +30,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #2
 
 attributes #0 = { noinline ssp uwtable }
 attributes #1 = { nounwind readnone speculatable willreturn }
