@@ -1802,7 +1802,7 @@ gentbl_cc_library(
 
 td_library(
     name = "SCFTdFiles",
-    srcs = ["include/mlir/Dialect/SCF/SCFOps.td"],
+    srcs = ["include/mlir/Dialect/SCF/IR/SCFOps.td"],
     includes = ["include"],
     deps = [
         ":ControlFlowInterfacesTdFiles",
@@ -1818,23 +1818,23 @@ gentbl_cc_library(
     tbl_outs = [
         (
             ["-gen-op-decls"],
-            "include/mlir/Dialect/SCF/SCFOps.h.inc",
+            "include/mlir/Dialect/SCF/IR/SCFOps.h.inc",
         ),
         (
             ["-gen-op-defs"],
-            "include/mlir/Dialect/SCF/SCFOps.cpp.inc",
+            "include/mlir/Dialect/SCF/IR/SCFOps.cpp.inc",
         ),
         (
             ["-gen-dialect-decls"],
-            "include/mlir/Dialect/SCF/SCFOpsDialect.h.inc",
+            "include/mlir/Dialect/SCF/IR/SCFOpsDialect.h.inc",
         ),
         (
             ["-gen-dialect-defs"],
-            "include/mlir/Dialect/SCF/SCFOpsDialect.cpp.inc",
+            "include/mlir/Dialect/SCF/IR/SCFOpsDialect.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/SCF/SCFOps.td",
+    td_file = "include/mlir/Dialect/SCF/IR/SCFOps.td",
     deps = [":SCFTdFiles"],
 )
 
@@ -1847,11 +1847,11 @@ gentbl_cc_library(
                 "-gen-pass-decls",
                 "-name=SCF",
             ],
-            "include/mlir/Dialect/SCF/Passes.h.inc",
+            "include/mlir/Dialect/SCF/Transforms/Passes.h.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/SCF/Passes.td",
+    td_file = "include/mlir/Dialect/SCF/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
 )
 
@@ -1861,13 +1861,9 @@ cc_library(
         "lib/Dialect/SCF/Transforms/*.cpp",
         "lib/Dialect/SCF/Transforms/*.h",
     ]),
-    hdrs = [
-        "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
-        "include/mlir/Dialect/SCF/Passes.h",
-        "include/mlir/Dialect/SCF/Patterns.h",
-        "include/mlir/Dialect/SCF/TileUsingInterface.h",
-        "include/mlir/Dialect/SCF/Transforms.h",
-    ],
+    hdrs = glob([
+        "include/mlir/Dialect/SCF/Transforms/*.h",
+    ]),
     includes = ["include"],
     deps = [
         ":AffineAnalysis",
@@ -2685,19 +2681,13 @@ cc_library(
     name = "SCFDialect",
     srcs = glob(
         [
-            "lib/Dialect/SCF/*.cpp",
-            "lib/Dialect/SCF/*.h",
+            "lib/Dialect/SCF/IR/*.cpp",
+            "lib/Dialect/SCF/IR/*.h",
         ],
     ),
     hdrs = glob(
         [
-            "include/mlir/Dialect/SCF/*.h",
-        ],
-        exclude = [
-            "include/mlir/Dialect/SCF/BufferizableOpInterfaceImpl.h",
-            "include/mlir/Dialect/SCF/Patterns.h",
-            "include/mlir/Dialect/SCF/TileUsingInterface.h",
-            "include/mlir/Dialect/SCF/Transforms.h",
+            "include/mlir/Dialect/SCF/IR/*.h",
         ],
     ),
     includes = ["include"],
