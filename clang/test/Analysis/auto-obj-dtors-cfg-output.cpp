@@ -1098,7 +1098,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:   2: [B3.1] (ImplicitCastExpr, LValueToRValue, int *)
 // CHECK-NEXT:   3: *[B3.2]
 // CHECK-NEXT:   4: [B3.3] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:   5: int n = *__begin1;
+// CHECK-NEXT:   5: int n
 // WARNINGS-NEXT:   6:  (CXXConstructExpr, class A)
 // ANALYZER-NEXT:   6:  (CXXConstructExpr, [B3.7], class A)
 // CHECK-NEXT:   7: A c;
