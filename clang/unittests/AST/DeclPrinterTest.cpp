@@ -1426,7 +1426,4 @@ TEST(DeclPrinter, VarDeclWithInitializer) {
   ASSERT_TRUE(PrintedDeclCXX17Matches(
       "int a = 0x15;", namedDecl(hasName("a")).bind("id"), "int a = 0x15",
       [](PrintingPolicy &Policy) { Policy.ConstantsAsWritten = true; }));
-  ASSERT_TRUE(
-      PrintedDeclCXX17Matches("void foo() {int arr[42]; for(int a : arr);}",
-                              namedDecl(hasName("a")).bind("id"), "int a"));
 }

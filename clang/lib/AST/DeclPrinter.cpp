@@ -895,15 +895,12 @@ void DeclPrinter::VisitVarDecl(VarDecl *D) {
   Expr *Init = D->getInit();
   if (!Policy.SuppressInitializers && Init) {
     bool ImplicitInit = false;
-    if (D->isCXXForRangeDecl()) {
-      // FIXME: We should print the range expression instead.
-      ImplicitInit = true;
-    } else if (CXXConstructExpr *Construct =
-                   dyn_cast<CXXConstructExpr>(Init->IgnoreImplicit())) {
+    if (CXXConstructExpr *Construct =
+            dyn_cast<CXXConstructExpr>(Init->IgnoreImplicit())) {
       if (D->getInitStyle() == VarDecl::CallInit &&
           !Construct->isListInitialization()) {
         ImplicitInit = Construct->getNumArgs() == 0 ||
-                       Construct->getArg(0)->isDefaultArgument();
+          Construct->getArg(0)->isDefaultArgument();
       }
     }
     if (!ImplicitInit) {
