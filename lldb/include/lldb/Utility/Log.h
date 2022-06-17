@@ -58,11 +58,9 @@ private:
 
 class StreamLogHandler : public LogHandler {
 public:
-  StreamLogHandler(int fd, bool should_close, bool unbuffered);
+  StreamLogHandler(int fd, bool should_close, bool unbuffered = true);
 
   void Emit(llvm::StringRef message) override;
-
-  static std::shared_ptr<StreamLogHandler> Create(int fd, bool unbuffered);
 
 private:
   llvm::raw_fd_ostream m_stream;
@@ -73,9 +71,6 @@ public:
   CallbackLogHandler(lldb::LogOutputCallback callback, void *baton);
 
   void Emit(llvm::StringRef message) override;
-
-  static std::shared_ptr<CallbackLogHandler>
-  Create(lldb::LogOutputCallback callback, void *baton);
 
 private:
   lldb::LogOutputCallback m_callback;
@@ -88,8 +83,6 @@ public:
 
   void Emit(llvm::StringRef message) override;
   void Dump(llvm::raw_ostream &stream) const;
-
-  static std::shared_ptr<RotatingLogHandler> Create(size_t size);
 
 private:
   size_t NormalizeIndex(size_t i) const;

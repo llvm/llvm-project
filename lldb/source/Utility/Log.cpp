@@ -347,23 +347,12 @@ void StreamLogHandler::Emit(llvm::StringRef message) {
   m_stream.flush();
 }
 
-std::shared_ptr<StreamLogHandler> StreamLogHandler::Create(int fd,
-                                                           bool should_close) {
-  constexpr const bool unbuffered = true;
-  return std::make_shared<StreamLogHandler>(fd, should_close, unbuffered);
-}
-
 CallbackLogHandler::CallbackLogHandler(lldb::LogOutputCallback callback,
                                        void *baton)
     : m_callback(callback), m_baton(baton) {}
 
 void CallbackLogHandler::Emit(llvm::StringRef message) {
   m_callback(message.data(), m_baton);
-}
-
-std::shared_ptr<CallbackLogHandler>
-CallbackLogHandler::Create(lldb::LogOutputCallback callback, void *baton) {
-  return std::make_shared<CallbackLogHandler>(callback, baton);
 }
 
 RotatingLogHandler::RotatingLogHandler(size_t size)
@@ -394,8 +383,4 @@ void RotatingLogHandler::Dump(llvm::raw_ostream &stream) const {
     stream << m_messages[idx];
   }
   stream.flush();
-}
-
-std::shared_ptr<RotatingLogHandler> RotatingLogHandler::Create(size_t size) {
-  return std::make_shared<RotatingLogHandler>(size);
 }
