@@ -330,6 +330,8 @@ else()
   endif()
 endif()
 
+set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
+
 # Check if HWLOC support is available
 if(${LIBOMP_USE_HWLOC})
   find_path(LIBOMP_HWLOC_INCLUDE_DIR NAMES hwloc.h HINTS ${LIBOMP_HWLOC_INSTALL_DIR} PATH_SUFFIXES include)
