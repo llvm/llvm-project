@@ -1017,11 +1017,10 @@ bool LoopVectorizationLegality::canVectorizeFPMath(
 
   // We can now only vectorize if all reductions with Exact FP math also
   // have the isOrdered flag set, which indicates that we can move the
-  // reduction operations in-loop, and do not have intermediate store.
+  // reduction operations in-loop.
   return (all_of(getReductionVars(), [&](auto &Reduction) -> bool {
     const RecurrenceDescriptor &RdxDesc = Reduction.second;
-    return !RdxDesc.hasExactFPMath() ||
-           (RdxDesc.isOrdered() && !RdxDesc.IntermediateStore);
+    return !RdxDesc.hasExactFPMath() || RdxDesc.isOrdered();
   }));
 }
 

@@ -1361,10 +1361,34 @@ declare float @llvm.fmuladd.f32(float, float, float)
 ; Test case with invariant store where fadd is strict.
 define void @reduction_store_to_invariant_address(float* %dst, float* readonly %src) {
 ; CHECK-ORDERED-LABEL: @reduction_store_to_invariant_address(
-; CHECK-ORDERED-NOT: vector.body
+; CHECK-ORDERED: entry
+; CHECK-ORDERED: %[[DEST_PTR:.*]] = getelementptr inbounds float, float* %dst, i64 42
+; CHECK-ORDERED: vector.body
+; CHECK-ORDERED: %[[VEC_PHI:.*]] = phi float [ 0.000000e+00, %vector.ph ], [ %[[RDX:.*]], %vector.body ]
+; CHECK-ORDERED: %[[LOAD_VEC:.*]] = load <8 x float>, <8 x float>*
+; CHECK-ORDERED: %[[RDX:.*]] = call float @llvm.vector.reduce.fadd.v8f32(float %[[VEC_PHI]], <8 x float> %[[LOAD_VEC]])
+; CHECK-ORDERED: middle.block
+; CHECK-ORDERED: store float %[[RDX]], float* %[[DEST_PTR]]
+; CHECK-ORDERED: for.body
+; CHECK-ORDERED: %[[LOAD:.*]] = load float, float*
+; CHECK-ORDERED: %[[FADD:.*]] = fadd float %{{.*}}, %[[LOAD]]
+; CHECK-ORDERED: store float %[[FADD]], float* %[[DEST_PTR]]
 
 ; CHECK-UNORDERED-LABEL: @reduction_store_to_invariant_address(
-; CHECK-UNORDERED-NOT: vector.body
+; CHECK-UNORDERED: entry
+; CHECK-UNORDERED: %[[DEST_PTR:.*]] = getelementptr inbounds float, float* %dst, i64 42
+; CHECK-UNORDERED: vector.body
+; CHECK-UNORDERED: %[[VEC_PHI:.*]] = phi <8 x float> [ <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %vector.ph ], [ %[[FADD_VEC:.*]], %vector.body ]
+; CHECK-UNORDERED: %[[LOAD_VEC:.*]] = load <8 x float>, <8 x float>*
+; CHECK-UNORDERED: %[[FADD_VEC]] = fadd <8 x float> %[[VEC_PHI]], %[[LOAD_VEC]]
+; CHECK-UNORDERED-NOT: call float @llvm.vector.reduce.fadd
+; CHECK-UNORDERED: middle.block
+; CHECK-UNORDERED: %[[RDX:.*]] = call float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> %[[FADD_VEC]])
+; CHECK-UNORDERED: store float %[[RDX]], float* %[[DEST_PTR]]
+; CHECK-UNORDERED: for.body
+; CHECK-UNORDERED: %[[LOAD:.*]] = load float, float*
+; CHECK-UNORDERED: %[[FADD:.*]] = fadd float {{.*}}, %[[LOAD]]
+; CHECK-UNORDERED: store float %[[FADD]], float* %[[DEST_PTR]]
 
 ; CHECK-NOT-VECTORIZED-LABEL: @reduction_store_to_invariant_address(
 ; CHECK-NOT-VECTORIZED-NOT: vector.body
@@ -1383,7 +1407,7 @@ for.body:
   store float %add, float* %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
-  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
 for.cond.cleanup:
   ret void
