@@ -343,7 +343,7 @@ struct RuntimeCheckingPtrGroup {
   /// of success, false otherwise.
   bool addPointer(unsigned Index, RuntimePointerChecking &RtCheck);
   bool addPointer(unsigned Index, const SCEV *Start, const SCEV *End,
-                  unsigned AS, ScalarEvolution &SE);
+                  unsigned AS, bool NeedsFreeze, ScalarEvolution &SE);
 
   /// The SCEV expression which represents the upper bound of all the
   /// pointers in this group.
@@ -355,6 +355,9 @@ struct RuntimeCheckingPtrGroup {
   SmallVector<unsigned, 2> Members;
   /// Address space of the involved pointers.
   unsigned AddressSpace;
+  /// Whether the pointer needs to be frozen after expansion, e.g. because it
+  /// may be poison outside the loop.
+  bool NeedsFreeze = false;
 };
 
 /// A memcheck which made up of a pair of grouped pointers.
@@ -366,10 +369,12 @@ struct PointerDiffInfo {
   const SCEV *SrcStart;
   const SCEV *SinkStart;
   unsigned AccessSize;
+  bool NeedsFreeze;
 
   PointerDiffInfo(const SCEV *SrcStart, const SCEV *SinkStart,
-                  unsigned AccessSize)
-      : SrcStart(SrcStart), SinkStart(SinkStart), AccessSize(AccessSize) {}
+                  unsigned AccessSize, bool NeedsFreeze)
+      : SrcStart(SrcStart), SinkStart(SinkStart), AccessSize(AccessSize),
+        NeedsFreeze(NeedsFreeze) {}
 };
 
 /// Holds information about the memory runtime legality checks to verify
@@ -396,13 +401,15 @@ public:
     unsigned AliasSetId;
     /// SCEV for the access.
     const SCEV *Expr;
+    /// True if the pointer expressions needs to be frozen after expansion.
+    bool NeedsFreeze;
 
     PointerInfo(Value *PointerValue, const SCEV *Start, const SCEV *End,
                 bool IsWritePtr, unsigned DependencySetId, unsigned AliasSetId,
-                const SCEV *Expr)
+                const SCEV *Expr, bool NeedsFreeze)
         : PointerValue(PointerValue), Start(Start), End(End),
           IsWritePtr(IsWritePtr), DependencySetId(DependencySetId),
-          AliasSetId(AliasSetId), Expr(Expr) {}
+          AliasSetId(AliasSetId), Expr(Expr), NeedsFreeze(NeedsFreeze) {}
   };
 
   RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE)
@@ -420,9 +427,9 @@ public:
   /// according to the assumptions that we've made during the analysis.
   /// The method might also version the pointer stride according to \p Strides,
   /// and add new predicates to \p PSE.
-  void insert(Loop *Lp, Value *Ptr, Type *AccessTy, bool WritePtr,
-              unsigned DepSetId, unsigned ASId, const ValueToValueMap &Strides,
-              PredicatedScalarEvolution &PSE);
+  void insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr, Type *AccessTy,
+              bool WritePtr, unsigned DepSetId, unsigned ASId,
+              PredicatedScalarEvolution &PSE, bool NeedsFreeze);
 
   /// No run-time memory checking is necessary.
   bool empty() const { return Pointers.empty(); }
