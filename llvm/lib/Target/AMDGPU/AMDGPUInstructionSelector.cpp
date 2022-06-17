@@ -3575,11 +3575,8 @@ AMDGPUInstructionSelector::selectVCSRC(MachineOperand &Root) const {
 
 }
 
-std::pair<Register, unsigned>
-AMDGPUInstructionSelector::selectVOP3ModsImpl(MachineOperand &Root,
-                                              bool AllowAbs,
-                                              bool OpSel,
-                                              bool ForceVGPR) const {
+std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3ModsImpl(
+    MachineOperand &Root, bool AllowAbs, bool OpSel, bool ForceVGPR) const {
   Register Src = Root.getReg();
   Register OrigSrc = Src;
   unsigned Mods = 0;

@@ -56,8 +56,8 @@ struct CodeGen {
         highs(numTensors, std::vector<Value>(numLoops)),
         pidxs(numTensors, std::vector<Value>(numLoops)),
         idxs(numTensors, std::vector<Value>(numLoops)), redVal(), sparseOut(op),
-        outerParNest(nest), lexIdx(), expValues(), expFilled(), expAdded(),
-        expCount(), curVecMask() {}
+        outerParNest(nest), lexIdx(), lexVal(), expValues(), expFilled(),
+        expAdded(), expCount(), curVecMask() {}
   /// Sparsification options.
   SparsificationOptions options;
   /// Universal dense indices and upper bounds (by index). The loops array
@@ -89,6 +89,7 @@ struct CodeGen {
   OpOperand *sparseOut;
   unsigned outerParNest;
   Value lexIdx;
+  Value lexVal;
   Value expValues;
   Value expFilled;
   Value expAdded;
@@ -543,6 +544,8 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
       auto dynShape = {ShapedType::kDynamicSize};
       auto memTp = MemRefType::get(dynShape, builder.getIndexType());
       codegen.lexIdx = builder.create<memref::AllocaOp>(loc, memTp, rank);
+      codegen.lexVal = builder.create<memref::AllocaOp>(
+          loc, MemRefType::get({}, elementType));
     } else {
       // Annotated sparse tensors.
       auto dynShape = {ShapedType::kDynamicSize};
@@ -723,7 +726,8 @@ static void genInsertionStore(CodeGen &codegen, OpBuilder &builder,
   Location loc = op.getLoc();
   // Direct insertion in lexicographic index order.
   if (!codegen.expValues) {
-    builder.create<LexInsertOp>(loc, t->get(), codegen.lexIdx, rhs);
+    builder.create<memref::StoreOp>(loc, rhs, codegen.lexVal);
+    builder.create<LexInsertOp>(loc, t->get(), codegen.lexIdx, codegen.lexVal);
     return;
   }
   // Generates insertion code along expanded access pattern.

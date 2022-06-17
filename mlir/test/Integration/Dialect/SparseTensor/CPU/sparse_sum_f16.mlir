@@ -1,4 +1,4 @@
- // RUN: mlir-opt %s --sparse-compiler | \
+// RUN: mlir-opt %s --sparse-compiler | \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \

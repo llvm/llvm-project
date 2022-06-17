@@ -10,6 +10,7 @@ from .... import func
 from .... import linalg
 from .... import math
 from .... import arith
+from .... import complex
 from ...._ods_common import get_op_result_or_value as _get_op_result_or_value, get_op_results_or_values as _get_op_results_or_values
 
 from .scalar_expr import *
@@ -408,6 +409,8 @@ class _BodyBuilder:
   def _unary_negf(self, x: Value) -> Value:
     if _is_floating_point_type(x.type):
       return arith.NegFOp(x).result
+    if _is_complex_type(x.type):
+      return complex.NegOp(x).result
     raise NotImplementedError("Unsupported 'negf' operand: {x}")
 
   def _binary_add(self, lhs: Value, rhs: Value) -> Value:
@@ -415,6 +418,8 @@ class _BodyBuilder:
       return arith.AddFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.AddIOp(lhs, rhs).result
+    if _is_complex_type(lhs.type):
+      return complex.AddOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'add' operands: {lhs}, {rhs}")
 
   def _binary_sub(self, lhs: Value, rhs: Value) -> Value:
@@ -422,6 +427,8 @@ class _BodyBuilder:
       return arith.SubFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.SubIOp(lhs, rhs).result
+    if _is_complex_type(lhs.type):
+      return complex.SubOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'sub' operands: {lhs}, {rhs}")
 
   def _binary_mul(self, lhs: Value, rhs: Value) -> Value:
@@ -429,6 +436,8 @@ class _BodyBuilder:
       return arith.MulFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.MulIOp(lhs, rhs).result
+    if _is_complex_type(lhs.type):
+      return complex.MulOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'mul' operands: {lhs}, {rhs}")
 
   def _binary_max_signed(self, lhs: Value, rhs: Value) -> Value:
@@ -510,6 +519,10 @@ def _add_type_mapping(operand_config: OperandDefConfig, operand_type: Type,
                        f"{type_mapping[name]} by type {element_or_self_type}")
   type_mapping[name] = element_or_self_type
   block_arg_types.append(element_or_self_type)
+
+
+def _is_complex_type(t: Type) -> bool:
+  return ComplexType.isinstance(t)
 
 
 def _is_floating_point_type(t: Type) -> bool:

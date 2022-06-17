@@ -193,9 +193,8 @@ define i1 @scalar_i32_lshr_and_signbit_eq_X_is_constant1(i32 %y) {
 
 define i1 @scalar_i32_lshr_and_negC_eq_X_is_constant2(i32 %y) {
 ; CHECK-LABEL: @scalar_i32_lshr_and_negC_eq_X_is_constant2(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -2147483648, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[LSHR]], -1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[Y:%.*]], 0
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %lshr = lshr i32 2147483648, %y
   %and = and i32 %lshr, 2147483648

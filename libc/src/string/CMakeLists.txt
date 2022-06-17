@@ -279,7 +279,6 @@ function(add_implementation name impl_name)
     ${ARGN})
 
   if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    list(APPEND ADD_IMPL_MLLVM_COMPILE_OPTIONS "-combiner-global-alias-analysis")
     # Note that '-mllvm' needs to be prefixed with 'SHELL:' to prevent CMake flag deduplication.
     foreach(opt IN LISTS ADD_IMPL_MLLVM_COMPILE_OPTIONS)
       list(APPEND ADD_IMPL_COMPILE_OPTIONS "SHELL:-mllvm ${opt}")
