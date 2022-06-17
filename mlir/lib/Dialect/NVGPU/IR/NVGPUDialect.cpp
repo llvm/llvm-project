@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/NVGPU/NVGPUDialect.h"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -21,13 +21,13 @@
 using namespace mlir;
 using namespace mlir::nvgpu;
 
-#include "mlir/Dialect/NVGPU/NVGPUDialect.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
 
 void nvgpu::NVGPUDialect::initialize() {
   addTypes<DeviceAsyncTokenType>();
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/NVGPU/NVGPU.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
       >();
 }
 
@@ -88,4 +88,4 @@ LogicalResult DeviceAsyncCopyOp::verify() {
 }
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/NVGPU/NVGPU.cpp.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"

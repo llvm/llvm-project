@@ -1,5 +1,9 @@
-add_mlir_dialect(NVGPU nvgpu)
-add_mlir_doc(NVGPU NVGPU Dialects/ -gen-dialect-doc)
+add_subdirectory(IR)
 
+set(LLVM_TARGET_DEFINITIONS Passes.td)
+mlir_tablegen(Passes.h.inc -gen-pass-decls -name NVGPU)
+mlir_tablegen(Passes.capi.h.inc -gen-pass-capi-header --prefix NVGPU)
+mlir_tablegen(Passes.capi.cpp.inc -gen-pass-capi-impl --prefix NVGPU)
+add_public_tablegen_target(MLIRNVGPUPassIncGen)
 
-set(LLVM_TARGET_DEFINITIONS NVGPU.td)
+add_mlir_doc(Passes NVGPUPasses ./ -gen-pass-doc)
