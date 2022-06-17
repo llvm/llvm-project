@@ -3557,4 +3557,35 @@ TEST_F(TransferTest, StructuredBindingAssignFromStructIntMembersToInts) {
       });
 }
 
+TEST_F(TransferTest, BinaryOperatorComma) {
+  std::string Code = R"(
+    void target(int Foo, int Bar) {
+      int &Baz = (Foo, Bar);
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+                ASSERT_THAT(BazDecl, NotNull());
+
+                const StorageLocation *BarLoc =
+                    Env.getStorageLocation(*BarDecl, SkipPast::Reference);
+                ASSERT_THAT(BarLoc, NotNull());
+
+                const StorageLocation *BazLoc =
+                    Env.getStorageLocation(*BazDecl, SkipPast::Reference);
+                EXPECT_EQ(BazLoc, BarLoc);
+              });
+}
+
 } // namespace
