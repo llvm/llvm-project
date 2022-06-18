@@ -31,6 +31,8 @@ def ROCDL_Dialect : Dialect {
     /// functions.
     static StringRef getKernelFuncAttrName() { return "rocdl.kernel"; }
   }];
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 //===----------------------------------------------------------------------===//

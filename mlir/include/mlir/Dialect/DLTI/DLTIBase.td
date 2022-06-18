@@ -37,6 +37,8 @@ def DLTI_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 def DLTI_DataLayoutEntryAttr : DialectAttr<

@@ -74,6 +74,8 @@ def SparseTensor_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 #endif // SPARSETENSOR_BASE

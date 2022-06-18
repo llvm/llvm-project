@@ -24,6 +24,8 @@ def Affine_Dialect : Dialect {
   let cppNamespace = "mlir";
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithmeticDialect"];
+
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 // Base class for Affine dialect ops.
@@ -96,8 +98,6 @@ def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
     /// Returns true if the result of this operation is a symbol for all its
     /// uses in `region`.
     bool isValidSymbol(Region *region);
-
-    operand_range getMapOperands() { return getOperands(); }
   }];
 
   let hasCanonicalizer = 1;
@@ -241,9 +241,9 @@ def AffineForOp : Affine_Op<"for",
     using BodyBuilderFn =
         function_ref<void(OpBuilder &, Location, Value, ValueRange)>;
 
-    static StringRef getStepAttrName() { return "step"; }
-    static StringRef getLowerBoundAttrName() { return "lower_bound"; }
-    static StringRef getUpperBoundAttrName() { return "upper_bound"; }
+    static StringRef getStepAttrStrName() { return "step"; }
+    static StringRef getLowerBoundAttrStrName() { return "lower_bound"; }
+    static StringRef getUpperBoundAttrStrName() { return "upper_bound"; }
 
     BlockArgument getInductionVar() { return getBody()->getArgument(0); }
     Block::BlockArgListType getRegionIterArgs() {
@@ -274,18 +274,18 @@ def AffineForOp : Affine_Op<"for",
 
     /// Returns loop step.
     int64_t getStep() {
-      return (*this)->getAttr(getStepAttrName()).cast<IntegerAttr>().getInt();
+      return (*this)->getAttr(getStepAttrStrName()).cast<IntegerAttr>().getInt();
     }
 
     /// Returns affine map for the lower bound.
     AffineMap getLowerBoundMap() { return getLowerBoundMapAttr().getValue(); }
     AffineMapAttr getLowerBoundMapAttr() {
-      return (*this)->getAttr(getLowerBoundAttrName()).cast<AffineMapAttr>();
+      return (*this)->getAttr(getLowerBoundAttrStrName()).cast<AffineMapAttr>();
     }
     /// Returns affine map for the upper bound. The upper bound is exclusive.
     AffineMap getUpperBoundMap() { return getUpperBoundMapAttr().getValue(); }
     AffineMapAttr getUpperBoundMapAttr() {
-      return (*this)->getAttr(getUpperBoundAttrName()).cast<AffineMapAttr>();
+      return (*this)->getAttr(getUpperBoundAttrStrName()).cast<AffineMapAttr>();
     }
 
     /// Set lower bound. The new bound must have the same number of operands as
@@ -305,7 +305,7 @@ def AffineForOp : Affine_Op<"for",
     void setStep(int64_t step) {
       assert(step > 0 && "step has to be a positive integer constant");
       auto *context = getLowerBoundMap().getContext();
-      (*this)->setAttr(StringAttr::get(context, getStepAttrName()),
+      (*this)->setAttr(StringAttr::get(context, getStepAttrStrName()),
                        IntegerAttr::get(IndexType::get(context), step));
     }
 
@@ -436,7 +436,7 @@ def AffineIfOp : Affine_Op<"if",
   ];
 
   let extraClassDeclaration = [{
-    static StringRef getConditionAttrName() { return "condition"; }
+    static StringRef getConditionAttrStrName() { return "condition"; }
 
     IntegerSet getIntegerSet();
     void setIntegerSet(IntegerSet newSet);
@@ -492,13 +492,10 @@ class AffineLoadOpBase<string mnemonic, list<Trait> traits = []> :
 
     /// Returns the affine map used to index the memref for this operation.
     AffineMapAttr getAffineMapAttr() {
-      return (*this)->getAttr(getMapAttrName()).cast<AffineMapAttr>();
+      return (*this)->getAttr(getMapAttrStrName()).cast<AffineMapAttr>();
     }
 
-    static StringRef getMapAttrName() { return "map"; }
-
-    // TODO: Remove once prefixing is flipped.
-    operand_range getIndices() { return indices(); }
+    static StringRef getMapAttrStrName() { return "map"; }
   }];
 }
 
@@ -558,7 +555,7 @@ class AffineMinMaxOpBase<string mnemonic, list<Trait> traits = []> :
   ];
 
   let extraClassDeclaration = [{
-    static StringRef getMapAttrName() { return "map"; }
+    static StringRef getMapAttrStrName() { return "map"; }
     AffineMap getAffineMap() { return map(); }
     ValueRange getMapOperands() { return operands(); }
     ValueRange getDimOperands() {
@@ -688,7 +685,7 @@ def AffineParallelOp : Affine_Op<"parallel",
      I32ElementsAttr:$lowerBoundsGroups,
      AffineMapAttr:$upperBoundsMap,
      I32ElementsAttr:$upperBoundsGroups,
-     I64ArrayAttr:$steps,
+     I64SmallVectorArrayAttr:$steps,
      Variadic<Index>:$mapOperands);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
@@ -733,21 +730,20 @@ def AffineParallelOp : Affine_Op<"parallel",
     void setUpperBounds(ValueRange operands, AffineMap map);
     void setUpperBoundsMap(AffineMap map);
 
-    SmallVector<int64_t, 8> getSteps();
     void setSteps(ArrayRef<int64_t> newSteps);
 
     /// Returns attribute names to use in op construction. Not expected to be
     /// used directly.
-    static StringRef getReductionsAttrName() { return "reductions"; }
-    static StringRef getLowerBoundsMapAttrName() { return "lowerBoundsMap"; }
-    static StringRef getLowerBoundsGroupsAttrName() {
+    static StringRef getReductionsAttrStrName() { return "reductions"; }
+    static StringRef getLowerBoundsMapAttrStrName() { return "lowerBoundsMap"; }
+    static StringRef getLowerBoundsGroupsAttrStrName() {
       return "lowerBoundsGroups";
     }
-    static StringRef getUpperBoundsMapAttrName() { return "upperBoundsMap"; }
-    static StringRef getUpperBoundsGroupsAttrName() {
+    static StringRef getUpperBoundsMapAttrStrName() { return "upperBoundsMap"; }
+    static StringRef getUpperBoundsGroupsAttrStrName() {
       return "upperBoundsGroups";
     }
-    static StringRef getStepsAttrName() { return "steps"; }
+    static StringRef getStepsAttrStrName() { return "steps"; }
 
     /// Returns `true` if the loop bounds have min/max expressions.
     bool hasMinMaxBounds() {
@@ -798,11 +794,11 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
       auto isWriteAttr = $_builder.getBoolAttr(isWrite);
       auto isDataCacheAttr = $_builder.getBoolAttr(isDataCache);
       $_state.addOperands(memref);
-      $_state.addAttribute(getMapAttrName(), AffineMapAttr::get(map));
+      $_state.addAttribute(getMapAttrStrName(), AffineMapAttr::get(map));
       $_state.addOperands(mapOperands);
-      $_state.addAttribute(getLocalityHintAttrName(), localityHintAttr);
-      $_state.addAttribute(getIsWriteAttrName(), isWriteAttr);
-      $_state.addAttribute(getIsDataCacheAttrName(), isDataCacheAttr);
+      $_state.addAttribute(getLocalityHintAttrStrName(), localityHintAttr);
+      $_state.addAttribute(getIsWriteAttrStrName(), isWriteAttr);
+      $_state.addAttribute(getIsDataCacheAttrStrName(), isDataCacheAttr);
     }]>];
 
   let extraClassDeclaration = [{
@@ -813,7 +809,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
     /// Returns the affine map used to index the memref for this operation.
     AffineMap getAffineMap() { return getAffineMapAttr().getValue(); }
     AffineMapAttr getAffineMapAttr() {
-      return (*this)->getAttr(getMapAttrName()).cast<AffineMapAttr>();
+      return (*this)->getAttr(getMapAttrStrName()).cast<AffineMapAttr>();
     }
 
     /// Impelements the AffineMapAccessInterface.
@@ -821,7 +817,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
     NamedAttribute getAffineMapAttrForMemRef(Value mref) {
       assert(mref == memref() &&
              "Expected mref argument to match memref operand");
-      return {StringAttr::get(getContext(), getMapAttrName()),
+      return {StringAttr::get(getContext(), getMapAttrStrName()),
         getAffineMapAttr()};
     }
 
@@ -830,10 +826,10 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
       return {operand_begin() + 1, operand_end()};
     }
 
-    static StringRef getMapAttrName() { return "map"; }
-    static StringRef getLocalityHintAttrName() { return "localityHint"; }
-    static StringRef getIsWriteAttrName() { return "isWrite"; }
-    static StringRef getIsDataCacheAttrName() { return "isDataCache"; }
+    static StringRef getMapAttrStrName() { return "map"; }
+    static StringRef getLocalityHintAttrStrName() { return "localityHint"; }
+    static StringRef getIsWriteAttrStrName() { return "isWrite"; }
+    static StringRef getIsDataCacheAttrStrName() { return "isDataCache"; }
   }];
 
   let hasCanonicalizer = 1;
@@ -858,13 +854,10 @@ class AffineStoreOpBase<string mnemonic, list<Trait> traits = []> :
 
     /// Returns the affine map used to index the memref for this operation.
     AffineMapAttr getAffineMapAttr() {
-      return (*this)->getAttr(getMapAttrName()).cast<AffineMapAttr>();
+      return (*this)->getAttr(getMapAttrStrName()).cast<AffineMapAttr>();
     }
 
-    static StringRef getMapAttrName() { return "map"; }
-
-    // TODO: Remove once prefixing is flipped.
-    operand_range getIndices() { return indices(); }
+    static StringRef getMapAttrStrName() { return "map"; }
   }];
 }
 
