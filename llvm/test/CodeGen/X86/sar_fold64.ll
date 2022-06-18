@@ -117,9 +117,9 @@ define <4 x i32> @all_sign_bit_ashr_vec1(<4 x i32> %x) {
 ;
 ; AVX2-LABEL: all_sign_bit_ashr_vec1:
 ; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
@@ -177,9 +177,9 @@ define <4 x i32> @all_sign_bit_ashr_vec3(<4 x i32> %x) {
 ;
 ; AVX2-LABEL: all_sign_bit_ashr_vec3:
 ; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
