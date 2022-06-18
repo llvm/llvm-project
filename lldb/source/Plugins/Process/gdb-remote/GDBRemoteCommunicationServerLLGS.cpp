@@ -1974,38 +1974,46 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
   return SendPacketNoLock(response.GetString());
 }
 
+void GDBRemoteCommunicationServerLLGS::AddProcessThreads(
+    StreamGDBRemote &response, NativeProcessProtocol &process, bool &had_any) {
+  Log *log = GetLog(LLDBLog::Thread);
+
+  lldb::pid_t pid = process.GetID();
+  if (pid == LLDB_INVALID_PROCESS_ID)
+    return;
+
+  LLDB_LOG(log, "iterating over threads of process {0}", process.GetID());
+  NativeThreadProtocol *thread;
+  uint32_t thread_index;
+  for (thread_index = 0, thread = process.GetThreadAtIndex(thread_index);
+       thread;
+       ++thread_index, thread = process.GetThreadAtIndex(thread_index)) {
+    LLDB_LOG(log, "iterated thread {0} (tid={1})", thread_index,
+             thread->GetID());
+    response.PutChar(had_any ? ',' : 'm');
+    if (bool(m_extensions_supported &
+             NativeProcessProtocol::Extension::multiprocess))
+      response.Format("p{0:x-}.", pid);
+    response.Format("{0:x-}", thread->GetID());
+    had_any = true;
+  }
+}
+
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_qfThreadInfo(
     StringExtractorGDBRemote &packet) {
-  Log *log = GetLog(LLDBLog::Thread);
+  assert(m_debugged_processes.size() == 1 ||
+         bool(m_extensions_supported &
+              NativeProcessProtocol::Extension::multiprocess));
 
-  // Fail if we don't have a current process.
-  if (!m_current_process ||
-      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID)) {
-    LLDB_LOG(log, "no process ({0}), returning OK",
-             m_current_process ? "invalid process id"
-                               : "null m_current_process");
-    return SendOKResponse();
-  }
-
+  bool had_any = false;
   StreamGDBRemote response;
-  response.PutChar('m');
 
-  LLDB_LOG(log, "starting thread iteration");
-  NativeThreadProtocol *thread;
-  uint32_t thread_index;
-  for (thread_index = 0,
-      thread = m_current_process->GetThreadAtIndex(thread_index);
-       thread; ++thread_index,
-      thread = m_current_process->GetThreadAtIndex(thread_index)) {
-    LLDB_LOG(log, "iterated thread {0}(tid={2})", thread_index,
-             thread->GetID());
-    if (thread_index > 0)
-      response.PutChar(',');
-    response.Printf("%" PRIx64, thread->GetID());
-  }
+  for (auto &pid_ptr : m_debugged_processes)
+    AddProcessThreads(response, *pid_ptr.second, had_any);
 
-  LLDB_LOG(log, "finished thread iteration");
+  if (!had_any)
+    response.PutChar('l');
   return SendPacketNoLock(response.GetString());
 }
 

@@ -159,6 +159,9 @@ protected:
 
   PacketResult Handle_qRegisterInfo(StringExtractorGDBRemote &packet);
 
+  void AddProcessThreads(StreamGDBRemote &response,
+                         NativeProcessProtocol &process, bool &had_any);
+
   PacketResult Handle_qfThreadInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qsThreadInfo(StringExtractorGDBRemote &packet);
