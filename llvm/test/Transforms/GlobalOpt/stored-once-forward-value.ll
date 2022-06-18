@@ -12,10 +12,8 @@ declare void @b()
 
 define i1 @dom_const() {
 ; CHECK-LABEL: @dom_const(
-; CHECK-NEXT:    store i1 true, ptr @g1, align 1
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    [[R:%.*]] = load i1, ptr @g1, align 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   store i1 true, ptr @g1
   call void @b()
@@ -25,10 +23,8 @@ define i1 @dom_const() {
 
 define i32 @dom_arg(i32 %a) {
 ; CHECK-LABEL: @dom_arg(
-; CHECK-NEXT:    store i32 [[A:%.*]], ptr @g2, align 4
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    [[R:%.*]] = load i32, ptr @g2, align 4
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[A:%.*]]
 ;
   store i32 %a, ptr @g2
   call void @b()
@@ -74,8 +70,7 @@ define i1 @dom_multiple_function_loads() {
 ; CHECK-LABEL: @dom_multiple_function_loads(
 ; CHECK-NEXT:    store i1 true, ptr @g5, align 1
 ; CHECK-NEXT:    call void @b()
-; CHECK-NEXT:    [[R:%.*]] = load i1, ptr @g5, align 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   store i1 true, ptr @g5
   call void @b()
