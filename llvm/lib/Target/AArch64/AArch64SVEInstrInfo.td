@@ -315,6 +315,9 @@ def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
                            (and node:$op1, (xor node:$op2, (SVEAllActive))),
                            (AArch64bic_node node:$op1, node:$op2)]>;
 
+def AArch64subr : PatFrag<(ops node:$op1, node:$op2),
+                          (sub node:$op2, node:$op1)>;
+
 let Predicates = [HasSVE] in {
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
   def  RDFFRS_PPz : sve_int_rdffr_pred<0b1, "rdffrs">;
@@ -360,7 +363,7 @@ let Predicates = [HasSVEorSME, UseExperimentalZeroingPseudos] in {
 let Predicates = [HasSVEorSME] in {
   defm ADD_ZI   : sve_int_arith_imm0<0b000, "add", add>;
   defm SUB_ZI   : sve_int_arith_imm0<0b001, "sub", sub>;
-  defm SUBR_ZI  : sve_int_arith_imm0_subr<0b011, "subr", sub>;
+  defm SUBR_ZI  : sve_int_arith_imm0<0b011, "subr", AArch64subr>;
   defm SQADD_ZI : sve_int_arith_imm0<0b100, "sqadd", saddsat>;
   defm UQADD_ZI : sve_int_arith_imm0<0b101, "uqadd", uaddsat>;
   defm SQSUB_ZI : sve_int_arith_imm0<0b110, "sqsub", ssubsat>;
