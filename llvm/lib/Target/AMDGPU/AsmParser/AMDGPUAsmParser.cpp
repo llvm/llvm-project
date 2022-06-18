@@ -4910,9 +4910,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     if (ID == ".end_amdhsa_kernel")
       break;
 
-    if (Seen.find(ID) != Seen.end())
+    if (!Seen.insert(ID).second)
       return TokError(".amdhsa_ directives cannot be repeated");
-    Seen.insert(ID);
 
     SMLoc ValStart = getLoc();
     int64_t IVal;
