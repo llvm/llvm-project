@@ -145,9 +145,11 @@ std::ostream &operator<<(std::ostream &os, const bf16 &d) {
 // Provide a float->bfloat conversion routine in case the runtime doesn't have
 // one.
 extern "C" uint16_t
-#if defined(__has_attribute) && __has_attribute(weak) &&                       \
-    !defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(_WIN32)
+#ifdef __has_attribute
+#if __has_attribute(weak) && !defined(__MINGW32__) && !defined(__CYGWIN__) &&  \
+    !defined(_WIN32)
     __attribute__((__weak__))
+#endif
 #endif
     __truncsfbf2(float f) {
   return float2bfloat(f);
@@ -156,9 +158,11 @@ extern "C" uint16_t
 // Provide a double->bfloat conversion routine in case the runtime doesn't have
 // one.
 extern "C" uint16_t
-#if defined(__has_attribute) && __has_attribute(weak) &&                       \
-    !defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(_WIN32)
+#ifdef __has_attribute
+#if __has_attribute(weak) && !defined(__MINGW32__) && !defined(__CYGWIN__) &&  \
+    !defined(_WIN32)
     __attribute__((__weak__))
+#endif
 #endif
     __truncdfbf2(double d) {
   // This does a double rounding step, but it's precise enough for our use
