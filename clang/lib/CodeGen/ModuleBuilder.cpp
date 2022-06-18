@@ -134,7 +134,14 @@ namespace {
                               llvm::LLVMContext &C) {
       assert(!M && "Replacing existing Module?");
       M.reset(new llvm::Module(ExpandModuleName(ModuleName, CodeGenOpts), C));
+
+      std::unique_ptr<CodeGenModule> OldBuilder = std::move(Builder);
+
       Initialize(*Ctx);
+
+      if (OldBuilder)
+        OldBuilder->moveLazyEmissionStates(Builder.get());
+
       return M.get();
     }
 
