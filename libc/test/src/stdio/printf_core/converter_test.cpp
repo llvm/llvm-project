@@ -223,3 +223,23 @@ TEST(LlvmLibcPrintfConverterTest, HexConversion) {
   ASSERT_STREQ(str, "0x00000000123456ab");
   ASSERT_EQ(writer.get_chars_written(), 18);
 }
+
+TEST(LlvmLibcPrintfConverterTest, PointerConversion) {
+  char str[20];
+  __llvm_libc::printf_core::StringWriter str_writer(str);
+  __llvm_libc::printf_core::Writer writer(
+      reinterpret_cast<void *>(&str_writer),
+      __llvm_libc::printf_core::write_to_string);
+
+  __llvm_libc::printf_core::FormatSection section;
+  section.has_conv = true;
+  section.raw_string = "%p";
+  section.raw_len = 2;
+  section.conv_name = 'p';
+  section.conv_val_ptr = (void *)(0x123456ab);
+  __llvm_libc::printf_core::convert(&writer, section);
+
+  str_writer.terminate();
+  ASSERT_STREQ(str, "0x123456ab");
+  ASSERT_EQ(writer.get_chars_written(), 10);
+}
