@@ -986,7 +986,7 @@ struct LastTensorLoadCanonicalization : public OpRewritePattern<ForOp> {
       if (!isTensor || !tensorLoadOp || (!bbArg.use_empty() && !tensorToMemref))
         continue;
       // If tensorToMemref is present, it must feed into the `ToTensorOp`.
-      if (tensorToMemref && tensorLoadOp.memref() != tensorToMemref)
+      if (tensorToMemref && tensorLoadOp.getMemref() != tensorToMemref)
         continue;
       // TODO: Any aliasing write of tensorLoadOp.memref() nested under `forOp`
       // must be before `ToTensorOp` in the block so that the lastWrite
@@ -1000,14 +1000,14 @@ struct LastTensorLoadCanonicalization : public OpRewritePattern<ForOp> {
       if (tensorToMemref) {
         rewriter.setInsertionPoint(forOp);
         rewriter.replaceOpWithNewOp<bufferization::ToMemrefOp>(
-            tensorToMemref, tensorToMemref.memref().getType(),
-            tensorToMemref.tensor());
+            tensorToMemref, tensorToMemref.getMemref().getType(),
+            tensorToMemref.getTensor());
       }
 
       // Clone the tensorLoad after forOp.
       rewriter.setInsertionPointAfter(forOp);
       Value newTensorLoad = rewriter.create<bufferization::ToTensorOp>(
-          loc, tensorLoadOp.memref());
+          loc, tensorLoadOp.getMemref());
       Value forOpResult = forOp.getResult(bbArg.getArgNumber() - /*iv=*/1);
       replacements.insert(std::make_pair(forOpResult, newTensorLoad));
 
