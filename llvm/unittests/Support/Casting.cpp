@@ -496,4 +496,42 @@ TEST(CastingTest, smart_dyn_cast_or_null) {
 }
 
 } // end namespace pointer_wrappers
+
+#ifndef NDEBUG
+namespace assertion_checks {
+struct Base {
+  virtual ~Base() {}
+};
+
+struct Derived : public Base {
+  static bool classof(const Base *B) { return false; }
+};
+
+TEST(CastingTest, assertion_check_const_ref) {
+  const Base B;
+  EXPECT_DEATH((void)cast<Derived>(B), "argument of incompatible type")
+      << "Invalid cast of const ref did not cause an abort()";
+}
+
+TEST(CastingTest, assertion_check_ref) {
+  Base B;
+  EXPECT_DEATH((void)cast<Derived>(B), "argument of incompatible type")
+      << "Invalid cast of const ref did not cause an abort()";
+}
+
+TEST(CastingTest, assertion_check_ptr) {
+  Base B;
+  EXPECT_DEATH((void)cast<Derived>(&B), "argument of incompatible type")
+      << "Invalid cast of const ref did not cause an abort()";
+}
+
+TEST(CastingTest, assertion_check_unique_ptr) {
+  auto B = std::make_unique<Base>();
+  EXPECT_DEATH((void)cast<Derived>(std::move(B)),
+               "argument of incompatible type")
+      << "Invalid cast of const ref did not cause an abort()";
+}
+
+} // end namespace assertion_checks
+#endif
 } // end namespace
