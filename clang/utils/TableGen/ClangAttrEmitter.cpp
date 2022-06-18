@@ -4321,9 +4321,8 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
       if (Attr.isSubClassOf("TargetSpecificAttr") &&
           !Attr.isValueUnset("ParseKind")) {
         AttrName = std::string(Attr.getValueAsString("ParseKind"));
-        if (Seen.find(AttrName) != Seen.end())
+        if (!Seen.insert(AttrName).second)
           continue;
-        Seen.insert(AttrName);
       } else
         AttrName = NormalizeAttrName(StringRef(Attr.getName())).str();
 
