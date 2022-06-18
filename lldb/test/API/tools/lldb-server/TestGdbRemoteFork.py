@@ -555,6 +555,66 @@ class TestGdbRemoteFork(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.expect_gdbremote_sequence()
 
     @add_test_categories(["fork"])
+    def test_threadinfo(self):
+        self.build()
+        self.prep_debug_monitor_and_inferior(
+            inferior_args=["fork",
+                           "thread:new",
+                           "trap",
+                           ])
+        self.add_qSupported_packets(["multiprocess+",
+                                     "fork-events+"])
+        ret = self.expect_gdbremote_sequence()
+        self.assertIn("fork-events+", ret["qSupported_response"])
+        self.reset_test_sequence()
+
+        # continue and expect fork
+        self.test_sequence.add_log_lines([
+            "read packet: $c#00",
+            {"direction": "send", "regex": self.fork_regex.format("fork"),
+             "capture": self.fork_capture},
+        ], True)
+        self.add_threadinfo_collection_packets()
+        ret = self.expect_gdbremote_sequence()
+        pidtids = [
+            (ret["parent_pid"], ret["parent_tid"]),
+            (ret["child_pid"], ret["child_tid"]),
+        ]
+        prev_pidtids = set(self.parse_threadinfo_packets(ret))
+        self.assertEqual(prev_pidtids,
+                         frozenset((int(pid, 16), int(tid, 16))
+                                   for pid, tid in pidtids))
+        self.reset_test_sequence()
+
+        for pidtid in pidtids:
+            self.test_sequence.add_log_lines(
+                ["read packet: $Hcp{}.{}#00".format(*pidtid),
+                 "send packet: $OK#00",
+                 "read packet: $c#00",
+                 {"direction": "send",
+                  "regex": "^[$]T05thread:p{}.{}.*".format(*pidtid),
+                  },
+                 ], True)
+            self.add_threadinfo_collection_packets()
+            ret = self.expect_gdbremote_sequence()
+            self.reset_test_sequence()
+            new_pidtids = set(self.parse_threadinfo_packets(ret))
+            added_pidtid = new_pidtids - prev_pidtids
+            prev_pidtids = new_pidtids
+
+            # verify that we've got exactly one new thread, and that
+            # the PID matches
+            self.assertEqual(len(added_pidtid), 1)
+            self.assertEqual(added_pidtid.pop()[0], int(pidtid[0], 16))
+
+        for pidtid in new_pidtids:
+            self.test_sequence.add_log_lines(
+                ["read packet: $Hgp{:x}.{:x}#00".format(*pidtid),
+                 "send packet: $OK#00",
+                 ], True)
+        self.expect_gdbremote_sequence()
+
+    @add_test_categories(["fork"])
     def test_memory_read_write(self):
         self.build()
         INITIAL_DATA = "Initial message"
