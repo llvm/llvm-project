@@ -13,11 +13,11 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace.json")
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["19521: [tsc=0x008fb5211c143fd8] error: expected tracing enabled event",
+          substrs=["19521: [tsc=40450075479261144] error: expected tracing enabled event",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19520: [tsc=0x008fb5211bfbc69e] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19520: [tsc=40450075477657246] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["67910: [tsc=0x008fb5211bfdf270] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["67910: [tsc=40450075477799536] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
     @testSBAPIAndCommands
@@ -26,11 +26,11 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_with_string_numbers.json")
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["19521: [tsc=0x008fb5211c143fd8] error: expected tracing enabled event",
+          substrs=["19521: [tsc=40450075479261144] error: expected tracing enabled event",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19520: [tsc=0x008fb5211bfbc69e] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19520: [tsc=40450075477657246] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["67910: [tsc=0x008fb5211bfdf270] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["67910: [tsc=40450075477799536] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
     @testSBAPIAndCommands
@@ -39,11 +39,11 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_missing_threads.json")
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["19521: [tsc=0x008fb5211c143fd8] error: expected tracing enabled event",
+          substrs=["19521: [tsc=40450075479261144] error: expected tracing enabled event",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19520: [tsc=0x008fb5211bfbc69e] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19520: [tsc=40450075477657246] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["67910: [tsc=0x008fb5211bfdf270] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["67910: [tsc=40450075477799536] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
     @testSBAPIAndCommands

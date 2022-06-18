@@ -174,6 +174,11 @@ public:
   virtual bool GoToId(lldb::user_id_t id) = 0;
 
   /// \return
+  ///     \b true if and only if there's an instruction item with the given \p
+  ///     id.
+  virtual bool HasId(lldb::user_id_t id) const = 0;
+
+  /// \return
   ///     A unique identifier for the instruction or error this cursor is
   ///     pointing to.
   virtual lldb::user_id_t GetId() const = 0;
