@@ -39363,7 +39363,7 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT ShuffleVT = N.getValueType();
 
-  auto IsMergeableWithShuffle = [](SDValue Op) {
+  auto IsMergeableWithShuffle = [](SDValue Op, bool FoldLoad = false) {
     // AllZeros/AllOnes constants are freely shuffled and will peek through
     // bitcasts. Other constant build vectors do not peek through bitcasts. Only
     // merge with target shuffles if it has one use so shuffle combining is
@@ -39372,13 +39372,14 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
            ISD::isBuildVectorAllZeros(Op.getNode()) ||
            ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
            ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode()) ||
-           (isTargetShuffle(Op.getOpcode()) && Op->hasOneUse());
+           (isTargetShuffle(Op.getOpcode()) && Op->hasOneUse()) ||
+           (FoldLoad && isShuffleFoldableLoad(Op));
   };
   auto IsSafeToMoveShuffle = [ShuffleVT](SDValue Op, unsigned BinOp) {
     // Ensure we only shuffle whole vector src elements, unless its a logical
     // binops where we can more aggressively move shuffles from dst to src.
-    // TODO: Add X86ISD::ANDNP handling with test coverage.
     return BinOp == ISD::AND || BinOp == ISD::OR || BinOp == ISD::XOR ||
+           BinOp == X86ISD::ANDNP ||
            (Op.getScalarValueSizeInBits() <= ShuffleVT.getScalarSizeInBits());
   };
 
@@ -39408,7 +39409,8 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
       if (TLI.isBinOp(SrcOpcode) && IsSafeToMoveShuffle(N0, SrcOpcode)) {
         SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
         SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
-        if (IsMergeableWithShuffle(Op00) || IsMergeableWithShuffle(Op01)) {
+        if (IsMergeableWithShuffle(Op00, Opc != X86ISD::PSHUFB) ||
+            IsMergeableWithShuffle(Op01, Opc != X86ISD::PSHUFB)) {
           SDValue LHS, RHS;
           Op00 = DAG.getBitcast(ShuffleVT, Op00);
           Op01 = DAG.getBitcast(ShuffleVT, Op01);
