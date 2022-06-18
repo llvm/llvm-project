@@ -64,7 +64,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     ```
   }];
 
-  let arguments = (ins Variadic<Index>:$dynamicSizes,
+  let arguments = (ins Variadic<Index>:$dynamic_sizes,
                        Optional<AnyTensor>:$copy,
                        OptionalAttr<BoolAttr>:$escape);
 
@@ -98,7 +98,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     // the tensor at dimension `idx`. Asserts that the shape is
     // dynamic at that `idx`.
     unsigned getIndexOfDynamicSize(unsigned idx) {
-      assert(!copy() && "no dim sizes specified when copying a tensor");
+      assert(!getCopy() && "no dim sizes specified when copying a tensor");
       assert(isDynamicDim(idx) && "expected dynamic size");
       ArrayRef<int64_t> shape = getType().getShape();
       return std::count_if(
@@ -169,8 +169,8 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
   let results = (outs Arg<AnyRankedOrUnrankedMemRef, "", []>:$output);
 
   let extraClassDeclaration = [{
-    Value getSource() { return input(); }
-    Value getTarget() { return output(); }
+    Value getSource() { return getInput(); }
+    Value getTarget() { return getOutput(); }
   }];
 
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($output)";

@@ -92,7 +92,7 @@ public:
   LogicalResult
   matchAndRewrite(bufferization::ToTensorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOp(op, adaptor.memref());
+    rewriter.replaceOp(op, adaptor.getMemref());
     return success();
   }
 };
@@ -108,7 +108,7 @@ public:
   LogicalResult
   matchAndRewrite(bufferization::ToMemrefOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOp(op, adaptor.tensor());
+    rewriter.replaceOp(op, adaptor.getTensor());
     return success();
   }
 };
