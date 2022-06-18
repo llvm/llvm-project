@@ -2419,33 +2419,104 @@ void InstrRefBasedLDV::BlockPHIPlacement(
   IDF.calculate(PHIBlocks);
 }
 
-Optional<ValueIDNum> InstrRefBasedLDV::pickVPHILoc(
-    const MachineBasicBlock &MBB, const DebugVariable &Var,
+bool InstrRefBasedLDV::pickVPHILoc(
+    SmallVectorImpl<DbgOpID> &OutValues, const MachineBasicBlock &MBB,
     const LiveIdxT &LiveOuts, FuncValueTable &MOutLocs,
     const SmallVectorImpl<const MachineBasicBlock *> &BlockOrders) {
-  // Collect a set of locations from predecessor where its live-out value can
-  // be found.
-  SmallVector<SmallVector<LocIdx, 4>, 8> Locs;
-  SmallVector<const DbgValueProperties *, 4> Properties;
-  unsigned NumLocs = MTracker->getNumLocs();
 
   // No predecessors means no PHIs.
   if (BlockOrders.empty())
-    return None;
+    return false;
 
-  for (const auto *p : BlockOrders) {
-    unsigned ThisBBNum = p->getNumber();
+  // All the location operands that do not already agree need to be joined,
+  // track the indices of each such location operand here.
+  SmallDenseSet<unsigned> LocOpsToJoin;
+
+  auto FirstValueIt = LiveOuts.find(BlockOrders[0]);
+  if (FirstValueIt == LiveOuts.end())
+    return false;
+  const DbgValue &FirstValue = *FirstValueIt->second;
+
+  for (const auto p : BlockOrders) {
     auto OutValIt = LiveOuts.find(p);
     if (OutValIt == LiveOuts.end())
       // If we have a predecessor not in scope, we'll never find a PHI position.
-      return None;
+      return false;
     const DbgValue &OutVal = *OutValIt->second;
 
-    if (OutVal.getDbgOpID(0).isConst() || OutVal.Kind == DbgValue::NoVal)
-      // Consts and no-values cannot have locations we can join on.
-      return None;
+    // No-values cannot have locations we can join on.
+    if (OutVal.Kind == DbgValue::NoVal)
+      return false;
 
-    Properties.push_back(&OutVal.Properties);
+    // For unjoined VPHIs where we don't know the location, we definitely
+    // can't find a join loc unless the VPHI is a backedge.
+    if (OutVal.isUnjoinedPHI() && OutVal.BlockNo != MBB.getNumber())
+      return false;
+
+    if (FirstValue.Properties != OutVal.Properties)
+      return false;
+
+    for (unsigned Idx = 0; Idx < FirstValue.getLocationOpCount(); ++Idx) {
+      // An unjoined PHI has no defined locations, and so a shared location must
+      // be found for every operand.
+      if (OutVal.isUnjoinedPHI()) {
+        LocOpsToJoin.insert(Idx);
+        continue;
+      }
+      DbgOpID FirstValOp = FirstValue.getDbgOpID(Idx);
+      DbgOpID OutValOp = OutVal.getDbgOpID(Idx);
+      if (FirstValOp != OutValOp) {
+        // We can never join constant ops - the ops must either both be equal
+        // constant ops or non-const ops.
+        if (FirstValOp.isConst() || OutValOp.isConst())
+          return false;
+        else
+          LocOpsToJoin.insert(Idx);
+      }
+    }
+  }
+
+  SmallVector<DbgOpID> NewDbgOps;
+
+  for (unsigned Idx = 0; Idx < FirstValue.getLocationOpCount(); ++Idx) {
+    // If this op doesn't need to be joined because the values agree, use that
+    // already-agreed value.
+    if (!LocOpsToJoin.contains(Idx)) {
+      NewDbgOps.push_back(FirstValue.getDbgOpID(Idx));
+      continue;
+    }
+
+    Optional<ValueIDNum> JoinedOpLoc =
+        pickOperandPHILoc(Idx, MBB, LiveOuts, MOutLocs, BlockOrders);
+
+    if (!JoinedOpLoc)
+      return false;
+
+    NewDbgOps.push_back(DbgOpStore.insert(*JoinedOpLoc));
+  }
+
+  OutValues.append(NewDbgOps);
+  return true;
+}
+
+Optional<ValueIDNum> InstrRefBasedLDV::pickOperandPHILoc(
+    unsigned DbgOpIdx, const MachineBasicBlock &MBB, const LiveIdxT &LiveOuts,
+    FuncValueTable &MOutLocs,
+    const SmallVectorImpl<const MachineBasicBlock *> &BlockOrders) {
+
+  // Collect a set of locations from predecessor where its live-out value can
+  // be found.
+  SmallVector<SmallVector<LocIdx, 4>, 8> Locs;
+  unsigned NumLocs = MTracker->getNumLocs();
+
+  for (const auto p : BlockOrders) {
+    unsigned ThisBBNum = p->getNumber();
+    auto OutValIt = LiveOuts.find(p);
+    assert(OutValIt != LiveOuts.end());
+    const DbgValue &OutVal = *OutValIt->second;
+    DbgOpID OutValOpID = OutVal.getDbgOpID(DbgOpIdx);
+    DbgOp OutValOp = DbgOpStore.find(OutValOpID);
+    assert(!OutValOp.IsConst);
 
     // Create new empty vector of locations.
     Locs.resize(Locs.size() + 1);
@@ -2454,8 +2525,8 @@ Optional<ValueIDNum> InstrRefBasedLDV::pickVPHILoc(
     // present. Do the same for VPHIs where we know the VPHI value.
     if (OutVal.Kind == DbgValue::Def ||
         (OutVal.Kind == DbgValue::VPHI && OutVal.BlockNo != MBB.getNumber() &&
-         !OutVal.getDbgOpID(0).isUndef())) {
-      ValueIDNum ValToLookFor = DbgOpStore.find(OutVal.getDbgOpID(0)).ID;
+         !OutValOp.isUndef())) {
+      ValueIDNum ValToLookFor = OutValOp.ID;
       // Search the live-outs of the predecessor for the specified value.
       for (unsigned int I = 0; I < NumLocs; ++I) {
         if (MOutLocs[ThisBBNum][I] == ValToLookFor)
@@ -2463,11 +2534,6 @@ Optional<ValueIDNum> InstrRefBasedLDV::pickVPHILoc(
       }
     } else {
       assert(OutVal.Kind == DbgValue::VPHI);
-      // For VPHIs where we don't know the location, we definitely can't find
-      // a join loc.
-      if (OutVal.BlockNo != MBB.getNumber())
-        return None;
-
       // Otherwise: this is a VPHI on a backedge feeding back into itself, i.e.
       // a value that's live-through the whole loop. (It has to be a backedge,
       // because a block can't dominate itself). We can accept as a PHI location
@@ -2481,16 +2547,8 @@ Optional<ValueIDNum> InstrRefBasedLDV::pickVPHILoc(
       }
     }
   }
-
   // We should have found locations for all predecessors, or returned.
   assert(Locs.size() == BlockOrders.size());
-
-  // Check that all properties are the same. We can't pick a location if they're
-  // not.
-  const DbgValueProperties *Properties0 = Properties[0];
-  for (const auto *Prop : Properties)
-    if (*Prop != *Properties0)
-      return None;
 
   // Starting with the first set of locations, take the intersection with
   // subsequent sets.
@@ -2582,7 +2640,7 @@ bool InstrRefBasedLDV::vlocJoin(
   // Scan for variable values that can never be resolved: if they have
   // different DIExpressions, different indirectness, or are mixed constants /
   // non-constants.
-  for (auto &V : Values) {
+  for (const auto &V : Values) {
     if (V.second->Properties != FirstVal.Properties)
       return false;
     if (V.second->Kind == DbgValue::NoVal)
@@ -2847,13 +2905,13 @@ void InstrRefBasedLDV::buildVLocValueMap(
           // eliminated and transitions from VPHI-with-location to
           // live-through-value. As a result, the selected location of any VPHI
           // might change, so we need to re-compute it on each iteration.
-          Optional<ValueIDNum> ValueNum =
-              pickVPHILoc(*MBB, Var, LiveOutIdx, MOutLocs, Preds);
+          SmallVector<DbgOpID> JoinedOps;
 
-          if (ValueNum) {
-            DbgOpID ValueID = DbgOpStore.insert(*ValueNum);
-            InLocsChanged |= LiveIn->getDbgOpID(0) != ValueID;
-            LiveIn->setDbgOpIDs(ValueID);
+          if (pickVPHILoc(JoinedOps, *MBB, LiveOutIdx, MOutLocs, Preds)) {
+            bool NewLocPicked = !equal(LiveIn->getDbgOpIDs(), JoinedOps);
+            InLocsChanged |= NewLocPicked;
+            if (NewLocPicked)
+              LiveIn->setDbgOpIDs(JoinedOps);
           }
         }
 
