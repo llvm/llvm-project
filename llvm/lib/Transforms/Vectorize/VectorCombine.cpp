@@ -1270,7 +1270,7 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       auto *SV = dyn_cast<ShuffleVectorInst>(U);
       if (!SV || SV->getType() != VT)
         return false;
-      if (find(Shuffles, SV) == Shuffles.end())
+      if (!llvm::is_contained(Shuffles, SV))
         Shuffles.push_back(SV);
     }
     return true;
