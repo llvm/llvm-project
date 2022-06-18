@@ -849,8 +849,8 @@ define <4 x i32> @combine_vec_add_shuffle_shl(<4 x i32> %a0)  {
 ;
 ; AVX-LABEL: combine_vec_add_shuffle_shl:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,1,0]
+; AVX-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3,3,3,3]
 ; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
