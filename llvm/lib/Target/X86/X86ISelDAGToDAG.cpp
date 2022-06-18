@@ -59,30 +59,27 @@ namespace {
     enum {
       RegBase,
       FrameIndexBase
-    } BaseType;
+    } BaseType = RegBase;
 
     // This is really a union, discriminated by BaseType!
     SDValue Base_Reg;
-    int Base_FrameIndex;
+    int Base_FrameIndex = 0;
 
-    unsigned Scale;
+    unsigned Scale = 1;
     SDValue IndexReg;
-    int32_t Disp;
+    int32_t Disp = 0;
     SDValue Segment;
-    const GlobalValue *GV;
-    const Constant *CP;
-    const BlockAddress *BlockAddr;
-    const char *ES;
-    MCSymbol *MCSym;
-    int JT;
+    const GlobalValue *GV = nullptr;
+    const Constant *CP = nullptr;
+    const BlockAddress *BlockAddr = nullptr;
+    const char *ES = nullptr;
+    MCSymbol *MCSym = nullptr;
+    int JT = -1;
     Align Alignment;            // CP alignment.
-    unsigned char SymbolFlags;  // X86II::MO_*
+    unsigned char SymbolFlags = X86II::MO_NO_FLAG;  // X86II::MO_*
     bool NegateIndex = false;
 
-    X86ISelAddressMode()
-        : BaseType(RegBase), Base_FrameIndex(0), Scale(1), Disp(0), GV(nullptr),
-          CP(nullptr), BlockAddr(nullptr), ES(nullptr), MCSym(nullptr), JT(-1),
-          SymbolFlags(X86II::MO_NO_FLAG) {}
+    X86ISelAddressMode() = default;
 
     bool hasSymbolicDisplacement() const {
       return GV != nullptr || CP != nullptr || ES != nullptr ||
