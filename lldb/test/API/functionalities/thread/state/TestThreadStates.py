@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class ThreadStateTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="llvm.org/pr15824 thread states not properly maintained")

@@ -19,7 +19,6 @@ def apple_silicon():
 
 class TestLaunchProcessPosixSpawn(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
-    mydir = TestBase.compute_mydir(__file__)
 
     def no_haswell(self):
         if not haswell():

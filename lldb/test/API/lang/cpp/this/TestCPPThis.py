@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class CPPThisTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # rdar://problem/9962849
     @expectedFailureAll(
         compiler="gcc",

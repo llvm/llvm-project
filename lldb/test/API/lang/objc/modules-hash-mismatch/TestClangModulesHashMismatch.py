@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestClangModuleHashMismatch(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(debug_info=no_match(["gmodules"]))
     def test_expr(self):
