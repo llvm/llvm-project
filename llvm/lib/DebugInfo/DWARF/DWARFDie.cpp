@@ -194,7 +194,7 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
             Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
       OS << Space << "\"" << Name << '\"';
-  } else if (Attr == DW_AT_type) {
+  } else if (Attr == DW_AT_type || Attr == DW_AT_containing_type) {
     DWARFDie D = resolveReferencedType(Die, FormValue);
     if (D && !D.isNULL()) {
       OS << Space << "\"";
