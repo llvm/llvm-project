@@ -270,27 +270,6 @@ TEST(AlignmentTest, AlignComparisons) {
   }
 }
 
-TEST(AlignmentTest, Max) {
-  // We introduce std::max here to test ADL.
-  using std::max;
-
-  // Uses llvm::max.
-  EXPECT_EQ(max(MaybeAlign(), Align(2)), Align(2));
-  EXPECT_EQ(max(Align(2), MaybeAlign()), Align(2));
-
-  EXPECT_EQ(max(MaybeAlign(1), Align(2)), Align(2));
-  EXPECT_EQ(max(Align(2), MaybeAlign(1)), Align(2));
-
-  EXPECT_EQ(max(MaybeAlign(2), Align(2)), Align(2));
-  EXPECT_EQ(max(Align(2), MaybeAlign(2)), Align(2));
-
-  EXPECT_EQ(max(MaybeAlign(4), Align(2)), Align(4));
-  EXPECT_EQ(max(Align(2), MaybeAlign(4)), Align(4));
-
-  // Uses std::max.
-  EXPECT_EQ(max(Align(2), Align(4)), Align(4));
-}
-
 TEST(AlignmentTest, AssumeAligned) {
   EXPECT_EQ(assumeAligned(0), Align(1));
   EXPECT_EQ(assumeAligned(0), Align());

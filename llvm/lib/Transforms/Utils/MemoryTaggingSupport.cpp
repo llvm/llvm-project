@@ -148,7 +148,7 @@ uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
 }
 
 void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
-  const Align NewAlignment = max(MaybeAlign(Info.AI->getAlign()), Alignment);
+  const Align NewAlignment = std::max(Info.AI->getAlign(), Alignment);
   Info.AI->setAlignment(NewAlignment);
   auto &Ctx = Info.AI->getFunction()->getContext();
 

@@ -326,14 +326,6 @@ inline Align operator/(Align Lhs, uint64_t Divisor) {
   return Align(Lhs.value() / Divisor);
 }
 
-inline Align max(MaybeAlign Lhs, Align Rhs) {
-  return Lhs && *Lhs > Rhs ? *Lhs : Rhs;
-}
-
-inline Align max(Align Lhs, MaybeAlign Rhs) {
-  return Rhs && *Rhs > Lhs ? *Rhs : Lhs;
-}
-
 #ifndef NDEBUG
 // For usage in LLVM_DEBUG macros.
 inline std::string DebugStr(const Align &A) {
