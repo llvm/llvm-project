@@ -157,13 +157,15 @@ def ConstantOp : CIR_Op<"cst",
 
 def InitStyle_None      : I32EnumAttrCase<"uninitialized", 1>;
 def InitStyle_ParamInit : I32EnumAttrCase<"paraminit", 2>;
+
+// These are similar to Clang's VarDecl initialization style
 def InitStyle_CInit     : I32EnumAttrCase<"cinit", 3>;
 def InitStyle_CallInit  : I32EnumAttrCase<"callinit", 4>;
 def InitStyle_ListInit  : I32EnumAttrCase<"listinit", 5>;
 
 def InitStyle : I32EnumAttr<
     "InitStyle",
-    "variable initialization style",
+    "initialization style",
     [InitStyle_None, InitStyle_ParamInit,
      InitStyle_CInit, InitStyle_CallInit,
      InitStyle_ListInit]> {
@@ -185,21 +187,28 @@ def AllocaOp : CIR_Op<"alloca", [
   AllocaTypesMatchWith<"'allocaType' matches pointee type of 'addr'",
                  "addr", "allocaType",
                  "$_self.cast<PointerType>().getPointee()">]> {
-  let summary = "local variable";
+  let summary = "Defines a scope-local variable";
   let description = [{
-    The `cir.alloca` operation defines a local variable.
+    The `cir.alloca` operation defines a scope-local variable.
 
-    Possible initialization styles are: uninitialized, paraminit,
-    callinit, cinit and listinit.
+    Initialization style must be one of:
+    - uninitialized
+    - paraminit: alloca to hold a function argument
+    - callinit: Call-style initialization (C++98)
+    - cinit: C-style initialization with assignment
+    - listinit: Direct list-initialization (C++11)
 
-    The result is a pointer type for the original input type.
+    The result type is a pointer to the input's type.
 
     Example:
 
     ```mlir
-    // Local variable with uninitialized value.
-    // int count = ...
-    %0 = cir.alloca i32, !cir.ptr<i32>, ["count", cinit]
+    // int count = 3;
+    %0 = cir.alloca i32, !cir.ptr<i32>, ["count", cinit] {alignment = 4 : i64}
+
+    // int *ptr;
+    %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["ptr", uninitialized] {alignment = 8 : i64}
+    ...
     ```
   }];
 
@@ -551,12 +560,14 @@ def BinOpKind : I32EnumAttr<
 def BinOp : CIR_Op<"binop", [Pure,
   SameTypeOperands, SameOperandsAndResultType]> {
 
-  let summary = "binary operations (arith and logic)";
+  let summary = "Binary operations (arith and logic)";
   let description = [{
     "cir.binop performs the binary operation according to
-     the specified kind/opcode: [mul, div, rem, add, sub, shl,
-     shr, and, xor, or]. It accepts to input operands and the
-     result type must match both types.
+     the specified opcode kind: [mul, div, rem, add, sub, shl,
+     shr, and, xor, or].
+
+     It requires two input operands and has one result, all types
+     should be the same.
 
      Example
      ```
