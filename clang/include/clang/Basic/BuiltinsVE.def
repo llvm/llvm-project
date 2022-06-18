@@ -15,6 +15,16 @@
 #   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
+// The format of this database is decribed in clang/Basic/Builtins.def.
+
+BUILTIN(__builtin_ve_vl_pack_f32p, "ULifC*fC*", "n")
+BUILTIN(__builtin_ve_vl_pack_f32a, "ULifC*", "n")
+
+BUILTIN(__builtin_ve_vl_extract_vm512u, "V256bV512b", "n")
+BUILTIN(__builtin_ve_vl_extract_vm512l, "V256bV512b", "n")
+BUILTIN(__builtin_ve_vl_insert_vm512u, "V512bV512bV256b", "n")
+BUILTIN(__builtin_ve_vl_insert_vm512l, "V512bV512bV256b", "n")
+
 // Use generated BUILTIN definitions
 #include "clang/Basic/BuiltinsVEVL.gen.def"
 

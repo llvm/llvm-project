@@ -1,7 +1,7 @@
 // REQUIRES: ve-registered-target
 
-// RUN: %clang_cc1 -no-opaque-pointers -S -emit-llvm -triple ve-unknown-linux-gnu \
-// RUN:   -ffreestanding %s -o - | FileCheck %s
+// RUN: %clang_cc1 -S -emit-llvm -triple ve-unknown-linux-gnu \
+// RUN:   -no-opaque-pointers -ffreestanding %s -o - | FileCheck %s
 
 #include <velintrin.h>
 
@@ -8810,4 +8810,49 @@ test_svob() {
   // CHECK-LABEL: @test_svob
   // CHECK: call void @llvm.ve.vl.svob()
   _vel_svob();
+}
+
+void __attribute__((noinline))
+test_pack_f32p(float* p1, float* p2) {
+  // CHECK-LABEL: @test_pack_f32p
+  // CHECK: %[[VAR1:[A-Za-z0-9.]+]] = bitcast float* %{{.*}} to i8*
+  // CHECK: %[[VAR2:[A-Za-z0-9.]+]] = bitcast float* %{{.*}} to i8*
+  // CHECK-NEXT: call i64 @llvm.ve.vl.pack.f32p(i8* %[[VAR1]], i8* %[[VAR2]])
+  v1 = _vel_pack_f32p(p1, p2);
+}
+
+void __attribute__((noinline))
+test_pack_f32a(float* p) {
+  // CHECK-LABEL: @test_pack_f32a
+  // CHECK: %[[VAR3:[A-Za-z0-9.]+]] = bitcast float* %{{.*}} to i8*
+  // CHECK-NEXT: call i64 @llvm.ve.vl.pack.f32a(i8* %[[VAR3]])
+  v1 = _vel_pack_f32a(p);
+}
+
+void __attribute__((noinline))
+test_extract_vm512u() {
+  // CHECK-LABEL: @test_extract_vm512u
+  // CHECK: call <256 x i1> @llvm.ve.vl.extract.vm512u(<512 x i1> %{{.*}})
+  vm1 = _vel_extract_vm512u(vm1_512);
+}
+
+void __attribute__((noinline))
+test_extract_vm512l() {
+  // CHECK-LABEL: @test_extract_vm512l
+  // CHECK: call <256 x i1> @llvm.ve.vl.extract.vm512l(<512 x i1> %{{.*}})
+  vm1 = _vel_extract_vm512l(vm1_512);
+}
+
+void __attribute__((noinline))
+test_insert_vm512u() {
+  // CHECK-LABEL: @test_insert_vm512u
+  // CHECK: call <512 x i1> @llvm.ve.vl.insert.vm512u(<512 x i1> %{{.*}}, <256 x i1> %{{.*}})
+  vm1_512 = _vel_insert_vm512u(vm1_512, vm1);
+}
+
+void __attribute__((noinline))
+test_insert_vm512l() {
+  // CHECK-LABEL: @test_insert_vm512l
+  // CHECK: call <512 x i1> @llvm.ve.vl.insert.vm512l(<512 x i1> %{{.*}}, <256 x i1> %{{.*}})
+  vm1_512 = _vel_insert_vm512l(vm1_512, vm1);
 }
