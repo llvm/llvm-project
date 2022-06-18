@@ -349,8 +349,7 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
     const VNInfo *NextValue = nullptr;
     const VisitKey Key(Value, DefinedLanes);
 
-    if (!Visited.count(Key)) {
-      Visited.insert(Key);
+    if (Visited.insert(Key).second) {
       // On first visit to a phi then start processing first predecessor
       NextPredIdx = 0;
     }

@@ -6020,31 +6020,25 @@ bool CodeGenPrepare::optimizePhiType(
       for (Value *V : Phi->incoming_values()) {
         if (auto *OpPhi = dyn_cast<PHINode>(V)) {
           if (!PhiNodes.count(OpPhi)) {
-            if (Visited.count(OpPhi))
+            if (!Visited.insert(OpPhi).second)
               return false;
             PhiNodes.insert(OpPhi);
-            Visited.insert(OpPhi);
             Worklist.push_back(OpPhi);
           }
         } else if (auto *OpLoad = dyn_cast<LoadInst>(V)) {
           if (!OpLoad->isSimple())
             return false;
-          if (!Defs.count(OpLoad)) {
-            Defs.insert(OpLoad);
+          if (Defs.insert(OpLoad).second)
             Worklist.push_back(OpLoad);
-          }
         } else if (auto *OpEx = dyn_cast<ExtractElementInst>(V)) {
-          if (!Defs.count(OpEx)) {
-            Defs.insert(OpEx);
+          if (Defs.insert(OpEx).second)
             Worklist.push_back(OpEx);
-          }
         } else if (auto *OpBC = dyn_cast<BitCastInst>(V)) {
           if (!ConvertTy)
             ConvertTy = OpBC->getOperand(0)->getType();
           if (OpBC->getOperand(0)->getType() != ConvertTy)
             return false;
-          if (!Defs.count(OpBC)) {
-            Defs.insert(OpBC);
+          if (Defs.insert(OpBC).second) {
             Worklist.push_back(OpBC);
             AnyAnchored |= !isa<LoadInst>(OpBC->getOperand(0)) &&
                            !isa<ExtractElementInst>(OpBC->getOperand(0));

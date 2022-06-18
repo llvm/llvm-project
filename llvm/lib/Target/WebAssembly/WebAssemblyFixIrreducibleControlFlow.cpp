@@ -222,10 +222,8 @@ private:
       assert(!Enterers.count(MBB));
       if (Blocks.insert(MBB).second) {
         for (auto *Pred : MBB->predecessors()) {
-          if (!AddedToWorkList.count(Pred)) {
+          if (AddedToWorkList.insert(Pred).second)
             WorkList.push_back(Pred);
-            AddedToWorkList.insert(Pred);
-          }
         }
       }
     }
