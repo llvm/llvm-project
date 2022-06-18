@@ -367,8 +367,7 @@ void GenerateCaseForVersionedClauses(const std::vector<Record *> &Clauses,
 
     const auto ClauseFormattedName = VerClause.getClause().getFormattedName();
 
-    if (Cases.find(ClauseFormattedName) == Cases.end()) {
-      Cases.insert(ClauseFormattedName);
+    if (Cases.insert(ClauseFormattedName).second) {
       OS << "        case " << DirLang.getClausePrefix() << ClauseFormattedName
          << ":\n";
       OS << "          return " << VerClause.getMinVersion()
