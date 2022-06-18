@@ -19,8 +19,6 @@ from threading import Thread
 
 class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def readPidMessage(self, fifo_file):
         with open(fifo_file, "r") as file:
             self.assertIn("pid", file.readline())

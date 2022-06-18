@@ -15,8 +15,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_breakpoints_on_initializers(self):
         """Show we can set breakpoints on initializers appearing both before
            and after the constructor body, and hit them."""

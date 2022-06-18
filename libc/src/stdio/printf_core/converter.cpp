@@ -61,7 +61,7 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'n':
     // return convert_write_int(writer, to_conv);
   case 'p':
-    // return convert_pointer(writer, to_conv);
+    return convert_pointer(writer, to_conv);
   default:
     return writer->write(to_conv.raw_string, to_conv.raw_len);
   }

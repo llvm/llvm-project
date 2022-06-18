@@ -13,8 +13,6 @@ from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
 
 class ProcessAPITestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

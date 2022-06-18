@@ -16,8 +16,6 @@ from lldbsuite.test import lldbutil
 class NetBSDCoreCommonTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()
         self.assertEqual(region_list.GetSize(), region_count)

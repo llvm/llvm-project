@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 class TestTraceLoad(TraceIntelPTTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def testLoadMultiCoreTrace(self):

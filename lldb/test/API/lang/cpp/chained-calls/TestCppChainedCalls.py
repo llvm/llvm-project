@@ -6,8 +6,6 @@ from lldbsuite.test import lldbutil
 
 class TestCppChainedCalls(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_with_run_command(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))

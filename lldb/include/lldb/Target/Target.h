@@ -1289,7 +1289,7 @@ public:
 
   class StopHookCommandLine : public StopHook {
   public:
-    virtual ~StopHookCommandLine() = default;
+    ~StopHookCommandLine() override = default;
 
     StringList &GetCommands() { return m_commands; }
     void SetActionFromString(const std::string &strings);
@@ -1312,7 +1312,7 @@ public:
 
   class StopHookScripted : public StopHook {
   public:
-    virtual ~StopHookScripted() = default;
+    ~StopHookScripted() override = default;
     StopHookResult HandleStop(ExecutionContext &exc_ctx,
                               lldb::StreamSP output) override;
 
