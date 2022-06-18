@@ -5207,8 +5207,6 @@ uint64_t RewriteInstance::getNewFunctionAddress(uint64_t OldAddress) {
   if (!Function)
     return 0;
 
-  assert(!Function->isFragment() && "cannot get new address for a fragment");
-
   return Function->getOutputAddress();
 }
 
