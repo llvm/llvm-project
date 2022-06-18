@@ -26,8 +26,6 @@ from lldbsuite.test import lldbutil
 
 class UnicodeLiteralsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_expr1(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.rdar12991846(expr=1)

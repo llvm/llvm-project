@@ -6,8 +6,6 @@ from lldbsuite.test.decorators import *
 
 class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def testErrorMessages(self):
         # We first check the output when there are no targets
         self.expect("thread trace dump instructions",

@@ -25,8 +25,6 @@ class SBBreakpointCallbackCase(TestBase):
         self.generateSource('test_listener_resume.cpp')
         self.generateSource('test_stop-hook.cpp')
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfRemote
     @skipIfNoSBHeaders
     # clang-cl does not support throw or catch (llvm.org/pr24538)

@@ -9,8 +9,6 @@ import os, signal, subprocess
 
 class SBModuleAPICase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         self.background_pid = None
