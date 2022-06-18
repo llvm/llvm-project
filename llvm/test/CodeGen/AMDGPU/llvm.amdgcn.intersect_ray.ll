@@ -131,9 +131,9 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(i32* %p_node_ptr
 ; GFX1013-NEXT:    v_mov_b32_e32 v10, 0x41000000
 ; GFX1013-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1013-NEXT:    v_add_co_u32 v2, s4, s4, v0
-; GFX1013-NEXT:    v_add_co_ci_u32_e64 v3, null, s5, 0, s4
+; GFX1013-NEXT:    v_add_co_ci_u32_e64 v3, s4, s5, 0, s4
 ; GFX1013-NEXT:    v_add_co_u32 v4, s4, s6, v0
-; GFX1013-NEXT:    v_add_co_ci_u32_e64 v5, null, s7, 0, s4
+; GFX1013-NEXT:    v_add_co_ci_u32_e64 v5, s4, s7, 0, s4
 ; GFX1013-NEXT:    flat_load_dword v0, v[2:3]
 ; GFX1013-NEXT:    flat_load_dword v1, v[4:5]
 ; GFX1013-NEXT:    v_mov_b32_e32 v2, 0
@@ -202,9 +202,9 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(i32* %p_node
 ; GFX1013-NEXT:    v_mov_b32_e32 v7, 0x48004700
 ; GFX1013-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1013-NEXT:    v_add_co_u32 v2, s4, s4, v0
-; GFX1013-NEXT:    v_add_co_ci_u32_e64 v3, null, s5, 0, s4
+; GFX1013-NEXT:    v_add_co_ci_u32_e64 v3, s4, s5, 0, s4
 ; GFX1013-NEXT:    v_add_co_u32 v4, s4, s6, v0
-; GFX1013-NEXT:    v_add_co_ci_u32_e64 v5, null, s7, 0, s4
+; GFX1013-NEXT:    v_add_co_ci_u32_e64 v5, s4, s7, 0, s4
 ; GFX1013-NEXT:    flat_load_dword v0, v[2:3]
 ; GFX1013-NEXT:    flat_load_dword v1, v[4:5]
 ; GFX1013-NEXT:    v_mov_b32_e32 v2, 0
@@ -277,7 +277,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(float* %p_ray,
 ; GFX1013-NEXT:    v_mov_b32_e32 v11, 0x41000000
 ; GFX1013-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1013-NEXT:    v_add_co_u32 v0, s4, s4, v0
-; GFX1013-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s4
+; GFX1013-NEXT:    v_add_co_ci_u32_e64 v1, s4, s5, 0, s4
 ; GFX1013-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX1013-NEXT:    v_mov_b32_e32 v0, 0xb36211c7
 ; GFX1013-NEXT:    v_mov_b32_e32 v1, 0x102
@@ -344,7 +344,7 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(float* %p_
 ; GFX1013-NEXT:    v_mov_b32_e32 v8, 0x48004700
 ; GFX1013-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1013-NEXT:    v_add_co_u32 v0, s4, s4, v0
-; GFX1013-NEXT:    v_add_co_ci_u32_e64 v1, null, s5, 0, s4
+; GFX1013-NEXT:    v_add_co_ci_u32_e64 v1, s4, s5, 0, s4
 ; GFX1013-NEXT:    flat_load_dword v2, v[0:1]
 ; GFX1013-NEXT:    v_mov_b32_e32 v0, 0xb36211c6
 ; GFX1013-NEXT:    v_mov_b32_e32 v1, 0x102

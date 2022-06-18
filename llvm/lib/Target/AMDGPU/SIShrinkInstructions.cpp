@@ -690,9 +690,9 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   return nullptr;
 }
 
-// If an instruction has dead sdst replace it with NULL register on gfx10+
+// If an instruction has dead sdst replace it with NULL register on gfx1030+
 bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
-  if (ST->getGeneration() < AMDGPUSubtarget::GFX10)
+  if (!ST->hasGFX10_3Insts())
     return false;
 
   MachineOperand *Op = TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
