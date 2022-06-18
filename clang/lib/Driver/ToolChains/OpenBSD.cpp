@@ -113,6 +113,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const toolchains::OpenBSD &ToolChain =
       static_cast<const toolchains::OpenBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
+  const llvm::Triple::ArchType Arch = ToolChain.getArch();
   ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
@@ -126,9 +127,9 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
-  if (ToolChain.getArch() == llvm::Triple::mips64)
+  if (Arch == llvm::Triple::mips64)
     CmdArgs.push_back("-EB");
-  else if (ToolChain.getArch() == llvm::Triple::mips64el)
+  else if (Arch == llvm::Triple::mips64el)
     CmdArgs.push_back("-EL");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_shared)) {
@@ -156,7 +157,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_nopie) || Args.hasArg(options::OPT_pg))
     CmdArgs.push_back("-nopie");
 
-  if (ToolChain.getArch() == llvm::Triple::riscv64)
+  if (Arch == llvm::Triple::riscv64)
     CmdArgs.push_back("-X");
 
   if (Output.isFilename()) {
