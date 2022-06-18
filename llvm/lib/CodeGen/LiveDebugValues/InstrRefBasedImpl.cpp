@@ -3135,11 +3135,11 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   assert(MaxNumBlocks >= 0);
   ++MaxNumBlocks;
 
+  initialSetup(MF);
+
   MLocTransfer.resize(MaxNumBlocks);
   vlocs.resize(MaxNumBlocks, VLocTracker(OverlapFragments, EmptyExpr));
   SavedLiveIns.resize(MaxNumBlocks);
-
-  initialSetup(MF);
 
   produceMLocTransferFunction(MF, MLocTransfer, MaxNumBlocks);
 
