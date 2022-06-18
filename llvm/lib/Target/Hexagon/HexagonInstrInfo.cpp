@@ -159,7 +159,7 @@ bool HexagonInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
     auto Op = MI.getOperand(1);
     // If the instruction has a global address as operand, it is not cheap
     // since the operand will be constant extended.
-    if (Op.getType() == MachineOperand::MO_GlobalAddress)
+    if (Op.isGlobal())
       return false;
     // If the instruction has an operand of size > 16bits, its will be
     // const-extended and hence, it is not cheap.
