@@ -88,7 +88,7 @@ public:
       : StopInfo(thread, break_id), m_should_stop(false),
         m_should_stop_is_valid(false), m_should_perform_action(true),
         m_address(LLDB_INVALID_ADDRESS), m_break_id(LLDB_INVALID_BREAK_ID),
-        m_was_one_shot(false) {
+        m_was_all_internal(false), m_was_one_shot(false) {
     StoreBPInfo();
   }
 
@@ -96,7 +96,7 @@ public:
       : StopInfo(thread, break_id), m_should_stop(should_stop),
         m_should_stop_is_valid(true), m_should_perform_action(true),
         m_address(LLDB_INVALID_ADDRESS), m_break_id(LLDB_INVALID_BREAK_ID),
-        m_was_one_shot(false) {
+        m_was_all_internal(false), m_was_one_shot(false) {
     StoreBPInfo();
   }
 
@@ -108,11 +108,22 @@ public:
       BreakpointSiteSP bp_site_sp(
           thread_sp->GetProcess()->GetBreakpointSiteList().FindByID(m_value));
       if (bp_site_sp) {
-        if (bp_site_sp->GetNumberOfOwners() == 1) {
+        uint32_t num_owners = bp_site_sp->GetNumberOfOwners();
+        if (num_owners == 1) {
           BreakpointLocationSP bp_loc_sp = bp_site_sp->GetOwnerAtIndex(0);
           if (bp_loc_sp) {
-            m_break_id = bp_loc_sp->GetBreakpoint().GetID();
-            m_was_one_shot = bp_loc_sp->GetBreakpoint().IsOneShot();
+            Breakpoint & bkpt = bp_loc_sp->GetBreakpoint();
+            m_break_id = bkpt.GetID();
+            m_was_one_shot = bkpt.IsOneShot();
+            m_was_all_internal = bkpt.IsInternal();
+          }
+        } else {
+          m_was_all_internal = true;
+          for (uint32_t i = 0; i < num_owners; i++) {
+            if (!bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint().IsInternal()) {
+              m_was_all_internal = false;
+              break;
+            }
           }
         }
         m_address = bp_site_sp->GetLoadAddress();
@@ -163,23 +174,7 @@ public:
   }
 
   bool DoShouldNotify(Event *event_ptr) override {
-    ThreadSP thread_sp(m_thread_wp.lock());
-    if (thread_sp) {
-      BreakpointSiteSP bp_site_sp(
-          thread_sp->GetProcess()->GetBreakpointSiteList().FindByID(m_value));
-      if (bp_site_sp) {
-        bool all_internal = true;
-
-        for (uint32_t i = 0; i < bp_site_sp->GetNumberOfOwners(); i++) {
-          if (!bp_site_sp->GetOwnerAtIndex(i)->GetBreakpoint().IsInternal()) {
-            all_internal = false;
-            break;
-          }
-        }
-        return !all_internal;
-      }
-    }
-    return true;
+    return !m_was_all_internal;
   }
 
   const char *GetDescription() override {
@@ -603,6 +598,7 @@ private:
   // in case somebody deletes it between the time the StopInfo is made and the
   // description is asked for.
   lldb::break_id_t m_break_id;
+  bool m_was_all_internal;
   bool m_was_one_shot;
 };
 

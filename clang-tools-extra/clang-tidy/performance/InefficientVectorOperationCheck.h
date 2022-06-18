@@ -22,7 +22,7 @@ namespace performance {
 /// field without calling Reserve() first.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/performance/inefficient-vector-operation.html
 class InefficientVectorOperationCheck : public ClangTidyCheck {
 public:
   InefficientVectorOperationCheck(StringRef Name, ClangTidyContext *Context);

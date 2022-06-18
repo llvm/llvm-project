@@ -30,12 +30,15 @@ using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
 
+/// Write a stream of bytes from \p data to the given output file.
+/// It creates or overwrites the output file, but not append.
 static llvm::Error WriteBytesToDisk(FileSpec &output_file,
                                     ArrayRef<uint8_t> data) {
   std::basic_fstream<char> out_fs = std::fstream(
       output_file.GetPath().c_str(), std::ios::out | std::ios::binary);
-  out_fs.write(reinterpret_cast<const char *>(&data[0]),
-               data.size() * sizeof(uint8_t));
+  if (!data.empty())
+    out_fs.write(reinterpret_cast<const char *>(&data[0]), data.size());
+
   out_fs.close();
   if (!out_fs)
     return createStringError(inconvertibleErrorCode(),
@@ -62,7 +65,7 @@ WriteSessionToFile(const llvm::json::Value &trace_session_json,
   FileSpec trace_path = directory;
   trace_path.AppendPathComponent("trace.json");
   std::ofstream os(trace_path.GetPath());
-  os << std::string(formatv("{0:2}", trace_session_json));
+  os << formatv("{0:2}", trace_session_json).str();
   os.close();
   if (!os)
     return createStringError(inconvertibleErrorCode(),
@@ -90,7 +93,6 @@ BuildThreadsSection(Process &process, FileSpec directory) {
 
   FileSpec threads_dir = directory;
   threads_dir.AppendPathComponent("threads");
-  FileSystem::Instance().Resolve(threads_dir);
   sys::fs::create_directories(threads_dir.GetCString());
 
   for (ThreadSP thread_sp : process.Threads()) {
@@ -101,13 +103,13 @@ BuildThreadsSection(Process &process, FileSpec directory) {
     JSONThread json_thread;
     json_thread.tid = tid;
 
-    if (trace_sp->GetTracedCores().empty()) {
+    if (trace_sp->GetTracedCpus().empty()) {
       FileSpec output_file = threads_dir;
       output_file.AppendPathComponent(std::to_string(tid) + ".intelpt_trace");
-      json_thread.trace_buffer = output_file.GetPath();
+      json_thread.ipt_trace = output_file.GetPath();
 
       llvm::Error err = process.GetTarget().GetTrace()->OnThreadBinaryDataRead(
-          tid, IntelPTDataKinds::kTraceBuffer,
+          tid, IntelPTDataKinds::kIptTrace,
           [&](llvm::ArrayRef<uint8_t> data) -> llvm::Error {
             return WriteBytesToDisk(output_file, data);
           });
@@ -120,29 +122,28 @@ BuildThreadsSection(Process &process, FileSpec directory) {
   return json_threads;
 }
 
-static llvm::Expected<llvm::Optional<std::vector<JSONCore>>>
-BuildCoresSection(TraceIntelPT &trace_ipt, FileSpec directory) {
-  if (trace_ipt.GetTracedCores().empty())
+static llvm::Expected<llvm::Optional<std::vector<JSONCpu>>>
+BuildCpusSection(TraceIntelPT &trace_ipt, FileSpec directory) {
+  if (trace_ipt.GetTracedCpus().empty())
     return None;
 
-  std::vector<JSONCore> json_cores;
-  FileSpec cores_dir = directory;
-  cores_dir.AppendPathComponent("cores");
-  FileSystem::Instance().Resolve(cores_dir);
-  sys::fs::create_directories(cores_dir.GetCString());
+  std::vector<JSONCpu> json_cpus;
+  FileSpec cpus_dir = directory;
+  cpus_dir.AppendPathComponent("cpus");
+  sys::fs::create_directories(cpus_dir.GetCString());
 
-  for (lldb::core_id_t core_id : trace_ipt.GetTracedCores()) {
-    JSONCore json_core;
-    json_core.core_id = core_id;
+  for (lldb::cpu_id_t cpu_id : trace_ipt.GetTracedCpus()) {
+    JSONCpu json_cpu;
+    json_cpu.id = cpu_id;
 
     {
-      FileSpec output_trace = cores_dir;
-      output_trace.AppendPathComponent(std::to_string(core_id) +
+      FileSpec output_trace = cpus_dir;
+      output_trace.AppendPathComponent(std::to_string(cpu_id) +
                                        ".intelpt_trace");
-      json_core.trace_buffer = output_trace.GetPath();
+      json_cpu.ipt_trace = output_trace.GetPath();
 
-      llvm::Error err = trace_ipt.OnCoreBinaryDataRead(
-          core_id, IntelPTDataKinds::kTraceBuffer,
+      llvm::Error err = trace_ipt.OnCpuBinaryDataRead(
+          cpu_id, IntelPTDataKinds::kIptTrace,
           [&](llvm::ArrayRef<uint8_t> data) -> llvm::Error {
             return WriteBytesToDisk(output_trace, data);
           });
@@ -151,22 +152,22 @@ BuildCoresSection(TraceIntelPT &trace_ipt, FileSpec directory) {
     }
 
     {
-      FileSpec output_context_switch_trace = cores_dir;
+      FileSpec output_context_switch_trace = cpus_dir;
       output_context_switch_trace.AppendPathComponent(
-          std::to_string(core_id) + ".perf_context_switch_trace");
-      json_core.context_switch_trace = output_context_switch_trace.GetPath();
+          std::to_string(cpu_id) + ".perf_context_switch_trace");
+      json_cpu.context_switch_trace = output_context_switch_trace.GetPath();
 
-      llvm::Error err = trace_ipt.OnCoreBinaryDataRead(
-          core_id, IntelPTDataKinds::kPerfContextSwitchTrace,
+      llvm::Error err = trace_ipt.OnCpuBinaryDataRead(
+          cpu_id, IntelPTDataKinds::kPerfContextSwitchTrace,
           [&](llvm::ArrayRef<uint8_t> data) -> llvm::Error {
             return WriteBytesToDisk(output_context_switch_trace, data);
           });
       if (err)
         return std::move(err);
     }
-    json_cores.push_back(std::move(json_core));
+    json_cpus.push_back(std::move(json_cpu));
   }
-  return json_cores;
+  return json_cpus;
 }
 
 /// Build modules sub-section of the trace's session. The original modules
@@ -216,7 +217,6 @@ BuildModulesSection(Process &process, FileSpec directory) {
     if (load_addr == LLDB_INVALID_ADDRESS)
       continue;
 
-    FileSystem::Instance().Resolve(directory);
     FileSpec path_to_copy_module = directory;
     path_to_copy_module.AppendPathComponent("modules");
     path_to_copy_module.AppendPathComponent(system_path);
@@ -228,9 +228,9 @@ BuildModulesSection(Process &process, FileSpec directory) {
           inconvertibleErrorCode(),
           formatv("couldn't write to the file. {0}", ec.message()));
 
-    json_modules.push_back(JSONModule{system_path,
-                                      path_to_copy_module.GetPath(), load_addr,
-                                      module_sp->GetUUID().GetAsString()});
+    json_modules.push_back(
+        JSONModule{system_path, path_to_copy_module.GetPath(),
+                   JSONUINT64{load_addr}, module_sp->GetUUID().GetAsString()});
   }
   return json_modules;
 }
@@ -261,7 +261,7 @@ BuildProcessSection(Process &process, const FileSpec &directory) {
     return json_modules.takeError();
 
   return JSONProcess{
-      static_cast<int64_t>(process.GetID()),
+      process.GetID(),
       process.GetTarget().GetArchitecture().GetTriple().getTriple(),
       json_threads.get(), json_modules.get()};
 }
@@ -290,19 +290,21 @@ Error TraceIntelPTSessionSaver::SaveToDisk(TraceIntelPT &trace_ipt,
   if (!cpu_info)
     return cpu_info.takeError();
 
+  FileSystem::Instance().Resolve(directory);
+
   Expected<std::vector<JSONProcess>> json_processes =
       BuildProcessesSection(trace_ipt, directory);
 
   if (!json_processes)
     return json_processes.takeError();
 
-  Expected<Optional<std::vector<JSONCore>>> json_cores =
-      BuildCoresSection(trace_ipt, directory);
-  if (!json_cores)
-    return json_cores.takeError();
+  Expected<Optional<std::vector<JSONCpu>>> json_cpus =
+      BuildCpusSection(trace_ipt, directory);
+  if (!json_cpus)
+    return json_cpus.takeError();
 
   JSONTraceSession json_intel_pt_session{"intel-pt", *cpu_info, *json_processes,
-                                         *json_cores,
+                                         *json_cpus,
                                          trace_ipt.GetPerfZeroTscConversion()};
 
   return WriteSessionToFile(toJSON(json_intel_pt_session), directory);

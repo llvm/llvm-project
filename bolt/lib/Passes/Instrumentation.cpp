@@ -597,8 +597,7 @@ void Instrumentation::createAuxiliaryFunctions(BinaryContext &BC) {
     BinaryFunction *Func = BC.createInjectedBinaryFunction(std::string(Title));
 
     std::vector<std::unique_ptr<BinaryBasicBlock>> BBs;
-    BBs.emplace_back(
-        Func->createBasicBlock(BinaryBasicBlock::INVALID_OFFSET, nullptr));
+    BBs.emplace_back(Func->createBasicBlock());
     BBs.back()->addInstructions(Instrs.begin(), Instrs.end());
     BBs.back()->setCFIState(0);
     Func->insertBasicBlocks(nullptr, std::move(BBs),

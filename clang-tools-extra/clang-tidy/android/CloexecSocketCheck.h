@@ -18,7 +18,7 @@ namespace android {
 /// Finds code that uses socket() without using the SOCK_CLOEXEC flag.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-socket.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-socket.html
 class CloexecSocketCheck : public CloexecCheck {
 public:
   CloexecSocketCheck(StringRef Name, ClangTidyContext *Context)

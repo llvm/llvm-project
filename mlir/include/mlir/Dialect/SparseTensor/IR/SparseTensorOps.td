@@ -188,6 +188,8 @@ def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
     is solely defined by side-effects and not SSA values. The semantics
     may be refined over time as our sparse abstractions evolve.
 
+    Example:
+
     ```mlir
     sparse_tensor.lex_insert %tensor, %indices, %val
       : tensor<1024x1024xf64, #CSR>, memref<?xindex>, f64
@@ -385,7 +387,8 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
       would be equivalent to a union operation where non-overlapping values
       in the inputs are copied to the output unchanged.
 
-      Example of isEqual applied to intersecting elements only.
+      Example of isEqual applied to intersecting elements only:
+
       ```mlir
       %C = bufferization.alloc_tensor...
       %0 = linalg.generic #trait
@@ -405,8 +408,8 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
       } -> tensor<?xi8, #SparseVec>
       ```
 
-      Example of A+B in upper triangle, A-B in lower triangle
-      (not working yet, but construct will be available soon).
+      Example of A+B in upper triangle, A-B in lower triangle:
+
       ```mlir
       %C = bufferization.alloc_tensor...
       %1 = linalg.generic #trait
@@ -438,7 +441,8 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
 
       Example of set difference. Returns a copy of A where its sparse structure
       is *not* overlapped by B. The element type of B can be different than A
-      because we never use its values, only its sparse structure.
+      because we never use its values, only its sparse structure:
+
       ```mlir
       %C = bufferization.alloc_tensor...
       %2 = linalg.generic #trait
@@ -486,6 +490,7 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [NoSideEffect]>,
       region does not contribute to the output.
 
       Example of A+1, restricted to existing elements:
+
       ```mlir
       %C = bufferization.alloc_tensor...
       %0 = linalg.generic #trait
@@ -546,6 +551,7 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]>,
       Yields a value from within a `binary` or `unary` block.
 
       Example:
+
       ```
       %0 = sparse_tensor.unary %a : i64 to i64 {
         ^bb0(%arg0: i64):

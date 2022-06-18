@@ -20,13 +20,13 @@ using namespace llvm::json;
 namespace lldb_private {
 namespace trace_intel_pt {
 
-Optional<std::vector<lldb::core_id_t>> JSONTraceSession::GetCoreIds() {
-  if (!cores)
+Optional<std::vector<lldb::cpu_id_t>> JSONTraceSession::GetCpuIds() {
+  if (!cpus)
     return None;
-  std::vector<lldb::core_id_t> core_ids;
-  for (const JSONCore &core : *cores)
-    core_ids.push_back(core.core_id);
-  return core_ids;
+  std::vector<lldb::cpu_id_t> cpu_ids;
+  for (const JSONCpu &cpu : *cpus)
+    cpu_ids.push_back(cpu.id);
+  return cpu_ids;
 }
 
 json::Value toJSON(const JSONModule &module) {
@@ -34,7 +34,7 @@ json::Value toJSON(const JSONModule &module) {
   json_module["systemPath"] = module.system_path;
   if (module.file)
     json_module["file"] = *module.file;
-  json_module["loadAddress"] = module.load_address;
+  json_module["loadAddress"] = toJSON(module.load_address, true);
   if (module.uuid)
     json_module["uuid"] = *module.uuid;
   return std::move(json_module);
@@ -49,14 +49,15 @@ bool fromJSON(const json::Value &value, JSONModule &module, Path path) {
 }
 
 json::Value toJSON(const JSONThread &thread) {
-  return json::Object{{"tid", thread.tid},
-                      {"traceBuffer", thread.trace_buffer}};
+  json::Object obj{{"tid", thread.tid}};
+  if (thread.ipt_trace)
+    obj["iptTrace"] = *thread.ipt_trace;
+  return obj;
 }
 
 bool fromJSON(const json::Value &value, JSONThread &thread, Path path) {
   ObjectMapper o(value, path);
-  return o && o.map("tid", thread.tid) &&
-         o.map("traceBuffer", thread.trace_buffer);
+  return o && o.map("tid", thread.tid) && o.map("iptTrace", thread.ipt_trace);
 }
 
 json::Value toJSON(const JSONProcess &process) {
@@ -74,22 +75,21 @@ bool fromJSON(const json::Value &value, JSONProcess &process, Path path) {
          o.map("threads", process.threads) && o.map("modules", process.modules);
 }
 
-json::Value toJSON(const JSONCore &core) {
+json::Value toJSON(const JSONCpu &cpu) {
   return Object{
-      {"coreId", core.core_id},
-      {"traceBuffer", core.trace_buffer},
-      {"contextSwitchTrace", core.context_switch_trace},
+      {"id", cpu.id},
+      {"iptTrace", cpu.ipt_trace},
+      {"contextSwitchTrace", cpu.context_switch_trace},
   };
 }
 
-bool fromJSON(const json::Value &value, JSONCore &core, Path path) {
+bool fromJSON(const json::Value &value, JSONCpu &cpu, Path path) {
   ObjectMapper o(value, path);
-  uint64_t core_id;
-  if (!o || !o.map("coreId", core_id) ||
-      !o.map("traceBuffer", core.trace_buffer) ||
-      !o.map("contextSwitchTrace", core.context_switch_trace))
+  uint64_t cpu_id;
+  if (!(o && o.map("id", cpu_id) && o.map("iptTrace", cpu.ipt_trace) &&
+        o.map("contextSwitchTrace", cpu.context_switch_trace)))
     return false;
-  core.core_id = core_id;
+  cpu.id = cpu_id;
   return true;
 }
 
@@ -106,8 +106,8 @@ bool fromJSON(const json::Value &value, pt_cpu &cpu_info, Path path) {
   ObjectMapper o(value, path);
   std::string vendor;
   uint64_t family, model, stepping;
-  if (!o || !o.map("vendor", vendor) || !o.map("family", family) ||
-      !o.map("model", model) || !o.map("stepping", stepping))
+  if (!(o && o.map("vendor", vendor) && o.map("family", family) &&
+        o.map("model", model) && o.map("stepping", stepping)))
     return false;
   cpu_info.vendor = vendor == "GenuineIntel" ? pcv_intel : pcv_unknown;
   cpu_info.family = family;
@@ -122,16 +122,21 @@ json::Value toJSON(const JSONTraceSession &session) {
                 // We have to do this because the compiler fails at doing it
                 // automatically because pt_cpu is not in a namespace
                 {"cpuInfo", toJSON(session.cpu_info)},
-                {"cores", session.cores},
+                {"cpus", session.cpus},
                 {"tscPerfZeroConversion", session.tsc_perf_zero_conversion}};
 }
 
 bool fromJSON(const json::Value &value, JSONTraceSession &session, Path path) {
   ObjectMapper o(value, path);
-  if (!o || !o.map("processes", session.processes) ||
-      !o.map("type", session.type) || !o.map("cores", session.cores) ||
-      !o.map("tscPerfZeroConversion", session.tsc_perf_zero_conversion))
+  if (!(o && o.map("processes", session.processes) &&
+        o.map("type", session.type) && o.map("cpus", session.cpus) &&
+        o.map("tscPerfZeroConversion", session.tsc_perf_zero_conversion)))
     return false;
+  if (session.cpus && !session.tsc_perf_zero_conversion) {
+    path.report(
+        "\"tscPerfZeroConversion\" is required when \"cpus\" is provided");
+    return false;
+  }
   // We have to do this because the compiler fails at doing it automatically
   // because pt_cpu is not in a namespace
   if (!fromJSON(*value.getAsObject()->get("cpuInfo"), session.cpu_info,
