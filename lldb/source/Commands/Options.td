@@ -1120,6 +1120,9 @@ let Command = "thread trace dump instructions" in {
     Arg<"Count">,
     Desc<"The number of instructions to display starting at the most recent "
     "instruction, or the oldest if --forwards is provided.">;
+  def thread_trace_dump_instructions_all : Option<"all", "a">, Group<1>,
+    Desc<"From the starting point of the trace, dump all instructions "
+    "available.">;
   def thread_trace_dump_instructions_id: Option<"id", "i">, Group<1>,
     Arg<"Index">,
     Desc<"Custom starting instruction id from where to start traversing. This "
@@ -1128,14 +1131,22 @@ let Command = "thread trace dump instructions" in {
     Arg<"Index">,
     Desc<"How many instruction to skip from the starting position of the trace "
     "before starting the traversal.">;
-  def thread_trace_dump_instructions_raw : Option<"raw", "r">,
-    Group<1>,
+  def thread_trace_dump_instructions_raw : Option<"raw", "r">, Group<1>,
     Desc<"Dump only instruction address without disassembly nor symbol "
     "information.">;
+  def thread_trace_dump_instructions_file : Option<"file", "F">, Group<1>,
+    Arg<"Filename">,
+    Desc<"Dump the instruction to a file instead of the standard output.">;
+  def thread_trace_dump_instructions_json: Option<"json", "j">,
+    Group<1>,
+    Desc<"Dump in simple JSON format.">;
+  def thread_trace_dump_instructions_pretty_print: Option<"pretty-json", "J">,
+    Group<1>,
+    Desc<"Dump in JSON format but pretty printing the output for easier readability.">;
   def thread_trace_dump_instructions_show_tsc : Option<"tsc", "t">, Group<1>,
     Desc<"For each instruction, print the corresponding timestamp counter if "
     "available.">;
-  def thread_trace_dump_instructions_hide_events : Option<"events", "e">,
+  def thread_trace_dump_instructions_show_events : Option<"events", "e">,
     Group<1>,
     Desc<"Dump the events that happened during the execution of the target.">;
   def thread_trace_dump_instructions_continue: Option<"continue", "C">,

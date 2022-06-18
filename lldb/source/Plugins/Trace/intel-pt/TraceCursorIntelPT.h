@@ -41,6 +41,8 @@ public:
 
   lldb::user_id_t GetId() const override;
 
+  bool HasId(lldb::user_id_t id) const override;
+
 private:
   size_t GetInternalInstructionSize();
 
