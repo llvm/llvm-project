@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class FoundationTestCaseNSError(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(archs=["i[3-6]86"], bugnumber="<rdar://problem/28814052>")
     def test_runtime_types(self):
         """Test commands that require runtime types"""

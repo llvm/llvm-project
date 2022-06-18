@@ -4,8 +4,6 @@ from lldbsuite.test.decorators import *
 
 class DeleteCommandTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_delete_builtin(self):
         self.expect("command delete settings", error=True,

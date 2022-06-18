@@ -346,6 +346,22 @@ TEST(LlvmLibcSPrintfTest, HexConv) {
   ASSERT_STREQ(buff, "007F 0x1000000000 002   ");
 }
 
+TEST(LlvmLibcSPrintfTest, PointerConv) {
+  char buff[64];
+  int written;
+
+  written = __llvm_libc::sprintf(buff, "%p", nullptr);
+  EXPECT_EQ(written, 9);
+  ASSERT_STREQ(buff, "(nullptr)");
+
+  written = __llvm_libc::sprintf(buff, "%p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 10);
+  ASSERT_STREQ(buff, "0x1a2b3c4d");
+
+  written = __llvm_libc::sprintf(buff, "%p", buff);
+  EXPECT_GT(written, 0);
+}
+
 #ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
 TEST(LlvmLibcSPrintfTest, IndexModeParsing) {
   char buff[64];

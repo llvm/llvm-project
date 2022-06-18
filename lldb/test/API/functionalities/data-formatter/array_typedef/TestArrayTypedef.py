@@ -4,8 +4,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class ArrayTypedefTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_array_typedef(self):

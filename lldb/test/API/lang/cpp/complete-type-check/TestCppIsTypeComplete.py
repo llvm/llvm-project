@@ -8,8 +8,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def assertComplete(self, typename):
         """ Asserts that the type with the given name is complete. """
         found_type = self.target().FindFirstType(typename)

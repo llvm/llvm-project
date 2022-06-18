@@ -7,8 +7,6 @@ from lldbsuite.test import lldbutil
 class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
     """Test QSaveRegisterState/QRestoreRegisterState support."""
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def grp_register_save_restore_works(self, with_suffix):
         # Start up the process, use thread suffix, grab main thread id.
         inferior_args = ["message:main entered", "sleep:5"]

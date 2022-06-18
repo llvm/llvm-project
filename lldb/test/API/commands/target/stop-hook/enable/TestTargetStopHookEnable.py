@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     def test_invalid_arg(self):
         self.expect("target stop-hook enable -1", error=True,

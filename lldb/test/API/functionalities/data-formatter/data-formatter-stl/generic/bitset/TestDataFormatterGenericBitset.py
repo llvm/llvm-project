@@ -17,8 +17,6 @@ POINTER = "POINTER"
 
 class GenericBitsetDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         primes = [1]*1000

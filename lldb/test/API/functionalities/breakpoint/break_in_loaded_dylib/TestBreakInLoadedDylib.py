@@ -6,8 +6,6 @@ from lldbsuite.test import lldbutil
 class TestBreakInLoadedDylib(TestBase):
     """ Test that we can set a source regex breakpoint that will take in
     a dlopened library that hasn't loaded when we set the breakpoint."""
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
