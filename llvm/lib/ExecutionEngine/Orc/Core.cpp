@@ -2021,9 +2021,8 @@ JITDylib::getDFSLinkOrder(ArrayRef<JITDylibSP> JDs) {
 
         for (auto &KV : llvm::reverse(Result.back()->LinkOrder)) {
           auto &JD = *KV.first;
-          if (Visited.count(&JD))
+          if (!Visited.insert(&JD).second)
             continue;
-          Visited.insert(&JD);
           WorkStack.push_back(&JD);
         }
       }
