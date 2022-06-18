@@ -1342,13 +1342,20 @@ private:
                 SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
                 DbgValue &LiveIn);
 
-  /// For the given block and live-outs feeding into it, try to find a
-  /// machine location where all the variable values join together.
-  /// \returns Value ID of a machine PHI if an appropriate one is available.
-  Optional<ValueIDNum>
-  pickVPHILoc(const MachineBasicBlock &MBB, const DebugVariable &Var,
+  /// For the given block and live-outs feeding into it, try to find
+  /// machine locations for each debug operand where all the values feeding
+  /// into that operand join together.
+  /// \returns true if a joined location was found for every value that needed
+  ///          to be joined.
+  bool
+  pickVPHILoc(SmallVectorImpl<DbgOpID> &OutValues, const MachineBasicBlock &MBB,
               const LiveIdxT &LiveOuts, FuncValueTable &MOutLocs,
               const SmallVectorImpl<const MachineBasicBlock *> &BlockOrders);
+
+  Optional<ValueIDNum> pickOperandPHILoc(
+      unsigned DbgOpIdx, const MachineBasicBlock &MBB, const LiveIdxT &LiveOuts,
+      FuncValueTable &MOutLocs,
+      const SmallVectorImpl<const MachineBasicBlock *> &BlockOrders);
 
   /// Take collections of DBG_VALUE instructions stored in TTracker, and
   /// install them into their output blocks. Preserves a stable order of
