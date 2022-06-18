@@ -156,6 +156,9 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_nopie) || Args.hasArg(options::OPT_pg))
     CmdArgs.push_back("-nopie");
 
+  if (ToolChain.getArch() == llvm::Triple::riscv64)
+    CmdArgs.push_back("-X");
+
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
