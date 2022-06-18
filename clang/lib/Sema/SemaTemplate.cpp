@@ -3505,12 +3505,14 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
   TemplateParameterList *TPL = BTD->getTemplateParameters();
 
   // Wrap the type in substitution sugar.
-  auto getSubstType = [&](unsigned IndexReplaced, QualType Replacement) {
+  auto getSubstType = [&](QualType Replacement, unsigned IndexReplaced,
+                          Optional<unsigned> PackIndexReplaced) {
     QualType TTP = SemaRef.Context.getTemplateTypeParmType(
         0, IndexReplaced, false,
         cast<TemplateTypeParmDecl>(TPL->getParam(IndexReplaced)));
     return SemaRef.Context.getSubstTemplateTypeParmType(
-        cast<TemplateTypeParmType>(TTP), Replacement.getCanonicalType());
+        cast<TemplateTypeParmType>(TTP), Replacement.getCanonicalType(),
+        PackIndexReplaced);
   };
 
   switch (BTD->getBuiltinTemplateKind()) {
@@ -3535,7 +3537,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     TemplateArgumentListInfo SyntheticTemplateArgs;
     // The type argument, wrapped in substitution sugar, gets reused as the
     // first template argument in the synthetic template argument list.
-    QualType SyntheticType = getSubstType(1, OrigType);
+    QualType SyntheticType = getSubstType(OrigType, 1, None);
     SyntheticTemplateArgs.addArgument(
         TemplateArgumentLoc(TemplateArgument(SyntheticType),
                             SemaRef.Context.getTrivialTypeSourceInfo(
@@ -3590,8 +3592,9 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     }
 
     // We simply return the type at index `Index`.
-    auto Nth = std::next(Ts.pack_begin(), Index.getExtValue());
-    return getSubstType(1, Nth->getAsType());
+    int64_t N = Index.getExtValue();
+    return getSubstType(Ts.getPackAsArray()[N].getAsType(), 1,
+                        Ts.pack_size() - 1 - N);
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
 }

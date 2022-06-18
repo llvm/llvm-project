@@ -1167,7 +1167,7 @@ public:
       return QualType(T, 0);
 
     return Ctx.getSubstTemplateTypeParmType(T->getReplacedParameter(),
-                                            replacementType);
+                                            replacementType, T->getPackIndex());
   }
 
   // FIXME: Non-trivial to implement, but important for C++
@@ -3647,6 +3647,14 @@ CXXRecordDecl *InjectedClassNameType::getDecl() const {
 
 IdentifierInfo *TemplateTypeParmType::getIdentifier() const {
   return isCanonicalUnqualified() ? nullptr : getDecl()->getIdentifier();
+}
+
+SubstTemplateTypeParmType::SubstTemplateTypeParmType(
+    const TemplateTypeParmType *Param, QualType Canon,
+    Optional<unsigned> PackIndex)
+    : Type(SubstTemplateTypeParm, Canon, Canon->getDependence()),
+      Replaced(Param) {
+  SubstTemplateTypeParmTypeBits.PackIndex = PackIndex ? *PackIndex + 1 : 0;
 }
 
 SubstTemplateTypeParmPackType::SubstTemplateTypeParmPackType(

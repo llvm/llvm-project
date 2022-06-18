@@ -4754,19 +4754,20 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
 /// Retrieve a substitution-result type.
 QualType
 ASTContext::getSubstTemplateTypeParmType(const TemplateTypeParmType *Parm,
-                                         QualType Replacement) const {
+                                         QualType Replacement,
+                                         Optional<unsigned> PackIndex) const {
   assert(Replacement.isCanonical()
          && "replacement types must always be canonical");
 
   llvm::FoldingSetNodeID ID;
-  SubstTemplateTypeParmType::Profile(ID, Parm, Replacement);
+  SubstTemplateTypeParmType::Profile(ID, Parm, Replacement, PackIndex);
   void *InsertPos = nullptr;
   SubstTemplateTypeParmType *SubstParm
     = SubstTemplateTypeParmTypes.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!SubstParm) {
     SubstParm = new (*this, TypeAlignment)
-      SubstTemplateTypeParmType(Parm, Replacement);
+        SubstTemplateTypeParmType(Parm, Replacement, PackIndex);
     Types.push_back(SubstParm);
     SubstTemplateTypeParmTypes.InsertNode(SubstParm, InsertPos);
   }
@@ -12866,9 +12867,11 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     const TemplateTypeParmType *PX = SX->getReplacedParameter();
     if (PX != SY->getReplacedParameter())
       return QualType();
-
-    return Ctx.getSubstTemplateTypeParmType(PX,
-                                            Ctx.getQualifiedType(Underlying));
+    auto PackIndex = SX->getPackIndex();
+    if (PackIndex != SY->getPackIndex())
+      return QualType();
+    return Ctx.getSubstTemplateTypeParmType(
+        PX, Ctx.getQualifiedType(Underlying), PackIndex);
   }
   case Type::ObjCTypeParam:
     // FIXME: Try to merge these.
