@@ -1295,7 +1295,7 @@ const Defined *LinkerScript::assignAddresses() {
   if (script->hasSectionsCommand) {
     // With a linker script, assignment of addresses to headers is covered by
     // allocateHeaders().
-    dot = config->imageBase.getValueOr(0);
+    dot = config->imageBase.value_or(0);
   } else {
     // Assign addresses to headers right now.
     dot = target->getImageBase();
@@ -1331,7 +1331,7 @@ SmallVector<PhdrEntry *, 0> LinkerScript::createPhdrs() {
   // Process PHDRS and FILEHDR keywords because they are not
   // real output sections and cannot be added in the following loop.
   for (const PhdrsCommand &cmd : phdrsCommands) {
-    PhdrEntry *phdr = make<PhdrEntry>(cmd.type, cmd.flags.getValueOr(PF_R));
+    PhdrEntry *phdr = make<PhdrEntry>(cmd.type, cmd.flags.value_or(PF_R));
 
     if (cmd.hasFilehdr)
       phdr->add(Out::elfHeader);
